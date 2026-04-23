@@ -1,0 +1,537 @@
+<view class="qy-app">
+  <block wx:if="{{screen == 'home'}}">
+    <scroll-view class="screen with-tab" scroll-y>
+      <view class="hero">
+        <view class="brand-row">
+          <view class="brand">
+            <text class="brand-mark">缘</text>
+            <text class="brand-name">乾缘</text>
+          </view>
+          <view class="theme-pill">晨色</view>
+        </view>
+        <view class="hero-title">千里姻缘
+一线相牵</view>
+        <view class="hero-subtitle">为您精心挑选 · 今日推荐 12 位</view>
+      </view>
+
+      <view class="home-form">
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">相亲者的性别</text>
+          <text class="section-tip">选定后不可随意修改</text>
+        </view>
+        <view class="gender-grid">
+          <view class="gender-card {{filterState.gender == '女' ? 'active female' : ''}}" bindtap="selectHomeGender" data-value="女">
+            <view class="radio">{{filterState.gender == '女' ? '✓' : ''}}</view>
+            <text class="gender-text">女</text>
+          </view>
+          <view class="gender-card {{filterState.gender == '男' ? 'active male' : ''}}" bindtap="selectHomeGender" data-value="男">
+            <view class="radio">{{filterState.gender == '男' ? '✓' : ''}}</view>
+            <text class="gender-text">男</text>
+          </view>
+        </view>
+
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">相亲者的居住地</text>
+        </view>
+        <view class="select-box" bindtap="toggleCityPanel">
+          <view class="select-left">
+            <text class="mini-icon">地</text>
+            <text>{{filterState.city}}</text>
+          </view>
+          <text class="chevron">{{cityOpen ? '⌃' : '⌄'}}</text>
+        </view>
+        <view class="option-panel" wx:if="{{cityOpen}}">
+          <view wx:for="{{cities}}" wx:key="*this" class="option-row {{filterState.city == item ? 'selected' : ''}}" bindtap="selectCity" data-value="{{item}}">
+            {{item}}
+          </view>
+        </view>
+
+        <view class="section-head age-head">
+          <text class="dot"></text>
+          <text class="section-title">相亲者的年龄</text>
+        </view>
+        <view class="select-box" bindtap="toggleYearPanel">
+          <view class="select-left">
+            <text class="mini-icon">年</text>
+            <text>{{filterState.year}}年</text>
+          </view>
+          <text class="chevron">{{yearOpen ? '⌃' : '⌄'}}</text>
+        </view>
+        <view class="option-panel year-panel" wx:if="{{yearOpen}}">
+          <view wx:for="{{years}}" wx:key="*this" class="option-row {{filterState.year == item ? 'selected' : ''}}" bindtap="selectYear" data-value="{{item}}">
+            {{item}} 年
+          </view>
+        </view>
+
+        <button class="btn primary big start-btn" bindtap="startSearch">开始寻缘</button>
+        <view class="peek-link" bindtap="startSearch">先去看看 &gt;&gt;</view>
+        <view class="agreement">
+          <text class="agree-check">✓</text>
+          <text>填写资料即视为阅读并同意 </text>
+          <text class="text-link">服务及隐私条款</text>
+        </view>
+      </view>
+    </scroll-view>
+  </block>
+
+  <block wx:if="{{screen == 'list'}}">
+    <scroll-view class="screen with-tab" scroll-y>
+      <view class="topbar">
+        <view class="top-action" bindtap="openFilter"><text class="filter-lines">≡</text> 筛选</view>
+        <view class="top-title">每日推荐</view>
+        <view class="top-action ghost"></view>
+      </view>
+
+      <view class="side-tab" bindtap="openForm" data-return="list">填写资料</view>
+
+      <view class="candidate-list">
+        <view wx:for="{{candidates}}" wx:key="id" class="candidate-card">
+          <view class="card-meta">
+            <text class="mono">寻缘号 · {{item.id}}</text>
+            <text>{{item.posted}}</text>
+          </view>
+          <view class="card-main">
+            <view class="avatar tone-{{item.tone}}">{{item.initial}}</view>
+            <view class="candidate-body">
+              <view class="candidate-title">
+                <text class="candidate-gender">{{item.gender}}</text>
+                <text class="separator">·</text>
+                <text class="mono year">{{item.year}}年</text>
+                <text class="hot">热度 {{item.hot}}</text>
+              </view>
+              <view class="fact-grid">
+                <view class="fact"><text>居住</text><text>{{item.residence}}</text></view>
+                <view class="fact"><text>户籍</text><text>{{item.hometown}}</text></view>
+                <view class="fact"><text>学历</text><text>{{item.education}}</text></view>
+                <view class="fact"><text>身高</text><text>{{item.height}}cm</text></view>
+              </view>
+            </view>
+          </view>
+          <view class="intro-box"><text>介绍</text>　{{item.intro}}</view>
+          <view class="card-actions">
+            <button class="btn secondary small" bindtap="contactCandidate">联系对方</button>
+            <button class="btn primary small" bindtap="openDetail" data-id="{{item.id}}">查看资料</button>
+          </view>
+        </view>
+      </view>
+
+      <view class="register-banner" wx:if="{{!bannerDismissed}}">
+        <view class="banner-icon">资</view>
+        <view class="banner-copy">
+          <view>您未登记相亲资料</view>
+          <text>登记后，为您精准推荐对象</text>
+        </view>
+        <button class="banner-btn" bindtap="openForm" data-return="list">去登记</button>
+        <view class="banner-close" bindtap="dismissBanner">×</view>
+      </view>
+    </scroll-view>
+  </block>
+
+  <block wx:if="{{screen == 'detail'}}">
+    <scroll-view class="screen detail-screen" scroll-y>
+      <view class="topbar">
+        <view class="top-action" bindtap="backToList">‹ 返回</view>
+        <view class="top-title">相亲资料</view>
+        <view class="top-action right" bindtap="goHome">首页</view>
+      </view>
+
+      <view class="detail-head">
+        <view class="avatar big tone-{{selectedCandidate.tone}}">{{selectedCandidate.initial}}</view>
+        <view class="detail-main">
+          <view class="mono detail-id">寻缘号 {{selectedCandidate.id}}</view>
+          <view class="detail-stats">
+            <text>收藏 {{selectedCandidate.likes}}</text>
+            <text>热度 {{selectedCandidate.hot}}</text>
+          </view>
+        </view>
+        <view class="chip">转发</view>
+      </view>
+
+      <view class="detail-actions">
+        <view class="star-action {{detailStarred ? 'on' : ''}}" bindtap="toggleStar">
+          <text>{{detailStarred ? '★' : '☆'}}</text>
+          <text>收藏</text>
+        </view>
+        <button class="btn secondary medium {{detailUnlocked ? 'soft' : ''}}" bindtap="unlockDetail">{{detailUnlocked ? '已解锁' : '解锁对方'}}</button>
+        <button class="btn primary medium" bindtap="contactCandidate">发消息</button>
+      </view>
+
+      <view class="detail-section">
+        <view class="detail-grid">
+          <view><text>年份</text><text>{{selectedCandidate.year}}</text></view>
+          <view><text>性别</text><text>{{selectedCandidate.gender}}</text></view>
+          <view><text>学历</text><text>{{selectedCandidate.education}}</text></view>
+          <view><text>身高</text><text>{{selectedCandidate.height}}cm</text></view>
+          <view><text>户籍</text><text>{{selectedCandidate.hometown}}</text></view>
+          <view><text>居住</text><text>{{selectedCandidate.residence}}</text></view>
+          <view><text>职业</text><text>{{selectedCandidate.occupation}}</text></view>
+        </view>
+      </view>
+
+      <view class="detail-section">
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">更多详情</text>
+        </view>
+        <view class="detail-grid">
+          <view><text>家乡</text><text>{{selectedCandidate.hometown}}</text></view>
+          <view><text>年收入</text><text>{{selectedCandidate.income}}</text></view>
+          <view><text>婚姻</text><text>{{selectedCandidate.marriage}}</text></view>
+          <view><text>是否有房</text><text>{{selectedCandidate.housing}}</text></view>
+          <view><text>体型</text><text>{{selectedCandidate.body}}</text></view>
+        </view>
+        <view class="detail-intro">{{selectedCandidate.intro}}</view>
+      </view>
+
+      <view class="detail-section last">
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">择偶要求</text>
+        </view>
+        <view class="require-list">
+          <view><text>年份</text><text>{{selectedCandidate.requirements.yearRange}}</text></view>
+          <view><text>年收入</text><text>{{selectedCandidate.requirements.income}}</text></view>
+          <view><text>身高</text><text>{{selectedCandidate.requirements.height}}</text></view>
+          <view><text>婚房</text><text>{{selectedCandidate.requirements.housing}}</text></view>
+          <view><text>学历要求</text><text>{{selectedCandidate.requirements.education}}</text></view>
+          <view><text>婚姻要求</text><text>{{selectedCandidate.requirements.marriage}}</text></view>
+          <view><text>户籍地要求</text><text>{{selectedCandidate.requirements.hometown}}</text></view>
+          <view><text>居住地要求</text><text>{{selectedCandidate.requirements.residence}}</text></view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="float-generate" bindtap="openForm" data-return="detail">生成我的资料</view>
+    <view class="detail-toast" wx:if="{{detailToast}}">
+      <text>觉得合适请尽快查看，明天将无法看到对方资料</text>
+      <text class="toast-close" bindtap="hideDetailToast">×</text>
+    </view>
+    <view class="detail-bottom">
+      <view class="bottom-home" bindtap="goHome">首页</view>
+      <button class="btn secondary medium" bindtap="contactCandidate">发消息</button>
+      <button class="btn primary medium wide" bindtap="openContact">查看联系方式</button>
+    </view>
+
+    <view class="modal" wx:if="{{contactOpen}}">
+      <view class="modal-mask" catchtap="closeContact"></view>
+      <view class="contact-sheet" catchtap="noop">
+        <view class="sheet-handle"></view>
+        <view class="sheet-title">解锁联系方式</view>
+        <view class="sheet-sub">寻缘号 {{selectedCandidate.id}} · 本次操作将消耗 1 次解锁</view>
+        <view class="sheet-profile">
+          <view class="avatar tone-{{selectedCandidate.tone}}">{{selectedCandidate.initial}}</view>
+          <view>
+            <view>{{selectedCandidate.gender}} · {{selectedCandidate.year}}年 · {{selectedCandidate.height}}cm</view>
+            <text>{{selectedCandidate.residence}} · {{selectedCandidate.occupation}}</text>
+          </view>
+        </view>
+        <button class="btn primary big" bindtap="confirmContact">确认解锁</button>
+        <button class="btn ghost big" bindtap="closeContact">暂不解锁</button>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{screen == 'filter'}}">
+    <scroll-view class="screen filter-screen" scroll-y>
+      <view class="topbar">
+        <view class="top-action" bindtap="closeFilter">‹ 返回</view>
+        <view class="top-title">筛选条件</view>
+        <view class="top-action right muted" bindtap="resetFilter">重置</view>
+      </view>
+
+      <view class="filter-content">
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">相亲者性别</text>
+        </view>
+        <view class="chip-row three">
+          <view class="filter-chip {{filterGender == '男' ? 'selected' : ''}}" bindtap="selectFilterGender" data-value="男">男</view>
+          <view class="filter-chip {{filterGender == '女' ? 'selected' : ''}}" bindtap="selectFilterGender" data-value="女">女</view>
+          <view class="filter-chip {{filterGender == '不限' ? 'selected' : ''}}" bindtap="selectFilterGender" data-value="不限">不限</view>
+        </view>
+
+        <view class="section-head range-head">
+          <text class="dot"></text>
+          <text class="section-title">年龄范围</text>
+          <text class="section-tip">{{ageMin}} - {{ageMax}} 岁</text>
+        </view>
+        <slider min="22" max="60" value="{{ageMin}}" activeColor="#D96B5E" backgroundColor="#F4EEE7" block-color="#FFFFFF" bindchange="onAgeMinChange"></slider>
+        <slider min="22" max="60" value="{{ageMax}}" activeColor="#D96B5E" backgroundColor="#F4EEE7" block-color="#FFFFFF" bindchange="onAgeMaxChange"></slider>
+
+        <view class="section-head range-head">
+          <text class="dot"></text>
+          <text class="section-title">身高范围</text>
+          <text class="section-tip">{{heightMin}} - {{heightMax}} cm</text>
+        </view>
+        <slider min="150" max="200" value="{{heightMin}}" activeColor="#D96B5E" backgroundColor="#F4EEE7" block-color="#FFFFFF" bindchange="onHeightMinChange"></slider>
+        <slider min="150" max="200" value="{{heightMax}}" activeColor="#D96B5E" backgroundColor="#F4EEE7" block-color="#FFFFFF" bindchange="onHeightMaxChange"></slider>
+
+        <view class="section-head range-head">
+          <text class="dot"></text>
+          <text class="section-title">学历</text>
+        </view>
+        <view class="chip-row">
+          <view wx:for="{{educationOptions}}" wx:key="label" class="filter-chip {{item.selected ? 'selected' : ''}}" bindtap="toggleEducation" data-index="{{index}}">{{item.label}}</view>
+        </view>
+
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">婚姻状况</text>
+        </view>
+        <view class="chip-row">
+          <view wx:for="{{marriageOptions}}" wx:key="*this" class="filter-chip {{filterMarriage == item ? 'selected' : ''}}" bindtap="selectFilterMarriage" data-value="{{item}}">{{item}}</view>
+        </view>
+
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">住房情况</text>
+        </view>
+        <view class="chip-row">
+          <view wx:for="{{housingOptions}}" wx:key="*this" class="filter-chip {{filterHousing == item ? 'selected' : ''}}" bindtap="selectFilterHousing" data-value="{{item}}">{{item}}</view>
+        </view>
+
+        <view class="section-head">
+          <text class="dot"></text>
+          <text class="section-title">居住城市</text>
+          <text class="section-tip">已选 {{filterCityCount}} 个</text>
+        </view>
+        <view class="chip-row city-chips">
+          <view wx:for="{{filterCities}}" wx:key="label" class="filter-chip {{item.selected ? 'selected solid' : ''}}" bindtap="toggleFilterCity" data-index="{{index}}">{{item.label}}</view>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="filter-bottom">
+      <button class="btn ghost big" bindtap="closeFilter">取消</button>
+      <button class="btn primary big apply" bindtap="applyFilter">查看 {{matchCount}} 位符合</button>
+    </view>
+  </block>
+
+  <block wx:if="{{screen == 'form'}}">
+    <scroll-view class="screen form-screen" scroll-y>
+      <view class="topbar">
+        <view class="top-action" bindtap="closeForm">‹ 返回</view>
+        <view class="top-title">更多详情</view>
+        <view class="top-action ghost"></view>
+      </view>
+
+      <view class="form-hero">
+        <view class="option-label"><text>●</text> 选填信息</view>
+        <view class="form-title">资料完善度</view>
+        <view class="progress-line">
+          <view class="progress-track"><view class="progress-fill" style="width: {{formProgress}}%;"></view></view>
+          <text>{{formProgress}}%</text>
+        </view>
+        <view class="form-tip">完善度越高，相亲成功率越高</view>
+      </view>
+
+      <view class="form-card">
+        <view class="form-row">
+          <text>相亲者昵称<text class="required">*</text></text>
+          <text class="row-value mono">{{form.nickname}}</text>
+        </view>
+        <picker mode="selector" range="{{incomeOptions}}" bindchange="onIncomeChange">
+          <view class="form-row">
+            <text>年收入</text>
+            <text class="row-value">{{form.income}} ›</text>
+          </view>
+        </picker>
+        <picker mode="selector" range="{{marriageOptions}}" bindchange="onMarriageChange">
+          <view class="form-row">
+            <text>婚姻状况</text>
+            <text class="row-value">{{form.marriage}} ›</text>
+          </view>
+        </picker>
+        <picker mode="selector" range="{{housingOptions}}" bindchange="onHousingChange">
+          <view class="form-row">
+            <text>是否有房</text>
+            <text class="row-value">{{form.housing}} ›</text>
+          </view>
+        </picker>
+        <view class="form-row textarea-row">
+          <text>相亲描述</text>
+          <textarea value="{{form.intro}}" placeholder="补充相亲信息，增大成功率，让对方更了解相亲者。例：毕业院校、籍贯、兴趣爱好等。（注意：此处不要留联系方式，否则会导致资料审核不通过。）" bindinput="onIntroInput" maxlength="240"></textarea>
+        </view>
+      </view>
+
+      <view class="photo-card">
+        <view class="photo-title">
+          <text>照片</text>
+          <text>第一张将默认为头像</text>
+        </view>
+        <view class="photo-grid">
+          <view wx:for="{{photos}}" wx:key="id" class="photo-box {{item.filled ? 'filled' : ''}}" bindtap="togglePhoto" data-index="{{index}}">
+            <block wx:if="{{item.filled}}">
+              <text>✓</text>
+            </block>
+            <block wx:else>
+              <text class="plus">+</text>
+              <text>照片 {{index + 1}}</text>
+            </block>
+          </view>
+        </view>
+        <view class="photo-tip">照片越清晰，匹配效率更高。系统将对照片进行审核，不合规照片不予通过。</view>
+      </view>
+    </scroll-view>
+
+    <view class="form-bottom">
+      <button class="btn ghost big" bindtap="closeForm">暂不填写</button>
+      <button class="btn primary big save" bindtap="saveForm">保存</button>
+    </view>
+  </block>
+
+  <block wx:if="{{screen == 'share'}}">
+    <scroll-view class="screen with-tab" scroll-y>
+      <view class="topbar">
+        <view class="top-action ghost"></view>
+        <view class="top-title">经验分享</view>
+        <view class="top-action right">搜索</view>
+      </view>
+
+      <view class="live-card">
+        <view class="live-badge">直播中</view>
+        <view class="avatar tone-rose">红</view>
+        <view class="live-copy">
+          <view>红娘说 · 第 42 期</view>
+          <text>怎样分辨真心的相亲对象</text>
+          <text class="mono">2,184 人在看</text>
+        </view>
+        <button class="btn primary small">进入</button>
+      </view>
+
+      <scroll-view class="share-tabs" scroll-x>
+        <view wx:for="{{shareTabs}}" wx:key="*this" class="share-tab {{currentShareTab == item ? 'active' : ''}}" bindtap="switchShareTab" data-value="{{item}}">{{item}}</view>
+      </scroll-view>
+
+      <view class="experience-list">
+        <view wx:for="{{experiences}}" wx:key="id" class="experience-card">
+          <view class="article-meta">
+            <text class="chip">{{item.tag}}</text>
+            <text>{{item.author}}</text>
+          </view>
+          <view class="article-title">{{item.title}}</view>
+          <view class="article-excerpt">{{item.excerpt}}</view>
+          <view class="article-actions">
+            <text>收藏 {{item.likes}}</text>
+            <text>评论 {{item.replies}}</text>
+            <text class="read-more">阅读全文 ›</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </block>
+
+  <block wx:if="{{screen == 'msg'}}">
+    <scroll-view class="screen with-tab" scroll-y>
+      <view class="topbar">
+        <view class="top-action ghost"></view>
+        <view class="top-title">消息</view>
+        <view class="top-action right">搜索</view>
+      </view>
+
+      <view class="message-list">
+        <view wx:for="{{messages}}" wx:key="id" class="message-row" bindtap="openChat" data-id="{{item.id}}">
+          <view class="avatar-wrap">
+            <view class="avatar tone-{{item.tone}}">{{item.initial}}</view>
+            <view class="unread" wx:if="{{item.unread > 0}}">{{item.unread}}</view>
+          </view>
+          <view class="message-copy">
+            <view>
+              <text>{{item.name}}</text>
+              <text class="official" wx:if="{{item.official}}">官方</text>
+            </view>
+            <text>{{item.preview}}</text>
+          </view>
+          <view class="message-time">{{item.time}}</view>
+        </view>
+      </view>
+    </scroll-view>
+  </block>
+
+  <block wx:if="{{screen == 'chat'}}">
+    <view class="screen chat-screen">
+      <view class="topbar">
+        <view class="top-action" bindtap="backMessages">‹ 返回</view>
+        <view class="top-title chat-title">{{selectedMessage.name}}</view>
+        <view class="top-action ghost"></view>
+      </view>
+      <scroll-view class="chat-body" scroll-y>
+        <view class="chat-note">温馨提示：请勿在聊天中发送诈骗信息</view>
+        <view wx:for="{{chatThread}}" wx:key="id" class="bubble-row {{item.who == 'me' ? 'me' : 'them'}}">
+          <view class="avatar small-avatar tone-{{item.tone}}">{{item.initial}}</view>
+          <view class="bubble">{{item.text}}</view>
+        </view>
+      </scroll-view>
+      <view class="chat-input">
+        <input value="{{chatInput}}" bindinput="onChatInput" confirm-type="send" bindconfirm="sendChat" placeholder="请输入..." />
+        <button class="btn primary send" bindtap="sendChat">发送</button>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{screen == 'me'}}">
+    <scroll-view class="screen with-tab" scroll-y>
+      <view class="me-hero">
+        <view class="me-profile">
+          <view class="avatar big tone-ink ring">您</view>
+          <view>
+            <view class="me-name">寻缘号 53366922</view>
+            <view class="me-tags">
+              <text class="chip">普通会员</text>
+              <text class="chip accent">已认证</text>
+            </view>
+          </view>
+        </view>
+        <view class="stats-grid">
+          <view wx:for="{{stats}}" wx:key="label" class="stat-item">
+            <view>{{item.value}}</view>
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="member-card">
+        <view>
+          <view>升级会员</view>
+          <text>解锁无限次联系 · 专属红娘服务</text>
+        </view>
+        <button class="btn dark small">立即升级</button>
+      </view>
+
+      <view class="action-list">
+        <view wx:for="{{memberActions}}" wx:key="label" class="action-row" bindtap="tapMemberAction" data-label="{{item.label}}">
+          <text class="action-icon">{{item.icon}}</text>
+          <text>{{item.label}}</text>
+          <text>›</text>
+        </view>
+      </view>
+    </scroll-view>
+  </block>
+
+  <view class="tabbar" wx:if="{{screen == 'home' || screen == 'list' || screen == 'share' || screen == 'msg' || screen == 'me'}}">
+    <view class="tab-item {{activeTab == 'home' ? 'active' : ''}}" bindtap="switchTab" data-tab="home">
+      <text class="tab-icon">缘</text>
+      <text>每日推荐</text>
+    </view>
+    <view class="tab-item {{activeTab == 'list' ? 'active' : ''}}" bindtap="switchTab" data-tab="list">
+      <text class="tab-icon">资</text>
+      <text>相亲资料</text>
+    </view>
+    <view class="tab-item {{activeTab == 'share' ? 'active' : ''}}" bindtap="switchTab" data-tab="share">
+      <view class="tab-icon-wrap">
+        <text class="tab-icon">享</text>
+        <text class="live-dot">直播</text>
+      </view>
+      <text>经验分享</text>
+    </view>
+    <view class="tab-item {{activeTab == 'msg' ? 'active' : ''}}" bindtap="switchTab" data-tab="msg">
+      <text class="tab-icon">信</text>
+      <text>消息</text>
+    </view>
+    <view class="tab-item {{activeTab == 'me' ? 'active' : ''}}" bindtap="switchTab" data-tab="me">
+      <text class="tab-icon">我</text>
+      <text>我的</text>
+    </view>
+  </view>
+</view>

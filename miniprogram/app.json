@@ -1,0 +1,16 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/example/index"
+  ],
+  "window": {
+    "backgroundColor": "#FBF6F1",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FBF6F1",
+    "navigationBarTitleText": "乾缘婚恋",
+    "navigationBarTextStyle": "black"
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}
