@@ -1,0 +1,46 @@
+<scroll-view class="legal-page" scroll-y>
+  <view class="legal-title">乾缘婚恋 用户协议</view>
+  <view class="legal-meta">最后更新: 2026 年</view>
+
+  <view class="legal-section">
+    <view class="legal-h">第一条 适用范围</view>
+    <text>本协议是您与乾缘婚恋小程序运营方之间就本平台服务的使用所订立的协议。在使用本平台之前, 请您仔细阅读本协议, 一旦您注册或使用, 即视为同意本协议全部条款。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第二条 服务内容</view>
+    <text>本平台提供基于真实婚恋意愿的资料展示、智能匹配、红娘人工撮合等服务。本平台不直接公开任何用户的微信号、手机号等私人联系方式。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第三条 用户行为规范</view>
+    <text>3.1 您应当真实、准确地填写个人资料, 包括但不限于性别、出生年份、身高、学历、居住地等。\n3.2 您不得发布违法、淫秽、暴力、骚扰、虚假等不当内容。\n3.3 您不得冒用他人身份, 不得使用他人照片。\n3.4 您不得通过本平台从事任何商业推销、传销、诈骗等活动。\n3.5 一经发现违规行为, 平台有权暂停或终止您的账号使用。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第四条 红娘撮合流程</view>
+    <text>4.1 您可对感兴趣的会员发起"申请联系", 申请将进入红娘工单队列。\n4.2 平台红娘将依据双方意愿组织撮合, 不保证申请一定成功。\n4.3 申请提交后无论结果如何, 申请额度均不退还。\n4.4 您不得绕过红娘私下索要联系方式, 不得在留言中索取或留下手机号、微信号。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第五条 知识产权与内容授权</view>
+    <text>您上传至本平台的照片、文字描述等内容, 您应保证拥有合法的著作权或授权; 您同意平台为开展服务之必要 (如展示、撮合) 使用上述内容。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第六条 责任与免责</view>
+    <text>6.1 本平台仅提供技术撮合服务, 不对会员之间的私下沟通、最终交往结果承担责任。\n6.2 因不可抗力或第三方原因 (如微信平台规则变更) 导致服务中断的, 本平台不承担责任。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第七条 协议变更</view>
+    <text>本平台有权根据业务发展或法律法规变化适时修订本协议。修订后的协议将通过小程序内公告等方式告知, 您继续使用即视为接受修订。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第八条 联系我们</view>
+    <text>如对本协议有任何疑问, 您可通过小程序"我的-关于我们"页面联系我们。</text>
+  </view>
+
+  <view class="legal-foot">— 完 —</view>
+</scroll-view>

@@ -1,0 +1,77 @@
+# ============================================================
+# Dev override（docker compose up 默认加载）
+# 所有端口绑 0.0.0.0，从外部 IP 10.129.209.249 直连
+# Dev 模式不启用 Traefik（生产用 docker-compose.traefik.yml）
+# ============================================================
+services:
+
+  db:
+    restart: "no"
+    ports:
+      - "0.0.0.0:5432:5432"
+
+  adminer:
+    restart: "no"
+    ports:
+      - "0.0.0.0:18081:8080"   # 避开 8080，dev 用 18081 访问 adminer
+
+  backend:
+    restart: "no"
+    ports:
+      - "0.0.0.0:8000:8000"
+    build:
+      context: ./backend
+    command:
+      - fastapi
+      - run
+      - --reload
+      - "app/main.py"
+    develop:
+      watch:
+        - path: ./backend
+          action: sync
+          target: /app
+          ignore:
+            - ./backend/.venv
+            - .venv
+        - path: ./backend/pyproject.toml
+          action: rebuild
+    volumes:
+      - ./backend/htmlcov:/app/htmlcov
+      - ./data/uploads:/app/uploads     # 一期 FastAPI 自托管图片
+    environment:
+      SMTP_HOST: "mailcatcher"
+      SMTP_PORT: "1025"
+      SMTP_TLS: "false"
+      EMAILS_FROM_EMAIL: "noreply@qianyuan.cn"
+
+  mailcatcher:
+    image: schickling/mailcatcher
+    ports:
+      - "0.0.0.0:11180:1080"   # mail Web UI (避开本机已占的 11080)
+      - "0.0.0.0:11025:1025"   # smtp 接收端口
+
+  admin:
+    restart: "no"
+    image: node:24-bookworm
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port 80"
+    volumes:
+      - ./admin:/app
+      # 避免 host node_modules 干扰 (容器内独立安装)
+      - admin_node_modules:/app/node_modules
+    environment:
+      - VITE_API_URL=http://10.129.209.249:8000
+      - NODE_ENV=development
+    ports:
+      - "0.0.0.0:5173:80"
+    # dev 模式不需要 build context, 也不挂 traefik 标签
+    build: !reset null
+
+volumes:
+  admin_node_modules:
+
+networks:
+  traefik-public:
+    # dev 模式无外部 traefik 网络，本地建一个空的让 labels 不报错
+    external: false

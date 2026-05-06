@@ -1,0 +1,41 @@
+<scroll-view class="legal-page" scroll-y>
+  <view class="legal-title">乾缘婚恋 隐私政策</view>
+  <view class="legal-meta">最后更新: 2026 年</view>
+
+  <view class="legal-section">
+    <view class="legal-h">一、我们收集的信息</view>
+    <text>1. 微信账户标识 (openid): 用于唯一识别您的账户; 不含您的微信昵称和手机号 (除非您主动授权)。\n2. 您主动填写的资料: 性别、出生年份、身高、学历、收入、居住地、家乡、职业、婚姻状况、择偶要求、自我描述等。\n3. 您主动上传的照片。\n4. 您主动绑定的联系方式: 微信号、手机号 (用于红娘联系您, 非必填)。\n5. 行为日志: 浏览记录、收藏、申请联系等, 用于改善服务和数据安全。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">二、我们如何使用信息</view>
+    <text>1. 提供撮合服务: 把您的部分资料展示给其他会员, 由红娘协助撮合。\n2. 保障平台安全: 检测违规、滥用、欺诈行为。\n3. 改善产品体验: 匿名统计分析, 不会针对单个用户。\n4. 法律合规: 遵守相关法律法规要求。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">三、我们绝不会做的事</view>
+    <text>1. 未经您同意, 不向第三方公开您的微信号、手机号。\n2. 不向广告商、第三方平台出售您的个人数据。\n3. 不在任何商业推广中冒用您的真实姓名、照片。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">四、信息存储与安全</view>
+    <text>1. 您的数据存储于国内合规云服务器, 使用加密传输 (HTTPS) 和加密存储。\n2. 仅平台必要的运营人员 (红娘 / 客服) 在工作必要时访问您的资料。\n3. 您注销账户后, 您的资料将在 30 天内被脱敏或删除。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">五、您的权利</view>
+    <text>1. 查询权: 您随时可在小程序"我的-相亲资料"中查看您的全部数据。\n2. 修改权: 您可随时编辑或删除您的任意资料。\n3. 撤回授权: 您可在微信"设置-隐私"中撤销小程序的相关授权。\n4. 注销权: 通过"我的-关于我们"联系我们注销账户, 5 个工作日内处理完毕。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">六、未成年人保护</view>
+    <text>本平台仅面向 18 周岁以上的成年人, 不得允许未成年人注册使用; 一经发现立即清除。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">七、隐私政策变更</view>
+    <text>本政策可能根据业务变化、法规要求调整, 修订后的政策将通过小程序内公告等方式告知, 您继续使用即视为接受。</text>
+  </view>
+
+  <view class="legal-foot">— 完 —</view>
+</scroll-view>

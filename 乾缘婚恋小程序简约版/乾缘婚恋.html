@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>乾缘婚恋 · 小程序设计</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF6EE; --surface: #fff; --surfaceAlt: #F7EFE3;
+    --primary: #C93434; --primaryDeep: #A82626; --primarySoft: #F9E5E0;
+    --accent: #C9A24C; --ink: #1F1A17; --inkSoft: #5A4F47; --inkMuted: #9A8E84;
+    --border: #E9DFD0;
+    --headerGrad: linear-gradient(135deg, #C93434 0%, #8F1F1F 50%, #5A0E0E 100%);
+    --headerOverlay: radial-gradient(circle at 75% 30%, rgba(255,200,130,0.3), transparent 50%), radial-gradient(circle at 25% 70%, rgba(255,100,100,0.2), transparent 50%);
+    --font-scale: 1;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; color: var(--ink); }
+  body { font-size: calc(14px * var(--font-scale)); }
+  button { font-family: inherit; }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .phone-scroll { scrollbar-width: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js"></script>
+<script src="theme.js"></script>
+<script type="text/babel" src="chrome.jsx"></script>
+<script type="text/babel" src="avatar.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="screens/home.jsx"></script>
+<script type="text/babel" src="screens/detail.jsx"></script>
+<script type="text/babel" src="screens/my.jsx"></script>
+<script type="text/babel" src="screens/profile-edit.jsx"></script>
+<script type="text/babel" src="screens/criteria-edit.jsx"></script>
+<script type="text/babel" src="screens/filter.jsx"></script>
+<script type="text/babel" src="screens/quick-fill.jsx"></script>
+
+<script type="text/babel">
+
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "theme": "cinnabar",
+  "fontScale": 1,
+  "avatar": "cartoon"
+}/*EDITMODE-END*/;
+
+function TabBar({ cur, onGo }) {
+  const tabs = [
+    { k: 'home', label: '每日推荐', icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 21 s-7-4.5-7-10 a5 5 0 0 1 9-3 a5 5 0 0 1 9 3 c0 5.5-7 10-7 10z"/>
+      </svg>
+    ) },
+    { k: 'my-profile', label: '相亲资料', icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21 a8 8 0 0 1 16 0"/>
+      </svg>
+    ) },
+    { k: 'me', label: '我的', icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="7" r="4"/><path d="M6 21 c0-3 2.5-6 6-6 s6 3 6 6"/>
+      </svg>
+    ) },
+  ];
+  return (
+    <div style={{
+      background: 'var(--surface)', borderTop: '1px solid var(--border)',
+      display: 'flex', alignItems: 'center', padding: '8px 0 6px',
+      flexShrink: 0
+    }}>
+      {tabs.map(t => {
+        const active = cur === t.k;
+        return (
+          <button key={t.k} onClick={() => onGo(t.k)} style={{
+            flex: 1, background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            color: active ? 'var(--primary)' : 'var(--inkMuted)',
+            padding: '4px 0',
+          }}>
+            {t.icon}
+            <span style={{ fontSize: 11, fontWeight: active ? 700 : 500 }}>{t.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function App({ initialScreen = 'home', standalone = false }) {
+  const [history, setHistory] = React.useState([{ screen: initialScreen, param: null }]);
+  const [state, setState] = React.useState({ relation: null });
+  const cur = history[history.length - 1];
+  
+  const nav = {
+    go: (screen, param) => setHistory([...history, { screen, param }]),
+    back: () => setHistory(history.length > 1 ? history.slice(0, -1) : history),
+    reset: (screen) => setHistory([{ screen, param: null }])
+  };
+  
+  const app = { nav, profiles: window.APP_DATA.profiles, state, setState };
+  
+  const mainTabs = ['home', 'my-profile', 'me'];
+  const isMain = mainTabs.includes(cur.screen);
+  
+  let screen;
+  switch (cur.screen) {
+    case 'home': screen = <HomeScreen app={app}/>; break;
+    case 'detail': screen = <DetailScreen app={app} profileId={cur.param}/>; break;
+    case 'my-profile': screen = <MyScreen app={app}/>; break;
+    case 'me': screen = <MeScreen app={app}/>; break;
+    case 'profile-edit': screen = <ProfileEditScreen app={app}/>; break;
+    case 'criteria-edit': screen = <CriteriaEditScreen app={app}/>; break;
+    case 'filter': screen = <FilterScreen app={app}/>; break;
+    case 'quick-fill': screen = <QuickFillScreen app={app}/>; break;
+    default: screen = <HomeScreen app={app}/>;
+  }
+  
+  return (
+    <Phone tabBar={isMain ? <TabBar cur={cur.screen} onGo={(k) => nav.reset(k)}/> : null}>
+      {screen}
+    </Phone>
+  );
+}
+
+// Mini "我的" personal settings screen
+function MeScreen({ app }) {
+  const { nav } = app;
+  const items = [
+    { icon: '💝', label: '我的心愿', sub: '记录您的期待' },
+    { icon: '👥', label: '看过我的人', sub: '0 人', onClick: null },
+    { icon: '✨', label: '我收藏的', sub: '0 人' },
+    { icon: '🔒', label: '隐私设置', sub: '' },
+    { icon: '📋', label: '实名认证', sub: '未认证' },
+    { icon: 'ℹ️', label: '关于我们', sub: 'v1.0.0' },
+  ];
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: 'var(--bg)' }}>
+      <div style={{ background: 'var(--headerGrad)', backgroundImage: 'var(--headerGrad), var(--headerOverlay)', paddingBottom: 40 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px 10px' }}>
+          <div style={{ width: 40 }}/>
+          <div style={{ fontSize: 18, fontWeight: 600, color: '#fff' }}>我的</div>
+          <MPCapsule dark/>
+        </div>
+        <div style={{ padding: '20px 20px 0', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Avatar gender="男" size={64}/>
+          <div>
+            <div style={{ fontSize: 17, color: '#fff', fontWeight: 700 }}>寻缘号 53652255</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>已登记 · 审核中</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ margin: '-24px 14px 0', background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        {items.map((item, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+            borderBottom: i < items.length-1 ? '1px solid var(--border)' : 'none'
+          }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--primarySoft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{item.icon}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{item.label}</div>
+              {item.sub && <div style={{ fontSize: 12, color: 'var(--inkMuted)', marginTop: 2 }}>{item.sub}</div>}
+            </div>
+            <svg width="8" height="12" viewBox="0 0 8 12"><path d="M1 1 L6 6 L1 11" stroke="var(--inkMuted)" strokeWidth="1.5" fill="none"/></svg>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+window.MeScreen = MeScreen;
+
+// ─── Tweaks Panel ─────────────────────────────────────────────
+function TweaksPanel({ tweaks, onChange, onClose }) {
+  return (
+    <div style={{
+      position: 'fixed', right: 20, bottom: 20, width: 280,
+      background: '#fff', borderRadius: 14, padding: 16, zIndex: 100,
+      boxShadow: '0 20px 50px rgba(0,0,0,0.2)', border: '1px solid #e5e0d5',
+      fontFamily: '"Noto Sans SC", system-ui, sans-serif'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ fontSize: 14, fontWeight: 700 }}>Tweaks</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#999' }}>✕</button>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>主色调</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[['cinnabar','温润红喜','#C93434'],['pink','暖玉柔粉','#E06B7A'],['gold','深金典雅','#8B2828']].map(([k, label, c]) => (
+            <button key={k} onClick={() => onChange({ theme: k })} style={{
+              flex: 1, padding: '8px 4px', background: tweaks.theme === k ? c : '#f5f0e8',
+              color: tweaks.theme === k ? '#fff' : '#333',
+              border: tweaks.theme === k ? 'none' : '1px solid #e5e0d5',
+              borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 500
+            }}>{label}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>字号（适老化）{tweaks.fontScale}×</div>
+        <input type="range" min="1" max="1.3" step="0.05" value={tweaks.fontScale} onChange={e => onChange({ fontScale: parseFloat(e.target.value) })} style={{ width: '100%' }}/>
+      </div>
+      <div>
+        <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>头像风格</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[['default','默认'],['cartoon','卡通'],['real','真实']].map(([k, label]) => (
+            <button key={k} onClick={() => onChange({ avatar: k })} style={{
+              flex: 1, padding: '7px 4px', background: tweaks.avatar === k ? '#333' : '#f5f0e8',
+              color: tweaks.avatar === k ? '#fff' : '#333',
+              border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer'
+            }}>{label}</button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Root ────────────────────────────────────────────────────
+function Root() {
+  const [tweaks, setTweaks] = React.useState(TWEAKS);
+  const [showTweaks, setShowTweaks] = React.useState(false);
+  
+  React.useEffect(() => {
+    window.applyTheme(tweaks.theme, tweaks.fontScale, tweaks.avatar);
+  }, [tweaks]);
+  
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setShowTweaks(true);
+      if (e.data?.type === '__deactivate_edit_mode') setShowTweaks(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+  
+  const updateTweak = (patch) => {
+    const next = { ...tweaks, ...patch };
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: patch }, '*');
+  };
+  
+  return (
+    <div style={{ minHeight: '100vh', background: '#f0eee9', padding: '20px 0' }}>
+      <DesignCanvas>
+        <DCSection id="main" title="乾缘婚恋 · 完整交互原型" subtitle="父母+本人双视角 · 每日推荐 / 相亲资料 / 我的 三tab">
+          <DCArtboard id="proto" label="完整原型（可点击）" width={432} height={912}>
+            <App/>
+          </DCArtboard>
+        </DCSection>
+        
+        <DCSection id="variations" title="3 种视觉方向" subtitle="温润红喜 · 暖玉柔粉 · 深金典雅">
+          <DCArtboard id="v1" label="温润红喜 · 首页" width={432} height={912}>
+            <ThemedApp themeKey="cinnabar" screen="home"/>
+          </DCArtboard>
+          <DCArtboard id="v2" label="暖玉柔粉 · 首页" width={432} height={912}>
+            <ThemedApp themeKey="pink" screen="home"/>
+          </DCArtboard>
+          <DCArtboard id="v3" label="深金典雅 · 首页" width={432} height={912}>
+            <ThemedApp themeKey="gold" screen="home"/>
+          </DCArtboard>
+        </DCSection>
+        
+        <DCSection id="screens" title="关键页面（温润红喜）" subtitle="点击原型上的对应入口可到达">
+          <DCArtboard id="s-detail" label="相亲者详情" width={432} height={912}>
+            <ThemedApp themeKey="cinnabar" screen="detail"/>
+          </DCArtboard>
+          <DCArtboard id="s-profile" label="我的资料" width={432} height={912}>
+            <ThemedApp themeKey="cinnabar" screen="my-profile"/>
+          </DCArtboard>
+          <DCArtboard id="s-edit" label="选填信息" width={432} height={912}>
+            <ThemedApp themeKey="cinnabar" screen="profile-edit"/>
+          </DCArtboard>
+          <DCArtboard id="s-criteria" label="择偶标准" width={432} height={912}>
+            <ThemedApp themeKey="cinnabar" screen="criteria-edit"/>
+          </DCArtboard>
+          <DCArtboard id="s-filter" label="筛选（8步引导）" width={432} height={912}>
+            <ThemedApp themeKey="cinnabar" screen="filter"/>
+          </DCArtboard>
+          <DCArtboard id="s-quick" label="快速填写（3问题）" width={432} height={912}>
+            <ThemedApp themeKey="cinnabar" screen="quick-fill"/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+      
+      {showTweaks && <TweaksPanel tweaks={tweaks} onChange={updateTweak} onClose={() => setShowTweaks(false)}/>}
+    </div>
+  );
+}
+
+// Wrap an App render in a themed container so multiple themes can coexist in the canvas
+function ThemedApp({ themeKey, screen }) {
+  const ref = React.useRef(null);
+  const t = window.THEMES[themeKey];
+  const vars = {};
+  Object.entries(t).forEach(([k, v]) => { if (typeof v === 'string') vars['--' + k] = v; });
+  return (
+    <div ref={ref} style={{ ...vars, width: '100%', height: '100%', fontFamily: '"Noto Sans SC", "PingFang SC", system-ui, sans-serif' }}>
+      <App initialScreen={screen} standalone/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+</script>
+
+</body>
+</html>
