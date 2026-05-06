@@ -1,0 +1,51 @@
+<view class="welcome-page">
+  <view class="brand">
+    <view class="brand-title">乾缘婚恋</view>
+    <view class="brand-sub">真诚相亲 · 严选资料</view>
+  </view>
+
+  <view class="form-card">
+    <view class="form-title">欢迎你, 先完善基本信息</view>
+
+    <view class="row">
+      <view class="row-label">头像</view>
+      <view class="avatar-btn" bindtap="onPickAvatar">
+        <image
+          wx:if="{{avatarTempPath}}"
+          class="avatar-img"
+          src="{{avatarTempPath}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="avatar-default">
+          <text>{{defaultGlyph}}</text>
+        </view>
+        <text class="avatar-edit-tag">点击更换</text>
+      </view>
+    </view>
+
+    <view class="row">
+      <view class="row-label">昵称</view>
+      <input
+        class="nick-input"
+        type="text"
+        placeholder="请填写昵称"
+        value="{{nickname}}"
+        bindinput="onNicknameInput"
+        maxlength="20"
+      />
+    </view>
+
+    <view class="agreement-row" bindtap="toggleAgreed">
+      <view class="checkbox {{agreed ? 'on' : ''}}">{{agreed ? '✓' : ''}}</view>
+      <text class="agree-text">
+        我已阅读并同意
+        <text class="link" catchtap="openAgreement">《用户协议》</text>
+        <text class="link" catchtap="openPrivacy">《隐私政策》</text>
+      </text>
+    </view>
+  </view>
+
+  <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
+    {{submitting ? '提交中...' : '开始使用'}}
+  </button>
+</view>

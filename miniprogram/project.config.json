@@ -1,6 +1,6 @@
 {
-  "miniprogramRoot": "miniprogram/",
-  "cloudfunctionRoot": "cloudfunctions/",
+  "miniprogramRoot": "./",
+  "cloudfunctionRoot": "",
   "setting": {
     "urlCheck": true,
     "es6": true,
@@ -45,8 +45,8 @@
     "disableSWC": true
   },
   "appid": "wx13929d522db7fa5a",
-  "projectname": "quickstart-wx-cloud",
-  "libVersion": "3.15.2",
+  "projectname": "qianyuan-mp",
+  "libVersion": "2.20.1",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "condition": {
     "search": {

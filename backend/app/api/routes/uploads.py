@@ -1,0 +1,78 @@
+"""图片上传 (一期 FastAPI 自托管)
+
+- 文件落到 /app/uploads/ (容器内, 宿主机 bind mount 到 data/uploads/)
+- 通过 GET /uploads/<filename> 公开访问 (静态文件路由在 main.py 挂载)
+- 必须登录才能上传
+
+二期可改为腾讯云 COS / 七牛 / 阿里云 OSS, 接口对外不变.
+"""
+
+import os
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from sqlmodel import SQLModel
+
+from app.api.deps import CurrentUser
+
+router = APIRouter(prefix="/uploads", tags=["uploads"])
+
+# 容器内上传目录, 与 docker-compose 里 ./data/uploads:/app/uploads 对齐
+UPLOAD_DIR = Path("/app/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# 公开访问的 URL 前缀 (从环境变量取, 默认走 dev IP)
+PUBLIC_BASE = os.environ.get("PUBLIC_FILE_BASE", "http://10.129.209.249:8000/files")
+
+ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+class UploadResponse(SQLModel):
+    url: str
+    filename: str
+    size: int
+
+
+@router.post("/image", response_model=UploadResponse)
+async def upload_image(
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+) -> UploadResponse:
+    """上传一张图片. 返回 URL 给客户端, 客户端再调 /profiles/me/photos 落库."""
+    # 校验扩展名
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in ALLOWED_EXT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的图片格式, 仅支持 {', '.join(ALLOWED_EXT)}",
+        )
+
+    # 读全文件 (一期简单, 二期接 COS 后改成流式)
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"图片过大, 最大 {MAX_SIZE // (1024 * 1024)} MB",
+        )
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="空文件")
+
+    # 用 uuid 命名避免冲突 + 防猜测
+    new_name = f"{uuid.uuid4().hex}{ext}"
+    # 按用户分子目录, 便于追溯/清理
+    user_dir = UPLOAD_DIR / str(current_user.id)
+    user_dir.mkdir(parents=True, exist_ok=True)
+    target = user_dir / new_name
+
+    with open(target, "wb") as f:
+        f.write(content)
+
+    # 返回公开 URL: /files/<user_id>/<filename>
+    rel_path = f"{current_user.id}/{new_name}"
+    return UploadResponse(
+        url=f"{PUBLIC_BASE}/{rel_path}",
+        filename=new_name,
+        size=len(content),
+    )

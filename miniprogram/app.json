@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/welcome/welcome",
+    "pages/agreement/agreement",
+    "pages/privacy/privacy",
     "pages/example/index"
   ],
   "window": {

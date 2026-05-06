@@ -1,0 +1,147 @@
+page {
+  background: linear-gradient(180deg, #fbf6ec 0%, #ffffff 60%);
+}
+
+.welcome-page {
+  padding: 80rpx 40rpx 60rpx;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 60rpx;
+}
+.brand-title {
+  font-size: 56rpx;
+  font-weight: 800;
+  color: #c93434;
+  letter-spacing: 6rpx;
+}
+.brand-sub {
+  margin-top: 12rpx;
+  color: #9a8e84;
+  font-size: 26rpx;
+}
+
+.form-card {
+  background: #ffffff;
+  border-radius: 18rpx;
+  padding: 40rpx 36rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.form-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f1a17;
+  margin-bottom: 30rpx;
+}
+
+.row {
+  margin-bottom: 28rpx;
+  display: flex;
+  flex-direction: column;
+}
+.row-label {
+  color: #5a4f47;
+  font-size: 26rpx;
+  margin-bottom: 14rpx;
+  font-weight: 600;
+}
+
+.avatar-btn {
+  width: 160rpx;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.avatar-img {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 4rpx solid #c93434;
+}
+
+.avatar-default {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f7d6cf 0%, #c93434 100%);
+  color: #fff;
+  font-size: 64rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-edit-tag {
+  font-size: 22rpx;
+  color: #9a8e84;
+}
+
+.nick-input {
+  height: 88rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 12rpx;
+  background: #fbf7ee;
+  font-size: 28rpx;
+  color: #1f1a17;
+}
+
+.agreement-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 14rpx 0;
+  margin-top: 8rpx;
+}
+.checkbox {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  border: 2rpx solid #c93434;
+  background: #ffffff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.checkbox.on {
+  background: #c93434;
+}
+.agree-text {
+  font-size: 24rpx;
+  color: #5a4f47;
+  line-height: 1.6;
+}
+.link {
+  color: #c93434;
+  text-decoration: underline;
+}
+
+.submit-btn {
+  margin-top: 50rpx;
+  height: 96rpx;
+  background: #c93434;
+  color: #ffffff;
+  border-radius: 48rpx;
+  font-size: 32rpx;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.submit-btn[disabled] {
+  background: #d8a8a8;
+  color: #ffffff;
+}
+.submit-btn::after { border: none; }
