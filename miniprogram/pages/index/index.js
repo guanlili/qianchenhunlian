@@ -16,6 +16,10 @@ const profileSvc = require('../../services/profile');
 const matchSvc = require('../../services/match');
 const favoriteSvc = require('../../services/favorite');
 const contactSvc = require('../../services/contact');
+const { resolveFileUrl } = require('../../utils/config');
+
+const _resolveList = (arr) =>
+  Array.isArray(arr) ? arr.map(resolveFileUrl).filter(Boolean) : [];
 
 const _TONES = ['rose', 'sage', 'ocean', 'indigo', 'plum', 'gold'];
 const _GLYPHS = ['寻', '缘', '乾', '合', '雅', '良'];
@@ -53,7 +57,7 @@ function adaptCard(item) {
     location: item.location || '',
     origin: item.origin || '',
     desc: item.desc || '',
-    photos: item.photos || [],
+    photos: _resolveList(item.photos),
     likes: item.likes || 0,
     hot: item.hot || 0,
     starred: !!item.starred,
@@ -86,7 +90,7 @@ function adaptDetail(detailResp) {
     hasHouse: p.has_house || '',
     bodyType: p.body_type || '',
     desc: p.desc || '',
-    photos: p.photos || [],
+    photos: _resolveList(p.photos),
     likes: p.likes || 0,
     hot: p.hot || 0,
     tone: _pickTone(seed),
@@ -155,7 +159,9 @@ const makeOptions = (labels, selectedLabels = []) => labels.map((label) => ({
  */
 const createPhotos = (urls = []) => {
   const slots = [];
-  urls.slice(0, 6).forEach((url, i) => slots.push({ id: `photo-${i + 1}`, url }));
+  urls.slice(0, 6).forEach((url, i) =>
+    slots.push({ id: `photo-${i + 1}`, url: resolveFileUrl(url) })
+  );
   while (slots.length < 6) {
     slots.push({ id: `photo-${slots.length + 1}`, url: null });
   }
@@ -572,7 +578,7 @@ Page({
         };
         updates.profileFields = buildProfileFields(updates.profileForm);
         updates.photos = createPhotos(p.photos || []);
-        updates.myPhotos = (p.photos || []).filter(Boolean);
+        updates.myPhotos = _resolveList(p.photos);
         // relation: 后端权威值 (覆盖 storage)
         if (data.profile.relation) {
           updates.relation = data.profile.relation;
@@ -1491,7 +1497,7 @@ Page({
       const photos = createPhotos(updated.photos || []);
       this.setData({
         photos,
-        myPhotos: (updated.photos || []).filter(Boolean),
+        myPhotos: _resolveList(updated.photos),
         profileProgress: updated.progress || calcProfileProgress(this.data.profileForm, photos),
       });
     } catch (e) {
@@ -1517,7 +1523,7 @@ Page({
       const photos = createPhotos(updated.photos || []);
       this.setData({
         photos,
-        myPhotos: (updated.photos || []).filter(Boolean),
+        myPhotos: _resolveList(updated.photos),
         profileProgress: updated.progress || 0,
       });
       wx.showToast({ title: '已删除', icon: 'success' });
@@ -1820,8 +1826,12 @@ Page({
     if (!this.data.apiReady) return;
     try {
       const r = await favoriteSvc.listVisitors({ limit: 50 });
+      const items = (r.items || []).map((it) => ({
+        ...it,
+        photos: _resolveList(it.photos),
+      }));
       this.setData({
-        visitorList: r.items || [],
+        visitorList: items,
         visitorTotal: r.total || 0,
       });
     } catch (e) {
@@ -1834,8 +1844,12 @@ Page({
     if (!this.data.apiReady) return;
     try {
       const r = await favoriteSvc.listMine({ limit: 50 });
+      const items = (r.items || []).map((it) => ({
+        ...it,
+        photos: _resolveList(it.photos),
+      }));
       this.setData({
-        favoriteList: r.items || [],
+        favoriteList: items,
         favoriteTotal: r.total || 0,
       });
     } catch (e) {

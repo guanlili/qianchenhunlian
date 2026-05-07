@@ -14,8 +14,29 @@ const USE_MOCK = false;
 // JWT token 在 storage 里的 key
 const TOKEN_KEY = 'qy_access_token';
 
+// BASE_URL 去掉 /api/v1 后的根 host, 用于拼接图片相对路径 (/files/...)
+const HOST_ROOT = BASE_URL.replace(/\/api\/v\d+\/?$/, '');
+
+/**
+ * 把后端返的图片路径拼成可访问 URL.
+ * - 相对路径 ('/files/xxx.jpg') → HOST_ROOT + path  (跨环境自动适配)
+ * - 老的绝对 URL (含 http://10.129.209.249 等)   → 替换 host 为当前 HOST_ROOT
+ * - 已经是当前 HOST_ROOT 开头的绝对 URL          → 原样返
+ * - 空 / 'default' / 非字符串                      → 返空字符串 (调用方按需渲染占位)
+ */
+function resolveFileUrl(u) {
+  if (!u || typeof u !== 'string' || u === 'default') return '';
+  if (u.startsWith('/')) return HOST_ROOT + u;
+  // 兼容老数据: 把任何 http://xxx:8000 部分剥掉, 只保留 /files/...
+  const m = u.match(/^https?:\/\/[^/]+(\/files\/.*)$/);
+  if (m) return HOST_ROOT + m[1];
+  return u; // 实在不认识就原样
+}
+
 module.exports = {
   BASE_URL,
   USE_MOCK,
   TOKEN_KEY,
+  HOST_ROOT,
+  resolveFileUrl,
 };

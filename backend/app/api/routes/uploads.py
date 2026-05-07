@@ -69,10 +69,13 @@ async def upload_image(
     with open(target, "wb") as f:
         f.write(content)
 
-    # 返回公开 URL: /files/<user_id>/<filename>
-    rel_path = f"{current_user.id}/{new_name}"
+    # 返回相对路径 (e.g., /files/<user_id>/<filename>)
+    # 客户端按当前 BASE_URL 的 host 拼成完整 URL, 跨环境 (内网/外网) 永远正确.
+    # PUBLIC_BASE 仅用作向后兼容: 如老客户端期望绝对 URL, 仍可拿到一个;
+    # 但 photos 字段会落入 DB, 用相对路径更稳健.
+    rel_path = f"/files/{current_user.id}/{new_name}"
     return UploadResponse(
-        url=f"{PUBLIC_BASE}/{rel_path}",
+        url=rel_path,
         filename=new_name,
         size=len(content),
     )
