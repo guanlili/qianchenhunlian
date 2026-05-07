@@ -29,7 +29,15 @@ function clearToken() {
 function _getOrCreateDevOpenid() {
   let openid = wx.getStorageSync('qy_dev_openid');
   if (!openid) {
-    openid = 'dev_' + Math.random().toString(36).slice(2, 10);
+    // 用设备指纹生成稳定 openid: 清缓存 / 重装小程序后还是同一个,
+    // 跨设备会不同 (这正是 dev fallback 的取舍, 真正跨设备一致需配 WECHAT_APP_SECRET)
+    try {
+      const info = wx.getSystemInfoSync();
+      const seed = `${info.brand || 'dev'}-${info.model || 'unknown'}-${info.platform || 'wx'}`;
+      openid = 'dev_' + seed.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40);
+    } catch (e) {
+      openid = 'dev_main';
+    }
     wx.setStorageSync('qy_dev_openid', openid);
   }
   return openid;
