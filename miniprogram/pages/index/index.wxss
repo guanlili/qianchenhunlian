@@ -2279,3 +2279,17 @@ page {
   background: #c93434;
   color: #ffffff;
 }
+
+.my-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+  margin-top: 16rpx;
+}
+
+.my-photo-img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12rpx;
+  background: #f7efe3;
+}
