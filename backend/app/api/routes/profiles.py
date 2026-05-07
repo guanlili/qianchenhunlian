@@ -16,7 +16,7 @@ from app.models import (
     CriteriaUpdate,
     Message,
     Profile,
-    ProfilePublic,
+    ProfileWithContact,
     ProfileUpdate,
 )
 from sqlmodel import SQLModel
@@ -83,7 +83,7 @@ def _calc_criteria_progress(criteria: Criteria) -> int:
 
 
 class ProfileMeResponse(SQLModel):
-    profile: ProfilePublic | None = None
+    profile: ProfileWithContact | None = None
     criteria: CriteriaPublic | None = None
     has_profile: bool = False
     has_criteria: bool = False
@@ -116,7 +116,7 @@ def read_my_profile(
     ).first()
     is_welcomed = bool(profile and profile.nickname and profile.avatar_url)
     return ProfileMeResponse(
-        profile=ProfilePublic.model_validate(profile, from_attributes=True)
+        profile=ProfileWithContact.model_validate(profile, from_attributes=True)
         if profile
         else None,
         criteria=CriteriaPublic.model_validate(criteria, from_attributes=True)
@@ -128,12 +128,12 @@ def read_my_profile(
     )
 
 
-@router.post("/me/welcome", response_model=ProfilePublic)
+@router.post("/me/welcome", response_model=ProfileWithContact)
 def submit_welcome(
     session: SessionDep,
     current_user: CurrentUser,
     body: WelcomeBody,
-) -> ProfilePublic:
+) -> ProfileWithContact:
     """首启动引导提交: 头像 + 昵称.
 
     用户首次进入小程序的强引导, 必须填这两项才能继续使用.
@@ -169,15 +169,15 @@ def submit_welcome(
     session.add(profile)
     session.commit()
     session.refresh(profile)
-    return ProfilePublic.model_validate(profile, from_attributes=True)
+    return ProfileWithContact.model_validate(profile, from_attributes=True)
 
 
-@router.put("/me", response_model=ProfilePublic)
+@router.put("/me", response_model=ProfileWithContact)
 def upsert_my_profile(
     session: SessionDep,
     current_user: CurrentUser,
     body: Annotated[ProfileUpdate, Body()],
-) -> ProfilePublic:
+) -> ProfileWithContact:
     """新建或更新我的资料.
 
     一期"先发后审": 保存即 audit_status='approved' (dev 阶段); progress 后端重算.
@@ -201,16 +201,16 @@ def upsert_my_profile(
     session.add(profile)
     session.commit()
     session.refresh(profile)
-    return ProfilePublic.model_validate(profile, from_attributes=True)
+    return ProfileWithContact.model_validate(profile, from_attributes=True)
 
 
-@router.put("/me/contact", response_model=ProfilePublic)
+@router.put("/me/contact", response_model=ProfileWithContact)
 def update_my_contact(
     session: SessionDep,
     current_user: CurrentUser,
     wechat: Annotated[str | None, Body(embed=True)] = None,
     phone: Annotated[str | None, Body(embed=True)] = None,
-) -> ProfilePublic:
+) -> ProfileWithContact:
     """单独更新联系方式 (敏感字段, 单接口便于审计)"""
     profile = session.exec(
         select(Profile).where(Profile.user_id == current_user.id)
@@ -227,7 +227,7 @@ def update_my_contact(
     session.add(profile)
     session.commit()
     session.refresh(profile)
-    return ProfilePublic.model_validate(profile, from_attributes=True)
+    return ProfileWithContact.model_validate(profile, from_attributes=True)
 
 
 @router.put("/me/criteria", response_model=CriteriaPublic)
@@ -256,12 +256,12 @@ def upsert_my_criteria(
     return CriteriaPublic.model_validate(criteria, from_attributes=True)
 
 
-@router.post("/me/photos", response_model=ProfilePublic)
+@router.post("/me/photos", response_model=ProfileWithContact)
 def add_my_photo(
     session: SessionDep,
     current_user: CurrentUser,
     body: PhotoCommit,
-) -> ProfilePublic:
+) -> ProfileWithContact:
     """追加一张照片到我的资料.
 
     一期: 客户端先把图片 PUT 到 /uploads/ (后续接 COS), 拿到 URL 调本接口落库.
@@ -282,15 +282,15 @@ def add_my_photo(
     session.add(profile)
     session.commit()
     session.refresh(profile)
-    return ProfilePublic.model_validate(profile, from_attributes=True)
+    return ProfileWithContact.model_validate(profile, from_attributes=True)
 
 
-@router.delete("/me/photos/{index}", response_model=ProfilePublic)
+@router.delete("/me/photos/{index}", response_model=ProfileWithContact)
 def remove_my_photo(
     session: SessionDep,
     current_user: CurrentUser,
     index: int,
-) -> ProfilePublic:
+) -> ProfileWithContact:
     profile = session.exec(
         select(Profile).where(Profile.user_id == current_user.id)
     ).first()
@@ -307,7 +307,7 @@ def remove_my_photo(
     session.add(profile)
     session.commit()
     session.refresh(profile)
-    return ProfilePublic.model_validate(profile, from_attributes=True)
+    return ProfileWithContact.model_validate(profile, from_attributes=True)
 
 
 @router.delete("/me", response_model=Message)
