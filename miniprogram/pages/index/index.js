@@ -139,6 +139,8 @@ function adaptMyProfileRows(p) {
     { label: '是否有房', value: p.has_house || '未填写' },
     { label: '是否有车', value: p.has_car || '未填写' },
     { label: '体型', value: p.body_type || '未填写' },
+    { label: '手机号', value: p.contact_phone || '未填写' },
+    { label: '微信号', value: p.contact_wechat || '未填写' },
   ];
 }
 
@@ -233,6 +235,8 @@ const buildMyProfileRows = (form) => [
   { label: '是否有房', value: form.house },
   { label: '是否有车', value: '未填写' },
   { label: '体型', value: '未填写' },
+  { label: '手机号', value: '未填写' },
+  { label: '微信号', value: '未填写' },
 ];
 
 const buildCriteriaFields = (values) => [
