@@ -383,6 +383,7 @@ Page({
     myProfileRows: buildMyProfileRows(defaultProfileForm),
     profileDesc: defaultProfileForm.desc,
     photos: createPhotos(),
+    myPhotos: [],              // 我的资料展示页用 (只列已上传的非空 URL)
     profileProgress: 39,
     formReturnScreen: 'my-profile',
     criteriaValues: defaultCriteriaValues,
@@ -571,6 +572,7 @@ Page({
         };
         updates.profileFields = buildProfileFields(updates.profileForm);
         updates.photos = createPhotos(p.photos || []);
+        updates.myPhotos = (p.photos || []).filter(Boolean);
         // relation: 后端权威值 (覆盖 storage)
         if (data.profile.relation) {
           updates.relation = data.profile.relation;
@@ -1350,6 +1352,13 @@ Page({
     }
   },
 
+  /** 我的资料页点照片预览 */
+  previewMyPhoto(e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    wx.previewImage({ current: url, urls: this.data.myPhotos });
+  },
+
   onContactPhoneInput(e) {
     const v = (e.detail.value || '').replace(/\D/g, '').slice(0, 11);
     this.setData({ myContactPhone: v });
@@ -1480,6 +1489,7 @@ Page({
       const photos = createPhotos(updated.photos || []);
       this.setData({
         photos,
+        myPhotos: (updated.photos || []).filter(Boolean),
         profileProgress: updated.progress || calcProfileProgress(this.data.profileForm, photos),
       });
     } catch (e) {
@@ -1505,6 +1515,7 @@ Page({
       const photos = createPhotos(updated.photos || []);
       this.setData({
         photos,
+        myPhotos: (updated.photos || []).filter(Boolean),
         profileProgress: updated.progress || 0,
       });
       wx.showToast({ title: '已删除', icon: 'success' });
