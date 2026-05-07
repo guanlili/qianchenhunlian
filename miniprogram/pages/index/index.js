@@ -1279,6 +1279,8 @@ Page({
       formReturnScreen: returnScreen,
       optionSheet: null,
     });
+    // 每次打开编辑页都从 server 拉最新, 避免直接从 home 进来 stale state
+    this.loadMyProfile().catch((e) => console.warn('[index] reload on edit', e));
   },
 
   closeProfileEdit() {
@@ -1531,6 +1533,7 @@ Page({
       criteriaReturnScreen: returnScreen,
       optionSheet: null,
     });
+    this.loadMyProfile().catch((e) => console.warn('[index] reload on criteria-edit', e));
   },
 
   closeCriteriaEdit() {
