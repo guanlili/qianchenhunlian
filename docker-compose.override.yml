@@ -47,6 +47,7 @@ services:
 
   mailcatcher:
     image: schickling/mailcatcher
+    profiles: ["tools"]   # 默认不启动, 需要测邮件时 `docker compose --profile tools up -d mailcatcher`
     ports:
       - "0.0.0.0:11180:1080"   # mail Web UI (避开本机已占的 11080)
       - "0.0.0.0:11025:1025"   # smtp 接收端口

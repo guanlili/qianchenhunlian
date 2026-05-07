@@ -22,6 +22,7 @@ services:
 
   adminer:
     image: adminer
+    profiles: ["tools"]   # 默认不启动, 需要看库时 `docker compose --profile tools up -d adminer`
     restart: always
     networks:
       - traefik-public
