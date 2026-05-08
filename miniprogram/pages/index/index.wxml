@@ -251,15 +251,6 @@
         <view class="desc-box full warm-desc">{{profileDesc}}</view>
       </view>
 
-      <view class="section-card list-card" wx:if="{{myPhotos.length > 0}}">
-        <view class="card-head">
-          <view><text class="head-icon">图</text>我的照片</view>
-        </view>
-        <view class="my-photo-grid">
-          <image wx:for="{{myPhotos}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="my-photo-img" bindtap="previewMyPhoto" data-url="{{item}}" />
-        </view>
-      </view>
-
       <view class="section-card list-card" wx:if="{{myParentsRows.length > 0}}">
         <view class="card-head">
           <view><text class="head-icon">家</text>家庭成员情况</view>
