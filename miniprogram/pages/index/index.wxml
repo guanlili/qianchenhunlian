@@ -97,8 +97,7 @@
           </view>
           <view class="desc-box"><text>介绍：</text>{{item.desc}}</view>
           <view class="card-actions">
-            <button class="btn outline" bindtap="contactCandidate">联系当地门店</button>
-            <button class="btn primary" bindtap="openDetail" data-id="{{item.id}}">查看资料</button>
+            <button class="btn primary wide" bindtap="openDetail" data-id="{{item.id}}">查看资料</button>
           </view>
         </view>
       </view>
