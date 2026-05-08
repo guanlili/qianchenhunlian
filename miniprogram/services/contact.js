@@ -27,13 +27,7 @@ function listMyRequests({ skip = 0, limit = 20 } = {}) {
   return get(`/contacts/my-requests?skip=${skip}&limit=${limit}`);
 }
 
-/** 发"看上你"意向 (轻量, 不消耗额度, 不撮合) */
-function sendIntent(targetUserId, message = null) {
-  return post(`/contacts/${targetUserId}/intent`, { message });
-}
-
 module.exports = {
   requestContact,
   listMyRequests,
-  sendIntent,
 };
