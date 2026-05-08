@@ -50,16 +50,6 @@
         </view>
       </view>
 
-      <view class="relation-card" wx:if="{{!relation}}">
-        <view class="relation-title">请问您和相亲者的关系是？</view>
-        <view class="relation-sub">填写后为你精准推荐</view>
-        <view class="relation-grid">
-          <view wx:for="{{relationChoices}}" wx:key="label" class="outline-pill {{item.selected ? 'active' : ''}}" bindtap="selectRelation" data-value="{{item.label}}">
-            {{item.label}}
-          </view>
-        </view>
-      </view>
-
       <view class="push-row" bindtap="toggleNotify">
         <view>
           <view>{{notifyEnabled ? '已开启每日推荐通知' : '未开启每日推荐通知'}}</view>
@@ -107,13 +97,12 @@
           </view>
           <view class="desc-box"><text>介绍：</text>{{item.desc}}</view>
           <view class="card-actions">
-            <button class="btn outline" bindtap="contactCandidate">联系对方</button>
+            <button class="btn outline" bindtap="contactCandidate">联系当地门店</button>
             <button class="btn primary" bindtap="openDetail" data-id="{{item.id}}">查看资料</button>
           </view>
         </view>
       </view>
 
-      <view class="side-action" bindtap="openProfileEdit" data-return="home">填写相亲资料</view>
     </scroll-view>
   </block>
 
@@ -122,7 +111,7 @@
       <view class="solid-header flat">
         <view class="nav-row light">
           <button class="nav-link light" bindtap="backFromDetail">‹ 返回</button>
-          <view class="nav-title">相亲资料</view>
+          <view class="nav-title">资料</view>
           <button class="nav-link light right" bindtap="goHome">首页</button>
         </view>
       </view>
@@ -138,7 +127,6 @@
                 <text><text class="ico flame">♥</text>{{selectedProfile.hot}}</text>
               </view>
             </view>
-            <button class="chip-btn">转发资料</button>
           </view>
           <view class="detail-actions">
             <view class="star-action {{detailStarred ? 'on' : ''}}" bindtap="toggleDetailStar">
@@ -148,7 +136,7 @@
             <view wx:if="{{requestSubmitted}}" class="unlock-tag">
               <text>已提交申请 ✓</text>
             </view>
-            <button class="btn primary" bindtap="openContact">{{requestSubmitted ? '已申请, 等红娘联系' : '申请联系'}}</button>
+            <button class="btn primary" bindtap="openContact">{{requestSubmitted ? '已申请, 等红娘联系' : '联系当地门店'}}</button>
           </view>
         </view>
 
@@ -189,15 +177,13 @@
         </view>
       </scroll-view>
 
-      <view class="float-profile" bindtap="openProfileEdit" data-return="detail">生成我的资料</view>
       <view class="detail-toast" wx:if="{{detailToast}}">
         <text>觉得合适请尽快查看，明天将无法看到对方资料</text>
         <text bindtap="hideDetailToast">×</text>
       </view>
       <view class="bottom-actions detail-bottom">
         <button class="home-small" bindtap="goHome">回首页</button>
-        <button class="btn outline" bindtap="contactCandidate">发消息</button>
-        <button class="btn primary wide" bindtap="openContact">{{requestSubmitted ? '已申请, 等红娘联系' : '申请联系'}}</button>
+        <button class="btn primary wide" bindtap="openContact">{{requestSubmitted ? '已申请, 等红娘联系' : '联系当地门店'}}</button>
       </view>
       <view class="prev-next">
         <button bindtap="prevProfile">‹ 上一个</button>
@@ -211,7 +197,7 @@
       <view class="solid-header profile-header">
         <view class="nav-row light">
           <view class="nav-placeholder"></view>
-          <view class="nav-title">相亲资料</view>
+          <view class="nav-title">资料</view>
           <view class="nav-placeholder"></view>
         </view>
         <view class="follow-card">
@@ -236,17 +222,15 @@
         </view>
         <view class="feature-row">
           <view class="resource-flag">享更多资源</view>
-          <view><view class="round-icon">✦</view><text>真诚相亲</text><text>未认证</text></view>
+          <view><view class="round-icon">✦</view><text>真诚</text><text>未认证</text></view>
           <view><view class="round-icon dot">⇡</view><text>优先推荐</text><text>未开启</text></view>
-          <view><view class="round-icon ring" style="background: conic-gradient(#c93434 0 {{profileProgress}}%, #f0e1d6 {{profileProgress}}% 100%);"><text class="ring-inner">{{profileProgress}}%</text></view><text>资料完善度</text><text>去修改 ›</text></view>
+          <view><view class="round-icon ring" style="background: conic-gradient(#c93434 0 {{profileProgress}}%, #f0e1d6 {{profileProgress}}% 100%);"><text class="ring-inner">{{profileProgress}}%</text></view><text>资料完善度</text><text>{{profileProgress}}%</text></view>
         </view>
-        <view class="hint-strip"><view class="strip-dot">!</view><text class="strip-text">有嘉宾想了解您的家乡在哪，<text bindtap="openProfileEdit" data-return="my-profile">去填写 ›</text></text></view>
       </view>
 
       <view class="section-card list-card">
         <view class="card-head">
           <view><text class="head-icon">资</text>我的资料 <text class="status-tag">审核中</text></view>
-          <text bindtap="openProfileEdit" data-return="my-profile">编辑资料 ›</text>
         </view>
         <view class="detail-grid self-grid">
           <view wx:for="{{myProfileRows}}" wx:key="label">
@@ -260,7 +244,6 @@
       <view class="section-card list-card" wx:if="{{myPhotos.length > 0}}">
         <view class="card-head">
           <view><text class="head-icon">图</text>我的照片</view>
-          <text bindtap="openProfileEdit" data-return="my-profile">编辑 ›</text>
         </view>
         <view class="my-photo-grid">
           <image wx:for="{{myPhotos}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="my-photo-img" bindtap="previewMyPhoto" data-url="{{item}}" />
@@ -270,7 +253,6 @@
       <view class="section-card list-card">
         <view class="card-head">
           <view><text class="head-icon">择</text>择偶要求</view>
-          <text bindtap="openCriteriaEdit" data-return="my-profile">编辑资料 ›</text>
         </view>
         <view class="pref-row"><text>年份</text><text>{{criteriaValues.year}}</text></view>
         <view class="pref-row"><text>身高</text><text>{{criteriaValues.height}}</text></view>
@@ -282,7 +264,6 @@
       </view>
 
       <view class="share-actions">
-        <button class="btn outline" bindtap="openProfileEdit" data-return="my-profile">修改资料</button>
         <button class="btn primary wide" bindtap="shareProfile">分享到群或好友 ›</button>
       </view>
     </scroll-view>
@@ -416,7 +397,7 @@
 
       <scroll-view class="child-scroll with-bottom" scroll-y>
         <view class="progress-card">
-          <view><text>资料完善度：</text><text>完善度越高，相亲成功率越高</text></view>
+          <view><text>资料完善度：</text><text>完善度越高，匹配成功率越高</text></view>
           <view class="progress-track"><view style="width: {{profileProgress}}%;"></view><text>{{profileProgress}}%</text></view>
           <text>资料越完整，越快找到有缘人</text>
         </view>
@@ -449,8 +430,8 @@
         </view>
 
         <view class="form-card padded">
-          <view class="form-title">相亲描述</view>
-          <textarea value="{{profileForm.desc}}" bindinput="onProfileDescInput" maxlength="240" placeholder="补充相亲信息，增大成功率，让对方更了解相亲者。例如：毕业院校、籍贯、兴趣爱好等。注意：此处不要留联系方式。"></textarea>
+          <view class="form-title">自我描述</view>
+          <textarea value="{{profileForm.desc}}" bindinput="onProfileDescInput" maxlength="240" placeholder="补充信息，增大成功率，让对方更了解你。例如：毕业院校、籍贯、兴趣爱好等。注意：此处不要留联系方式。"></textarea>
           <button class="quick-fill-btn" bindtap="openQuickFill">快速填写（3问题自动生成）</button>
         </view>
 
@@ -506,7 +487,7 @@
 
       <scroll-view class="child-scroll with-bottom" scroll-y>
         <view class="progress-card">
-          <view><text>资料完善度：</text><text>完善度越高，相亲成功率越高</text></view>
+          <view><text>资料完善度：</text><text>完善度越高，匹配成功率越高</text></view>
           <view class="progress-track"><view class="criteria"></view><text>51%</text></view>
           <text>资料越完整，越快找到有缘人</text>
         </view>
@@ -691,9 +672,9 @@
       <scroll-view class="child-scroll quick-content" scroll-y>
         <view class="quick-title">回答3个问题 快速帮您填写</view>
         <view class="stepper">
-          <view class="{{quickStep >= 1 ? 'active' : ''}}"><text>{{quickStep > 1 ? '✓' : '1'}}</text><text>相亲特点</text></view>
+          <view class="{{quickStep >= 1 ? 'active' : ''}}"><text>{{quickStep > 1 ? '✓' : '1'}}</text><text>个人特点</text></view>
           <view class="line {{quickStep > 1 ? 'active' : ''}}"></view>
-          <view class="{{quickStep >= 2 ? 'active' : ''}}"><text>{{quickStep > 2 ? '✓' : '2'}}</text><text>相亲优势</text></view>
+          <view class="{{quickStep >= 2 ? 'active' : ''}}"><text>{{quickStep > 2 ? '✓' : '2'}}</text><text>个人优势</text></view>
           <view class="line {{quickStep > 2 ? 'active' : ''}}"></view>
           <view class="{{quickStep >= 3 ? 'active' : ''}}"><text>3</text><text>对女方要求</text></view>
         </view>
@@ -722,7 +703,7 @@
     </view>
     <view class="tab-item {{activeTab == 'my-profile' ? 'active' : ''}}" bindtap="switchTab" data-tab="my-profile">
       <view class="tab-icon">人</view>
-      <text>相亲资料</text>
+      <text>资料</text>
     </view>
     <view class="tab-item {{activeTab == 'me' ? 'active' : ''}}" bindtap="switchTab" data-tab="me">
       <view class="tab-icon">我</view>
@@ -735,7 +716,7 @@
     <view class="contact-sheet" catchtap="noop">
       <view class="sheet-handle"></view>
 
-      <view class="sheet-title">申请联系</view>
+      <view class="sheet-title">联系当地门店</view>
       <view class="sheet-sub">寻缘号 {{selectedProfile.xy_code || selectedProfile.id}} · 消耗 1 次申请额度</view>
       <view class="sheet-profile">
         <view class="avatar tone-{{selectedProfile.tone}}">{{selectedProfile.glyph}}</view>
