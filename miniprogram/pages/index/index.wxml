@@ -132,10 +132,6 @@
               <text>{{detailStarred ? '★' : '☆'}}</text>
               <text>收藏</text>
             </view>
-            <view wx:if="{{requestSubmitted}}" class="unlock-tag">
-              <text>已提交申请 ✓</text>
-            </view>
-            <button class="btn primary" bindtap="openContact">{{requestSubmitted ? '已申请, 等红娘联系' : '联系当地门店'}}</button>
           </view>
         </view>
 
@@ -192,7 +188,7 @@
       </view>
       <view class="bottom-actions detail-bottom">
         <button class="home-small" bindtap="goHome">回首页</button>
-        <button class="btn primary wide" bindtap="openContact">{{requestSubmitted ? '已申请, 等红娘联系' : '联系当地门店'}}</button>
+        <button class="btn primary wide" bindtap="openContact" disabled="{{requestSubmitted}}">{{requestSubmitted ? '已申请, 等红娘联系' : '联系当地门店'}}</button>
       </view>
       <view class="prev-next">
         <button bindtap="prevProfile">‹ 上一个</button>
