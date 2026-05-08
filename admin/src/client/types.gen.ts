@@ -45,6 +45,20 @@ export type AdminCriteriaItem = {
     progress?: number;
 };
 
+export type AdminCriteriaUpdate = {
+    year_min?: (number | null);
+    year_max?: (number | null);
+    height_min?: (number | null);
+    height_max?: (number | null);
+    income?: (string | null);
+    edu?: (string | null);
+    marriage?: (string | null);
+    house?: (string | null);
+    note?: (string | null);
+    origins?: (Array<(string)> | null);
+    locations?: (Array<(string)> | null);
+};
+
 /**
  * 资料详情 + 择偶要求 (admin 视角, 含联系方式)
  */
@@ -92,6 +106,31 @@ export type AdminProfileItem = {
 export type AdminProfileList = {
     items?: Array<AdminProfileItem>;
     total?: number;
+};
+
+/**
+ * 红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.
+ */
+export type AdminProfileUpdate = {
+    nickname?: (string | null);
+    avatar_url?: (string | null);
+    relation?: (string | null);
+    gender?: (string | null);
+    year?: (number | null);
+    height?: (number | null);
+    edu?: (string | null);
+    income?: (string | null);
+    marriage?: (string | null);
+    origin?: (string | null);
+    location?: (string | null);
+    hometown?: (string | null);
+    job?: (string | null);
+    has_house?: (string | null);
+    has_car?: (string | null);
+    body_type?: (string | null);
+    desc?: (string | null);
+    contact_wechat?: (string | null);
+    contact_phone?: (string | null);
 };
 
 export type AdminUserBrief = {
@@ -327,13 +366,16 @@ export type PrivateUserCreate = {
 };
 
 export type ProfileMeResponse = {
-    profile?: (ProfilePublic | null);
+    profile?: (ProfileWithContact | null);
     criteria?: (CriteriaPublic | null);
     has_profile?: boolean;
     has_criteria?: boolean;
+    is_welcomed?: boolean;
 };
 
 export type ProfilePublic = {
+    nickname?: (string | null);
+    avatar_url?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
@@ -363,6 +405,8 @@ export type ProfilePublic = {
  * 允许部分更新
  */
 export type ProfileUpdate = {
+    nickname?: (string | null);
+    avatar_url?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
@@ -384,6 +428,8 @@ export type ProfileUpdate = {
  * 已解锁/管理员视角, 含联系方式
  */
 export type ProfileWithContact = {
+    nickname?: (string | null);
+    avatar_url?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
@@ -553,6 +599,12 @@ export type WechatLoginResponse = {
     user: UserPublic;
     has_profile?: boolean;
     has_criteria?: boolean;
+    is_welcomed?: boolean;
+};
+
+export type WelcomeBody = {
+    nickname: string;
+    avatar_url: string;
 };
 
 /**
@@ -593,6 +645,20 @@ export type AdminAuditProfileData = {
 };
 
 export type AdminAuditProfileResponse = (AdminProfileItem);
+
+export type AdminAdminUpdateProfileData = {
+    requestBody: AdminProfileUpdate;
+    userId: string;
+};
+
+export type AdminAdminUpdateProfileResponse = (AdminProfileItem);
+
+export type AdminAdminUpdateCriteriaData = {
+    requestBody: AdminCriteriaUpdate;
+    userId: string;
+};
+
+export type AdminAdminUpdateCriteriaResponse = (AdminCriteriaItem);
 
 export type AdminGrantUnlockBalanceData = {
     requestBody: GrantBalanceRequest;
@@ -778,15 +844,21 @@ export type ProfilesUpsertMyProfileData = {
     requestBody: ProfileUpdate;
 };
 
-export type ProfilesUpsertMyProfileResponse = (ProfilePublic);
+export type ProfilesUpsertMyProfileResponse = (ProfileWithContact);
 
 export type ProfilesDeleteMyProfileResponse = (Message);
+
+export type ProfilesSubmitWelcomeData = {
+    requestBody: WelcomeBody;
+};
+
+export type ProfilesSubmitWelcomeResponse = (ProfileWithContact);
 
 export type ProfilesUpdateMyContactData = {
     requestBody?: Body_profiles_update_my_contact;
 };
 
-export type ProfilesUpdateMyContactResponse = (ProfilePublic);
+export type ProfilesUpdateMyContactResponse = (ProfileWithContact);
 
 export type ProfilesUpsertMyCriteriaData = {
     requestBody: CriteriaUpdate;
@@ -798,13 +870,13 @@ export type ProfilesAddMyPhotoData = {
     requestBody: PhotoCommit;
 };
 
-export type ProfilesAddMyPhotoResponse = (ProfilePublic);
+export type ProfilesAddMyPhotoResponse = (ProfileWithContact);
 
 export type ProfilesRemoveMyPhotoData = {
     index: number;
 };
 
-export type ProfilesRemoveMyPhotoResponse = (ProfilePublic);
+export type ProfilesRemoveMyPhotoResponse = (ProfileWithContact);
 
 export type UploadsUploadImageData = {
     formData: Body_uploads_upload_image;
