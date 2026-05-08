@@ -71,24 +71,46 @@ function adaptDetail(detailResp) {
   if (!detailResp || !detailResp.profile) return null;
   const p = detailResp.profile;
   const seed = p.user_id || p.id || '';
+  // 出生年份用 birth_date 优先, fallback 老 year 字段
+  const birthYear = p.birth_date
+    ? Number(String(p.birth_date).slice(0, 4))
+    : (p.year || 0);
+  const birthMonth = p.birth_date
+    ? Number(String(p.birth_date).slice(5, 7))
+    : 0;
   return {
     // id 用 user_id (UUID), 给 prev/next 等内部逻辑用; 显示走 xy_code 字段
     id: p.user_id,
     user_id: p.user_id,
     xy_code: detailResp.xy_code || '',
+    real_name: p.real_name || '',
+    ethnicity: p.ethnicity || '',
     gender: p.gender || '',
-    year: p.year || '',
-    age: p.year ? new Date().getFullYear() - p.year : '',
+    year: birthYear || '',
+    birthMonth: birthMonth || '',
+    birthLabel: birthYear
+      ? (birthMonth ? `${birthYear}年${birthMonth}月` : `${birthYear}年`)
+      : '',
+    age: birthYear ? new Date().getFullYear() - birthYear : '',
     height: p.height || '',
+    weight: p.weight || '',
+    healthStatus: p.health_status || '',
     edu: p.edu || '',
+    major: p.major || '',
+    hobbies: p.hobbies || '',
     income: p.income || '',
     location: p.location || '',
     origin: p.origin || '',
     hometown: p.hometown || '',
     job: p.job || '',
+    employerType: p.employer_type || '',
+    hasSocialInsurance: p.has_social_insurance || '',
     marriage: p.marriage || '',
     hasHouse: p.has_house || '',
+    hasCar: p.has_car || '',
+    houseCarLoan: p.house_car_loan || '',
     bodyType: p.body_type || '',
+    personalityType: p.personality_type || '',
     desc: p.desc || '',
     photos: _resolveList(p.photos),
     likes: p.likes || 0,
@@ -130,21 +152,47 @@ function adaptCriteriaValues(c) {
 /** server profile (我的) → myProfileRows (WXML 用) */
 function adaptMyProfileRows(p) {
   if (!p) return null;
+  // 出生: birth_date 优先 (精确到月), 老数据 fallback year
+  const birthLabel = p.birth_date
+    ? `${String(p.birth_date).slice(0, 4)}年${Number(String(p.birth_date).slice(5, 7))}月`
+    : (p.year ? `${p.year}年` : '未填写');
   return [
+    { label: '姓名', value: p.real_name || '未填写' },
     { label: '性别', value: p.gender || '未填写' },
-    { label: '年份', value: p.year ? `${p.year}年` : '未填写' },
+    { label: '民族', value: p.ethnicity || '未填写' },
+    { label: '出生', value: birthLabel },
     { label: '身高', value: p.height ? `${p.height}cm` : '未填写' },
+    { label: '体重', value: p.weight ? `${p.weight}kg` : '未填写' },
+    { label: '身体状况', value: p.health_status || '未填写' },
     { label: '学历', value: p.edu || '未填写' },
+    { label: '专业', value: p.major || '未填写' },
+    { label: '兴趣爱好', value: p.hobbies || '未填写' },
     { label: '户籍地', value: p.origin || '未填写' },
     { label: '居住地', value: p.location || '未填写' },
     { label: '家乡', value: p.hometown || '未填写' },
-    { label: '婚姻', value: p.marriage || '未填写' },
-    { label: '年收入', value: p.income || '未填写' },
+    { label: '婚姻状况', value: p.marriage || '未填写' },
+    { label: '月收入', value: p.income || '未填写' },
+    { label: '职业', value: p.job || '未填写' },
+    { label: '工作单位性质', value: p.employer_type || '未填写' },
+    { label: '是否有社保', value: p.has_social_insurance || '未填写' },
     { label: '是否有房', value: p.has_house || '未填写' },
     { label: '是否有车', value: p.has_car || '未填写' },
+    { label: '房贷车贷', value: p.house_car_loan || '未填写' },
     { label: '体型', value: p.body_type || '未填写' },
+    { label: '性格类型', value: p.personality_type || '未填写' },
     { label: '手机号', value: p.contact_phone || '未填写' },
     { label: '微信号', value: p.contact_wechat || '未填写' },
+  ];
+}
+
+/** server parents_info → 父母信息 rows (WXML 用) */
+function adaptParentsRows(pi) {
+  if (!pi) return [];
+  return [
+    { label: '父母身体状况', value: pi.parents_health || '未填写' },
+    { label: '父母职业', value: pi.parents_job || '未填写' },
+    { label: '父母养老保险', value: pi.parents_pension || '未填写' },
+    { label: '兄弟姐妹', value: pi.siblings || '未填写' },
   ];
 }
 
@@ -390,6 +438,7 @@ Page({
     profileDesc: defaultProfileForm.desc,
     photos: createPhotos(),
     myPhotos: [],              // 我的资料展示页用 (只列已上传的非空 URL)
+    myParentsRows: [],         // 父母 / 兄弟姐妹信息 rows
     profileProgress: 39,
     formReturnScreen: 'my-profile',
     criteriaValues: defaultCriteriaValues,
@@ -593,6 +642,7 @@ Page({
           updates.criteriaFields = buildCriteriaFields(cv);
         }
       }
+      updates.myParentsRows = adaptParentsRows(data.parents_info);
       this.setData(updates);
     } catch (e) {
       console.warn('[index] loadMyProfile', e);

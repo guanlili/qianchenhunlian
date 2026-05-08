@@ -274,6 +274,28 @@ export const AdminCriteriaItemSchema = {
             ],
             title: 'Height Max'
         },
+        weight_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Min'
+        },
+        weight_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Max'
+        },
         income: {
             anyOf: [
                 {
@@ -317,6 +339,39 @@ export const AdminCriteriaItemSchema = {
                 }
             ],
             title: 'House'
+        },
+        car: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Car'
+        },
+        job: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Job'
+        },
+        social_insurance: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Social Insurance'
         },
         note: {
             anyOf: [
@@ -402,6 +457,28 @@ export const AdminCriteriaUpdateSchema = {
             ],
             title: 'Height Max'
         },
+        weight_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Min'
+        },
+        weight_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Max'
+        },
         income: {
             anyOf: [
                 {
@@ -445,6 +522,39 @@ export const AdminCriteriaUpdateSchema = {
                 }
             ],
             title: 'House'
+        },
+        car: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Car'
+        },
+        job: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Job'
+        },
+        social_insurance: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Social Insurance'
         },
         note: {
             anyOf: [
@@ -490,6 +600,114 @@ export const AdminCriteriaUpdateSchema = {
     title: 'AdminCriteriaUpdate'
 } as const;
 
+export const AdminParentsInfoItemSchema = {
+    properties: {
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        parents_health: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Health'
+        },
+        parents_job: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Job'
+        },
+        parents_pension: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Pension'
+        },
+        siblings: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Siblings'
+        }
+    },
+    type: 'object',
+    required: ['user_id'],
+    title: 'AdminParentsInfoItem'
+} as const;
+
+export const AdminParentsInfoUpdateSchema = {
+    properties: {
+        parents_health: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Health'
+        },
+        parents_job: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Job'
+        },
+        parents_pension: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Pension'
+        },
+        siblings: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Siblings'
+        }
+    },
+    type: 'object',
+    title: 'AdminParentsInfoUpdate'
+} as const;
+
 export const AdminProfileDetailSchema = {
     properties: {
         profile: {
@@ -504,12 +722,22 @@ export const AdminProfileDetailSchema = {
                     type: 'null'
                 }
             ]
+        },
+        parents_info: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/AdminParentsInfoItem'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
     required: ['profile'],
     title: 'AdminProfileDetail',
-    description: '资料详情 + 择偶要求 (admin 视角, 含联系方式)'
+    description: '资料详情 + 择偶要求 + 父母信息 (admin 视角, 含联系方式)'
 } as const;
 
 export const AdminProfileItemSchema = {
@@ -540,6 +768,50 @@ export const AdminProfileItemSchema = {
                 }
             ],
             title: 'Openid'
+        },
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        avatar_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Avatar Url'
+        },
+        real_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Real Name'
+        },
+        ethnicity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ethnicity'
         },
         relation: {
             anyOf: [
@@ -574,6 +846,18 @@ export const AdminProfileItemSchema = {
             ],
             title: 'Year'
         },
+        birth_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Birth Date'
+        },
         height: {
             anyOf: [
                 {
@@ -585,6 +869,28 @@ export const AdminProfileItemSchema = {
             ],
             title: 'Height'
         },
+        weight: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight'
+        },
+        health_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Health Status'
+        },
         edu: {
             anyOf: [
                 {
@@ -595,6 +901,28 @@ export const AdminProfileItemSchema = {
                 }
             ],
             title: 'Edu'
+        },
+        major: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Major'
+        },
+        hobbies: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Hobbies'
         },
         income: {
             anyOf: [
@@ -662,6 +990,28 @@ export const AdminProfileItemSchema = {
             ],
             title: 'Job'
         },
+        employer_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Employer Type'
+        },
+        has_social_insurance: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Social Insurance'
+        },
         has_house: {
             anyOf: [
                 {
@@ -684,6 +1034,17 @@ export const AdminProfileItemSchema = {
             ],
             title: 'Has Car'
         },
+        house_car_loan: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'House Car Loan'
+        },
         body_type: {
             anyOf: [
                 {
@@ -694,6 +1055,17 @@ export const AdminProfileItemSchema = {
                 }
             ],
             title: 'Body Type'
+        },
+        personality_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Personality Type'
         },
         desc: {
             anyOf: [
@@ -858,6 +1230,28 @@ export const AdminProfileUpdateSchema = {
             ],
             title: 'Avatar Url'
         },
+        real_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Real Name'
+        },
+        ethnicity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ethnicity'
+        },
         relation: {
             anyOf: [
                 {
@@ -891,6 +1285,18 @@ export const AdminProfileUpdateSchema = {
             ],
             title: 'Year'
         },
+        birth_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Birth Date'
+        },
         height: {
             anyOf: [
                 {
@@ -902,6 +1308,28 @@ export const AdminProfileUpdateSchema = {
             ],
             title: 'Height'
         },
+        weight: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight'
+        },
+        health_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Health Status'
+        },
         edu: {
             anyOf: [
                 {
@@ -912,6 +1340,28 @@ export const AdminProfileUpdateSchema = {
                 }
             ],
             title: 'Edu'
+        },
+        major: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Major'
+        },
+        hobbies: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Hobbies'
         },
         income: {
             anyOf: [
@@ -979,6 +1429,28 @@ export const AdminProfileUpdateSchema = {
             ],
             title: 'Job'
         },
+        employer_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Employer Type'
+        },
+        has_social_insurance: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Social Insurance'
+        },
         has_house: {
             anyOf: [
                 {
@@ -1001,6 +1473,17 @@ export const AdminProfileUpdateSchema = {
             ],
             title: 'Has Car'
         },
+        house_car_loan: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'House Car Loan'
+        },
         body_type: {
             anyOf: [
                 {
@@ -1011,6 +1494,17 @@ export const AdminProfileUpdateSchema = {
                 }
             ],
             title: 'Body Type'
+        },
+        personality_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Personality Type'
         },
         desc: {
             anyOf: [
@@ -1578,6 +2072,28 @@ export const CriteriaPublicSchema = {
             ],
             title: 'Height Max'
         },
+        weight_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Min'
+        },
+        weight_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Max'
+        },
         income: {
             anyOf: [
                 {
@@ -1625,6 +2141,42 @@ export const CriteriaPublicSchema = {
                 }
             ],
             title: 'House'
+        },
+        car: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Car'
+        },
+        job: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Job'
+        },
+        social_insurance: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 8
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Social Insurance'
         },
         note: {
             anyOf: [
@@ -1721,6 +2273,28 @@ export const CriteriaUpdateSchema = {
             ],
             title: 'Height Max'
         },
+        weight_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Min'
+        },
+        weight_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight Max'
+        },
         income: {
             anyOf: [
                 {
@@ -1768,6 +2342,42 @@ export const CriteriaUpdateSchema = {
                 }
             ],
             title: 'House'
+        },
+        car: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Car'
+        },
+        job: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Job'
+        },
+        social_insurance: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 8
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Social Insurance'
         },
         note: {
             anyOf: [
@@ -2514,6 +3124,30 @@ export const ProfilePublicSchema = {
             ],
             title: 'Avatar Url'
         },
+        real_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Real Name'
+        },
+        ethnicity: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 16
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ethnicity'
+        },
         relation: {
             anyOf: [
                 {
@@ -2551,6 +3185,18 @@ export const ProfilePublicSchema = {
             ],
             title: 'Year'
         },
+        birth_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Birth Date'
+        },
         height: {
             anyOf: [
                 {
@@ -2564,6 +3210,31 @@ export const ProfilePublicSchema = {
             ],
             title: 'Height'
         },
+        weight: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 200,
+                    minimum: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight'
+        },
+        health_status: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Health Status'
+        },
         edu: {
             anyOf: [
                 {
@@ -2575,6 +3246,30 @@ export const ProfilePublicSchema = {
                 }
             ],
             title: 'Edu'
+        },
+        major: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Major'
+        },
+        hobbies: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Hobbies'
         },
         income: {
             anyOf: [
@@ -2648,6 +3343,30 @@ export const ProfilePublicSchema = {
             ],
             title: 'Job'
         },
+        employer_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Employer Type'
+        },
+        has_social_insurance: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 8
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Social Insurance'
+        },
         has_house: {
             anyOf: [
                 {
@@ -2672,6 +3391,18 @@ export const ProfilePublicSchema = {
             ],
             title: 'Has Car'
         },
+        house_car_loan: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'House Car Loan'
+        },
         body_type: {
             anyOf: [
                 {
@@ -2683,6 +3414,18 @@ export const ProfilePublicSchema = {
                 }
             ],
             title: 'Body Type'
+        },
+        personality_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Personality Type'
         },
         desc: {
             anyOf: [
@@ -2771,6 +3514,30 @@ export const ProfileUpdateSchema = {
             ],
             title: 'Avatar Url'
         },
+        real_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Real Name'
+        },
+        ethnicity: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 16
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ethnicity'
+        },
         relation: {
             anyOf: [
                 {
@@ -2808,6 +3575,18 @@ export const ProfileUpdateSchema = {
             ],
             title: 'Year'
         },
+        birth_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Birth Date'
+        },
         height: {
             anyOf: [
                 {
@@ -2821,6 +3600,31 @@ export const ProfileUpdateSchema = {
             ],
             title: 'Height'
         },
+        weight: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 200,
+                    minimum: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight'
+        },
+        health_status: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Health Status'
+        },
         edu: {
             anyOf: [
                 {
@@ -2832,6 +3636,30 @@ export const ProfileUpdateSchema = {
                 }
             ],
             title: 'Edu'
+        },
+        major: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Major'
+        },
+        hobbies: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Hobbies'
         },
         income: {
             anyOf: [
@@ -2905,6 +3733,30 @@ export const ProfileUpdateSchema = {
             ],
             title: 'Job'
         },
+        employer_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Employer Type'
+        },
+        has_social_insurance: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 8
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Social Insurance'
+        },
         has_house: {
             anyOf: [
                 {
@@ -2929,6 +3781,18 @@ export const ProfileUpdateSchema = {
             ],
             title: 'Has Car'
         },
+        house_car_loan: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'House Car Loan'
+        },
         body_type: {
             anyOf: [
                 {
@@ -2940,6 +3804,18 @@ export const ProfileUpdateSchema = {
                 }
             ],
             title: 'Body Type'
+        },
+        personality_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Personality Type'
         },
         desc: {
             anyOf: [
@@ -2985,6 +3861,30 @@ export const ProfileWithContactSchema = {
             ],
             title: 'Avatar Url'
         },
+        real_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Real Name'
+        },
+        ethnicity: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 16
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ethnicity'
+        },
         relation: {
             anyOf: [
                 {
@@ -3022,6 +3922,18 @@ export const ProfileWithContactSchema = {
             ],
             title: 'Year'
         },
+        birth_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Birth Date'
+        },
         height: {
             anyOf: [
                 {
@@ -3035,6 +3947,31 @@ export const ProfileWithContactSchema = {
             ],
             title: 'Height'
         },
+        weight: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 200,
+                    minimum: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Weight'
+        },
+        health_status: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Health Status'
+        },
         edu: {
             anyOf: [
                 {
@@ -3046,6 +3983,30 @@ export const ProfileWithContactSchema = {
                 }
             ],
             title: 'Edu'
+        },
+        major: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Major'
+        },
+        hobbies: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Hobbies'
         },
         income: {
             anyOf: [
@@ -3119,6 +4080,30 @@ export const ProfileWithContactSchema = {
             ],
             title: 'Job'
         },
+        employer_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Employer Type'
+        },
+        has_social_insurance: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 8
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Social Insurance'
+        },
         has_house: {
             anyOf: [
                 {
@@ -3143,6 +4128,18 @@ export const ProfileWithContactSchema = {
             ],
             title: 'Has Car'
         },
+        house_car_loan: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'House Car Loan'
+        },
         body_type: {
             anyOf: [
                 {
@@ -3154,6 +4151,18 @@ export const ProfileWithContactSchema = {
                 }
             ],
             title: 'Body Type'
+        },
+        personality_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Personality Type'
         },
         desc: {
             anyOf: [

@@ -142,24 +142,34 @@
 
         <view class="section-card">
           <view class="detail-grid">
-            <view><text>年份</text><text>{{selectedProfile.year}}年</text></view>
+            <view><text>出生</text><text>{{selectedProfile.birthLabel || (selectedProfile.year + '年')}}</text></view>
             <view><text>性别</text><text>{{selectedProfile.gender}}</text></view>
+            <view><text>民族</text><text>{{selectedProfile.ethnicity || '—'}}</text></view>
             <view><text>学历</text><text>{{selectedProfile.edu}}</text></view>
             <view><text>身高</text><text>{{selectedProfile.height}}cm</text></view>
+            <view><text>体重</text><text>{{selectedProfile.weight ? selectedProfile.weight + 'kg' : '—'}}</text></view>
             <view><text>户籍</text><text>{{selectedProfile.origin}}</text></view>
             <view><text>居住</text><text>{{selectedProfile.location}}</text></view>
-            <view class="span"><text>职业</text><text>{{selectedProfile.job}}</text></view>
+            <view><text>职业</text><text>{{selectedProfile.job}}</text></view>
+            <view><text>单位性质</text><text>{{selectedProfile.employerType || '—'}}</text></view>
           </view>
         </view>
 
         <view class="section-title"><text></text>更多详情</view>
         <view class="section-card">
           <view class="detail-grid">
+            <view><text>专业</text><text>{{selectedProfile.major || '—'}}</text></view>
+            <view><text>兴趣爱好</text><text>{{selectedProfile.hobbies || '—'}}</text></view>
             <view><text>家乡</text><text>{{selectedProfile.hometown}}</text></view>
             <view><text>婚姻</text><text>{{selectedProfile.marriage}}</text></view>
-            <view><text>年收入</text><text>{{selectedProfile.income}}</text></view>
+            <view><text>月收入</text><text>{{selectedProfile.income}}</text></view>
+            <view><text>身体状况</text><text>{{selectedProfile.healthStatus || '—'}}</text></view>
+            <view><text>是否有社保</text><text>{{selectedProfile.hasSocialInsurance || '—'}}</text></view>
             <view><text>是否有房</text><text>{{selectedProfile.hasHouse}}</text></view>
+            <view><text>是否有车</text><text>{{selectedProfile.hasCar || '—'}}</text></view>
+            <view><text>房贷车贷</text><text>{{selectedProfile.houseCarLoan || '—'}}</text></view>
             <view><text>体型</text><text>{{selectedProfile.bodyType}}</text></view>
+            <view><text>性格</text><text>{{selectedProfile.personalityType || '—'}}</text></view>
           </view>
           <view class="desc-box full">{{selectedProfile.desc}}</view>
         </view>
@@ -247,6 +257,18 @@
         </view>
         <view class="my-photo-grid">
           <image wx:for="{{myPhotos}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="my-photo-img" bindtap="previewMyPhoto" data-url="{{item}}" />
+        </view>
+      </view>
+
+      <view class="section-card list-card" wx:if="{{myParentsRows.length > 0}}">
+        <view class="card-head">
+          <view><text class="head-icon">家</text>家庭成员情况</view>
+        </view>
+        <view class="detail-grid self-grid">
+          <view wx:for="{{myParentsRows}}" wx:key="label">
+            <text>{{item.label}}</text>
+            <text>{{item.value}}</text>
+          </view>
         </view>
       </view>
 

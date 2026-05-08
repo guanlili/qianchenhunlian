@@ -22,6 +22,7 @@ from app.models import (
     ContactRequest,
     Criteria,
     Message,
+    ParentsInfo,
     Profile,
     Staff,
     StaffCreate,
@@ -30,6 +31,7 @@ from app.models import (
     StaffsPublic,
     User,
 )
+from datetime import date
 
 router = APIRouter(
     prefix="/admin",
@@ -46,20 +48,33 @@ class AdminProfileItem(SQLModel):
     user_id: uuid.UUID
     xy_code: str | None = None
     openid: str | None = None
+    nickname: str | None = None
+    avatar_url: str | None = None
+    real_name: str | None = None
+    ethnicity: str | None = None
     relation: str | None = None
     gender: str | None = None
     year: int | None = None
+    birth_date: date | None = None
     height: int | None = None
+    weight: int | None = None
+    health_status: str | None = None
     edu: str | None = None
+    major: str | None = None
+    hobbies: str | None = None
     income: str | None = None
     marriage: str | None = None
     origin: str | None = None
     location: str | None = None
     hometown: str | None = None
     job: str | None = None
+    employer_type: str | None = None
+    has_social_insurance: str | None = None
     has_house: str | None = None
     has_car: str | None = None
+    house_car_loan: str | None = None
     body_type: str | None = None
+    personality_type: str | None = None
     desc: str | None = None
     photos: list[str] = []
     contact_wechat: str | None = None
@@ -84,21 +99,35 @@ class AdminCriteriaItem(SQLModel):
     year_max: int | None = None
     height_min: int | None = None
     height_max: int | None = None
+    weight_min: int | None = None
+    weight_max: int | None = None
     income: str | None = None
     edu: str | None = None
     marriage: str | None = None
     house: str | None = None
+    car: str | None = None
+    job: str | None = None
+    social_insurance: str | None = None
     note: str | None = None
     origins: list[str] = []
     locations: list[str] = []
     progress: int = 0
 
 
+class AdminParentsInfoItem(SQLModel):
+    user_id: uuid.UUID
+    parents_health: str | None = None
+    parents_job: str | None = None
+    parents_pension: str | None = None
+    siblings: str | None = None
+
+
 class AdminProfileDetail(SQLModel):
-    """资料详情 + 择偶要求 (admin 视角, 含联系方式)"""
+    """资料详情 + 择偶要求 + 父母信息 (admin 视角, 含联系方式)"""
 
     profile: AdminProfileItem
     criteria: AdminCriteriaItem | None = None
+    parents_info: AdminParentsInfoItem | None = None
 
 
 def _to_admin_profile_item(p: Profile, u: User) -> AdminProfileItem:
@@ -106,20 +135,33 @@ def _to_admin_profile_item(p: Profile, u: User) -> AdminProfileItem:
         user_id=p.user_id,
         xy_code=u.xy_code,
         openid=u.openid,
+        nickname=p.nickname,
+        avatar_url=p.avatar_url,
+        real_name=p.real_name,
+        ethnicity=p.ethnicity,
         relation=p.relation,
         gender=p.gender,
         year=p.year,
+        birth_date=p.birth_date,
         height=p.height,
+        weight=p.weight,
+        health_status=p.health_status,
         edu=p.edu,
+        major=p.major,
+        hobbies=p.hobbies,
         income=p.income,
         marriage=p.marriage,
         origin=p.origin,
         location=p.location,
         hometown=p.hometown,
         job=p.job,
+        employer_type=p.employer_type,
+        has_social_insurance=p.has_social_insurance,
         has_house=p.has_house,
         has_car=p.has_car,
+        house_car_loan=p.house_car_loan,
         body_type=p.body_type,
+        personality_type=p.personality_type,
         desc=p.desc,
         photos=list(p.photos or []),
         contact_wechat=p.contact_wechat,
@@ -146,14 +188,29 @@ def _to_admin_criteria_item(c: Criteria) -> AdminCriteriaItem:
         year_max=c.year_max,
         height_min=c.height_min,
         height_max=c.height_max,
+        weight_min=c.weight_min,
+        weight_max=c.weight_max,
         income=c.income,
         edu=c.edu,
         marriage=c.marriage,
         house=c.house,
+        car=c.car,
+        job=c.job,
+        social_insurance=c.social_insurance,
         note=c.note,
         origins=list(c.origins or []),
         locations=list(c.locations or []),
         progress=c.progress,
+    )
+
+
+def _to_admin_parents_info_item(pi: ParentsInfo) -> AdminParentsInfoItem:
+    return AdminParentsInfoItem(
+        user_id=pi.user_id,
+        parents_health=pi.parents_health,
+        parents_job=pi.parents_job,
+        parents_pension=pi.parents_pension,
+        siblings=pi.siblings,
     )
 
 
@@ -172,20 +229,31 @@ class AdminProfileUpdate(SQLModel):
 
     nickname: str | None = None
     avatar_url: str | None = None
+    real_name: str | None = None
+    ethnicity: str | None = None
     relation: str | None = None
     gender: str | None = None
     year: int | None = None
+    birth_date: date | None = None
     height: int | None = None
+    weight: int | None = None
+    health_status: str | None = None
     edu: str | None = None
+    major: str | None = None
+    hobbies: str | None = None
     income: str | None = None
     marriage: str | None = None
     origin: str | None = None
     location: str | None = None
     hometown: str | None = None
     job: str | None = None
+    employer_type: str | None = None
+    has_social_insurance: str | None = None
     has_house: str | None = None
     has_car: str | None = None
+    house_car_loan: str | None = None
     body_type: str | None = None
+    personality_type: str | None = None
     desc: str | None = None
     contact_wechat: str | None = None
     contact_phone: str | None = None
@@ -196,13 +264,25 @@ class AdminCriteriaUpdate(SQLModel):
     year_max: int | None = None
     height_min: int | None = None
     height_max: int | None = None
+    weight_min: int | None = None
+    weight_max: int | None = None
     income: str | None = None
     edu: str | None = None
     marriage: str | None = None
     house: str | None = None
+    car: str | None = None
+    job: str | None = None
+    social_insurance: str | None = None
     note: str | None = None
     origins: list[str] | None = None
     locations: list[str] | None = None
+
+
+class AdminParentsInfoUpdate(SQLModel):
+    parents_health: str | None = None
+    parents_job: str | None = None
+    parents_pension: str | None = None
+    siblings: str | None = None
 
 
 class GrantBalanceRequest(SQLModel):
@@ -275,9 +355,13 @@ def get_profile_detail(
     criteria = session.exec(
         select(Criteria).where(Criteria.user_id == user_id)
     ).first()
+    parents = session.exec(
+        select(ParentsInfo).where(ParentsInfo.user_id == user_id)
+    ).first()
     return AdminProfileDetail(
         profile=_to_admin_profile_item(profile, user),
         criteria=_to_admin_criteria_item(criteria) if criteria else None,
+        parents_info=_to_admin_parents_info_item(parents) if parents else None,
     )
 
 
@@ -311,12 +395,16 @@ def audit_profile(
 
 # 计算资料完善度时考虑的字段 (跟 profiles.py 保持同步; 可后续抽公共)
 _PROFILE_PROGRESS_FIELDS = (
-    "gender", "year", "height", "edu", "income", "marriage", "origin",
-    "location", "hometown", "job", "has_house", "body_type", "desc",
+    "real_name", "gender", "ethnicity", "year", "height", "weight",
+    "health_status", "edu", "major", "hobbies", "income", "marriage",
+    "origin", "location", "hometown", "job", "employer_type",
+    "has_social_insurance", "has_house", "has_car", "house_car_loan",
+    "body_type", "personality_type", "desc",
 )
 _CRITERIA_PROGRESS_FIELDS = (
     "year_min", "year_max", "height_min", "height_max",
-    "income", "edu", "marriage", "house",
+    "weight_min", "weight_max", "income", "edu", "marriage",
+    "house", "car", "job", "social_insurance",
 )
 
 
@@ -375,6 +463,10 @@ def admin_update_profile(
     for k, v in data.items():
         setattr(profile, k, v if v != "" else None)
 
+    # 兼容老 year 字段: 如果填了 birth_date, 同步 year (推荐排序逻辑还看 year)
+    if profile.birth_date is not None:
+        profile.year = profile.birth_date.year
+
     profile.audit_status = "approved"
     profile.audit_reason = None
     profile.progress = _calc_profile_progress(profile)
@@ -416,6 +508,37 @@ def admin_update_criteria(
     session.commit()
     session.refresh(criteria)
     return _to_admin_criteria_item(criteria)
+
+
+@router.put(
+    "/profiles/{user_id}/parents-info",
+    response_model=AdminParentsInfoItem,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def admin_update_parents_info(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    body: AdminParentsInfoUpdate = Body(),
+) -> AdminParentsInfoItem:
+    """红娘 / 管理员代录父母 / 兄弟姐妹 信息"""
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    parents = session.exec(
+        select(ParentsInfo).where(ParentsInfo.user_id == user_id)
+    ).first()
+    data = body.model_dump(exclude_unset=True)
+    if parents is None:
+        parents = ParentsInfo(user_id=user_id, **data)
+    else:
+        for k, v in data.items():
+            setattr(parents, k, v if v != "" else None)
+    parents.updated_at = datetime.utcnow()
+    session.add(parents)
+    session.commit()
+    session.refresh(parents)
+    return _to_admin_parents_info_item(parents)
 
 
 @router.post(
