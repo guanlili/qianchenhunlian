@@ -1181,21 +1181,35 @@ Page({
     });
   },
 
+  /**
+   * 首页卡片"联系当地门店"按钮: 一键提交工单 (走 contactrequest, admin 后台可见).
+   * 跟详情页"联系当地门店"是同一类工单, 只是这里不弹 sheet 让填留言, 直接发.
+   */
   async contactCandidate(e) {
-    // 卡片上的"联系对方"按钮可能传 dataset.id, 详情页则用 selectedProfile
     const targetId =
       (e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id) ||
       (this.data.selectedProfile && this.data.selectedProfile.user_id);
     if (!this.data.apiReady || !targetId) {
-      wx.showToast({ title: '已发送联系意向', icon: 'success' });
+      wx.showToast({ title: '已提交申请', icon: 'success' });
       return;
     }
     if (!this._gateCompleteProfile()) return;
+    if (!this._gatePhoneSoftGuide()) return;
     try {
-      await contactSvc.sendIntent(targetId);
-      wx.showToast({ title: '已发送联系意向', icon: 'success' });
+      const res = await contactSvc.requestContact(targetId, null);
+      wx.showModal({
+        title: '已提交申请',
+        content: `红娘会尽快联系门店撮合, 请耐心等待 (剩余申请额度 ${res.balance})`,
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } catch (err) {
       console.warn('[index] contactCandidate', err);
+      const detail = (err && err.detail) || '';
+      if (typeof detail === 'string' && detail.startsWith('DUPLICATE|')) {
+        wx.showToast({ title: '24 小时内已申请过', icon: 'none' });
+        return;
+      }
       this._handleProfileGateError(err);
     }
   },

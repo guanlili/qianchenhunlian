@@ -16,7 +16,7 @@ from sqlalchemy import update as sa_update
 from sqlmodel import Field, SQLModel, and_, func, select
 
 from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
-from app.models import ContactIntent, ContactRequest, Profile, User
+from app.models import ContactRequest, Profile, User
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
@@ -53,11 +53,6 @@ class ContactRequestResult(SQLModel):
 class ContactRequestList(SQLModel):
     items: list[ContactRequestPublic] = []
     total: int = 0
-
-
-class IntentResponse(SQLModel):
-    intent_id: uuid.UUID
-    sent_at: datetime
 
 
 # ---------------- Routes ----------------
@@ -198,37 +193,8 @@ def unlock_contact_deprecated(target_id: uuid.UUID):
     )
 
 
-# ---------------- 联系意向 (轻交互, 不消耗额度) ----------------
-
-
-@router.post("/{target_id}/intent", response_model=IntentResponse)
-def send_intent(
-    session: SessionDep,
-    current_user: CompleteProfileUser,
-    target_id: uuid.UUID,
-    message: Annotated[str | None, Body(embed=True)] = None,
-) -> IntentResponse:
-    """发"看上你"意向 (轻; 不扣额度, 不撮合). 真要联系还得提交 contact request."""
-    if target_id == current_user.id:
-        raise HTTPException(status_code=400, detail="不能给自己发意向")
-
-    target = session.get(User, target_id)
-    if not target:
-        raise HTTPException(status_code=404, detail="对方不存在")
-    if target.status != "active" or target.is_superuser:
-        raise HTTPException(status_code=404, detail="对方资料不可见")
-    target_profile = session.exec(
-        select(Profile).where(Profile.user_id == target_id)
-    ).first()
-    if not target_profile or target_profile.audit_status != "approved":
-        raise HTTPException(status_code=404, detail="对方资料不可见")
-
-    intent = ContactIntent(
-        from_user_id=current_user.id,
-        to_user_id=target_id,
-        message=(message or "").strip()[:255] or None,
-    )
-    session.add(intent)
-    session.commit()
-    session.refresh(intent)
-    return IntentResponse(intent_id=intent.id, sent_at=intent.created_at)
+# 联系意向 (sendIntent / contactintent) 已废弃 ↓
+# 旧设计: 首页"看上你"轻交互, 走 contactintent 表, 红娘后台看不到 → 实际无意义.
+# 新设计: 任何 "联系" 按钮都走 POST /contacts/requests 进 contactrequest 表,
+# admin 后台单一来源.
+# contactintent 表与模型保留, 历史 2 条数据留库, 不再插入新数据.
