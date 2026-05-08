@@ -356,6 +356,140 @@ export const AdminCriteriaItemSchema = {
     title: 'AdminCriteriaItem'
 } as const;
 
+export const AdminCriteriaUpdateSchema = {
+    properties: {
+        year_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year Min'
+        },
+        year_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year Max'
+        },
+        height_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Height Min'
+        },
+        height_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Height Max'
+        },
+        income: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Income'
+        },
+        edu: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Edu'
+        },
+        marriage: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Marriage'
+        },
+        house: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'House'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        },
+        origins: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Origins'
+        },
+        locations: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Locations'
+        }
+    },
+    type: 'object',
+    title: 'AdminCriteriaUpdate'
+} as const;
+
 export const AdminProfileDetailSchema = {
     properties: {
         profile: {
@@ -698,6 +832,223 @@ export const AdminProfileListSchema = {
     },
     type: 'object',
     title: 'AdminProfileList'
+} as const;
+
+export const AdminProfileUpdateSchema = {
+    properties: {
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        avatar_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Avatar Url'
+        },
+        relation: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Relation'
+        },
+        gender: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Gender'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        height: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Height'
+        },
+        edu: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Edu'
+        },
+        income: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Income'
+        },
+        marriage: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Marriage'
+        },
+        origin: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Origin'
+        },
+        location: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Location'
+        },
+        hometown: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Hometown'
+        },
+        job: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Job'
+        },
+        has_house: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has House'
+        },
+        has_car: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Car'
+        },
+        body_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Body Type'
+        },
+        desc: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Desc'
+        },
+        contact_wechat: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact Wechat'
+        },
+        contact_phone: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact Phone'
+        }
+    },
+    type: 'object',
+    title: 'AdminProfileUpdate',
+    description: '红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.'
 } as const;
 
 export const AdminUserBriefSchema = {
@@ -2100,7 +2451,7 @@ export const ProfileMeResponseSchema = {
         profile: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/ProfilePublic'
+                    '$ref': '#/components/schemas/ProfileWithContact'
                 },
                 {
                     type: 'null'
@@ -2126,6 +2477,11 @@ export const ProfileMeResponseSchema = {
             type: 'boolean',
             title: 'Has Criteria',
             default: false
+        },
+        is_welcomed: {
+            type: 'boolean',
+            title: 'Is Welcomed',
+            default: false
         }
     },
     type: 'object',
@@ -2134,6 +2490,30 @@ export const ProfileMeResponseSchema = {
 
 export const ProfilePublicSchema = {
     properties: {
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        avatar_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Avatar Url'
+        },
         relation: {
             anyOf: [
                 {
@@ -2367,6 +2747,30 @@ export const ProfilePublicSchema = {
 
 export const ProfileUpdateSchema = {
     properties: {
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        avatar_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Avatar Url'
+        },
         relation: {
             anyOf: [
                 {
@@ -2557,6 +2961,30 @@ export const ProfileUpdateSchema = {
 
 export const ProfileWithContactSchema = {
     properties: {
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        avatar_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Avatar Url'
+        },
         relation: {
             anyOf: [
                 {
@@ -3460,11 +3888,32 @@ export const WechatLoginResponseSchema = {
             type: 'boolean',
             title: 'Has Criteria',
             default: false
+        },
+        is_welcomed: {
+            type: 'boolean',
+            title: 'Is Welcomed',
+            default: false
         }
     },
     type: 'object',
     required: ['access_token', 'user'],
     title: 'WechatLoginResponse'
+} as const;
+
+export const WelcomeBodySchema = {
+    properties: {
+        nickname: {
+            type: 'string',
+            title: 'Nickname'
+        },
+        avatar_url: {
+            type: 'string',
+            title: 'Avatar Url'
+        }
+    },
+    type: 'object',
+    required: ['nickname', 'avatar_url'],
+    title: 'WelcomeBody'
 } as const;
 
 export const WhoAmISchema = {

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Ban, Check, EllipsisVertical, ShieldCheck, X, Zap } from "lucide-react"
+import { Ban, Check, EllipsisVertical, Pencil, ShieldCheck, X, Zap } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { AuditDialog } from "./AuditDialog"
+import { EditProfileDialog } from "./EditProfileDialog"
 
 interface ProfileActionsMenuProps {
   item: AdminProfileItem
@@ -54,6 +55,15 @@ export function ProfileActionsMenu({ item }: ProfileActionsMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
+        <EditProfileDialog
+          item={item}
+          trigger={
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Pencil className="text-sky-500" /> 代录资料
+            </DropdownMenuItem>
+          }
+        />
+        <DropdownMenuSeparator />
         <AuditDialog
           item={item}
           approve={true}

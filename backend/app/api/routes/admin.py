@@ -167,6 +167,44 @@ class AuditRequest(SQLModel):
     reason: str | None = None
 
 
+class AdminProfileUpdate(SQLModel):
+    """红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式."""
+
+    nickname: str | None = None
+    avatar_url: str | None = None
+    relation: str | None = None
+    gender: str | None = None
+    year: int | None = None
+    height: int | None = None
+    edu: str | None = None
+    income: str | None = None
+    marriage: str | None = None
+    origin: str | None = None
+    location: str | None = None
+    hometown: str | None = None
+    job: str | None = None
+    has_house: str | None = None
+    has_car: str | None = None
+    body_type: str | None = None
+    desc: str | None = None
+    contact_wechat: str | None = None
+    contact_phone: str | None = None
+
+
+class AdminCriteriaUpdate(SQLModel):
+    year_min: int | None = None
+    year_max: int | None = None
+    height_min: int | None = None
+    height_max: int | None = None
+    income: str | None = None
+    edu: str | None = None
+    marriage: str | None = None
+    house: str | None = None
+    note: str | None = None
+    origins: list[str] | None = None
+    locations: list[str] | None = None
+
+
 class GrantBalanceRequest(SQLModel):
     delta: int = 1  # 可正可负
     reason: str | None = None
@@ -269,6 +307,115 @@ def audit_profile(
     session.refresh(profile)
 
     return _to_admin_profile_item(profile, user)
+
+
+# 计算资料完善度时考虑的字段 (跟 profiles.py 保持同步; 可后续抽公共)
+_PROFILE_PROGRESS_FIELDS = (
+    "gender", "year", "height", "edu", "income", "marriage", "origin",
+    "location", "hometown", "job", "has_house", "body_type", "desc",
+)
+_CRITERIA_PROGRESS_FIELDS = (
+    "year_min", "year_max", "height_min", "height_max",
+    "income", "edu", "marriage", "house",
+)
+
+
+def _calc_profile_progress(profile: Profile) -> int:
+    filled = sum(
+        1 for f in _PROFILE_PROGRESS_FIELDS
+        if getattr(profile, f) not in (None, "", [])
+    )
+    if profile.photos:
+        filled += 2
+    if profile.contact_wechat or profile.contact_phone:
+        filled += 1
+    total = len(_PROFILE_PROGRESS_FIELDS) + 3
+    return min(100, int(filled / total * 100))
+
+
+def _calc_criteria_progress(criteria: Criteria) -> int:
+    filled = sum(
+        1 for f in _CRITERIA_PROGRESS_FIELDS
+        if getattr(criteria, f) not in (None, "")
+    )
+    if criteria.origins:
+        filled += 1
+    if criteria.locations:
+        filled += 1
+    total = len(_CRITERIA_PROGRESS_FIELDS) + 2
+    return min(100, int(filled / total * 100))
+
+
+@router.put(
+    "/profiles/{user_id}",
+    response_model=AdminProfileItem,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def admin_update_profile(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    body: AdminProfileUpdate = Body(),
+) -> AdminProfileItem:
+    """红娘 / 管理员代录用户资料 (任意字段 + 联系方式).
+
+    admin 和 staff 都可调用 (整个 router 已 require_admin_or_staff).
+    保存后:
+    - 自动重算 progress
+    - audit_status 强制置 approved (代录视为已审核)
+    - 不触发"先发后审"流程
+    """
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == user_id)
+    ).first()
+    user = session.get(User, user_id)
+    if not profile or not user:
+        raise HTTPException(status_code=404, detail="资料不存在")
+
+    data = body.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(profile, k, v if v != "" else None)
+
+    profile.audit_status = "approved"
+    profile.audit_reason = None
+    profile.progress = _calc_profile_progress(profile)
+    profile.updated_at = datetime.utcnow()
+    session.add(profile)
+    session.commit()
+    session.refresh(profile)
+    return _to_admin_profile_item(profile, user)
+
+
+@router.put(
+    "/profiles/{user_id}/criteria",
+    response_model=AdminCriteriaItem,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def admin_update_criteria(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    body: AdminCriteriaUpdate = Body(),
+) -> AdminCriteriaItem:
+    """红娘 / 管理员代录择偶要求"""
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    criteria = session.exec(
+        select(Criteria).where(Criteria.user_id == user_id)
+    ).first()
+    data = body.model_dump(exclude_unset=True)
+    if criteria is None:
+        criteria = Criteria(user_id=user_id, **data)
+    else:
+        for k, v in data.items():
+            setattr(criteria, k, v if v != "" else None)
+
+    criteria.progress = _calc_criteria_progress(criteria)
+    criteria.updated_at = datetime.utcnow()
+    session.add(criteria)
+    session.commit()
+    session.refresh(criteria)
+    return _to_admin_criteria_item(criteria)
 
 
 @router.post(

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, ContactsSendIntentData, ContactsSendIntentResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, PrivateCreateUserData, PrivateCreateUserResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse, WechatWechatDevLoginData, WechatWechatDevLoginResponse } from './types.gen';
+import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, ContactsSendIntentData, ContactsSendIntentResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, PrivateCreateUserData, PrivateCreateUserResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse, WechatWechatDevLoginData, WechatWechatDevLoginResponse } from './types.gen';
 
 export class AdminService {
     /**
@@ -67,6 +67,60 @@ export class AdminService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/admin/profiles/{user_id}/audit',
+            path: {
+                user_id: data.userId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Update Profile
+     * 红娘 / 管理员代录用户资料 (任意字段 + 联系方式).
+     *
+     * admin 和 staff 都可调用 (整个 router 已 require_admin_or_staff).
+     * 保存后:
+     * - 自动重算 progress
+     * - audit_status 强制置 approved (代录视为已审核)
+     * - 不触发"先发后审"流程
+     * @param data The data for the request.
+     * @param data.userId
+     * @param data.requestBody
+     * @returns AdminProfileItem Successful Response
+     * @throws ApiError
+     */
+    public static adminUpdateProfile(data: AdminAdminUpdateProfileData): CancelablePromise<AdminAdminUpdateProfileResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/admin/profiles/{user_id}',
+            path: {
+                user_id: data.userId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Update Criteria
+     * 红娘 / 管理员代录择偶要求
+     * @param data The data for the request.
+     * @param data.userId
+     * @param data.requestBody
+     * @returns AdminCriteriaItem Successful Response
+     * @throws ApiError
+     */
+    public static adminUpdateCriteria(data: AdminAdminUpdateCriteriaData): CancelablePromise<AdminAdminUpdateCriteriaResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/admin/profiles/{user_id}/criteria',
             path: {
                 user_id: data.userId
             },
@@ -743,7 +797,7 @@ export class ProfilesService {
      * 上线接人审/机审后, 这里改回 'pending'.
      * @param data The data for the request.
      * @param data.requestBody
-     * @returns ProfilePublic Successful Response
+     * @returns ProfileWithContact Successful Response
      * @throws ApiError
      */
     public static upsertMyProfile(data: ProfilesUpsertMyProfileData): CancelablePromise<ProfilesUpsertMyProfileResponse> {
@@ -772,11 +826,34 @@ export class ProfilesService {
     }
     
     /**
+     * Submit Welcome
+     * 首启动引导提交: 头像 + 昵称.
+     *
+     * 用户首次进入小程序的强引导, 必须填这两项才能继续使用.
+     * 幂等: 已存在 Profile 也会更新这两项.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ProfileWithContact Successful Response
+     * @throws ApiError
+     */
+    public static submitWelcome(data: ProfilesSubmitWelcomeData): CancelablePromise<ProfilesSubmitWelcomeResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/profiles/me/welcome',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Update My Contact
      * 单独更新联系方式 (敏感字段, 单接口便于审计)
      * @param data The data for the request.
      * @param data.requestBody
-     * @returns ProfilePublic Successful Response
+     * @returns ProfileWithContact Successful Response
      * @throws ApiError
      */
     public static updateMyContact(data: ProfilesUpdateMyContactData = {}): CancelablePromise<ProfilesUpdateMyContactResponse> {
@@ -818,7 +895,7 @@ export class ProfilesService {
      * 一期: 客户端先把图片 PUT 到 /uploads/ (后续接 COS), 拿到 URL 调本接口落库.
      * @param data The data for the request.
      * @param data.requestBody
-     * @returns ProfilePublic Successful Response
+     * @returns ProfileWithContact Successful Response
      * @throws ApiError
      */
     public static addMyPhoto(data: ProfilesAddMyPhotoData): CancelablePromise<ProfilesAddMyPhotoResponse> {
@@ -837,7 +914,7 @@ export class ProfilesService {
      * Remove My Photo
      * @param data The data for the request.
      * @param data.index
-     * @returns ProfilePublic Successful Response
+     * @returns ProfileWithContact Successful Response
      * @throws ApiError
      */
     public static removeMyPhoto(data: ProfilesRemoveMyPhotoData): CancelablePromise<ProfilesRemoveMyPhotoResponse> {
