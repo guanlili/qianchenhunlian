@@ -7,7 +7,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import EmailStr
 from sqlalchemy import JSON, Column
@@ -107,20 +107,31 @@ class UsersPublic(SQLModel):
 class ProfileBase(SQLModel):
     nickname: str | None = Field(default=None, max_length=64)        # 微信昵称 / 用户填的昵称
     avatar_url: str | None = Field(default=None, max_length=500)     # 头像 URL (来自 chooseAvatar 上传)
+    real_name: str | None = Field(default=None, max_length=64)       # 真实姓名 (登记表)
+    ethnicity: str | None = Field(default=None, max_length=16)       # 民族
     relation: str | None = Field(default=None, max_length=16)
     gender: str | None = Field(default=None, max_length=8)
-    year: int | None = Field(default=None, ge=1950, le=2015)
+    year: int | None = Field(default=None, ge=1950, le=2015)         # 兼容老数据, 推荐用 birth_date
+    birth_date: date | None = None                                   # 出生年月 (新, 精确到日)
     height: int | None = Field(default=None, ge=100, le=220)
+    weight: int | None = Field(default=None, ge=20, le=200)          # 体重 kg
+    health_status: str | None = Field(default=None, max_length=64)   # 身体状况
     edu: str | None = Field(default=None, max_length=32)
-    income: str | None = Field(default=None, max_length=32)
-    marriage: str | None = Field(default=None, max_length=16)
+    major: str | None = Field(default=None, max_length=64)           # 专业
+    hobbies: str | None = Field(default=None, max_length=120)        # 兴趣爱好
+    income: str | None = Field(default=None, max_length=32)          # 月收入档位 (b1: 改为月收入)
+    marriage: str | None = Field(default=None, max_length=16)        # c1: 改为 select, 选项见前端
     origin: str | None = Field(default=None, max_length=128)
     location: str | None = Field(default=None, max_length=128)
     hometown: str | None = Field(default=None, max_length=128)
     job: str | None = Field(default=None, max_length=64)
+    employer_type: str | None = Field(default=None, max_length=32)   # 工作单位性质 (国企/民企/事业单位/外企/自由职业等)
+    has_social_insurance: str | None = Field(default=None, max_length=8)  # 是否有社保 (有/无)
     has_house: str | None = Field(default=None, max_length=32)
     has_car: str | None = Field(default=None, max_length=16)
+    house_car_loan: str | None = Field(default=None, max_length=64)  # 房贷车贷情况
     body_type: str | None = Field(default=None, max_length=16)
+    personality_type: str | None = Field(default=None, max_length=32)  # 性格类型
     desc: str | None = Field(default=None, max_length=240)
 
 
@@ -183,10 +194,15 @@ class CriteriaBase(SQLModel):
     year_max: int | None = None
     height_min: int | None = None
     height_max: int | None = None
+    weight_min: int | None = None                                       # 体重要求 (新)
+    weight_max: int | None = None
     income: str | None = Field(default=None, max_length=32)
     edu: str | None = Field(default=None, max_length=64)
     marriage: str | None = Field(default=None, max_length=16)
     house: str | None = Field(default=None, max_length=32)
+    car: str | None = Field(default=None, max_length=32)                # 车要求 (新)
+    job: str | None = Field(default=None, max_length=64)                # 职业要求 (新)
+    social_insurance: str | None = Field(default=None, max_length=8)    # 对方是否有社保
     note: str | None = Field(default=None, max_length=180)
 
 
@@ -218,6 +234,35 @@ class CriteriaPublic(CriteriaBase):
     origins: list[str] = []
     locations: list[str] = []
     progress: int = 0
+
+
+# ------------------------------------------------------------
+# ParentsInfo · 父母 / 兄弟姐妹 信息 (登记表家庭成员情况栏)
+# ------------------------------------------------------------
+
+
+class ParentsInfoBase(SQLModel):
+    parents_health: str | None = Field(default=None, max_length=64)   # 父母身体状况
+    parents_job: str | None = Field(default=None, max_length=64)      # 父母职业
+    parents_pension: str | None = Field(default=None, max_length=16)  # 父母养老保险 有/无
+    siblings: str | None = Field(default=None, max_length=120)        # 兄弟姐妹情况
+
+
+class ParentsInfoUpdate(ParentsInfoBase):
+    """允许部分更新"""
+
+
+class ParentsInfo(ParentsInfoBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", unique=True, index=True
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ParentsInfoPublic(ParentsInfoBase):
+    user_id: uuid.UUID
 
 
 # ------------------------------------------------------------

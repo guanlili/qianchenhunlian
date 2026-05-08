@@ -35,10 +35,15 @@ export type AdminCriteriaItem = {
     year_max?: (number | null);
     height_min?: (number | null);
     height_max?: (number | null);
+    weight_min?: (number | null);
+    weight_max?: (number | null);
     income?: (string | null);
     edu?: (string | null);
     marriage?: (string | null);
     house?: (string | null);
+    car?: (string | null);
+    job?: (string | null);
+    social_insurance?: (string | null);
     note?: (string | null);
     origins?: Array<(string)>;
     locations?: Array<(string)>;
@@ -50,41 +55,75 @@ export type AdminCriteriaUpdate = {
     year_max?: (number | null);
     height_min?: (number | null);
     height_max?: (number | null);
+    weight_min?: (number | null);
+    weight_max?: (number | null);
     income?: (string | null);
     edu?: (string | null);
     marriage?: (string | null);
     house?: (string | null);
+    car?: (string | null);
+    job?: (string | null);
+    social_insurance?: (string | null);
     note?: (string | null);
     origins?: (Array<(string)> | null);
     locations?: (Array<(string)> | null);
 };
 
+export type AdminParentsInfoItem = {
+    user_id: string;
+    parents_health?: (string | null);
+    parents_job?: (string | null);
+    parents_pension?: (string | null);
+    siblings?: (string | null);
+};
+
+export type AdminParentsInfoUpdate = {
+    parents_health?: (string | null);
+    parents_job?: (string | null);
+    parents_pension?: (string | null);
+    siblings?: (string | null);
+};
+
 /**
- * 资料详情 + 择偶要求 (admin 视角, 含联系方式)
+ * 资料详情 + 择偶要求 + 父母信息 (admin 视角, 含联系方式)
  */
 export type AdminProfileDetail = {
     profile: AdminProfileItem;
     criteria?: (AdminCriteriaItem | null);
+    parents_info?: (AdminParentsInfoItem | null);
 };
 
 export type AdminProfileItem = {
     user_id: string;
     xy_code?: (string | null);
     openid?: (string | null);
+    nickname?: (string | null);
+    avatar_url?: (string | null);
+    real_name?: (string | null);
+    ethnicity?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
+    birth_date?: (string | null);
     height?: (number | null);
+    weight?: (number | null);
+    health_status?: (string | null);
     edu?: (string | null);
+    major?: (string | null);
+    hobbies?: (string | null);
     income?: (string | null);
     marriage?: (string | null);
     origin?: (string | null);
     location?: (string | null);
     hometown?: (string | null);
     job?: (string | null);
+    employer_type?: (string | null);
+    has_social_insurance?: (string | null);
     has_house?: (string | null);
     has_car?: (string | null);
+    house_car_loan?: (string | null);
     body_type?: (string | null);
+    personality_type?: (string | null);
     desc?: (string | null);
     photos?: Array<(string)>;
     contact_wechat?: (string | null);
@@ -114,20 +153,31 @@ export type AdminProfileList = {
 export type AdminProfileUpdate = {
     nickname?: (string | null);
     avatar_url?: (string | null);
+    real_name?: (string | null);
+    ethnicity?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
+    birth_date?: (string | null);
     height?: (number | null);
+    weight?: (number | null);
+    health_status?: (string | null);
     edu?: (string | null);
+    major?: (string | null);
+    hobbies?: (string | null);
     income?: (string | null);
     marriage?: (string | null);
     origin?: (string | null);
     location?: (string | null);
     hometown?: (string | null);
     job?: (string | null);
+    employer_type?: (string | null);
+    has_social_insurance?: (string | null);
     has_house?: (string | null);
     has_car?: (string | null);
+    house_car_loan?: (string | null);
     body_type?: (string | null);
+    personality_type?: (string | null);
     desc?: (string | null);
     contact_wechat?: (string | null);
     contact_phone?: (string | null);
@@ -230,10 +280,15 @@ export type CriteriaPublic = {
     year_max?: (number | null);
     height_min?: (number | null);
     height_max?: (number | null);
+    weight_min?: (number | null);
+    weight_max?: (number | null);
     income?: (string | null);
     edu?: (string | null);
     marriage?: (string | null);
     house?: (string | null);
+    car?: (string | null);
+    job?: (string | null);
+    social_insurance?: (string | null);
     note?: (string | null);
     id: string;
     user_id: string;
@@ -247,10 +302,15 @@ export type CriteriaUpdate = {
     year_max?: (number | null);
     height_min?: (number | null);
     height_max?: (number | null);
+    weight_min?: (number | null);
+    weight_max?: (number | null);
     income?: (string | null);
     edu?: (string | null);
     marriage?: (string | null);
     house?: (string | null);
+    car?: (string | null);
+    job?: (string | null);
+    social_insurance?: (string | null);
     note?: (string | null);
     origins?: (Array<(string)> | null);
     locations?: (Array<(string)> | null);
@@ -376,20 +436,31 @@ export type ProfileMeResponse = {
 export type ProfilePublic = {
     nickname?: (string | null);
     avatar_url?: (string | null);
+    real_name?: (string | null);
+    ethnicity?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
+    birth_date?: (string | null);
     height?: (number | null);
+    weight?: (number | null);
+    health_status?: (string | null);
     edu?: (string | null);
+    major?: (string | null);
+    hobbies?: (string | null);
     income?: (string | null);
     marriage?: (string | null);
     origin?: (string | null);
     location?: (string | null);
     hometown?: (string | null);
     job?: (string | null);
+    employer_type?: (string | null);
+    has_social_insurance?: (string | null);
     has_house?: (string | null);
     has_car?: (string | null);
+    house_car_loan?: (string | null);
     body_type?: (string | null);
+    personality_type?: (string | null);
     desc?: (string | null);
     id: string;
     user_id: string;
@@ -407,20 +478,31 @@ export type ProfilePublic = {
 export type ProfileUpdate = {
     nickname?: (string | null);
     avatar_url?: (string | null);
+    real_name?: (string | null);
+    ethnicity?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
+    birth_date?: (string | null);
     height?: (number | null);
+    weight?: (number | null);
+    health_status?: (string | null);
     edu?: (string | null);
+    major?: (string | null);
+    hobbies?: (string | null);
     income?: (string | null);
     marriage?: (string | null);
     origin?: (string | null);
     location?: (string | null);
     hometown?: (string | null);
     job?: (string | null);
+    employer_type?: (string | null);
+    has_social_insurance?: (string | null);
     has_house?: (string | null);
     has_car?: (string | null);
+    house_car_loan?: (string | null);
     body_type?: (string | null);
+    personality_type?: (string | null);
     desc?: (string | null);
 };
 
@@ -430,20 +512,31 @@ export type ProfileUpdate = {
 export type ProfileWithContact = {
     nickname?: (string | null);
     avatar_url?: (string | null);
+    real_name?: (string | null);
+    ethnicity?: (string | null);
     relation?: (string | null);
     gender?: (string | null);
     year?: (number | null);
+    birth_date?: (string | null);
     height?: (number | null);
+    weight?: (number | null);
+    health_status?: (string | null);
     edu?: (string | null);
+    major?: (string | null);
+    hobbies?: (string | null);
     income?: (string | null);
     marriage?: (string | null);
     origin?: (string | null);
     location?: (string | null);
     hometown?: (string | null);
     job?: (string | null);
+    employer_type?: (string | null);
+    has_social_insurance?: (string | null);
     has_house?: (string | null);
     has_car?: (string | null);
+    house_car_loan?: (string | null);
     body_type?: (string | null);
+    personality_type?: (string | null);
     desc?: (string | null);
     id: string;
     user_id: string;
@@ -659,6 +752,13 @@ export type AdminAdminUpdateCriteriaData = {
 };
 
 export type AdminAdminUpdateCriteriaResponse = (AdminCriteriaItem);
+
+export type AdminAdminUpdateParentsInfoData = {
+    requestBody: AdminParentsInfoUpdate;
+    userId: string;
+};
+
+export type AdminAdminUpdateParentsInfoResponse = (AdminParentsInfoItem);
 
 export type AdminGrantUnlockBalanceData = {
     requestBody: GrantBalanceRequest;

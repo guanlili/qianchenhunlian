@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { AuditDialog } from "./AuditDialog"
 import { EditCriteriaDialog } from "./EditCriteriaDialog"
+import { EditParentsDialog } from "./EditParentsDialog"
 import { EditProfileDialog } from "./EditProfileDialog"
 
 interface ProfileActionsMenuProps {
@@ -69,6 +70,14 @@ export function ProfileActionsMenu({ item }: ProfileActionsMenuProps) {
           trigger={
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
               <Pencil className="text-violet-500" /> 代录择偶要求
+            </DropdownMenuItem>
+          }
+        />
+        <EditParentsDialog
+          item={item}
+          trigger={
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Pencil className="text-emerald-500" /> 代录父母信息
             </DropdownMenuItem>
           }
         />

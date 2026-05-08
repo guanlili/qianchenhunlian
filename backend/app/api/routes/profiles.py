@@ -15,6 +15,8 @@ from app.models import (
     CriteriaPublic,
     CriteriaUpdate,
     Message,
+    ParentsInfo,
+    ParentsInfoPublic,
     Profile,
     ProfileWithContact,
     ProfileUpdate,
@@ -23,31 +25,18 @@ from sqlmodel import SQLModel
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
-# 计算资料完善度时考虑的字段
+# 计算资料完善度时考虑的字段 (含登记表新增字段)
 _PROFILE_FIELDS = (
-    "gender",
-    "year",
-    "height",
-    "edu",
-    "income",
-    "marriage",
-    "origin",
-    "location",
-    "hometown",
-    "job",
-    "has_house",
-    "body_type",
-    "desc",
+    "real_name", "gender", "ethnicity", "year", "height", "weight",
+    "health_status", "edu", "major", "hobbies", "income", "marriage",
+    "origin", "location", "hometown", "job", "employer_type",
+    "has_social_insurance", "has_house", "has_car", "house_car_loan",
+    "body_type", "personality_type", "desc",
 )
 _CRITERIA_FIELDS = (
-    "year_min",
-    "year_max",
-    "height_min",
-    "height_max",
-    "income",
-    "edu",
-    "marriage",
-    "house",
+    "year_min", "year_max", "height_min", "height_max",
+    "weight_min", "weight_max", "income", "edu", "marriage",
+    "house", "car", "job", "social_insurance",
 )
 
 
@@ -85,6 +74,7 @@ def _calc_criteria_progress(criteria: Criteria) -> int:
 class ProfileMeResponse(SQLModel):
     profile: ProfileWithContact | None = None
     criteria: CriteriaPublic | None = None
+    parents_info: ParentsInfoPublic | None = None
     has_profile: bool = False
     has_criteria: bool = False
     is_welcomed: bool = False    # 头像 + 昵称 都已设置
@@ -114,6 +104,9 @@ def read_my_profile(
     criteria = session.exec(
         select(Criteria).where(Criteria.user_id == current_user.id)
     ).first()
+    parents = session.exec(
+        select(ParentsInfo).where(ParentsInfo.user_id == current_user.id)
+    ).first()
     is_welcomed = bool(profile and profile.nickname and profile.avatar_url)
     return ProfileMeResponse(
         profile=ProfileWithContact.model_validate(profile, from_attributes=True)
@@ -121,6 +114,9 @@ def read_my_profile(
         else None,
         criteria=CriteriaPublic.model_validate(criteria, from_attributes=True)
         if criteria
+        else None,
+        parents_info=ParentsInfoPublic.model_validate(parents, from_attributes=True)
+        if parents
         else None,
         has_profile=profile is not None,
         has_criteria=criteria is not None,

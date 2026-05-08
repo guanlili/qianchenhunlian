@@ -27,13 +27,18 @@ type FormState = {
   year_max: string
   height_min: string
   height_max: string
+  weight_min: string
+  weight_max: string
   income: string
   edu: string
   marriage: string
   house: string
+  car: string
+  job: string
+  social_insurance: string
   note: string
-  origins: string // 逗号分隔
-  locations: string // 逗号分隔
+  origins: string
+  locations: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -41,10 +46,15 @@ const EMPTY_FORM: FormState = {
   year_max: "",
   height_min: "",
   height_max: "",
+  weight_min: "",
+  weight_max: "",
   income: "",
   edu: "",
   marriage: "",
   house: "",
+  car: "",
+  job: "",
+  social_insurance: "",
   note: "",
   origins: "",
   locations: "",
@@ -71,10 +81,15 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
         year_max: c.year_max ? String(c.year_max) : "",
         height_min: c.height_min ? String(c.height_min) : "",
         height_max: c.height_max ? String(c.height_max) : "",
+        weight_min: c.weight_min ? String(c.weight_min) : "",
+        weight_max: c.weight_max ? String(c.weight_max) : "",
         income: c.income || "",
         edu: c.edu || "",
         marriage: c.marriage || "",
         house: c.house || "",
+        car: c.car || "",
+        job: c.job || "",
+        social_insurance: c.social_insurance || "",
         note: c.note || "",
         origins: (c.origins || []).join(", "),
         locations: (c.locations || []).join(", "),
@@ -96,10 +111,15 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
         year_max: form.year_max ? Number(form.year_max) : null,
         height_min: form.height_min ? Number(form.height_min) : null,
         height_max: form.height_max ? Number(form.height_max) : null,
+        weight_min: form.weight_min ? Number(form.weight_min) : null,
+        weight_max: form.weight_max ? Number(form.weight_max) : null,
         income: form.income || null,
         edu: form.edu || null,
         marriage: form.marriage || null,
         house: form.house || null,
+        car: form.car || null,
+        job: form.job || null,
+        social_insurance: form.social_insurance || null,
         note: form.note || null,
         origins: form.origins ? splitList(form.origins) : null,
         locations: form.locations ? splitList(form.locations) : null,
@@ -134,10 +154,15 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
           <Field label="出生年份-最晚" value={form.year_max} onChange={update("year_max")} placeholder="1995" inputMode="numeric" />
           <Field label="身高-最低 (cm)" value={form.height_min} onChange={update("height_min")} placeholder="160" inputMode="numeric" />
           <Field label="身高-最高 (cm)" value={form.height_max} onChange={update("height_max")} placeholder="180" inputMode="numeric" />
-          <Field label="年收入要求" value={form.income} onChange={update("income")} placeholder="15万以上" />
+          <Field label="体重-最低 (kg)" value={form.weight_min} onChange={update("weight_min")} placeholder="45" inputMode="numeric" />
+          <Field label="体重-最高 (kg)" value={form.weight_max} onChange={update("weight_max")} placeholder="75" inputMode="numeric" />
+          <Field label="月收入要求" value={form.income} onChange={update("income")} placeholder="8000-12000元" />
           <Field label="学历要求" value={form.edu} onChange={update("edu")} placeholder="本科及以上" />
           <Field label="婚姻要求" value={form.marriage} onChange={update("marriage")} placeholder="未婚" />
           <Field label="婚房要求" value={form.house} onChange={update("house")} placeholder="有婚房" />
+          <Field label="车要求" value={form.car} onChange={update("car")} placeholder="有车 / 不限" />
+          <Field label="职业要求" value={form.job} onChange={update("job")} placeholder="稳定工作" />
+          <Field label="对方是否有社保" value={form.social_insurance} onChange={update("social_insurance")} placeholder="有 / 无 / 不限" />
         </div>
 
         <div className="space-y-2">
