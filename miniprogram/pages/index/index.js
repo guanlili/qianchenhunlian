@@ -212,7 +212,7 @@ const calcProfileProgress = (form, photos) => {
 };
 
 const buildProfileFields = (form) => [
-  { key: 'nickname', label: '相亲者昵称', value: form.nickname, required: true, editable: false },
+  { key: 'nickname', label: '昵称', value: form.nickname, required: true, editable: false },
   { key: 'gender',    label: '性别',     value: form.gender,    editable: true, options: ['男', '女'] },
   { key: 'year',      label: '出生年份', value: form.year ? form.year + '年' : '', rawValue: form.year, editable: true, type: 'number', placeholder: '如 1990' },
   { key: 'height',    label: '身高',     value: form.height ? form.height + ' cm' : '', rawValue: form.height, editable: true, type: 'number', placeholder: '如 165' },
@@ -278,8 +278,8 @@ function buildIncomeLabel(minIdx, maxIdx) {
 }
 
 const createQuickQuestions = () => [
-  { step: 1, title: '您的特点？', label: '相亲特点', hint: '点击选择最符合的两个', options: makeOptions(traits.slice(0, 6), []) },
-  { step: 2, title: '您的相亲优势？', label: '相亲优势', hint: '点击选择最符合的两个', options: makeOptions(advantages.slice(0, 6), ['有上进心']) },
+  { step: 1, title: '您的特点？', label: '个人特点', hint: '点击选择最符合的两个', options: makeOptions(traits.slice(0, 6), []) },
+  { step: 2, title: '您的优势？', label: '个人优势', hint: '点击选择最符合的两个', options: makeOptions(advantages.slice(0, 6), ['有上进心']) },
   { step: 3, title: '您对女方的要求？', label: '对女方要求', hint: '点击选择最符合的两个', options: makeOptions(requirements.slice(0, 6), ['收入稳定']) },
 ];
 
@@ -434,11 +434,8 @@ Page({
       { value: 0, label: '看过我' },
     ],
     meItems: [
-      { icon: '约', label: '我的申请', sub: '' },
       { icon: '看', label: '看过我的人', sub: '0 人' },
       { icon: '藏', label: '我收藏的', sub: '0 人' },
-      { icon: '隐', label: '隐私设置', sub: '' },
-      { icon: '认', label: '实名认证', sub: '未认证' },
       { icon: '关', label: '关于我们', sub: 'v1.0.0' },
     ],
     // 当前登录用户(从 app.globalData 灌过来)
@@ -1253,7 +1250,7 @@ Page({
       title: '请先完善你的资料',
       content:
         progress === 0
-          ? '申请联系 / 发起意向前, 需要你先填一份相亲资料让对方了解你'
+          ? '联系当地门店前, 需要你先填一份资料让对方了解你'
           : `资料完善度需达到 60% 才能进行此操作 (当前 ${progress}%)`,
       confirmText: '去完善',
       cancelText: '稍后',
@@ -1675,7 +1672,7 @@ Page({
     const traitsText = selected[0].length ? selected[0].join('、') : '真诚、踏实';
     const advantagesText = selected[1].length ? selected[1].join('、') : '工作稳定';
     const requirementsText = selected[2].length ? selected[2].join('、') : '性格温和';
-    const desc = `我性格${traitsText}，相亲优势是${advantagesText}。希望对方${requirementsText}，两家人沟通真诚，彼此尊重，一起把日子过踏实。`;
+    const desc = `我性格${traitsText}，优势是${advantagesText}。希望对方${requirementsText}，两家人沟通真诚，彼此尊重，一起把日子过踏实。`;
     const profileForm = {
       ...this.data.profileForm,
       desc,
@@ -1920,7 +1917,7 @@ Page({
     if (sp && sp.gender && sp.year) {
       title = `${sp.gender} · ${sp.year}年 · ${sp.location || ''}  · 帮我把把关`;
     } else if (me && me.xy_code) {
-      title = `${me.xy_code} 邀请你看看 ta 的相亲资料`;
+      title = `${me.xy_code} 邀请你看看 ta 的资料`;
     }
     return {
       title,

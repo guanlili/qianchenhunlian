@@ -1,7 +1,7 @@
 <view class="welcome-page">
   <view class="brand">
     <view class="brand-title">乾缘婚恋</view>
-    <view class="brand-sub">真诚相亲 · 严选资料</view>
+    <view class="brand-sub">真诚 · 严选资料</view>
   </view>
 
   <view class="form-card">
