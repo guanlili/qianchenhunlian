@@ -6,7 +6,7 @@
  *   - 错误码 → wx.showToast
  *   - 401 自动重新 wx.login + 重试一次
  *   - loading 控制 (默认开)
- *   - WECHAT_APP_ID 没配置时 fallback 到 /wechat/dev-login
+ *   - 登录失败 → 直接报错, 不再 fallback dev-login (避免静默生成假账号)
  */
 
 const { BASE_URL, TOKEN_KEY } = require('./config');
@@ -26,23 +26,6 @@ function clearToken() {
   wx.removeStorageSync(TOKEN_KEY);
 }
 
-function _getOrCreateDevOpenid() {
-  let openid = wx.getStorageSync('qy_dev_openid');
-  if (!openid) {
-    // 用设备指纹生成稳定 openid: 清缓存 / 重装小程序后还是同一个,
-    // 跨设备会不同 (这正是 dev fallback 的取舍, 真正跨设备一致需配 WECHAT_APP_SECRET)
-    try {
-      const info = wx.getSystemInfoSync();
-      const seed = `${info.brand || 'dev'}-${info.model || 'unknown'}-${info.platform || 'wx'}`;
-      openid = 'dev_' + seed.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40);
-    } catch (e) {
-      openid = 'dev_main';
-    }
-    wx.setStorageSync('qy_dev_openid', openid);
-  }
-  return openid;
-}
-
 function _rawRequest(opts) {
   return new Promise((resolve, reject) => {
     wx.request({
@@ -54,8 +37,10 @@ function _rawRequest(opts) {
 }
 
 /**
- * wx.login + 后端 /wechat/login, 失败时 fallback /wechat/dev-login
- * 返回 { access_token, user, has_profile, has_criteria }
+ * wx.login → 后端 /wechat/login → 拿 JWT.
+ * 任何失败 (network / invalid url / 微信侧 / 后端) 都直接 reject,
+ * 不再 fallback dev-login (避免每次失败都给一个新假账号).
+ * 客户端调用方应在 catch 里给用户明确提示, 不要静默掉.
  */
 function loginAndGetToken() {
   if (_isLoggingIn) {
@@ -79,7 +64,6 @@ function loginAndGetToken() {
     wx.login({
       success: async ({ code }) => {
         try {
-          // 先尝试真正的微信登录
           const res = await _rawRequest({
             url: `${BASE_URL}/wechat/login`,
             method: 'POST',
@@ -93,32 +77,21 @@ function loginAndGetToken() {
             finish(out.token, out.payload);
             return;
           }
-          // 503 = 后端未配置 AppID/Secret → fallback
-          if (res.statusCode === 503) {
-            const devRes = await _rawRequest({
-              url: `${BASE_URL}/wechat/dev-login`,
-              method: 'POST',
-              data: { openid: _getOrCreateDevOpenid() },
-              header: { 'Content-Type': 'application/json' },
-            });
-            if (devRes.statusCode === 200 && devRes.data && devRes.data.access_token) {
-              setToken(devRes.data.access_token);
-              const out = { token: devRes.data.access_token, payload: devRes.data };
-              resolve(out);
-              finish(out.token, out.payload);
-              return;
-            }
-            const e = new Error('dev-login failed: ' + JSON.stringify(devRes.data));
-            reject(e); finish(null, null, e); return;
-          }
-          const e = new Error((res.data && res.data.detail) || `登录失败 (${res.statusCode})`);
-          reject(e); finish(null, null, e);
+          const detail =
+            (res.data && (res.data.detail || res.data.message)) ||
+            `登录失败 (${res.statusCode})`;
+          const e = new Error(typeof detail === 'string' ? detail : `登录失败 (${res.statusCode})`);
+          reject(e);
+          finish(null, null, e);
         } catch (err) {
-          reject(err); finish(null, null, err);
+          reject(err);
+          finish(null, null, err);
         }
       },
       fail: (err) => {
-        reject(err); finish(null, null, err);
+        // wx.login 本身失败 (e.g. 网络断 / 用户拒绝授权), 不要伪造身份继续
+        reject(err);
+        finish(null, null, err);
       },
     });
   });

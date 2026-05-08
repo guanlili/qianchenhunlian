@@ -3,8 +3,7 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import Field
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app import crud
 from app.api.deps import SessionDep
@@ -65,33 +64,4 @@ async def wechat_login(
         openid=info["openid"],
         unionid=info.get("unionid") or None,
     )
-    return _build_login_response(session, user)
-
-
-# ----------- dev only -----------
-
-
-class WechatDevLoginRequest(SQLModel):
-    """dev 登录: 直接传 fake openid, 用于 AppID 没配置时联调小程序"""
-
-    openid: str = Field(min_length=4, max_length=64)
-
-
-@router.post("/dev-login", response_model=WechatLoginResponse)
-def wechat_dev_login(
-    body: WechatDevLoginRequest,
-    session: SessionDep,
-) -> WechatLoginResponse:
-    """⚠️ 仅 ENVIRONMENT=local 可用, 用于无 AppID 时联调.
-
-    传一个 fake openid (如 'dev_zhang_001'), 后端直接 upsert 用户并签 JWT.
-    生产环境会拒绝.
-    """
-    if settings.ENVIRONMENT != "local":
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="dev-login 不可用",
-        )
-
-    user, _ = crud.get_or_create_wx_user(session=session, openid=body.openid)
     return _build_login_response(session, user)
