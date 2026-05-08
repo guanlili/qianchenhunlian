@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { AuditDialog } from "./AuditDialog"
+import { EditCriteriaDialog } from "./EditCriteriaDialog"
 import { EditProfileDialog } from "./EditProfileDialog"
 
 interface ProfileActionsMenuProps {
@@ -60,6 +61,14 @@ export function ProfileActionsMenu({ item }: ProfileActionsMenuProps) {
           trigger={
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
               <Pencil className="text-sky-500" /> 代录资料
+            </DropdownMenuItem>
+          }
+        />
+        <EditCriteriaDialog
+          item={item}
+          trigger={
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Pencil className="text-violet-500" /> 代录择偶要求
             </DropdownMenuItem>
           }
         />
