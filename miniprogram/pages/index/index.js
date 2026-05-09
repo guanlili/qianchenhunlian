@@ -217,7 +217,7 @@ const createPhotos = (urls = []) => {
 };
 
 const defaultProfileForm = {
-  nickname: '寻缘号 53652255',
+  nickname: '用户编号 53652255',
   gender: '',
   year: '',
   height: '',
