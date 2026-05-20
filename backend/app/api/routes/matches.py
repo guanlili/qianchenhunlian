@@ -44,6 +44,7 @@ class MatchBrief(SQLModel):
     likes: int = 0
     hot: int = 0
     starred: bool = False    # 调用者是否已收藏此人
+    verified: str = "none"   # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
 
 
 class MatchListResponse(SQLModel):
@@ -72,6 +73,7 @@ class MatchDetailResponse(SQLModel):
     xy_code: str | None = None  # 资料人寻缘号 (8 位数字), 显示用
     unlocked: bool = False
     starred: bool = False
+    verified: str = "none"   # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
 
 
 # ---------------- Helpers ----------------
@@ -97,6 +99,7 @@ def _to_brief(
         likes=profile.likes,
         hot=profile.hot,
         starred=starred,
+        verified=(user.verified if user else "none") or "none",
     )
 
 
@@ -331,6 +334,7 @@ def get_profile_detail(
         xy_code=target_xy_code,
         unlocked=False,
         starred=starred,
+        verified=(target_user.verified or "none"),
     )
 
 

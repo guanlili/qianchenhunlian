@@ -658,11 +658,79 @@ page {
   display: flex;
   gap: 18rpx;
   width: 100%;
+  align-items: center;
 }
 
 .card-actions .btn {
   flex: 1;
-  max-width: calc(50% - 9rpx);
+}
+
+.card-star.big {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  width: 110rpx;
+  height: 82rpx;
+  padding: 0;
+  border-radius: 16rpx;
+  background: #f7efe3;
+  color: #9a8e84;
+}
+
+.card-star.big.on {
+  background: #f9e5e0;
+  color: #c93434;
+}
+
+.card-star.big .card-star-icon {
+  font-size: 36rpx;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.card-star.big .card-star-text {
+  font-size: 22rpx;
+  line-height: 1;
+  font-weight: 600;
+}
+
+/* 实名认证徽章 */
+.verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  border-radius: 999rpx;
+  background: #f0ebe2;
+  color: #b0a89e;
+  font-weight: 700;
+}
+
+.verify-badge.on {
+  background: linear-gradient(90deg, #ffd97a 0%, #f4a23a 100%);
+  color: #5a3408;
+}
+
+.verify-badge.mini {
+  padding: 4rpx 14rpx;
+  font-size: 22rpx;
+}
+
+.verify-badge.big {
+  padding: 10rpx 18rpx;
+  font-size: 26rpx;
+  align-self: flex-start;
+}
+
+.verify-badge-check {
+  font-size: 22rpx;
+  line-height: 1;
+}
+
+.verify-badge-text {
+  line-height: 1;
 }
 
 .btn {

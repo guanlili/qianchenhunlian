@@ -78,9 +78,9 @@
         <view wx:for="{{profiles}}" wx:key="id" class="profile-card">
           <view class="profile-id-row">
             <text class="profile-id">用户编号 {{item.xy_code || item.id}}</text>
-            <view class="card-star {{item.starred ? 'on' : ''}}" catchtap="onCardStar" data-index="{{index}}">
-              <text>{{item.starred ? '★' : '☆'}}</text>
-              <text class="card-star-text">{{item.starred ? '已收藏' : '收藏'}}</text>
+            <view class="verify-badge mini {{item.isVerified ? 'on' : ''}}">
+              <text>✓</text>
+              <text>{{item.isVerified ? '已认证' : '未认证'}}</text>
             </view>
           </view>
           <view class="profile-main">
@@ -97,7 +97,11 @@
           </view>
           <view class="desc-box"><text>介绍：</text>{{item.desc}}</view>
           <view class="card-actions">
-            <button class="btn primary wide" bindtap="openDetail" data-id="{{item.id}}">查看资料</button>
+            <button class="btn primary" bindtap="openDetail" data-id="{{item.id}}">查看资料</button>
+            <view class="card-star big {{item.starred ? 'on' : ''}}" catchtap="onCardStar" data-index="{{index}}">
+              <text class="card-star-icon">{{item.starred ? '★' : '☆'}}</text>
+              <text class="card-star-text">{{item.starred ? '已收藏' : '收藏'}}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -125,6 +129,10 @@
                 <text><text class="ico star">★</text>{{selectedProfile.likes}}</text>
                 <text><text class="ico flame">♥</text>{{selectedProfile.hot}}</text>
               </view>
+            </view>
+            <view class="verify-badge big {{selectedProfile.isVerified ? 'on' : ''}}">
+              <text class="verify-badge-check">✓</text>
+              <text class="verify-badge-text">{{selectedProfile.isVerified ? '已认证' : '未认证'}}</text>
             </view>
           </view>
           <view class="detail-actions">
