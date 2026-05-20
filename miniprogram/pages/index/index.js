@@ -61,6 +61,8 @@ function adaptCard(item) {
     likes: item.likes || 0,
     hot: item.hot || 0,
     starred: !!item.starred,
+    verified: item.verified || 'none',
+    isVerified: item.verified === 'passed',
     tone: _pickTone(seed),
     glyph: _pickGlyph(seed),
   };
@@ -115,6 +117,8 @@ function adaptDetail(detailResp) {
     photos: _resolveList(p.photos),
     likes: p.likes || 0,
     hot: p.hot || 0,
+    verified: detailResp.verified || 'none',
+    isVerified: detailResp.verified === 'passed',
     tone: _pickTone(seed),
     glyph: _pickGlyph(seed),
     contact: detailResp.unlocked
