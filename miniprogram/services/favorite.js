@@ -19,13 +19,19 @@ function listMine({ skip = 0, limit = 20 } = {}) {
   return get(`/favorites?skip=${skip}&limit=${limit}`);
 }
 
-/** 看过我的人列表 (24h 内同一访客取最近一次) */
+/** 看过我的人列表 */
 function listVisitors({ skip = 0, limit = 20 } = {}) {
   return get(`/favorites/visitors?skip=${skip}&limit=${limit}`);
+}
+
+/** 我看过的人列表 */
+function listSeenByMe({ skip = 0, limit = 20 } = {}) {
+  return get(`/favorites/seen-by-me?skip=${skip}&limit=${limit}`);
 }
 
 module.exports = {
   toggle,
   listMine,
   listVisitors,
+  listSeenByMe,
 };

@@ -506,6 +506,7 @@ Page({
       { value: 0, label: '看过我' },
     ],
     meItems: [
+      { icon: '资', label: '我的资料', sub: '' },
       { icon: '我', label: '我看过的人', sub: '' },
       { icon: '看', label: '看过我的人', sub: '0 人' },
       { icon: '心', label: '我点过好感的人', sub: '' },
@@ -693,8 +694,11 @@ Page({
       optionSheet: null,
     });
     if (tab === 'home') this.loadHome();
-    else if (tab === 'my-profile') this.loadMyProfile();
-    else if (tab === 'me') this.loadMeStats();
+    else if (tab === 'me') {
+      this.loadMeStats();
+      this.loadMyProfile();  // 我的资料挪到了 me 页里, 顺手加载
+    }
+    else if (tab === 'affinity') this.openAffinity();
   },
 
   goHome() {
@@ -1929,6 +1933,7 @@ Page({
 
   tapMeItem(e) {
     const label = e.currentTarget.dataset.label;
+    if (label === '我的资料')        return this.setData({ screen: 'my-profile' });
     if (label === '看过我的人')     return this.openVisitors();
     if (label === '我看过的人')     return this.openIVisited();
     if (label === '我收藏的')       return this.openFavorites();
@@ -2040,11 +2045,20 @@ Page({
     this.openDetail({ currentTarget: { dataset: { id } } });
   },
 
-  /** 我看过的人 (基于 view 表反向, 后端暂无端点; 复用 my-requests 思路: 这里
-   *  简化做成空列表占位, 后续加 GET /views/seen-by-me 接口) */
+  /** 我看过的人 — 拉 /favorites/seen-by-me */
   async openIVisited() {
-    this.setData({ screen: 'i-visited', iVisitedList: [], iVisitedTotal: 0 });
-    // 占位: 后续接 GET /views/seen-by-me
+    this.setData({ screen: 'i-visited' });
+    if (!this.data.apiReady) return;
+    try {
+      const r = await favoriteSvc.listSeenByMe({ limit: 50 });
+      const items = (r.items || []).map((it) => ({
+        ...it,
+        photos: _resolveList(it.photos),
+      }));
+      this.setData({ iVisitedList: items, iVisitedTotal: r.total || 0 });
+    } catch (e) {
+      console.warn('[index] openIVisited', e);
+    }
   },
 
   /** 我点过好感的人 */

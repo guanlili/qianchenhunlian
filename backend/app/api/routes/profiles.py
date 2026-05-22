@@ -347,6 +347,47 @@ def remove_my_photo(
     return ProfileWithContact.model_validate(profile, from_attributes=True)
 
 
+@router.post("/me/deactivate", response_model=Message)
+def deactivate_me(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Message:
+    """相亲下线: user.status='inactive', 推荐不再展示我; 我可以再 reactivate."""
+    current_user.status = "inactive"
+    current_user.updated_at = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    return Message(message="已下线, 推荐列表不再展示您, 可随时上线")
+
+
+@router.post("/me/reactivate", response_model=Message)
+def reactivate_me(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Message:
+    """重新上线"""
+    if current_user.status == "blocked":
+        raise HTTPException(status_code=403, detail="账号已封禁, 无法自助上线")
+    current_user.status = "active"
+    current_user.updated_at = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    return Message(message="已上线")
+
+
+@router.post("/me/cancel-account", response_model=Message)
+def cancel_account_request(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Message:
+    """申请注销账号: 标记 deactivating, 后台审核后由 admin 真删."""
+    current_user.status = "deactivating"
+    current_user.updated_at = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    return Message(message="已提交注销申请, 审核完成后 5 个工作日内处理")
+
+
 @router.delete("/me", response_model=Message)
 def delete_my_profile(
     session: SessionDep,

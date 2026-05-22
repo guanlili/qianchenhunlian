@@ -313,16 +313,22 @@ class AdminUserBrief(SQLModel):
 @router.get("/profiles", response_model=AdminProfileList)
 def list_profiles(
     session: SessionDep,
+    actor: CurrentActor,
     audit_status: Literal["all", "pending", "approved", "rejected"] = Query("all"),
     keyword: str | None = Query(None, description="搜寻缘号 / 居住地 / desc"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminProfileList:
-    """资料列表 (管理员视角, 含联系方式)"""
+    """资料列表 (管理员视角, 含联系方式). store_owner 仅看本店用户."""
     base = select(Profile, User).join(User, Profile.user_id == User.id)  # type: ignore
 
     if audit_status != "all":
         base = base.where(Profile.audit_status == audit_status)
+
+    # store_owner: 限本店
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        base = base.where(Profile.home_store_id == sid)
 
     if keyword:
         kw = f"%{keyword}%"
@@ -349,14 +355,16 @@ def list_profiles(
 def get_profile_detail(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
 ) -> AdminProfileDetail:
-    """单个资料详情 + 对方择偶要求 (admin/staff 都能看)"""
+    """单个资料详情 + 对方择偶要求 (admin/staff 都能看; store_owner 限本店)"""
     profile = session.exec(
         select(Profile).where(Profile.user_id == user_id)
     ).first()
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
+    _check_store_scope(actor, profile)
     criteria = session.exec(
         select(Criteria).where(Criteria.user_id == user_id)
     ).first()
@@ -447,15 +455,15 @@ def _calc_criteria_progress(criteria: Criteria) -> int:
 def admin_update_profile(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
     body: AdminProfileUpdate = Body(),
 ) -> AdminProfileItem:
     """红娘 / 管理员代录用户资料 (任意字段 + 联系方式).
 
-    admin 和 staff 都可调用 (整个 router 已 require_admin_or_staff).
+    store_owner 只能改本店用户; admin/普通 staff 不受限.
     保存后:
     - 自动重算 progress
     - audit_status 强制置 approved (代录视为已审核)
-    - 不触发"先发后审"流程
     """
     profile = session.exec(
         select(Profile).where(Profile.user_id == user_id)
@@ -463,6 +471,7 @@ def admin_update_profile(
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
+    _check_store_scope(actor, profile)
 
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
@@ -490,12 +499,16 @@ def admin_update_profile(
 def admin_update_criteria(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
     body: AdminCriteriaUpdate = Body(),
 ) -> AdminCriteriaItem:
-    """红娘 / 管理员代录择偶要求"""
+    """红娘 / 管理员代录择偶要求. store_owner 限本店."""
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
+    if profile:
+        _check_store_scope(actor, profile)
 
     criteria = session.exec(
         select(Criteria).where(Criteria.user_id == user_id)
@@ -523,12 +536,16 @@ def admin_update_criteria(
 def admin_update_parents_info(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
     body: AdminParentsInfoUpdate = Body(),
 ) -> AdminParentsInfoItem:
-    """红娘 / 管理员代录父母 / 兄弟姐妹 信息"""
+    """红娘 / 管理员代录父母 / 兄弟姐妹 信息. store_owner 限本店."""
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
+    if profile:
+        _check_store_scope(actor, profile)
 
     parents = session.exec(
         select(ParentsInfo).where(ParentsInfo.user_id == user_id)
@@ -549,19 +566,38 @@ def admin_update_parents_info(
 # ---------------- 实名认证 (admin + 门店账号) ----------------
 
 
-def _can_verify(actor: CurrentActor, target_profile: Profile) -> bool:
-    """admin: 任何用户都能标; store_owner: 只能标自己门店下的用户"""
-    if actor.actor_type == "user" and actor.is_superuser:
-        return True
+def _store_owner_id(actor: CurrentActor) -> uuid.UUID | None:
+    """如果当前 actor 是 store_owner 类型 staff, 返回其 store_id; 否则 None.
+    admin / 普通 staff 返 None (= 不受 store 限制)."""
     if (
         actor.actor_type == "staff"
         and actor.staff
         and actor.staff.role == "store_owner"
     ):
-        if not actor.staff.store_id:
-            return False
-        return target_profile.home_store_id == actor.staff.store_id
+        return actor.staff.store_id
+    return None
+
+
+def _can_verify(actor: CurrentActor, target_profile: Profile) -> bool:
+    """admin: 任何用户都能标; store_owner: 只能标自己门店下的用户"""
+    if actor.actor_type == "user" and actor.is_superuser:
+        return True
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        return target_profile.home_store_id == sid
+    # 普通 staff (无 store_id 限制 role='staff') — 视为全局, 暂同 admin
+    if actor.actor_type == "staff" and actor.staff and actor.staff.role == "staff":
+        return True
     return False
+
+
+def _check_store_scope(actor: CurrentActor, target_profile: Profile) -> None:
+    """store_owner 只能操作本店用户; 不在本店则 403. admin/staff 不受限."""
+    sid = _store_owner_id(actor)
+    if sid is None:
+        return
+    if target_profile.home_store_id != sid:
+        raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
 
 
 class VerifyResponse(SQLModel):
@@ -647,7 +683,7 @@ class HomeStoreUpdate(SQLModel):
 @router.put(
     "/profiles/{user_id}/home-store",
     response_model=AdminProfileItem,
-    dependencies=[Depends(require_admin_or_staff)],
+    dependencies=[Depends(require_admin)],
 )
 def admin_set_home_store(
     session: SessionDep,
@@ -688,11 +724,16 @@ class StoreList(SQLModel):
 )
 def admin_list_stores(
     session: SessionDep,
+    actor: CurrentActor,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     city: str | None = Query(default=None),
 ) -> StoreList:
     base = select(Store)
+    # store_owner 只看自己门店
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        base = base.where(Store.id == sid)
     if city:
         base = base.where(Store.city == city)
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
@@ -917,20 +958,59 @@ class StatsResponse(SQLModel):
     total_profiles: int = 0
     pending_audits: int = 0
     today_signups: int = 0
+    # — 新增 5 项 —
+    pending_tickets: int = 0      # 待处理工单 (status='pending')
+    mutual_affinity_pairs: int = 0  # 互相好感对子 (有 A→B 和 B→A 同时存在的对)
+    verified_users: int = 0       # 已实名认证用户数
+    verified_ratio: int = 0       # 已认证比例 (0-100)
+    active_stores: int = 0        # 营业中门店数
 
 
 @router.get("/stats", response_model=StatsResponse)
 def admin_stats(session: SessionDep) -> StatsResponse:
-    """简易看板数据"""
+    """简易看板数据 — 含工单 / 好感 / 认证比例 / 门店"""
+    from app.models import Affinity, ContactRequest, Store
+
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    total_users = session.exec(select(func.count()).select_from(User)).one() or 0
+    verified_users = session.exec(
+        select(func.count()).select_from(User).where(User.verified == "passed")
+    ).one() or 0
+
+    # 互相好感对子数: 同时存在 (A→B) 和 (B→A), 每个对子只算一次 → /2
+    # 这里偷懒用 join 自连接, 然后 //2 (推荐场景下数据量小, 性能 OK)
+    mutual_rows = session.exec(
+        select(func.count())
+        .select_from(Affinity)
+        .join(
+            Affinity.__table__.alias("rev"),  # type: ignore
+            (Affinity.from_user_id == Affinity.__table__.alias("rev").c.to_user_id)  # type: ignore
+            & (Affinity.to_user_id == Affinity.__table__.alias("rev").c.from_user_id),
+        )
+    )
+    try:
+        mutual_total = session.exec(mutual_rows).one() or 0
+    except Exception:
+        mutual_total = 0
+    mutual_pairs = int(mutual_total) // 2
+
     return StatsResponse(
-        total_users=session.exec(select(func.count()).select_from(User)).one() or 0,
+        total_users=total_users,
         total_profiles=session.exec(select(func.count()).select_from(Profile)).one() or 0,
         pending_audits=session.exec(
             select(func.count()).select_from(Profile).where(Profile.audit_status == "pending")
         ).one() or 0,
         today_signups=session.exec(
             select(func.count()).select_from(User).where(User.created_at >= today_start)
+        ).one() or 0,
+        pending_tickets=session.exec(
+            select(func.count()).select_from(ContactRequest).where(ContactRequest.status == "pending")
+        ).one() or 0,
+        mutual_affinity_pairs=mutual_pairs,
+        verified_users=verified_users,
+        verified_ratio=int(verified_users / total_users * 100) if total_users else 0,
+        active_stores=session.exec(
+            select(func.count()).select_from(Store).where(Store.status == "active")
         ).one() or 0,
     )
 

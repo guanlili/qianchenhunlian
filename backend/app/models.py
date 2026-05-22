@@ -521,6 +521,19 @@ class Feedback(SQLModel, table=True):
 
 
 # ------------------------------------------------------------
+# SiteSetting · 平台级配置 (资质证明 / 公告等)
+# ------------------------------------------------------------
+
+
+class SiteSetting(SQLModel, table=True):
+    """key-value 配置. value 用 JSON, 灵活塞任意结构 (e.g. 资质图片数组)."""
+
+    key: str = Field(primary_key=True, max_length=64)
+    value: dict | list = Field(default_factory=dict, sa_column=Column(JSON))
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ------------------------------------------------------------
 # Auth / 通用
 # ------------------------------------------------------------
 

@@ -19,6 +19,7 @@ import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
 import { Route as LayoutStaffRouteImport } from './routes/_layout/staff'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
+import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
 import { Route as LayoutProfilesRouteImport } from './routes/_layout/profiles'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
@@ -73,6 +74,11 @@ const LayoutRequestsRoute = LayoutRequestsRouteImport.update({
   path: '/requests',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutQualificationsRoute = LayoutQualificationsRouteImport.update({
+  id: '/qualifications',
+  path: '/qualifications',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutProfilesRoute = LayoutProfilesRouteImport.update({
   id: '/profiles',
   path: '/profiles',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof LayoutFeedbackRoute
   '/items': typeof LayoutItemsRoute
   '/profiles': typeof LayoutProfilesRoute
+  '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
   '/settings': typeof LayoutSettingsRoute
   '/staff': typeof LayoutStaffRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/feedback': typeof LayoutFeedbackRoute
   '/items': typeof LayoutItemsRoute
   '/profiles': typeof LayoutProfilesRoute
+  '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
   '/settings': typeof LayoutSettingsRoute
   '/staff': typeof LayoutStaffRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/_layout/feedback': typeof LayoutFeedbackRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/profiles': typeof LayoutProfilesRoute
+  '/_layout/qualifications': typeof LayoutQualificationsRoute
   '/_layout/requests': typeof LayoutRequestsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/staff': typeof LayoutStaffRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/items'
     | '/profiles'
+    | '/qualifications'
     | '/requests'
     | '/settings'
     | '/staff'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/items'
     | '/profiles'
+    | '/qualifications'
     | '/requests'
     | '/settings'
     | '/staff'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/_layout/feedback'
     | '/_layout/items'
     | '/_layout/profiles'
+    | '/_layout/qualifications'
     | '/_layout/requests'
     | '/_layout/settings'
     | '/_layout/staff'
@@ -270,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutRequestsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/qualifications': {
+      id: '/_layout/qualifications'
+      path: '/qualifications'
+      fullPath: '/qualifications'
+      preLoaderRoute: typeof LayoutQualificationsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/profiles': {
       id: '/_layout/profiles'
       path: '/profiles'
@@ -306,6 +325,7 @@ interface LayoutRouteChildren {
   LayoutFeedbackRoute: typeof LayoutFeedbackRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutProfilesRoute: typeof LayoutProfilesRoute
+  LayoutQualificationsRoute: typeof LayoutQualificationsRoute
   LayoutRequestsRoute: typeof LayoutRequestsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutStaffRoute: typeof LayoutStaffRoute
@@ -318,6 +338,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutFeedbackRoute: LayoutFeedbackRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutProfilesRoute: LayoutProfilesRoute,
+  LayoutQualificationsRoute: LayoutQualificationsRoute,
   LayoutRequestsRoute: LayoutRequestsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutStaffRoute: LayoutStaffRoute,

@@ -6,7 +6,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import and_
@@ -14,6 +14,8 @@ from sqlmodel import SQLModel, func, select
 
 from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
 from app.models import Affinity, Profile, User
+
+_AFFINITY_DAILY_LIMIT = 20
 
 router = APIRouter(prefix="/affinity", tags=["affinity"])
 
@@ -72,6 +74,20 @@ def toggle_affinity(
         session.delete(existing)
         session.commit()
         return AffinityToggleResponse(liked=False, mutual=False)
+
+    # 24h 上限: 防止刷好感 (取消的不计入)
+    one_day_ago = datetime.utcnow() - timedelta(hours=24)
+    recent_count = session.exec(
+        select(func.count())
+        .select_from(Affinity)
+        .where(Affinity.from_user_id == current_user.id)
+        .where(Affinity.created_at >= one_day_ago)
+    ).one()
+    if recent_count >= _AFFINITY_DAILY_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail=f"24 小时内最多对 {_AFFINITY_DAILY_LIMIT} 人点好感, 请明天再试",
+        )
 
     new_a = Affinity(from_user_id=current_user.id, to_user_id=target_user_id)
     session.add(new_a)

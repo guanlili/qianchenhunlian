@@ -1,0 +1,9 @@
+.page { min-height: 100vh; background: #fbf6ee; padding: 32rpx 28rpx; }
+.header { padding: 16rpx 0 24rpx; }
+.title { font-size: 38rpx; font-weight: 800; color: #1f1a17; }
+.sub { margin-top: 8rpx; color: #9a8e84; font-size: 24rpx; }
+.empty { text-align: center; padding: 80rpx 0; color: #9a8e84; }
+.image-list { display: flex; flex-direction: column; gap: 24rpx; }
+.image-card { background: #fff; border-radius: 20rpx; padding: 24rpx; }
+.image-pic { width: 100%; border-radius: 14rpx; }
+.image-title { display: block; margin-top: 12rpx; color: #5a4f47; font-size: 26rpx; text-align: center; }

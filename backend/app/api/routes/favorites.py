@@ -192,3 +192,47 @@ def list_visitors(
             )
         )
     return VisitorList(items=items, total=total)
+
+
+@router.get("/seen-by-me", response_model=VisitorList)
+def list_seen_by_me(
+    session: SessionDep,
+    current_user: CurrentUser,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> VisitorList:
+    """我看过的人 (每个被看的人取最近一次)"""
+    sub = (
+        select(
+            View.target_user_id,
+            func.max(View.created_at).label("last_viewed_at"),
+        )
+        .where(View.user_id == current_user.id)
+        .group_by(View.target_user_id)
+        .subquery()
+    )
+
+    total = session.exec(select(func.count()).select_from(sub)).one()
+
+    rows = session.exec(
+        select(sub.c.target_user_id, sub.c.last_viewed_at, User, Profile)
+        .join(User, User.id == sub.c.target_user_id)
+        .join(Profile, Profile.user_id == User.id, isouter=True)
+        .order_by(sub.c.last_viewed_at.desc())
+        .offset(skip)
+        .limit(limit)
+    ).all()
+
+    items = []
+    for tid, viewed_at, user, profile in rows:
+        items.append(
+            VisitorBrief(
+                user_id=user.id,
+                xy_code=user.xy_code,
+                gender=profile.gender if profile else None,
+                year=profile.year if profile else None,
+                photos=list(profile.photos or [])[:1] if profile else [],
+                last_viewed_at=viewed_at,
+            )
+        )
+    return VisitorList(items=items, total=total)

@@ -4620,6 +4620,44 @@ export const ProfileWithContactSchema = {
     description: '已解锁/管理员视角, 含联系方式'
 } as const;
 
+export const QualificationItemSchema = {
+    properties: {
+        image_url: {
+            type: 'string',
+            title: 'Image Url'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        }
+    },
+    type: 'object',
+    required: ['image_url'],
+    title: 'QualificationItem'
+} as const;
+
+export const QualificationListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/QualificationItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        }
+    },
+    type: 'object',
+    title: 'QualificationList'
+} as const;
+
 export const StaffCreateSchema = {
     properties: {
         email: {
@@ -4832,6 +4870,31 @@ export const StatsResponseSchema = {
         today_signups: {
             type: 'integer',
             title: 'Today Signups',
+            default: 0
+        },
+        pending_tickets: {
+            type: 'integer',
+            title: 'Pending Tickets',
+            default: 0
+        },
+        mutual_affinity_pairs: {
+            type: 'integer',
+            title: 'Mutual Affinity Pairs',
+            default: 0
+        },
+        verified_users: {
+            type: 'integer',
+            title: 'Verified Users',
+            default: 0
+        },
+        verified_ratio: {
+            type: 'integer',
+            title: 'Verified Ratio',
+            default: 0
+        },
+        active_stores: {
+            type: 'integer',
+            title: 'Active Stores',
             default: 0
         }
     },

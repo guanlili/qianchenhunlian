@@ -10,6 +10,7 @@ from app.api.routes import (
     matches,
     private,
     profiles,
+    site,
     stores,
     uploads,
     users,
@@ -30,6 +31,7 @@ api_router.include_router(contacts.router)
 api_router.include_router(affinity.router)
 api_router.include_router(stores.router)
 api_router.include_router(feedback.router)
+api_router.include_router(site.router)
 api_router.include_router(admin.router)
 api_router.include_router(uploads.router)
 
