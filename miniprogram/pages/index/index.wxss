@@ -2393,3 +2393,13 @@ page {
   font-size: 22rpx;
   line-height: 1;
 }
+
+.affinity-tip {
+  margin: 28rpx; padding: 18rpx 22rpx;
+  background: #fff7eb; border-radius: 12rpx;
+  color: #b07a1a; font-size: 22rpx;
+}
+.affinity-row .visitor-avatar {
+  background: linear-gradient(135deg, #ffb3b3 0%, #c93434 100%);
+  color: #fff;
+}

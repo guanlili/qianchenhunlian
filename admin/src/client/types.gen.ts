@@ -619,6 +619,15 @@ export type ProfileWithContact = {
     contact_phone?: (string | null);
 };
 
+export type QualificationItem = {
+    image_url: string;
+    title?: (string | null);
+};
+
+export type QualificationList = {
+    items?: Array<QualificationItem>;
+};
+
 export type StaffCreate = {
     email: string;
     name: string;
@@ -657,6 +666,11 @@ export type StatsResponse = {
     total_profiles?: number;
     pending_audits?: number;
     today_signups?: number;
+    pending_tickets?: number;
+    mutual_affinity_pairs?: number;
+    verified_users?: number;
+    verified_ratio?: number;
+    active_stores?: number;
 };
 
 export type StoreCreate = {
@@ -1069,6 +1083,13 @@ export type FavoritesListVisitorsData = {
 
 export type FavoritesListVisitorsResponse = (VisitorList);
 
+export type FavoritesListSeenByMeData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type FavoritesListSeenByMeResponse = (VisitorList);
+
 export type FeedbackSubmitFeedbackData = {
     requestBody: FeedbackBody;
 };
@@ -1181,6 +1202,20 @@ export type ProfilesRemoveMyPhotoData = {
 };
 
 export type ProfilesRemoveMyPhotoResponse = (ProfileWithContact);
+
+export type ProfilesDeactivateMeResponse = (Message);
+
+export type ProfilesReactivateMeResponse = (Message);
+
+export type ProfilesCancelAccountRequestResponse = (Message);
+
+export type SiteGetQualificationsResponse = (QualificationList);
+
+export type SitePutQualificationsData = {
+    requestBody: QualificationList;
+};
+
+export type SitePutQualificationsResponse = (QualificationList);
 
 export type StoresListCitiesResponse = (CityList);
 

@@ -1,0 +1,15 @@
+<view class="page">
+  <view class="header">
+    <view class="title">资质证明</view>
+    <view class="sub">平台备案 / 营业执照 / 资质照片</view>
+  </view>
+  <view class="empty" wx:if="{{!loading && items.length === 0}}">
+    <text>资质材料正在补充中</text>
+  </view>
+  <view class="image-list">
+    <view wx:for="{{items}}" wx:key="image_url" class="image-card" bindtap="preview" data-url="{{item.image_url}}">
+      <image src="{{item.image_url}}" mode="widthFix" class="image-pic" />
+      <text wx:if="{{item.title}}" class="image-title">{{item.title}}</text>
+    </view>
+  </view>
+</view>

@@ -9,6 +9,7 @@
     "pages/store-detail/store-detail",
     "pages/feedback/feedback",
     "pages/settings/settings",
+    "pages/qualifications/qualifications",
     "pages/example/index"
   ],
   "window": {

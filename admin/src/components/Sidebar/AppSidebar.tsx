@@ -1,4 +1,4 @@
-import { ClipboardList, Heart, Home, MapPin, MessageSquare, Shield, Users } from "lucide-react"
+import { Award, ClipboardList, Heart, Home, MapPin, MessageSquare, Shield, Users } from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -19,6 +19,7 @@ const baseItems: Item[] = [
   { icon: Users, title: "用户", path: "/admin" },
   { icon: MapPin, title: "门店管理", path: "/stores" },
   { icon: MessageSquare, title: "意见反馈", path: "/feedback" },
+  { icon: Award, title: "资质证明", path: "/qualifications" },
 ]
 
 export function AppSidebar() {

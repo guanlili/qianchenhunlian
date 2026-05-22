@@ -213,7 +213,7 @@
     <scroll-view class="screen main-screen" scroll-y>
       <view class="solid-header profile-header">
         <view class="nav-row light">
-          <view class="nav-placeholder"></view>
+          <button class="nav-link light" bindtap="backToMe">‹ 返回</button>
           <view class="nav-title">资料</view>
           <view class="nav-placeholder"></view>
         </view>
@@ -405,6 +405,35 @@
     </view>
   </block>
 
+  <block wx:if="{{screen == 'affinity'}}">
+    <scroll-view class="screen main-screen" scroll-y>
+      <view class="solid-header flat">
+        <view class="nav-row light">
+          <view class="nav-placeholder"></view>
+          <view class="nav-title">好感消息</view>
+          <view class="nav-placeholder"></view>
+        </view>
+      </view>
+      <view class="affinity-tip">
+        <text>只展示双方都点过 ❤ 好感的人, 红娘会主动联系撮合.</text>
+      </view>
+      <view class="list-empty" wx:if="{{affinityMutualTotal == 0}}">
+        <text>暂无互相好感</text>
+      </view>
+      <view wx:for="{{affinityMutualList}}" wx:key="user_id" class="visitor-row affinity-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
+        <view class="visitor-avatar">
+          <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+          <text wx:else>❤</text>
+        </view>
+        <view class="visitor-info">
+          <view class="visitor-title">用户编号 {{item.xy_code}} · {{item.gender}} · {{item.year}}年</view>
+          <text class="visitor-time">{{item.location || ''}}  · 互相好感 💕</text>
+        </view>
+        <text class="visitor-arrow">›</text>
+      </view>
+    </scroll-view>
+  </block>
+
   <block wx:if="{{screen == 'my-likes'}}">
     <view class="screen child-screen">
       <view class="solid-header flat">
@@ -443,8 +472,19 @@
         </view>
       </view>
       <scroll-view class="child-scroll" scroll-y>
-        <view class="list-empty">
-          <text>功能即将上线</text>
+        <view class="list-empty" wx:if="{{iVisitedTotal == 0}}">
+          <text>暂未浏览过任何人的资料</text>
+        </view>
+        <view wx:for="{{iVisitedList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
+          <view class="visitor-avatar">
+            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+            <text wx:else>{{item.gender || '?'}}</text>
+          </view>
+          <view class="visitor-info">
+            <view class="visitor-title">用户编号 {{item.xy_code}} · {{item.gender}} · {{item.year}}年</view>
+            <text class="visitor-time">最近浏览 {{item.last_viewed_at}}</text>
+          </view>
+          <text class="visitor-arrow">›</text>
         </view>
       </scroll-view>
     </view>
@@ -762,14 +802,14 @@
     </view>
   </block>
 
-  <view class="tabbar" wx:if="{{screen == 'home' || screen == 'my-profile' || screen == 'me'}}">
+  <view class="tabbar" wx:if="{{screen == 'home' || screen == 'affinity' || screen == 'me'}}">
     <view class="tab-item {{activeTab == 'home' ? 'active' : ''}}" bindtap="switchTab" data-tab="home">
       <view class="tab-icon">心</view>
       <text>每日推荐</text>
     </view>
-    <view class="tab-item {{activeTab == 'my-profile' ? 'active' : ''}}" bindtap="switchTab" data-tab="my-profile">
-      <view class="tab-icon">人</view>
-      <text>资料</text>
+    <view class="tab-item {{activeTab == 'affinity' ? 'active' : ''}}" bindtap="switchTab" data-tab="affinity">
+      <view class="tab-icon">❤</view>
+      <text>好感消息</text>
     </view>
     <view class="tab-item {{activeTab == 'me' ? 'active' : ''}}" bindtap="switchTab" data-tab="me">
       <view class="tab-icon">我</view>
