@@ -1,0 +1,41 @@
+<view class="page" wx:if="{{store}}">
+  <view class="header">
+    <view class="title">当地门店</view>
+  </view>
+
+  <view class="store-card">
+    <view class="store-head">
+      <view class="store-name">{{store.name}}</view>
+      <view class="verify-tag {{store.status === 'active' ? 'on' : ''}}">
+        <text>✓ 营业</text>
+      </view>
+    </view>
+    <view class="fees" wx:if="{{store.fees_desc}}">门店收费简介: {{store.fees_desc}}</view>
+
+    <view class="photo" wx:if="{{store.photo}}">
+      <image src="{{store.photo}}" mode="aspectFill" class="photo-img" />
+    </view>
+
+    <view class="info-row">
+      <view class="info-key">地址</view>
+      <view class="info-val">{{store.district || ''}} {{store.address || '—'}}</view>
+      <view class="info-action" bindtap="openLocation" wx:if="{{store.lng && store.lat}}">📍 定位</view>
+    </view>
+
+    <view class="info-row">
+      <view class="info-key">电话</view>
+      <view class="info-val">{{store.phone || '—'}}</view>
+      <view class="info-action" bindtap="callPhone" wx:if="{{store.phone}}">📞 拨号</view>
+    </view>
+  </view>
+
+  <view class="cta-area">
+    <button
+      class="cta-btn {{isCurrent ? 'on' : ''}}"
+      bindtap="pickStore"
+      disabled="{{isCurrent || binding}}"
+    >
+      {{isCurrent ? '当前已选定此门店 ✓' : (binding ? '提交中...' : '选择此门店  线下服务')}}
+    </button>
+  </view>
+</view>

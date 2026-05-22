@@ -1,0 +1,23 @@
+<view class="page">
+  <view class="header">
+    <view class="title">{{city}}</view>
+    <view class="sub">共 {{stores.length}} 家门店</view>
+  </view>
+  <view class="empty" wx:if="{{!loading && stores.length === 0}}">
+    <text>该城市暂无门店</text>
+  </view>
+  <view class="store-list">
+    <view wx:for="{{stores}}" wx:key="id" class="store-row" bindtap="pickStore" data-id="{{item.id}}">
+      <view class="store-photo">
+        <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="photo-img" />
+        <view wx:else class="photo-placeholder">乾</view>
+      </view>
+      <view class="store-meta">
+        <view class="store-name">{{item.name}}</view>
+        <view class="store-area">{{item.district || ''}}</view>
+        <view class="store-addr">{{item.address || ''}}</view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+</view>

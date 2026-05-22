@@ -20,7 +20,10 @@ from app.models import (
     Profile,
     ProfileWithContact,
     ProfileUpdate,
+    Store,
+    StorePublic,
 )
+import uuid
 from sqlmodel import SQLModel
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -75,6 +78,9 @@ class ProfileMeResponse(SQLModel):
     profile: ProfileWithContact | None = None
     criteria: CriteriaPublic | None = None
     parents_info: ParentsInfoPublic | None = None
+    home_store: StorePublic | None = None    # 用户主属门店 (已选)
+    verified: str = "none"                    # 'none' / 'passed' / ...
+    home_store_id: uuid.UUID | None = None
     has_profile: bool = False
     has_criteria: bool = False
     is_welcomed: bool = False    # 头像 + 昵称 都已设置
@@ -107,6 +113,9 @@ def read_my_profile(
     parents = session.exec(
         select(ParentsInfo).where(ParentsInfo.user_id == current_user.id)
     ).first()
+    home_store = None
+    if profile and profile.home_store_id:
+        home_store = session.get(Store, profile.home_store_id)
     is_welcomed = bool(profile and profile.nickname and profile.avatar_url)
     return ProfileMeResponse(
         profile=ProfileWithContact.model_validate(profile, from_attributes=True)
@@ -118,6 +127,11 @@ def read_my_profile(
         parents_info=ParentsInfoPublic.model_validate(parents, from_attributes=True)
         if parents
         else None,
+        home_store=StorePublic.model_validate(home_store, from_attributes=True)
+        if home_store
+        else None,
+        verified=current_user.verified or "none",
+        home_store_id=profile.home_store_id if profile else None,
         has_profile=profile is not None,
         has_criteria=criteria is not None,
         is_welcomed=is_welcomed,
@@ -224,6 +238,33 @@ def update_my_contact(
     session.commit()
     session.refresh(profile)
     return ProfileWithContact.model_validate(profile, from_attributes=True)
+
+
+class HomeStoreBody(SQLModel):
+    store_id: uuid.UUID
+
+
+@router.put("/me/home-store", response_model=StorePublic)
+def set_home_store(
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: HomeStoreBody = Body(),
+) -> StorePublic:
+    """用户在小程序选定主属门店"""
+    store = session.get(Store, body.store_id)
+    if not store or store.status != "active":
+        raise HTTPException(status_code=400, detail="门店不存在或已关闭")
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == current_user.id)
+    ).first()
+    if not profile:
+        # 没 profile 时 welcome 应该先走
+        raise HTTPException(status_code=400, detail="请先完成首启动引导")
+    profile.home_store_id = store.id
+    profile.updated_at = datetime.utcnow()
+    session.add(profile)
+    session.commit()
+    return StorePublic.model_validate(store, from_attributes=True)
 
 
 @router.put("/me/criteria", response_model=CriteriaPublic)

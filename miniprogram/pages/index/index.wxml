@@ -140,6 +140,10 @@
               <text>{{detailStarred ? '★' : '☆'}}</text>
               <text>收藏</text>
             </view>
+            <view class="like-action {{detailLiked ? 'on' : ''}} {{detailMutual ? 'mutual' : ''}}" bindtap="toggleDetailAffinity">
+              <text>{{detailLiked ? '❤' : '♡'}}</text>
+              <text>{{detailMutual ? '互相好感' : (detailLiked ? '已示好' : '好感')}}</text>
+            </view>
           </view>
         </view>
 
@@ -235,7 +239,7 @@
         </view>
         <view class="feature-row">
           <view class="resource-flag">享更多资源</view>
-          <view><view class="round-icon">✦</view><text>真诚</text><text>未认证</text></view>
+          <view><view class="round-icon">✦</view><text>线下门店认证</text><text>未认证</text></view>
           <view><view class="round-icon dot">⇡</view><text>优先推荐</text><text>未开启</text></view>
           <view><view class="round-icon ring" style="background: conic-gradient(#c93434 0 {{profileProgress}}%, #f0e1d6 {{profileProgress}}% 100%);"><text class="ring-inner">{{profileProgress}}%</text></view><text>资料完善度</text><text>{{profileProgress}}%</text></view>
         </view>
@@ -280,7 +284,8 @@
       </view>
 
       <view class="share-actions">
-        <button class="btn primary wide" bindtap="shareProfile">分享到群或好友 ›</button>
+        <button class="btn outline" bindtap="onAskModifyProfile">修改资料</button>
+        <button class="btn primary" bindtap="shareProfile">分享到群或好友 ›</button>
       </view>
     </scroll-view>
   </block>
@@ -395,6 +400,51 @@
             <text class="visitor-time">{{item.location}}</text>
           </view>
           <text class="visitor-arrow">›</text>
+        </view>
+      </scroll-view>
+    </view>
+  </block>
+
+  <block wx:if="{{screen == 'my-likes'}}">
+    <view class="screen child-screen">
+      <view class="solid-header flat">
+        <view class="nav-row light">
+          <button class="nav-link light" bindtap="backToMe">‹ 返回</button>
+          <view class="nav-title">我点过好感的人</view>
+          <view class="nav-placeholder"></view>
+        </view>
+      </view>
+      <scroll-view class="child-scroll" scroll-y>
+        <view class="list-empty" wx:if="{{myLikesTotal == 0}}">
+          <text>暂未给任何人点好感</text>
+        </view>
+        <view wx:for="{{myLikesList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
+          <view class="visitor-avatar">
+            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+            <text wx:else>{{item.gender || '?'}}</text>
+          </view>
+          <view class="visitor-info">
+            <view class="visitor-title">用户编号 {{item.xy_code}} · {{item.gender}} · {{item.year}}年</view>
+            <text class="visitor-time">{{item.location || ''}}</text>
+          </view>
+          <text class="visitor-arrow">›</text>
+        </view>
+      </scroll-view>
+    </view>
+  </block>
+
+  <block wx:if="{{screen == 'i-visited'}}">
+    <view class="screen child-screen">
+      <view class="solid-header flat">
+        <view class="nav-row light">
+          <button class="nav-link light" bindtap="backToMe">‹ 返回</button>
+          <view class="nav-title">我看过的人</view>
+          <view class="nav-placeholder"></view>
+        </view>
+      </view>
+      <scroll-view class="child-scroll" scroll-y>
+        <view class="list-empty">
+          <text>功能即将上线</text>
         </view>
       </scroll-view>
     </view>

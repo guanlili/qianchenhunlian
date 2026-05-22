@@ -1,0 +1,23 @@
+<view class="page">
+  <view class="header">
+    <view class="title">意见反馈</view>
+    <view class="sub">您的反馈是我们改进的动力 (上限 1000 字)</view>
+  </view>
+  <view class="form-card">
+    <textarea
+      class="content-area"
+      value="{{content}}"
+      bindinput="onContentInput"
+      maxlength="1000"
+      placeholder="说说您的建议、遇到的问题..."
+    />
+    <view class="counter">{{content.length}}/1000</view>
+  </view>
+  <view class="form-card">
+    <text class="label">联系方式 (选填)</text>
+    <input class="contact-input" value="{{contact}}" bindinput="onContactInput" placeholder="手机号 / 微信号 (便于回复)" />
+  </view>
+  <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
+    {{submitting ? '提交中...' : '提交反馈'}}
+  </button>
+</view>

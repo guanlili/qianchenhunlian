@@ -69,6 +69,21 @@ export type AdminCriteriaUpdate = {
     locations?: (Array<(string)> | null);
 };
 
+export type AdminFeedbackItem = {
+    id: string;
+    user_id: string;
+    user_xy_code?: (string | null);
+    content: string;
+    contact?: (string | null);
+    status: string;
+    created_at: string;
+};
+
+export type AdminFeedbackList = {
+    items?: Array<AdminFeedbackItem>;
+    total?: number;
+};
+
 export type AdminParentsInfoItem = {
     user_id: string;
     parents_health?: (string | null);
@@ -216,13 +231,31 @@ export type AdminUserList = {
     total?: number;
 };
 
+export type AffinityBrief = {
+    user_id: string;
+    xy_code?: (string | null);
+    gender?: (string | null);
+    year?: (number | null);
+    location?: (string | null);
+    photos?: Array<(string)>;
+    affinity_at: string;
+    is_mutual?: boolean;
+};
+
+export type AffinityList = {
+    items?: Array<AffinityBrief>;
+    total?: number;
+};
+
+export type AffinityToggleResponse = {
+    liked: boolean;
+    mutual: boolean;
+    created_at?: (string | null);
+};
+
 export type AuditRequest = {
     approve?: boolean;
     reason?: (string | null);
-};
-
-export type Body_contacts_send_intent = {
-    message?: (string | null);
 };
 
 export type Body_login_login_access_token = {
@@ -241,6 +274,15 @@ export type Body_profiles_update_my_contact = {
 
 export type Body_uploads_upload_image = {
     file: (Blob | File);
+};
+
+export type CityItem = {
+    city: string;
+    count: number;
+};
+
+export type CityList = {
+    items?: Array<CityItem>;
 };
 
 export type ContactRequestBody = {
@@ -332,6 +374,16 @@ export type FavoriteList = {
     total?: number;
 };
 
+export type FeedbackBody = {
+    content: string;
+    contact?: (string | null);
+};
+
+export type FeedbackResponse = {
+    id: string;
+    created_at: string;
+};
+
 export type FilterRequest = {
     gender?: (string | null);
     year_min?: (number | null);
@@ -360,13 +412,16 @@ export type HandleRequestBody = {
 
 export type status = 'accepted' | 'rejected' | 'contacted' | 'closed';
 
-export type HTTPValidationError = {
-    detail?: Array<ValidationError>;
+export type HomeStoreBody = {
+    store_id: string;
 };
 
-export type IntentResponse = {
-    intent_id: string;
-    sent_at: string;
+export type HomeStoreUpdate = {
+    store_id?: (string | null);
+};
+
+export type HTTPValidationError = {
+    detail?: Array<ValidationError>;
 };
 
 /**
@@ -387,6 +442,7 @@ export type MatchBrief = {
     likes?: number;
     hot?: number;
     starred?: boolean;
+    verified?: string;
 };
 
 export type MatchDetailResponse = {
@@ -394,6 +450,7 @@ export type MatchDetailResponse = {
     xy_code?: (string | null);
     unlocked?: boolean;
     starred?: boolean;
+    verified?: string;
 };
 
 export type MatchListResponse = {
@@ -414,6 +471,14 @@ export type NewPassword = {
     new_password: string;
 };
 
+export type ParentsInfoPublic = {
+    parents_health?: (string | null);
+    parents_job?: (string | null);
+    parents_pension?: (string | null);
+    siblings?: (string | null);
+    user_id: string;
+};
+
 export type PhotoCommit = {
     file_url: string;
 };
@@ -428,6 +493,10 @@ export type PrivateUserCreate = {
 export type ProfileMeResponse = {
     profile?: (ProfileWithContact | null);
     criteria?: (CriteriaPublic | null);
+    parents_info?: (ParentsInfoPublic | null);
+    home_store?: (StorePublic | null);
+    verified?: string;
+    home_store_id?: (string | null);
     has_profile?: boolean;
     has_criteria?: boolean;
     is_welcomed?: boolean;
@@ -554,6 +623,8 @@ export type StaffCreate = {
     email: string;
     name: string;
     is_active?: boolean;
+    role?: string;
+    store_id?: (string | null);
     password: string;
 };
 
@@ -561,6 +632,8 @@ export type StaffPublic = {
     email: string;
     name: string;
     is_active?: boolean;
+    role?: string;
+    store_id?: (string | null);
     id: string;
     created_at: string;
     updated_at: string;
@@ -575,6 +648,8 @@ export type StaffUpdate = {
     name?: (string | null);
     is_active?: (boolean | null);
     password?: (string | null);
+    role?: (string | null);
+    store_id?: (string | null);
 };
 
 export type StatsResponse = {
@@ -582,6 +657,51 @@ export type StatsResponse = {
     total_profiles?: number;
     pending_audits?: number;
     today_signups?: number;
+};
+
+export type StoreCreate = {
+    name: string;
+    city: string;
+    district?: (string | null);
+    address?: (string | null);
+    lng?: (number | null);
+    lat?: (number | null);
+    phone?: (string | null);
+    photo?: (string | null);
+    fees_desc?: (string | null);
+    status?: string;
+};
+
+export type StoreList = {
+    items?: Array<StorePublic>;
+    total?: number;
+};
+
+export type StorePublic = {
+    name: string;
+    city: string;
+    district?: (string | null);
+    address?: (string | null);
+    lng?: (number | null);
+    lat?: (number | null);
+    phone?: (string | null);
+    photo?: (string | null);
+    fees_desc?: (string | null);
+    status?: string;
+    id: string;
+};
+
+export type StoreUpdate = {
+    name?: (string | null);
+    city?: (string | null);
+    district?: (string | null);
+    address?: (string | null);
+    lng?: (number | null);
+    lat?: (number | null);
+    phone?: (string | null);
+    photo?: (string | null);
+    fees_desc?: (string | null);
+    status?: (string | null);
 };
 
 export type ToggleResponse = {
@@ -661,6 +781,13 @@ export type ValidationError = {
     type: string;
 };
 
+export type VerifyResponse = {
+    user_id: string;
+    verified: string;
+    verified_by_store_id?: (string | null);
+    verified_at?: (string | null);
+};
+
 export type VisitorBrief = {
     user_id: string;
     xy_code?: (string | null);
@@ -673,13 +800,6 @@ export type VisitorBrief = {
 export type VisitorList = {
     items?: Array<VisitorBrief>;
     total?: number;
-};
-
-/**
- * dev 登录: 直接传 fake openid, 用于 AppID 没配置时联调小程序
- */
-export type WechatDevLoginRequest = {
-    openid: string;
 };
 
 export type WechatLoginRequest = {
@@ -760,6 +880,59 @@ export type AdminAdminUpdateParentsInfoData = {
 
 export type AdminAdminUpdateParentsInfoResponse = (AdminParentsInfoItem);
 
+export type AdminVerifyProfileData = {
+    userId: string;
+};
+
+export type AdminVerifyProfileResponse = (VerifyResponse);
+
+export type AdminUnverifyProfileData = {
+    userId: string;
+};
+
+export type AdminUnverifyProfileResponse = (VerifyResponse);
+
+export type AdminAdminSetHomeStoreData = {
+    requestBody: HomeStoreUpdate;
+    userId: string;
+};
+
+export type AdminAdminSetHomeStoreResponse = (AdminProfileItem);
+
+export type AdminAdminListStoresData = {
+    city?: (string | null);
+    limit?: number;
+    skip?: number;
+};
+
+export type AdminAdminListStoresResponse = (StoreList);
+
+export type AdminAdminCreateStoreData = {
+    requestBody: StoreCreate;
+};
+
+export type AdminAdminCreateStoreResponse = (StorePublic);
+
+export type AdminAdminUpdateStoreData = {
+    requestBody: StoreUpdate;
+    storeId: string;
+};
+
+export type AdminAdminUpdateStoreResponse = (StorePublic);
+
+export type AdminAdminDeleteStoreData = {
+    storeId: string;
+};
+
+export type AdminAdminDeleteStoreResponse = (Message);
+
+export type AdminAdminListFeedbackData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type AdminAdminListFeedbackResponse = (AdminFeedbackList);
+
 export type AdminGrantUnlockBalanceData = {
     requestBody: GrantBalanceRequest;
     userId: string;
@@ -831,6 +1004,32 @@ export type AdminHandleContactRequestData = {
 
 export type AdminHandleContactRequestResponse = (AdminContactRequestItem);
 
+export type AffinityToggleAffinityData = {
+    targetUserId: string;
+};
+
+export type AffinityToggleAffinityResponse = (AffinityToggleResponse);
+
+export type AffinityListMineData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type AffinityListMineResponse = (AffinityList);
+
+export type AffinityListMutualData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type AffinityListMutualResponse = (AffinityList);
+
+export type AffinityCheckAffinityData = {
+    targetUserId: string;
+};
+
+export type AffinityCheckAffinityResponse = (AffinityToggleResponse);
+
 export type ContactsSubmitContactRequestData = {
     requestBody: ContactRequestBody;
 };
@@ -849,13 +1048,6 @@ export type ContactsUnlockContactDeprecatedData = {
 };
 
 export type ContactsUnlockContactDeprecatedResponse = (unknown);
-
-export type ContactsSendIntentData = {
-    requestBody?: Body_contacts_send_intent;
-    targetId: string;
-};
-
-export type ContactsSendIntentResponse = (IntentResponse);
 
 export type FavoritesToggleFavoriteData = {
     targetId: string;
@@ -876,6 +1068,12 @@ export type FavoritesListVisitorsData = {
 };
 
 export type FavoritesListVisitorsResponse = (VisitorList);
+
+export type FeedbackSubmitFeedbackData = {
+    requestBody: FeedbackBody;
+};
+
+export type FeedbackSubmitFeedbackResponse = (FeedbackResponse);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
@@ -960,6 +1158,12 @@ export type ProfilesUpdateMyContactData = {
 
 export type ProfilesUpdateMyContactResponse = (ProfileWithContact);
 
+export type ProfilesSetHomeStoreData = {
+    requestBody: HomeStoreBody;
+};
+
+export type ProfilesSetHomeStoreResponse = (StorePublic);
+
 export type ProfilesUpsertMyCriteriaData = {
     requestBody: CriteriaUpdate;
 };
@@ -977,6 +1181,22 @@ export type ProfilesRemoveMyPhotoData = {
 };
 
 export type ProfilesRemoveMyPhotoResponse = (ProfileWithContact);
+
+export type StoresListCitiesResponse = (CityList);
+
+export type StoresListStoresData = {
+    city?: (string | null);
+    limit?: number;
+    skip?: number;
+};
+
+export type StoresListStoresResponse = (StoreList);
+
+export type StoresGetStoreData = {
+    storeId: string;
+};
+
+export type StoresGetStoreResponse = (StorePublic);
 
 export type UploadsUploadImageData = {
     formData: Body_uploads_upload_image;
@@ -1051,9 +1271,3 @@ export type WechatWechatLoginData = {
 };
 
 export type WechatWechatLoginResponse = (WechatLoginResponse);
-
-export type WechatWechatDevLoginData = {
-    requestBody: WechatDevLoginRequest;
-};
-
-export type WechatWechatDevLoginResponse = (WechatLoginResponse);

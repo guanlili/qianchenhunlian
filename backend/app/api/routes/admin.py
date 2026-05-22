@@ -21,6 +21,7 @@ from app.api.deps import (
 from app.models import (
     ContactRequest,
     Criteria,
+    Feedback,
     Message,
     ParentsInfo,
     Profile,
@@ -29,6 +30,10 @@ from app.models import (
     StaffPublic,
     StaffUpdate,
     StaffsPublic,
+    Store,
+    StoreCreate,
+    StorePublic,
+    StoreUpdate,
     User,
 )
 from datetime import date
@@ -539,6 +544,275 @@ def admin_update_parents_info(
     session.commit()
     session.refresh(parents)
     return _to_admin_parents_info_item(parents)
+
+
+# ---------------- 实名认证 (admin + 门店账号) ----------------
+
+
+def _can_verify(actor: CurrentActor, target_profile: Profile) -> bool:
+    """admin: 任何用户都能标; store_owner: 只能标自己门店下的用户"""
+    if actor.actor_type == "user" and actor.is_superuser:
+        return True
+    if (
+        actor.actor_type == "staff"
+        and actor.staff
+        and actor.staff.role == "store_owner"
+    ):
+        if not actor.staff.store_id:
+            return False
+        return target_profile.home_store_id == actor.staff.store_id
+    return False
+
+
+class VerifyResponse(SQLModel):
+    user_id: uuid.UUID
+    verified: str
+    verified_by_store_id: uuid.UUID | None = None
+    verified_at: datetime | None = None
+
+
+@router.post("/profiles/{user_id}/verify", response_model=VerifyResponse)
+def verify_profile(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+) -> VerifyResponse:
+    """标用户为已认证 (admin 任意用户; 门店账号仅本店用户)"""
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == user_id)
+    ).first()
+    user = session.get(User, user_id)
+    if not profile or not user:
+        raise HTTPException(status_code=404, detail="资料不存在")
+
+    if not _can_verify(actor, profile):
+        raise HTTPException(status_code=403, detail="无权认证此用户")
+
+    user.verified = "passed"
+    user.updated_at = datetime.utcnow()
+    session.add(user)
+
+    if actor.actor_type == "staff" and actor.staff and actor.staff.store_id:
+        profile.verified_by_store_id = actor.staff.store_id
+    profile.verified_at = datetime.utcnow()
+    profile.updated_at = datetime.utcnow()
+    session.add(profile)
+    session.commit()
+    session.refresh(profile)
+    session.refresh(user)
+    return VerifyResponse(
+        user_id=user.id,
+        verified=user.verified,
+        verified_by_store_id=profile.verified_by_store_id,
+        verified_at=profile.verified_at,
+    )
+
+
+@router.post("/profiles/{user_id}/unverify", response_model=VerifyResponse)
+def unverify_profile(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+) -> VerifyResponse:
+    """撤销认证"""
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == user_id)
+    ).first()
+    user = session.get(User, user_id)
+    if not profile or not user:
+        raise HTTPException(status_code=404, detail="资料不存在")
+    if not _can_verify(actor, profile):
+        raise HTTPException(status_code=403, detail="无权撤销认证")
+
+    user.verified = "none"
+    user.updated_at = datetime.utcnow()
+    session.add(user)
+    profile.verified_by_store_id = None
+    profile.verified_at = None
+    profile.updated_at = datetime.utcnow()
+    session.add(profile)
+    session.commit()
+    session.refresh(profile)
+    session.refresh(user)
+    return VerifyResponse(user_id=user.id, verified=user.verified)
+
+
+# ---------------- 用户主属门店 (admin/staff 改) ----------------
+
+
+class HomeStoreUpdate(SQLModel):
+    store_id: uuid.UUID | None = None
+
+
+@router.put(
+    "/profiles/{user_id}/home-store",
+    response_model=AdminProfileItem,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def admin_set_home_store(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    body: HomeStoreUpdate = Body(),
+) -> AdminProfileItem:
+    """admin 设置 / 改变用户主属门店"""
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == user_id)
+    ).first()
+    user = session.get(User, user_id)
+    if not profile or not user:
+        raise HTTPException(status_code=404, detail="资料不存在")
+    if body.store_id is not None:
+        store = session.get(Store, body.store_id)
+        if not store or store.status != "active":
+            raise HTTPException(status_code=400, detail="门店不存在或已关闭")
+    profile.home_store_id = body.store_id
+    profile.updated_at = datetime.utcnow()
+    session.add(profile)
+    session.commit()
+    session.refresh(profile)
+    return _to_admin_profile_item(profile, user)
+
+
+# ---------------- 门店 CRUD (admin only) ----------------
+
+
+class StoreList(SQLModel):
+    items: list[StorePublic] = []
+    total: int = 0
+
+
+@router.get(
+    "/stores",
+    response_model=StoreList,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def admin_list_stores(
+    session: SessionDep,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    city: str | None = Query(default=None),
+) -> StoreList:
+    base = select(Store)
+    if city:
+        base = base.where(Store.city == city)
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(Store.city, Store.name).offset(skip).limit(limit)  # type: ignore
+    ).all()
+    return StoreList(
+        items=[StorePublic.model_validate(s, from_attributes=True) for s in rows],
+        total=total,
+    )
+
+
+@router.post(
+    "/stores",
+    response_model=StorePublic,
+    dependencies=[Depends(require_admin)],
+)
+def admin_create_store(
+    session: SessionDep,
+    body: StoreCreate = Body(),
+) -> StorePublic:
+    s = Store(**body.model_dump())
+    session.add(s)
+    session.commit()
+    session.refresh(s)
+    return StorePublic.model_validate(s, from_attributes=True)
+
+
+@router.put(
+    "/stores/{store_id}",
+    response_model=StorePublic,
+    dependencies=[Depends(require_admin)],
+)
+def admin_update_store(
+    session: SessionDep,
+    store_id: uuid.UUID,
+    body: StoreUpdate = Body(),
+) -> StorePublic:
+    s = session.get(Store, store_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="门店不存在")
+    data = body.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(s, k, v if v != "" else None)
+    s.updated_at = datetime.utcnow()
+    session.add(s)
+    session.commit()
+    session.refresh(s)
+    return StorePublic.model_validate(s, from_attributes=True)
+
+
+@router.delete(
+    "/stores/{store_id}",
+    response_model=Message,
+    dependencies=[Depends(require_admin)],
+)
+def admin_delete_store(
+    session: SessionDep,
+    store_id: uuid.UUID,
+) -> Message:
+    """软删: 改 status=closed, 保留历史 + home_store_id 关联完整"""
+    s = session.get(Store, store_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="门店不存在")
+    s.status = "closed"
+    s.updated_at = datetime.utcnow()
+    session.add(s)
+    session.commit()
+    return Message(message="门店已关闭")
+
+
+# ---------------- 反馈列表 ----------------
+
+
+class AdminFeedbackItem(SQLModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    user_xy_code: str | None = None
+    content: str
+    contact: str | None = None
+    status: str
+    created_at: datetime
+
+
+class AdminFeedbackList(SQLModel):
+    items: list[AdminFeedbackItem] = []
+    total: int = 0
+
+
+@router.get(
+    "/feedback",
+    response_model=AdminFeedbackList,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def admin_list_feedback(
+    session: SessionDep,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> AdminFeedbackList:
+    total = session.exec(select(func.count()).select_from(Feedback)).one()
+    rows = session.exec(
+        select(Feedback, User)
+        .join(User, Feedback.user_id == User.id, isouter=True)  # type: ignore
+        .order_by(Feedback.created_at.desc())  # type: ignore
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    items = [
+        AdminFeedbackItem(
+            id=fb.id,
+            user_id=fb.user_id,
+            user_xy_code=u.xy_code if u else None,
+            content=fb.content,
+            contact=fb.contact,
+            status=fb.status,
+            created_at=fb.created_at,
+        )
+        for fb, u in rows
+    ]
+    return AdminFeedbackList(items=items, total=total)
 
 
 @router.post(

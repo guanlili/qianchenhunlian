@@ -1,0 +1,13 @@
+.page { min-height: 100vh; background: #fbf6ee; padding: 32rpx 28rpx; }
+.header { padding: 32rpx 0; }
+.title { font-size: 38rpx; font-weight: 800; color: #1f1a17; }
+.sub { margin-top: 10rpx; color: #9a8e84; font-size: 24rpx; }
+.empty { text-align: center; padding: 80rpx 0; color: #9a8e84; }
+.city-list { background: #fff; border-radius: 20rpx; overflow: hidden; }
+.city-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 32rpx 28rpx; border-bottom: 2rpx solid #f4ece0;
+}
+.city-row:last-child { border-bottom: 0; }
+.city-name { font-size: 30rpx; font-weight: 700; color: #1f1a17; }
+.city-meta { color: #9a8e84; font-size: 24rpx; }

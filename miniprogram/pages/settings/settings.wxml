@@ -1,0 +1,23 @@
+<view class="page">
+  <view class="header">
+    <view class="title">设置</view>
+  </view>
+  <view wx:for="{{sections}}" wx:key="*this" wx:for-item="sec" class="section">
+    <view
+      wx:for="{{sec.items}}"
+      wx:key="label"
+      wx:for-item="item"
+      class="row"
+      bindtap="tap"
+      data-url="{{item.url}}"
+      data-kind="{{item.kind}}"
+      data-label="{{item.label}}"
+    >
+      <view class="row-main">
+        <view class="row-label">{{item.label}}</view>
+        <view wx:if="{{item.sub}}" class="row-sub">{{item.sub}}</view>
+      </view>
+      <text class="row-arrow">›</text>
+    </view>
+  </view>
+</view>

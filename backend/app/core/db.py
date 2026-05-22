@@ -36,6 +36,12 @@ _PENDING_ADD_COLUMNS: list[tuple[str, str, str]] = [
     ("criteria", "car",              "VARCHAR(32)"),
     ("criteria", "job",              "VARCHAR(64)"),
     ("criteria", "social_insurance", "VARCHAR(8)"),
+    # — Phase 1: 门店 / 好感 / 反馈 / 认证关联 —
+    ("profile", "home_store_id",         "UUID"),
+    ("profile", "verified_by_store_id",  "UUID"),
+    ("profile", "verified_at",           "TIMESTAMP"),
+    ("staff",   "role",                  "VARCHAR(16) NOT NULL DEFAULT 'staff'"),
+    ("staff",   "store_id",              "UUID"),
 ]
 
 

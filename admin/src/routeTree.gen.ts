@@ -15,11 +15,13 @@ import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
 import { Route as LayoutStaffRouteImport } from './routes/_layout/staff'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
 import { Route as LayoutProfilesRouteImport } from './routes/_layout/profiles'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
+import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 
 const SignupRoute = SignupRouteImport.update({
@@ -51,6 +53,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutStoresRoute = LayoutStoresRouteImport.update({
+  id: '/stores',
+  path: '/stores',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutStaffRoute = LayoutStaffRouteImport.update({
   id: '/staff',
   path: '/staff',
@@ -76,6 +83,11 @@ const LayoutItemsRoute = LayoutItemsRouteImport.update({
   path: '/items',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutFeedbackRoute = LayoutFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -88,11 +100,13 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/feedback': typeof LayoutFeedbackRoute
   '/items': typeof LayoutItemsRoute
   '/profiles': typeof LayoutProfilesRoute
   '/requests': typeof LayoutRequestsRoute
   '/settings': typeof LayoutSettingsRoute
   '/staff': typeof LayoutStaffRoute
+  '/stores': typeof LayoutStoresRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesByTo {
@@ -101,11 +115,13 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/feedback': typeof LayoutFeedbackRoute
   '/items': typeof LayoutItemsRoute
   '/profiles': typeof LayoutProfilesRoute
   '/requests': typeof LayoutRequestsRoute
   '/settings': typeof LayoutSettingsRoute
   '/staff': typeof LayoutStaffRoute
+  '/stores': typeof LayoutStoresRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
@@ -116,11 +132,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/feedback': typeof LayoutFeedbackRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/profiles': typeof LayoutProfilesRoute
   '/_layout/requests': typeof LayoutRequestsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/staff': typeof LayoutStaffRoute
+  '/_layout/stores': typeof LayoutStoresRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
@@ -131,11 +149,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/feedback'
     | '/items'
     | '/profiles'
     | '/requests'
     | '/settings'
     | '/staff'
+    | '/stores'
     | '/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -144,11 +164,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/feedback'
     | '/items'
     | '/profiles'
     | '/requests'
     | '/settings'
     | '/staff'
+    | '/stores'
     | '/'
   id:
     | '__root__'
@@ -158,11 +180,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_layout/admin'
+    | '/_layout/feedback'
     | '/_layout/items'
     | '/_layout/profiles'
     | '/_layout/requests'
     | '/_layout/settings'
     | '/_layout/staff'
+    | '/_layout/stores'
     | '/_layout/'
   fileRoutesById: FileRoutesById
 }
@@ -218,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/stores': {
+      id: '/_layout/stores'
+      path: '/stores'
+      fullPath: '/stores'
+      preLoaderRoute: typeof LayoutStoresRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/staff': {
       id: '/_layout/staff'
       path: '/staff'
@@ -253,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutItemsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/feedback': {
+      id: '/_layout/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof LayoutFeedbackRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/admin': {
       id: '/_layout/admin'
       path: '/admin'
@@ -265,21 +303,25 @@ declare module '@tanstack/react-router' {
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutFeedbackRoute: typeof LayoutFeedbackRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutProfilesRoute: typeof LayoutProfilesRoute
   LayoutRequestsRoute: typeof LayoutRequestsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutStaffRoute: typeof LayoutStaffRoute
+  LayoutStoresRoute: typeof LayoutStoresRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
+  LayoutFeedbackRoute: LayoutFeedbackRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutProfilesRoute: LayoutProfilesRoute,
   LayoutRequestsRoute: LayoutRequestsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutStaffRoute: LayoutStaffRoute,
+  LayoutStoresRoute: LayoutStoresRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 
