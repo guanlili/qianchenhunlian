@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, ContactsSendIntentData, ContactsSendIntentResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, PrivateCreateUserData, PrivateCreateUserResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse, WechatWechatDevLoginData, WechatWechatDevLoginResponse } from './types.gen';
+import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminVerifyProfileData, AdminVerifyProfileResponse, AdminUnverifyProfileData, AdminUnverifyProfileResponse, AdminAdminSetHomeStoreData, AdminAdminSetHomeStoreResponse, AdminAdminListStoresData, AdminAdminListStoresResponse, AdminAdminCreateStoreData, AdminAdminCreateStoreResponse, AdminAdminUpdateStoreData, AdminAdminUpdateStoreResponse, AdminAdminDeleteStoreData, AdminAdminDeleteStoreResponse, AdminAdminListFeedbackData, AdminAdminListFeedbackResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, AffinityToggleAffinityData, AffinityToggleAffinityResponse, AffinityListMineData, AffinityListMineResponse, AffinityListMutualData, AffinityListMutualResponse, AffinityCheckAffinityData, AffinityCheckAffinityResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, FeedbackSubmitFeedbackData, FeedbackSubmitFeedbackResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, PrivateCreateUserData, PrivateCreateUserResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesSetHomeStoreData, ProfilesSetHomeStoreResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, StoresListCitiesResponse, StoresListStoresData, StoresListStoresResponse, StoresGetStoreData, StoresGetStoreResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse } from './types.gen';
 
 export class AdminService {
     /**
@@ -150,6 +150,181 @@ export class AdminService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Verify Profile
+     * 标用户为已认证 (admin 任意用户; 门店账号仅本店用户)
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns VerifyResponse Successful Response
+     * @throws ApiError
+     */
+    public static verifyProfile(data: AdminVerifyProfileData): CancelablePromise<AdminVerifyProfileResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/profiles/{user_id}/verify',
+            path: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unverify Profile
+     * 撤销认证
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns VerifyResponse Successful Response
+     * @throws ApiError
+     */
+    public static unverifyProfile(data: AdminUnverifyProfileData): CancelablePromise<AdminUnverifyProfileResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/profiles/{user_id}/unverify',
+            path: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Set Home Store
+     * admin 设置 / 改变用户主属门店
+     * @param data The data for the request.
+     * @param data.userId
+     * @param data.requestBody
+     * @returns AdminProfileItem Successful Response
+     * @throws ApiError
+     */
+    public static adminSetHomeStore(data: AdminAdminSetHomeStoreData): CancelablePromise<AdminAdminSetHomeStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/admin/profiles/{user_id}/home-store',
+            path: {
+                user_id: data.userId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin List Stores
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @param data.city
+     * @returns StoreList Successful Response
+     * @throws ApiError
+     */
+    public static adminListStores(data: AdminAdminListStoresData = {}): CancelablePromise<AdminAdminListStoresResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/stores',
+            query: {
+                skip: data.skip,
+                limit: data.limit,
+                city: data.city
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Create Store
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns StorePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminCreateStore(data: AdminAdminCreateStoreData): CancelablePromise<AdminAdminCreateStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/stores',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Update Store
+     * @param data The data for the request.
+     * @param data.storeId
+     * @param data.requestBody
+     * @returns StorePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminUpdateStore(data: AdminAdminUpdateStoreData): CancelablePromise<AdminAdminUpdateStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/admin/stores/{store_id}',
+            path: {
+                store_id: data.storeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Delete Store
+     * 软删: 改 status=closed, 保留历史 + home_store_id 关联完整
+     * @param data The data for the request.
+     * @param data.storeId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static adminDeleteStore(data: AdminAdminDeleteStoreData): CancelablePromise<AdminAdminDeleteStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/admin/stores/{store_id}',
+            path: {
+                store_id: data.storeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin List Feedback
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns AdminFeedbackList Successful Response
+     * @throws ApiError
+     */
+    public static adminListFeedback(data: AdminAdminListFeedbackData = {}): CancelablePromise<AdminAdminListFeedbackResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/feedback',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -396,6 +571,96 @@ export class AdminService {
     }
 }
 
+export class AffinityService {
+    /**
+     * Toggle Affinity
+     * 点好感 / 取消好感 (toggle, 幂等). 已存在则取消, 不存在则创建.
+     * @param data The data for the request.
+     * @param data.targetUserId
+     * @returns AffinityToggleResponse Successful Response
+     * @throws ApiError
+     */
+    public static toggleAffinity(data: AffinityToggleAffinityData): CancelablePromise<AffinityToggleAffinityResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/affinity/{target_user_id}/toggle',
+            path: {
+                target_user_id: data.targetUserId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Mine
+     * 我点过好感的人 (单向; 不告诉对方是否 mutual, 避免反向探测)
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns AffinityList Successful Response
+     * @throws ApiError
+     */
+    public static listMine(data: AffinityListMineData = {}): CancelablePromise<AffinityListMineResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/affinity/mine',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Mutual
+     * 互相好感 — 双方都点了好感的对子. "好感消息" tab 显示.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns AffinityList Successful Response
+     * @throws ApiError
+     */
+    public static listMutual(data: AffinityListMutualData = {}): CancelablePromise<AffinityListMutualResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/affinity/mutual',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Check Affinity
+     * 查我对 target 是否点过好感 (用于详情页渲染按钮状态)
+     * @param data The data for the request.
+     * @param data.targetUserId
+     * @returns AffinityToggleResponse Successful Response
+     * @throws ApiError
+     */
+    public static checkAffinity(data: AffinityCheckAffinityData): CancelablePromise<AffinityCheckAffinityResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/affinity/has/{target_user_id}',
+            path: {
+                target_user_id: data.targetUserId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
 export class ContactsService {
     /**
      * Submit Contact Request
@@ -466,30 +731,6 @@ export class ContactsService {
             }
         });
     }
-    
-    /**
-     * Send Intent
-     * 发"看上你"意向 (轻; 不扣额度, 不撮合). 真要联系还得提交 contact request.
-     * @param data The data for the request.
-     * @param data.targetId
-     * @param data.requestBody
-     * @returns IntentResponse Successful Response
-     * @throws ApiError
-     */
-    public static sendIntent(data: ContactsSendIntentData): CancelablePromise<ContactsSendIntentResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/contacts/{target_id}/intent',
-            path: {
-                target_id: data.targetId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
 }
 
 export class FavoritesService {
@@ -554,6 +795,27 @@ export class FavoritesService {
                 skip: data.skip,
                 limit: data.limit
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class FeedbackService {
+    /**
+     * Submit Feedback
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns FeedbackResponse Successful Response
+     * @throws ApiError
+     */
+    public static submitFeedback(data: FeedbackSubmitFeedbackData): CancelablePromise<FeedbackSubmitFeedbackResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/feedback',
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -893,6 +1155,26 @@ export class ProfilesService {
     }
     
     /**
+     * Set Home Store
+     * 用户在小程序选定主属门店
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns StorePublic Successful Response
+     * @throws ApiError
+     */
+    public static setHomeStore(data: ProfilesSetHomeStoreData): CancelablePromise<ProfilesSetHomeStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/profiles/me/home-store',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Upsert My Criteria
      * 新建或更新我的择偶要求
      * @param data The data for the request.
@@ -947,6 +1229,66 @@ export class ProfilesService {
             url: '/api/v1/profiles/me/photos/{index}',
             path: {
                 index: data.index
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class StoresService {
+    /**
+     * List Cities
+     * 有门店的城市 distinct 列表 (按 active 状态过滤)
+     * @returns CityList Successful Response
+     * @throws ApiError
+     */
+    public static listCities(): CancelablePromise<StoresListCitiesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/stores/cities'
+        });
+    }
+    
+    /**
+     * List Stores
+     * 门店列表 (按城市筛选, 默认仅 active)
+     * @param data The data for the request.
+     * @param data.city
+     * @param data.skip
+     * @param data.limit
+     * @returns StoreList Successful Response
+     * @throws ApiError
+     */
+    public static listStores(data: StoresListStoresData = {}): CancelablePromise<StoresListStoresResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/stores',
+            query: {
+                city: data.city,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Store
+     * @param data The data for the request.
+     * @param data.storeId
+     * @returns StorePublic Successful Response
+     * @throws ApiError
+     */
+    public static getStore(data: StoresGetStoreData): CancelablePromise<StoresGetStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/stores/{store_id}',
+            path: {
+                store_id: data.storeId
             },
             errors: {
                 422: 'Validation Error'
@@ -1224,29 +1566,6 @@ export class WechatService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/wechat/login',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Wechat Dev Login
-     * ⚠️ 仅 ENVIRONMENT=local 可用, 用于无 AppID 时联调.
-     *
-     * 传一个 fake openid (如 'dev_zhang_001'), 后端直接 upsert 用户并签 JWT.
-     * 生产环境会拒绝.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns WechatLoginResponse Successful Response
-     * @throws ApiError
-     */
-    public static wechatDevLogin(data: WechatWechatDevLoginData): CancelablePromise<WechatWechatDevLoginResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/wechat/dev-login',
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {

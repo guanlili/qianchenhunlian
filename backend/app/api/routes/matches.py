@@ -155,6 +155,15 @@ def _is_starred(session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
     )
 
 
+# 山东省限制: 只推荐山东省下的用户 (按 origin 或 location 前缀匹配 "山东")
+def _shandong_clause():
+    from sqlalchemy import or_
+    return or_(
+        Profile.origin.like("山东%"),     # type: ignore
+        Profile.location.like("山东%"),   # type: ignore
+    )
+
+
 # ---------------- Routes ----------------
 
 
@@ -180,7 +189,8 @@ def get_daily_recommendations(
         .where(User.status == "active")
         .where(User.is_superuser == False)  # noqa: E712  排除 admin
         .where(User.xy_code.is_not(None))  # type: ignore
-        .where(Profile.audit_status == "approved")  # 仅推审核通过的资料
+        .where(Profile.audit_status == "approved")
+        .where(_shandong_clause())  # 仅推审核通过的资料
     )
 
     if tab == "today":
@@ -234,6 +244,7 @@ def apply_filter(
         .where(User.is_superuser == False)  # noqa: E712
         .where(User.xy_code.is_not(None))  # type: ignore
         .where(Profile.audit_status == "approved")
+        .where(_shandong_clause())
     )
 
     if body.gender:
@@ -366,6 +377,7 @@ def get_neighbor(
             .where(User.is_superuser == False)  # noqa: E712
             .where(User.xy_code.is_not(None))  # type: ignore
         .where(Profile.audit_status == "approved")
+        .where(_shandong_clause())
             .where(Profile.user_id != current_user.id)
             .where(Profile.updated_at < current.updated_at)
             .order_by(Profile.updated_at.desc())  # type: ignore
@@ -379,6 +391,7 @@ def get_neighbor(
             .where(User.is_superuser == False)  # noqa: E712
             .where(User.xy_code.is_not(None))  # type: ignore
         .where(Profile.audit_status == "approved")
+        .where(_shandong_clause())
             .where(Profile.user_id != current_user.id)
             .where(Profile.updated_at > current.updated_at)
             .order_by(Profile.updated_at.asc())  # type: ignore

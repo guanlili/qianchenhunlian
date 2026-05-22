@@ -4,6 +4,11 @@
     "pages/welcome/welcome",
     "pages/agreement/agreement",
     "pages/privacy/privacy",
+    "pages/store-cities/store-cities",
+    "pages/store-list/store-list",
+    "pages/store-detail/store-detail",
+    "pages/feedback/feedback",
+    "pages/settings/settings",
     "pages/example/index"
   ],
   "window": {

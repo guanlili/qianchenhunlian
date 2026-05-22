@@ -600,6 +600,79 @@ export const AdminCriteriaUpdateSchema = {
     title: 'AdminCriteriaUpdate'
 } as const;
 
+export const AdminFeedbackItemSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        user_xy_code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Xy Code'
+        },
+        content: {
+            type: 'string',
+            title: 'Content'
+        },
+        contact: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'user_id', 'content', 'status', 'created_at'],
+    title: 'AdminFeedbackItem'
+} as const;
+
+export const AdminFeedbackListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/AdminFeedbackItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'AdminFeedbackList'
+} as const;
+
 export const AdminParentsInfoItemSchema = {
     properties: {
         user_id: {
@@ -1746,6 +1819,129 @@ export const AdminUserListSchema = {
     title: 'AdminUserList'
 } as const;
 
+export const AffinityBriefSchema = {
+    properties: {
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        xy_code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Xy Code'
+        },
+        gender: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Gender'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        location: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Location'
+        },
+        photos: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Photos',
+            default: []
+        },
+        affinity_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Affinity At'
+        },
+        is_mutual: {
+            type: 'boolean',
+            title: 'Is Mutual',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['user_id', 'affinity_at'],
+    title: 'AffinityBrief'
+} as const;
+
+export const AffinityListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/AffinityBrief'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'AffinityList'
+} as const;
+
+export const AffinityToggleResponseSchema = {
+    properties: {
+        liked: {
+            type: 'boolean',
+            title: 'Liked'
+        },
+        mutual: {
+            type: 'boolean',
+            title: 'Mutual'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['liked', 'mutual'],
+    title: 'AffinityToggleResponse'
+} as const;
+
 export const AuditRequestSchema = {
     properties: {
         approve: {
@@ -1767,24 +1963,6 @@ export const AuditRequestSchema = {
     },
     type: 'object',
     title: 'AuditRequest'
-} as const;
-
-export const Body_contacts_send_intentSchema = {
-    properties: {
-        message: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Message'
-        }
-    },
-    type: 'object',
-    title: 'Body_contacts-send_intent'
 } as const;
 
 export const Body_login_login_access_tokenSchema = {
@@ -1882,6 +2060,37 @@ export const Body_uploads_upload_imageSchema = {
     type: 'object',
     required: ['file'],
     title: 'Body_uploads-upload_image'
+} as const;
+
+export const CityItemSchema = {
+    properties: {
+        city: {
+            type: 'string',
+            title: 'City'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['city', 'count'],
+    title: 'CityItem'
+} as const;
+
+export const CityListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/CityItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        }
+    },
+    type: 'object',
+    title: 'CityList'
 } as const;
 
 export const ContactRequestBodySchema = {
@@ -2525,6 +2734,47 @@ export const FavoriteListSchema = {
     title: 'FavoriteList'
 } as const;
 
+export const FeedbackBodySchema = {
+    properties: {
+        content: {
+            type: 'string',
+            title: 'Content'
+        },
+        contact: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact'
+        }
+    },
+    type: 'object',
+    required: ['content'],
+    title: 'FeedbackBody'
+} as const;
+
+export const FeedbackResponseSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'created_at'],
+    title: 'FeedbackResponse'
+} as const;
+
 export const FilterRequestSchema = {
     properties: {
         gender: {
@@ -2750,22 +3000,36 @@ export const HandleRequestBodySchema = {
     title: 'HandleRequestBody'
 } as const;
 
-export const IntentResponseSchema = {
+export const HomeStoreBodySchema = {
     properties: {
-        intent_id: {
+        store_id: {
             type: 'string',
             format: 'uuid',
-            title: 'Intent Id'
-        },
-        sent_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Sent At'
+            title: 'Store Id'
         }
     },
     type: 'object',
-    required: ['intent_id', 'sent_at'],
-    title: 'IntentResponse'
+    required: ['store_id'],
+    title: 'HomeStoreBody'
+} as const;
+
+export const HomeStoreUpdateSchema = {
+    properties: {
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        }
+    },
+    type: 'object',
+    title: 'HomeStoreUpdate'
 } as const;
 
 export const MatchBriefSchema = {
@@ -2896,6 +3160,11 @@ export const MatchBriefSchema = {
             type: 'boolean',
             title: 'Starred',
             default: false
+        },
+        verified: {
+            type: 'string',
+            title: 'Verified',
+            default: 'none'
         }
     },
     type: 'object',
@@ -2937,6 +3206,11 @@ export const MatchDetailResponseSchema = {
             type: 'boolean',
             title: 'Starred',
             default: false
+        },
+        verified: {
+            type: 'string',
+            title: 'Verified',
+            default: 'none'
         }
     },
     type: 'object',
@@ -3019,6 +3293,67 @@ export const NewPasswordSchema = {
     title: 'NewPassword'
 } as const;
 
+export const ParentsInfoPublicSchema = {
+    properties: {
+        parents_health: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Health'
+        },
+        parents_job: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Job'
+        },
+        parents_pension: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 16
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parents Pension'
+        },
+        siblings: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Siblings'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        }
+    },
+    type: 'object',
+    required: ['user_id'],
+    title: 'ParentsInfoPublic'
+} as const;
+
 export const PhotoCommitSchema = {
     properties: {
         file_url: {
@@ -3077,6 +3412,43 @@ export const ProfileMeResponseSchema = {
                     type: 'null'
                 }
             ]
+        },
+        parents_info: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/ParentsInfoPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        home_store: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/StorePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        verified: {
+            type: 'string',
+            title: 'Verified',
+            default: 'none'
+        },
+        home_store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Home Store Id'
         },
         has_profile: {
             type: 'boolean',
@@ -4266,6 +4638,24 @@ export const StaffCreateSchema = {
             title: 'Is Active',
             default: true
         },
+        role: {
+            type: 'string',
+            maxLength: 16,
+            title: 'Role',
+            default: 'staff'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        },
         password: {
             type: 'string',
             maxLength: 128,
@@ -4295,6 +4685,24 @@ export const StaffPublicSchema = {
             type: 'boolean',
             title: 'Is Active',
             default: true
+        },
+        role: {
+            type: 'string',
+            maxLength: 16,
+            title: 'Role',
+            default: 'staff'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
         },
         id: {
             type: 'string',
@@ -4354,6 +4762,30 @@ export const StaffUpdateSchema = {
                 }
             ],
             title: 'Password'
+        },
+        role: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 16
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Role'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
         }
     },
     type: 'object',
@@ -4405,6 +4837,368 @@ export const StatsResponseSchema = {
     },
     type: 'object',
     title: 'StatsResponse'
+} as const;
+
+export const StoreCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Name'
+        },
+        city: {
+            type: 'string',
+            maxLength: 32,
+            title: 'City'
+        },
+        district: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'District'
+        },
+        address: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Address'
+        },
+        lng: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lng'
+        },
+        lat: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lat'
+        },
+        phone: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Phone'
+        },
+        photo: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo'
+        },
+        fees_desc: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fees Desc'
+        },
+        status: {
+            type: 'string',
+            maxLength: 16,
+            title: 'Status',
+            default: 'active'
+        }
+    },
+    type: 'object',
+    required: ['name', 'city'],
+    title: 'StoreCreate'
+} as const;
+
+export const StoreListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/StorePublic'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'StoreList'
+} as const;
+
+export const StorePublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Name'
+        },
+        city: {
+            type: 'string',
+            maxLength: 32,
+            title: 'City'
+        },
+        district: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'District'
+        },
+        address: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Address'
+        },
+        lng: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lng'
+        },
+        lat: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lat'
+        },
+        phone: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Phone'
+        },
+        photo: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo'
+        },
+        fees_desc: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fees Desc'
+        },
+        status: {
+            type: 'string',
+            maxLength: 16,
+            title: 'Status',
+            default: 'active'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'city', 'id'],
+    title: 'StorePublic'
+} as const;
+
+export const StoreUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        city: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'City'
+        },
+        district: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'District'
+        },
+        address: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Address'
+        },
+        lng: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lng'
+        },
+        lat: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lat'
+        },
+        phone: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Phone'
+        },
+        photo: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo'
+        },
+        fees_desc: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fees Desc'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 16
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        }
+    },
+    type: 'object',
+    title: 'StoreUpdate'
 } as const;
 
 export const ToggleResponseSchema = {
@@ -4766,6 +5560,47 @@ export const ValidationErrorSchema = {
     title: 'ValidationError'
 } as const;
 
+export const VerifyResponseSchema = {
+    properties: {
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        verified: {
+            type: 'string',
+            title: 'Verified'
+        },
+        verified_by_store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Verified By Store Id'
+        },
+        verified_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Verified At'
+        }
+    },
+    type: 'object',
+    required: ['user_id', 'verified'],
+    title: 'VerifyResponse'
+} as const;
+
 export const VisitorBriefSchema = {
     properties: {
         user_id: {
@@ -4843,21 +5678,6 @@ export const VisitorListSchema = {
     },
     type: 'object',
     title: 'VisitorList'
-} as const;
-
-export const WechatDevLoginRequestSchema = {
-    properties: {
-        openid: {
-            type: 'string',
-            maxLength: 64,
-            minLength: 4,
-            title: 'Openid'
-        }
-    },
-    type: 'object',
-    required: ['openid'],
-    title: 'WechatDevLoginRequest',
-    description: 'dev 登录: 直接传 fake openid, 用于 AppID 没配置时联调小程序'
 } as const;
 
 export const WechatLoginRequestSchema = {

@@ -676,13 +676,15 @@ page {
   height: 82rpx;
   padding: 0;
   border-radius: 16rpx;
-  background: #f7efe3;
+  background: #ffffff;
+  border: 2rpx solid #e9dfd0;
   color: #9a8e84;
 }
 
 .card-star.big.on {
-  background: #f9e5e0;
-  color: #c93434;
+  background: #c93434;
+  border-color: #c93434;
+  color: #ffffff;
 }
 
 .card-star.big .card-star-icon {
@@ -2360,4 +2362,34 @@ page {
   aspect-ratio: 1;
   border-radius: 12rpx;
   background: #f7efe3;
+}
+
+.like-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+  padding: 12rpx 22rpx;
+  border-radius: 14rpx;
+  background: #f7efe3;
+  color: #9a8e84;
+}
+
+.like-action.on {
+  background: #f9e5e0;
+  color: #c93434;
+}
+
+.like-action.mutual {
+  background: linear-gradient(135deg, #ff6b6b 0%, #c93434 100%);
+  color: #fff;
+}
+
+.like-action text:first-child {
+  font-size: 28rpx;
+  line-height: 1;
+}
+.like-action text:last-child {
+  font-size: 22rpx;
+  line-height: 1;
 }

@@ -10,7 +10,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import EmailStr
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 # ------------------------------------------------------------
@@ -144,6 +144,11 @@ class Profile(ProfileBase, table=True):
     user_id: uuid.UUID = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE", unique=True, index=True
     )
+
+    # 用户主属门店 (用于工单分配 / 撮合 / 认证)
+    home_store_id: uuid.UUID | None = Field(default=None, index=True)
+    verified_by_store_id: uuid.UUID | None = None    # 谁认证的 (追溯)
+    verified_at: datetime | None = None              # 认证时间
 
     # 仅管理员/已解锁用户可见
     contact_wechat: str | None = Field(default=None, max_length=64)
@@ -406,6 +411,8 @@ class StaffBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     name: str = Field(max_length=64)
     is_active: bool = True
+    role: str = Field(default="staff", max_length=16)         # 'staff' / 'store_owner'
+    store_id: uuid.UUID | None = None                          # 仅 store_owner 必填
 
 
 class StaffCreate(StaffBase):
@@ -416,10 +423,12 @@ class StaffUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=64)
     is_active: bool | None = None
     password: str | None = Field(default=None, min_length=8, max_length=128)
+    role: str | None = Field(default=None, max_length=16)
+    store_id: uuid.UUID | None = None
 
 
 class Staff(StaffBase, table=True):
-    """后台员工: 只读权限. 登录后能看 dashboard/资料/用户列表, 但不能审核/改余额/封禁."""
+    """后台员工: 'staff' 只读, 'store_owner' 能管自己门店的用户 (认证/代录)."""
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
@@ -436,6 +445,79 @@ class StaffPublic(StaffBase):
 class StaffsPublic(SQLModel):
     items: list[StaffPublic] = []
     total: int = 0
+
+
+# ------------------------------------------------------------
+# Store · 线下门店
+# ------------------------------------------------------------
+
+
+class StoreBase(SQLModel):
+    name: str = Field(max_length=64)
+    city: str = Field(max_length=32, index=True)              # 山东省下的市 (例: 济南)
+    district: str | None = Field(default=None, max_length=32)  # 区/县 (例: 历下区)
+    address: str | None = Field(default=None, max_length=255)
+    lng: float | None = None
+    lat: float | None = None
+    phone: str | None = Field(default=None, max_length=32)
+    photo: str | None = Field(default=None, max_length=500)
+    fees_desc: str | None = Field(default=None, max_length=500)  # 收费简介
+    status: str = Field(default="active", max_length=16, index=True)  # 'active' | 'closed'
+
+
+class StoreCreate(StoreBase):
+    pass
+
+
+class StoreUpdate(SQLModel):
+    name: str | None = Field(default=None, max_length=64)
+    city: str | None = Field(default=None, max_length=32)
+    district: str | None = Field(default=None, max_length=32)
+    address: str | None = Field(default=None, max_length=255)
+    lng: float | None = None
+    lat: float | None = None
+    phone: str | None = Field(default=None, max_length=32)
+    photo: str | None = Field(default=None, max_length=500)
+    fees_desc: str | None = Field(default=None, max_length=500)
+    status: str | None = Field(default=None, max_length=16)
+
+
+class Store(StoreBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class StorePublic(StoreBase):
+    id: uuid.UUID
+
+
+# ------------------------------------------------------------
+# Affinity · 好感 (单向 like, 双方都有则为 mutual)
+# ------------------------------------------------------------
+
+
+class Affinity(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    from_user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    to_user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("from_user_id", "to_user_id", name="affinity_pair_uq"),)
+
+
+# ------------------------------------------------------------
+# Feedback · 用户意见反馈
+# ------------------------------------------------------------
+
+
+class Feedback(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    content: str = Field(max_length=1000)
+    contact: str | None = Field(default=None, max_length=64)   # 可填邮箱/微信
+    status: str = Field(default="open", max_length=16, index=True)  # open / handled
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ------------------------------------------------------------

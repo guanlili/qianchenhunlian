@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Ban, Check, EllipsisVertical, Pencil, ShieldCheck, X, Zap } from "lucide-react"
+import { Ban, BadgeCheck, BadgeMinus, Check, EllipsisVertical, Pencil, ShieldCheck, X, Zap } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -47,6 +47,26 @@ export function ProfileActionsMenu({ item }: ProfileActionsMenuProps) {
       setOpen(false)
     },
     onError: (e) => toast.error("封禁失败: " + (e as Error).message),
+  })
+
+  const verify = useMutation({
+    mutationFn: () => AdminService.verifyProfile({ userId: item.user_id }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      toast.success("已标为实名认证")
+      setOpen(false)
+    },
+    onError: (e) => toast.error("操作失败: " + (e as Error).message),
+  })
+
+  const unverify = useMutation({
+    mutationFn: () => AdminService.unverifyProfile({ userId: item.user_id }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      toast.success("已撤销认证")
+      setOpen(false)
+    },
+    onError: (e) => toast.error("操作失败: " + (e as Error).message),
   })
 
   return (
@@ -108,6 +128,19 @@ export function ProfileActionsMenu({ item }: ProfileActionsMenuProps) {
             </DropdownMenuItem>
           }
         />
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => verify.mutate()}
+          disabled={item.verified === "passed"}
+        >
+          <BadgeCheck className="text-amber-500" /> 标为实名认证
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => unverify.mutate()}
+          disabled={item.verified !== "passed"}
+        >
+          <BadgeMinus className="text-slate-500" /> 撤销认证
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => grant.mutate(3)}>
           <Zap className="text-amber-500" /> 加 3 次解锁

@@ -16,6 +16,8 @@ const profileSvc = require('../../services/profile');
 const matchSvc = require('../../services/match');
 const favoriteSvc = require('../../services/favorite');
 const contactSvc = require('../../services/contact');
+const affinitySvc = require('../../services/affinity');
+const storeSvc = require('../../services/store');
 const { resolveFileUrl } = require('../../utils/config');
 
 const _resolveList = (arr) =>
@@ -443,6 +445,23 @@ Page({
     photos: createPhotos(),
     myPhotos: [],              // 我的资料展示页用 (只列已上传的非空 URL)
     myParentsRows: [],         // 父母 / 兄弟姐妹信息 rows
+    myHomeStore: null,         // 我的主属门店 (Store 对象)
+
+    // ===== 详情页 好感按钮状态 =====
+    detailLiked: false,        // 我对当前 selectedProfile 是否点过好感
+    detailMutual: false,       // 是否互相好感
+
+    // ===== 好感消息 (affinity tab) =====
+    affinityMutualList: [],
+    affinityMutualTotal: 0,
+
+    // ===== 我看过的人 (visited-i-saw) =====
+    iVisitedList: [],
+    iVisitedTotal: 0,
+
+    // ===== 我点过好感的人 (my-likes) =====
+    myLikesList: [],
+    myLikesTotal: 0,
     profileProgress: 39,
     formReturnScreen: 'my-profile',
     criteriaValues: defaultCriteriaValues,
@@ -487,8 +506,14 @@ Page({
       { value: 0, label: '看过我' },
     ],
     meItems: [
+      { icon: '我', label: '我看过的人', sub: '' },
       { icon: '看', label: '看过我的人', sub: '0 人' },
+      { icon: '心', label: '我点过好感的人', sub: '' },
       { icon: '藏', label: '我收藏的', sub: '0 人' },
+      { icon: '亲', label: '相过亲的人', sub: '' },
+      { icon: '店', label: '我的当地门店', sub: '未选择 ›' },
+      { icon: '设', label: '设置', sub: '' },
+      { icon: '反', label: '意见反馈', sub: '' },
       { icon: '关', label: '关于我们', sub: 'v1.0.0' },
     ],
     // 当前登录用户(从 app.globalData 灌过来)
@@ -647,6 +672,12 @@ Page({
         }
       }
       updates.myParentsRows = adaptParentsRows(data.parents_info);
+      updates.myHomeStore = data.home_store || null;
+      // 同步 meItems 里 "我的当地门店" 的 sub
+      const homeName = data.home_store ? `${data.home_store.city} · ${data.home_store.name}` : '未选择 ›';
+      updates.meItems = this.data.meItems.map((it) =>
+        it.label === '我的当地门店' ? { ...it, sub: homeName } : it,
+      );
       this.setData(updates);
     } catch (e) {
       console.warn('[index] loadMyProfile', e);
@@ -1021,7 +1052,13 @@ Page({
             detailStarred: !!resp.starred,
             detailUnlocked: false,
             requestSubmitted: alreadyRequested,
+            detailLiked: false,
+            detailMutual: false,
           });
+          // 异步拉好感状态
+          affinitySvc.has(id).then((r) => {
+            this.setData({ detailLiked: !!r.liked, detailMutual: !!r.mutual });
+          }).catch(() => {});
           return;
         }
       } catch (e) {
@@ -1036,6 +1073,8 @@ Page({
       selectedProfileIndex: index,
       detailStarred: false,
       detailUnlocked: false,
+      detailLiked: false,
+      detailMutual: false,
     });
   },
 
@@ -1088,7 +1127,12 @@ Page({
           detailStarred: !!detailResp.starred,
           detailUnlocked: !!detailResp.unlocked,
           detailToast: true,
+          detailLiked: false,
+          detailMutual: false,
         });
+        affinitySvc.has(adapted.user_id).then((r) => {
+          this.setData({ detailLiked: !!r.liked, detailMutual: !!r.mutual });
+        }).catch(() => {});
       }
     } catch (e) {
       console.warn('[index] neighbor', e);
@@ -1218,15 +1262,54 @@ Page({
     }
   },
 
-  /** 点"申请联系" → 打开 sheet 让填留言 */
+  /** 点"联系当地门店" → 检查主属门店, 没选就跳门店选择 */
   openContact() {
     if (!this._gateCompleteProfile()) return;
+    // 必须先选门店才能发工单
+    if (!this.data.myHomeStore) {
+      const that = this;
+      wx.showModal({
+        title: '请先选择您的当地门店',
+        content: '红娘需要根据您的门店来撮合, 现在去选?',
+        confirmText: '去选门店',
+        cancelText: '取消',
+        success(res) {
+          if (res.confirm) {
+            wx.navigateTo({ url: '/pages/store-cities/store-cities' });
+          }
+        },
+      });
+      return;
+    }
     if (!this._gatePhoneSoftGuide()) return;
     this.setData({
       contactOpen: true,
       requestMessage: '',          // sheet 输入框
       requestSubmitting: false,    // 防双击
     });
+  },
+
+  /** 详情页 ❤ 好感按钮 */
+  async toggleDetailAffinity() {
+    const sp = this.data.selectedProfile;
+    if (!this.data.apiReady || !sp || !sp.user_id) return;
+    if (!this._gateCompleteProfile()) return;
+    try {
+      const res = await affinitySvc.toggle(sp.user_id);
+      this.setData({
+        detailLiked: !!res.liked,
+        detailMutual: !!res.mutual,
+      });
+      if (res.liked && res.mutual) {
+        wx.showToast({ title: '互相好感, 红娘已知晓 💕', icon: 'success', duration: 1500 });
+      } else if (res.liked) {
+        wx.showToast({ title: '已发送好感', icon: 'success' });
+      } else {
+        wx.showToast({ title: '已取消好感', icon: 'none' });
+      }
+    } catch (e) {
+      console.warn('[index] toggleDetailAffinity', e);
+    }
   },
 
   /** 软引导: 还没填手机号时, 提示"红娘需要电话联系你撮合", 让用户去填.
@@ -1846,23 +1929,25 @@ Page({
 
   tapMeItem(e) {
     const label = e.currentTarget.dataset.label;
-    if (label === '我的申请') {
-      this.openMyRequests();
-      return;
-    }
-    if (label === '看过我的人') {
-      this.openVisitors();
-      return;
-    }
-    if (label === '我收藏的') {
-      this.openFavorites();
-      return;
-    }
-    if (label === '实名认证') {
-      wx.showToast({ title: '即将开放', icon: 'none' });
-      return;
-    }
+    if (label === '看过我的人')     return this.openVisitors();
+    if (label === '我看过的人')     return this.openIVisited();
+    if (label === '我收藏的')       return this.openFavorites();
+    if (label === '我点过好感的人') return this.openMyLikes();
+    if (label === '相过亲的人')     return this.openMyRequests();
+    if (label === '我的当地门店')   return this.openMyStore();
+    if (label === '设置')            return wx.navigateTo({ url: '/pages/settings/settings' });
+    if (label === '意见反馈')        return wx.navigateTo({ url: '/pages/feedback/feedback' });
     wx.showToast({ title: '功能演示', icon: 'none' });
+  },
+
+  openMyStore() {
+    const profileForm = this.data.profileForm || {};
+    const home = this.data.myHomeStore;
+    if (home && home.id) {
+      wx.navigateTo({ url: `/pages/store-detail/store-detail?id=${home.id}` });
+    } else {
+      wx.navigateTo({ url: '/pages/store-cities/store-cities' });
+    }
   },
 
   /** 进"我的"页时刷新各项计数 */
@@ -1955,9 +2040,65 @@ Page({
     this.openDetail({ currentTarget: { dataset: { id } } });
   },
 
+  /** 我看过的人 (基于 view 表反向, 后端暂无端点; 复用 my-requests 思路: 这里
+   *  简化做成空列表占位, 后续加 GET /views/seen-by-me 接口) */
+  async openIVisited() {
+    this.setData({ screen: 'i-visited', iVisitedList: [], iVisitedTotal: 0 });
+    // 占位: 后续接 GET /views/seen-by-me
+  },
+
+  /** 我点过好感的人 */
+  async openMyLikes() {
+    this.setData({ screen: 'my-likes' });
+    if (!this.data.apiReady) return;
+    try {
+      const r = await affinitySvc.listMine({ limit: 50 });
+      const items = (r.items || []).map((it) => ({
+        ...it,
+        photos: _resolveList(it.photos),
+      }));
+      this.setData({ myLikesList: items, myLikesTotal: r.total || 0 });
+    } catch (e) {
+      console.warn('[index] openMyLikes', e);
+    }
+  },
+
+  /** 好感消息 (互相好感) — 进入 affinity screen */
+  async openAffinity() {
+    this.setData({ screen: 'affinity', activeTab: 'affinity' });
+    if (!this.data.apiReady) return;
+    try {
+      const r = await affinitySvc.listMutual({ limit: 50 });
+      const items = (r.items || []).map((it) => ({
+        ...it,
+        photos: _resolveList(it.photos),
+      }));
+      this.setData({ affinityMutualList: items, affinityMutualTotal: r.total || 0 });
+    } catch (e) {
+      console.warn('[index] openAffinity', e);
+    }
+  },
+
   /** 列表页返回"我的" */
   backToMe() {
     this.setData({ screen: 'me', activeTab: 'me' });
+  },
+
+  /** 红娘代录模式: 用户点 "修改资料" 时提示去联系门店 */
+  onAskModifyProfile() {
+    wx.showModal({
+      title: '如需修改资料',
+      content: '资料由红娘代录, 请联系您的当地门店, 或通过"意见反馈"提交修改意向, 我们会尽快处理.',
+      confirmText: '知道了',
+      cancelText: '取消',
+      showCancel: true,
+      success: (res) => {
+        if (res.confirm) {
+          // 默认进意见反馈, 让用户写改动需求
+          wx.navigateTo({ url: '/pages/feedback/feedback' });
+        }
+      },
+    });
   },
 
   shareProfile() {

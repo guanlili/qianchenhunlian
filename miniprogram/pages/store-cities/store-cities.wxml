@@ -1,0 +1,15 @@
+<view class="page">
+  <view class="header">
+    <view class="title">选择您所在的城市</view>
+    <view class="sub">山东省门店</view>
+  </view>
+  <view class="empty" wx:if="{{!loading && cities.length === 0}}">
+    <text>暂无门店</text>
+  </view>
+  <view class="city-list">
+    <view wx:for="{{cities}}" wx:key="city" class="city-row" bindtap="pickCity" data-city="{{item.city}}">
+      <text class="city-name">{{item.city}}</text>
+      <text class="city-meta">{{item.count}} 家门店 ›</text>
+    </view>
+  </view>
+</view>
