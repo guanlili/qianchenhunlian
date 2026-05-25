@@ -25,8 +25,24 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # 公开访问的 URL 前缀 (从环境变量取, 默认走 dev IP)
 PUBLIC_BASE = os.environ.get("PUBLIC_FILE_BASE", "http://10.129.209.249:8000/files")
 
-ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}   # 去掉 .gif 减少滥用面
 MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+def _looks_like_image(b: bytes) -> bool:
+    """通过 magic bytes 判断内容是不是真图片. 不依赖 Pillow."""
+    if len(b) < 12:
+        return False
+    # JPEG
+    if b[:3] == b"\xff\xd8\xff":
+        return True
+    # PNG
+    if b[:8] == b"\x89PNG\r\n\x1a\n":
+        return True
+    # WebP: 'RIFF....WEBP'
+    if b[:4] == b"RIFF" and b[8:12] == b"WEBP":
+        return True
+    return False
 
 
 class UploadResponse(SQLModel):
@@ -58,6 +74,13 @@ async def upload_image(
         )
     if len(content) == 0:
         raise HTTPException(status_code=400, detail="空文件")
+
+    # 校验 magic bytes (防止扩展名伪装为图片的 HTML/JS/SVG 上传后被浏览器直接渲染 → 反射 XSS)
+    if not _looks_like_image(content):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="文件不是合法的图片 (扩展名 / 内容不匹配)",
+        )
 
     # 用 uuid 命名避免冲突 + 防猜测
     new_name = f"{uuid.uuid4().hex}{ext}"

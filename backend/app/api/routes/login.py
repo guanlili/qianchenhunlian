@@ -109,26 +109,19 @@ def whoami(actor: CurrentActor) -> WhoAmI:
 
 @router.post("/password-recovery/{email}")
 def recover_password(email: str, session: SessionDep) -> Message:
-    """
-    Password Recovery
-    """
+    """密码找回. 防邮箱枚举: 用户存不存在都返同样的 200, 不暴露存在性."""
     user = crud.get_user_by_email(session=session, email=email)
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this email does not exist in the system.",
+    if user:
+        password_reset_token = generate_password_reset_token(email=email)
+        email_data = generate_reset_password_email(
+            email_to=user.email, email=email, token=password_reset_token
         )
-    password_reset_token = generate_password_reset_token(email=email)
-    email_data = generate_reset_password_email(
-        email_to=user.email, email=email, token=password_reset_token
-    )
-    send_email(
-        email_to=user.email,
-        subject=email_data.subject,
-        html_content=email_data.html_content,
-    )
-    return Message(message="Password recovery email sent")
+        send_email(
+            email_to=user.email,
+            subject=email_data.subject,
+            html_content=email_data.html_content,
+        )
+    return Message(message="如果该邮箱已注册, 我们已发送找回链接, 请查收")
 
 
 @router.post("/reset-password/")

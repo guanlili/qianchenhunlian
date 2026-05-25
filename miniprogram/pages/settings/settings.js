@@ -13,8 +13,8 @@ Page({
         items: [
           { label: '隐私条款',         kind: 'navigate', url: '/pages/privacy/privacy' },
           { label: '服务协议',         kind: 'navigate', url: '/pages/agreement/agreement' },
-          { label: '线下门店入驻协议', kind: 'placeholder' },
-          { label: '线上报名退费协议', kind: 'placeholder' },
+          { label: '线下门店入驻协议', kind: 'navigate', url: '/pages/store-protocol/store-protocol' },
+          { label: '线上报名退费协议', kind: 'navigate', url: '/pages/refund-protocol/refund-protocol' },
           { label: '资质证明',         kind: 'navigate', url: '/pages/qualifications/qualifications' },
         ],
       },

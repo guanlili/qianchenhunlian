@@ -75,6 +75,9 @@
       </view>
 
       <view class="profile-list">
+        <view wx:if="{{profiles.length === 0}}" class="list-empty">
+          <text>暂无可推荐的资料, 试试调整筛选条件</text>
+        </view>
         <view wx:for="{{profiles}}" wx:key="id" class="profile-card">
           <view class="profile-id-row">
             <text class="profile-id">用户编号 {{item.xy_code || item.id}}</text>
@@ -239,7 +242,7 @@
         </view>
         <view class="feature-row">
           <view class="resource-flag">享更多资源</view>
-          <view><view class="round-icon">✦</view><text>线下门店认证</text><text>未认证</text></view>
+          <view><view class="round-icon {{meVerified ? 'on' : ''}}">✦</view><text>线下门店认证</text><text>{{meVerified ? '已认证' : '未认证'}}</text></view>
           <view><view class="round-icon dot">⇡</view><text>优先推荐</text><text>未开启</text></view>
           <view><view class="round-icon ring" style="background: conic-gradient(#c93434 0 {{profileProgress}}%, #f0e1d6 {{profileProgress}}% 100%);"><text class="ring-inner">{{profileProgress}}%</text></view><text>资料完善度</text><text>{{profileProgress}}%</text></view>
         </view>

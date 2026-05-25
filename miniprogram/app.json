@@ -10,6 +10,8 @@
     "pages/feedback/feedback",
     "pages/settings/settings",
     "pages/qualifications/qualifications",
+    "pages/store-protocol/store-protocol",
+    "pages/refund-protocol/refund-protocol",
     "pages/example/index"
   ],
   "window": {

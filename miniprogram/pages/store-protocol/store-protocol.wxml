@@ -1,0 +1,29 @@
+<view class="legal-page">
+  <view class="legal-title">线下门店入驻协议</view>
+  <view class="legal-sub">本协议适用于所有申请入驻乾缘婚恋平台的线下门店</view>
+
+  <view class="legal-section">
+    <view class="legal-h">一、入驻条件</view>
+    <text>1. 申请方必须为依法注册并持有有效营业执照的法人或个体工商户。\n2. 经营范围须包含婚恋/婚介/家政等相关服务。\n3. 持有所在地相关部门发放的婚介服务备案 (如有)。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">二、平台职责</view>
+    <text>1. 为入驻门店提供小程序内门店展示、用户匹配工单分发服务。\n2. 协助门店开展实名认证、撮合、跟进等工作。\n3. 保护门店与用户的隐私和合法权益。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">三、门店义务</view>
+    <text>1. 真实合法经营, 不得虚报资质。\n2. 保护用户隐私, 不得将用户联系方式泄露给第三方。\n3. 收到平台工单后应在 24 小时内联系用户跟进。\n4. 收费明示, 不得隐瞒/欺诈消费者。\n5. 服从平台规则与监督。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">四、违约责任</view>
+    <text>违反本协议约定的, 平台有权下架门店展示、暂停或终止合作, 因此造成的损失由违约方承担。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">五、其他</view>
+    <text>本协议自门店入驻之日起生效, 详细条款以书面协议为准, 平台保留更新本协议的权利。</text>
+  </view>
+</view>
