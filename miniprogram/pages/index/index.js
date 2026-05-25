@@ -520,6 +520,7 @@ Page({
     // 当前登录用户(从 app.globalData 灌过来)
     me: null,
     myXyCode: '',
+    meVerified: false,  // 我自己是否实名认证 (彩色徽章)
     apiReady: false,    // 登录成功后置 true; false 时各 load 走 mock fallback
   },
 
@@ -574,6 +575,7 @@ Page({
         this.setData({
           me: payload.user,
           myXyCode: payload.user.xy_code || '',
+          meVerified: payload.user.verified === 'passed',
           apiReady: true,
         });
         // 已有 profile 的话, relation 取后端权威值 (覆盖 storage)

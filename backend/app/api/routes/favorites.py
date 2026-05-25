@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy import update as sa_update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel, and_, func, select
 
 from app.api.deps import CurrentUser, SessionDep
@@ -83,26 +85,37 @@ def toggle_favorite(
         if target.status != "active" or target.is_superuser:
             raise HTTPException(status_code=404, detail="对方资料不可见")
 
-    target_profile = session.exec(
-        select(Profile).where(Profile.user_id == target_id)
-    ).first()
-
     if existing:
         session.delete(existing)
-        if target_profile and target_profile.likes > 0:
-            target_profile.likes -= 1
-            session.add(target_profile)
+        # 原子 -1 (并发安全, 避免 read-modify-write 丢更新; 加 >0 守护防负数)
+        session.execute(
+            sa_update(Profile)
+            .where(Profile.user_id == target_id, Profile.likes > 0)
+            .values(likes=Profile.likes - 1)
+        )
         session.commit()
+        target_profile = session.exec(
+            select(Profile).where(Profile.user_id == target_id)
+        ).first()
         return ToggleResponse(
             starred=False,
             total_likes=target_profile.likes if target_profile else 0,
         )
 
-    session.add(Favorite(user_id=current_user.id, target_user_id=target_id))
-    if target_profile:
-        target_profile.likes += 1
-        session.add(target_profile)
-    session.commit()
+    # 加 UniqueConstraint 后, 并发两路 toggle 会有一路 IntegrityError → 静默为"已收藏"
+    try:
+        session.add(Favorite(user_id=current_user.id, target_user_id=target_id))
+        session.execute(
+            sa_update(Profile)
+            .where(Profile.user_id == target_id)
+            .values(likes=Profile.likes + 1)
+        )
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+    target_profile = session.exec(
+        select(Profile).where(Profile.user_id == target_id)
+    ).first()
     return ToggleResponse(
         starred=True, total_likes=target_profile.likes if target_profile else 0
     )

@@ -285,6 +285,10 @@ class Favorite(SQLModel, table=True):
     )
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
+    __table_args__ = (
+        UniqueConstraint("user_id", "target_user_id", name="favorite_pair_uq"),
+    )
+
 
 # ------------------------------------------------------------
 # Unlock · 联系方式解锁记录

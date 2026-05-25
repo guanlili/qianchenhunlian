@@ -1041,20 +1041,32 @@ class AdminUserList(SQLModel):
     total: int = 0
 
 
+def _mask_openid(openid: str | None) -> str | None:
+    """openid 是敏感凭据 (跟 AppSecret 组合可定位用户), 列表里只露前 6 + 后 4."""
+    if not openid:
+        return openid
+    if len(openid) <= 10:
+        return openid
+    return f"{openid[:6]}***{openid[-4:]}"
+
+
 @router.get("/users", response_model=AdminUserList)
 def list_admin_users(
     session: SessionDep,
     actor: Literal["all", "wx", "admin"] = Query("all"),
+    user_status: Literal["all", "active", "inactive", "deactivating", "blocked"] = Query("all"),
     keyword: str | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminUserList:
-    """User 表列表 (含小程序用户和 superuser admin)."""
+    """User 表列表. 加 user_status 过滤; 默认 openid 打码避免后台员工误转发."""
     base = select(User)
     if actor == "wx":
         base = base.where(User.openid.is_not(None))  # type: ignore
     elif actor == "admin":
         base = base.where(User.is_superuser == True)  # noqa: E712
+    if user_status != "all":
+        base = base.where(User.status == user_status)
     if keyword:
         kw = f"%{keyword}%"
         base = base.where(
@@ -1072,7 +1084,7 @@ def list_admin_users(
                 id=u.id,
                 actor="admin" if u.is_superuser else "wx",
                 xy_code=u.xy_code,
-                openid=u.openid,
+                openid=_mask_openid(u.openid),
                 email=u.email,
                 full_name=u.full_name,
                 is_superuser=u.is_superuser,

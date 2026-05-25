@@ -62,6 +62,27 @@ def _ensure_columns(session: Session) -> None:
     session.commit()
 
 
+def _ensure_favorite_unique(session: Session) -> None:
+    """老库的 favorite 表可能没 (user_id, target_user_id) 唯一约束 — 加上.
+    去重老数据后再加索引, 防止历史重复条目阻塞建索引."""
+    inspector = inspect(engine)
+    if "favorite" not in inspector.get_table_names():
+        return
+    existing_uqs = {uq["name"] for uq in inspector.get_unique_constraints("favorite")}
+    if "favorite_pair_uq" in existing_uqs:
+        return
+    # 先去重 (保留最早的)
+    session.execute(text("""
+        DELETE FROM favorite a USING favorite b
+        WHERE a.id > b.id AND a.user_id = b.user_id AND a.target_user_id = b.target_user_id
+    """))
+    session.execute(text(
+        "ALTER TABLE favorite ADD CONSTRAINT favorite_pair_uq UNIQUE (user_id, target_user_id)"
+    ))
+    session.commit()
+    logger.info("Added favorite_pair_uq unique constraint")
+
+
 def init_db(session: Session) -> None:
     """初始化数据库.
 
@@ -71,6 +92,7 @@ def init_db(session: Session) -> None:
     # 已有表加新字段 (保留数据); 之后再 create_all 创建可能缺的表
     _ensure_columns(session)
     SQLModel.metadata.create_all(engine)
+    _ensure_favorite_unique(session)
 
     # 创建首个超级管理员
     user = session.exec(

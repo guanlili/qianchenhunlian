@@ -69,7 +69,9 @@ class FilterRequest(SQLModel):
 
 
 class MatchDetailResponse(SQLModel):
-    profile: ProfilePublic | ProfileWithContact
+    # 始终用 ProfilePublic (不含 contact); 联系方式仅在 /profiles/me (本人自己看)
+    # 或 admin 后台 (店长/admin) 才下发. 类型收紧避免回归泄密.
+    profile: ProfilePublic
     xy_code: str | None = None  # 资料人寻缘号 (8 位数字), 显示用
     unlocked: bool = False
     starred: bool = False
@@ -327,10 +329,13 @@ def get_profile_detail(
     ).first()
     if not recent_view:
         session.add(View(user_id=current_user.id, target_user_id=user_id))
-        profile.hot += 1
-        # 重新计算 viewed_count (以 view 表实际为准, 简单起见就 +1)
-        profile.viewed_count += 1
-        session.add(profile)
+        # 原子 +1 (避免并发 read-modify-write 丢更新)
+        from sqlalchemy import update as sa_update
+        session.execute(
+            sa_update(Profile)
+            .where(Profile.user_id == user_id)
+            .values(hot=Profile.hot + 1, viewed_count=Profile.viewed_count + 1)
+        )
         session.commit()
         session.refresh(profile)
 

@@ -129,7 +129,13 @@ def get_or_create_wx_user(
     openid: str,
     unionid: str | None = None,
 ) -> tuple[User, bool]:
-    """根据 openid upsert 用户. 返回 (user, created)."""
+    """根据 openid upsert 用户. 返回 (user, created).
+
+    并发安全: 同一 openid 两路并发 wechat/login 时, 第一路 INSERT,
+    第二路捕获 IntegrityError 后重新 SELECT, 避免创建双账号或 500.
+    """
+    from sqlalchemy.exc import IntegrityError
+
     user = get_user_by_openid(session=session, openid=openid)
     if user:
         if unionid and not user.unionid:
@@ -149,6 +155,21 @@ def get_or_create_wx_user(
         last_active_at=datetime.utcnow(),
     )
     session.add(user)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发: 另一路已经 insert; 回滚后重 SELECT 拿到那个 user
+        session.rollback()
+        user = get_user_by_openid(session=session, openid=openid)
+        if user is None:
+            # 极端情况 (xy_code 冲突而非 openid), 重抛
+            raise
+        if unionid and not user.unionid:
+            user.unionid = unionid
+        user.last_active_at = datetime.utcnow()
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user, False
     session.refresh(user)
     return user, True

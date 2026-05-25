@@ -1,0 +1,29 @@
+<view class="legal-page">
+  <view class="legal-title">线上报名退费协议</view>
+  <view class="legal-sub">本协议适用于在乾缘婚恋平台通过线上报名所产生的任何服务费用</view>
+
+  <view class="legal-section">
+    <view class="legal-h">一、报名费用</view>
+    <text>用户在平台报名某项服务前, 应详细阅读门店或平台发布的服务内容及费用说明, 报名即视为同意相应条款。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">二、退费规则</view>
+    <text>1. 服务未开始: 报名后 7 个自然日内, 服务尚未开始的, 用户可申请全额退费 (扣除已发生的手续费)。\n2. 服务进行中: 服务已部分提供, 按实际已发生比例扣费后退还剩余款项。\n3. 服务已完成: 不支持退费。\n4. 因门店原因无法提供约定服务的, 全额退还且无任何手续费扣除。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">三、退费流程</view>
+    <text>1. 用户提交退费申请, 提供订单号/付款凭证。\n2. 平台或门店在 3 个工作日内审核回复。\n3. 审核通过后, 平台/门店在 5-15 个工作日内原路返还款项。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">四、争议处理</view>
+    <text>1. 用户与门店因退费产生争议时, 可通过"意见反馈"提交至平台仲裁。\n2. 平台仲裁结果作为终局处理意见。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">五、其他</view>
+    <text>本协议自用户提交报名之日起生效, 平台保留更新本协议的权利, 更新后将在小程序内公告。</text>
+  </view>
+</view>
