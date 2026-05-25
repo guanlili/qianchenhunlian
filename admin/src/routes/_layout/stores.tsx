@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { Pencil, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { Pencil, Plus, Trash2, Upload } from "lucide-react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, type StorePublic } from "@/client"
+import { AdminService, UploadsService, type StorePublic } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -235,8 +235,8 @@ function StoreFormDialog({
             </select>
           </div>
           <div className="col-span-2">
-            <Label>门店照片 URL (相对路径或绝对)</Label>
-            <Input value={form.photo} onChange={(e) => update("photo")(e.target.value)} placeholder="/files/xxx.jpg" />
+            <Label>门店照片</Label>
+            <PhotoField value={form.photo} onChange={update("photo")} />
           </div>
           <div className="col-span-2">
             <Label>收费简介</Label>
@@ -255,5 +255,43 @@ function StoreFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+
+function PhotoField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  const upload = useMutation({
+    mutationFn: (file: File) =>
+      UploadsService.uploadImage({ formData: { file } as any }),
+    onSuccess: (res) => {
+      onChange(res.url)
+      toast.success("已上传")
+    },
+    onError: (e) => toast.error("上传失败: " + (e as Error).message),
+  })
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="/files/xxx.jpg (或上传)" />
+        <Button type="button" variant="outline" onClick={() => ref.current?.click()} disabled={upload.isPending}>
+          <Upload /> {upload.isPending ? "上传中" : "上传"}
+        </Button>
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) upload.mutate(f)
+            e.target.value = ""
+          }}
+        />
+      </div>
+      {value && (
+        <img src={value} alt="店招" className="max-h-40 w-auto rounded border" />
+      )}
+    </div>
   )
 }
