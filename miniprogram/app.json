@@ -11,8 +11,7 @@
     "pages/settings/settings",
     "pages/qualifications/qualifications",
     "pages/store-protocol/store-protocol",
-    "pages/refund-protocol/refund-protocol",
-    "pages/example/index"
+    "pages/refund-protocol/refund-protocol"
   ],
   "window": {
     "backgroundColor": "#FBF6F1",
