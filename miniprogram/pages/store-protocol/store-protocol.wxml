@@ -1,29 +1,67 @@
-<view class="legal-page">
-  <view class="legal-title">线下门店入驻协议</view>
-  <view class="legal-sub">本协议适用于所有申请入驻乾缘婚恋平台的线下门店</view>
+<scroll-view class="legal-page" scroll-y>
+  <view class="legal-title">线下门店入驻合作协议</view>
+  <view class="legal-sub">本协议为「乾缘婚恋小程序平台」与线下入驻婚介门店 / 婚恋公司 (以下简称"合作门店") 的线上引流合作协议</view>
 
   <view class="legal-section">
-    <view class="legal-h">一、入驻条件</view>
-    <text>1. 申请方必须为依法注册并持有有效营业执照的法人或个体工商户。\n2. 经营范围须包含婚恋/婚介/家政等相关服务。\n3. 持有所在地相关部门发放的婚介服务备案 (如有)。</text>
+    <view class="legal-h">第一条 入驻条件</view>
+    <text>1. 申请方必须为依法注册并持有有效营业执照的法人或个体工商户。</text>
+    <text>2. 经营范围须包含婚恋 / 婚介 / 家政等相关服务。</text>
+    <text>3. 持有所在地相关部门发放的婚介服务备案 (如当地要求)。</text>
+    <text>4. 具备固定线下经营场所, 可接待会员到店进行真人实名核验。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">二、平台职责</view>
-    <text>1. 为入驻门店提供小程序内门店展示、用户匹配工单分发服务。\n2. 协助门店开展实名认证、撮合、跟进等工作。\n3. 保护门店与用户的隐私和合法权益。</text>
+    <view class="legal-h">第二条 合作模式</view>
+    <text>1. 平台负责线上小程序展示、线上用户报名、同城引流、客源分发。</text>
+    <text>2. 合作门店负责线下真人实名认证、证件核验、资料真伪审核、线下相亲对接、线下服务经营。</text>
+    <text>3. 线上用户报名 100 元 / 年 建档费, 平台与门店固定分成: 平台 50 元、门店 50 元。</text>
+    <text>4. 线上用户报名 100 元 / 年 如没有在 12 个月内选择对应服务门店, 进行第二年缴费之后, 前面一年的报名费 100 元 / 年自动划归平台所有。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">三、门店义务</view>
-    <text>1. 真实合法经营, 不得虚报资质。\n2. 保护用户隐私, 不得将用户联系方式泄露给第三方。\n3. 收到平台工单后应在 24 小时内联系用户跟进。\n4. 收费明示, 不得隐瞒/欺诈消费者。\n5. 服从平台规则与监督。</text>
+    <view class="legal-h">第三条 平台职责</view>
+    <text>1. 为入驻门店提供小程序内门店展示、用户匹配工单分发服务。</text>
+    <text>2. 协助门店开展实名认证、撮合、跟进等工作所需的后台工具。</text>
+    <text>3. 保护门店与用户的隐私和合法权益, 不向第三方泄露门店经营数据。</text>
+    <text>4. 配合门店进行服务质量评估、用户反馈整理。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">四、违约责任</view>
-    <text>违反本协议约定的, 平台有权下架门店展示、暂停或终止合作, 因此造成的损失由违约方承担。</text>
+    <view class="legal-h">第四条 门店权责</view>
+    <text>1. 合作门店必须具备合法经营资质, 合规开展婚恋服务, 不得虚报资质。</text>
+    <text>2. 门店必须对到店会员真人到场、证件核验、人脸核实, 杜绝虚假会员、婚托、诈骗人员入驻平台。</text>
+    <text>3. 门店拥有独立后台账号, 可自主修改本店会员线下实名认证彩色 / 黑白状态。</text>
+    <text>4. 收到平台工单后应在 24 小时内主动联系用户跟进, 不得拖延、推诿。</text>
+    <text>5. 收费明示, 不得隐瞒、欺诈、捆绑销售, 所有线下收费需向用户明确告知收费项目和金额。</text>
+    <text>6. 门店严禁私自利用平台名义乱收费、虚假宣传、诱导消费。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">五、其他</view>
-    <text>本协议自门店入驻之日起生效, 详细条款以书面协议为准, 平台保留更新本协议的权利。</text>
+    <view class="legal-h">第五条 责任划分 (核心条款)</view>
+    <text>1. 所有线下身份核验错误、资料造假、人员虚假、婚恋纠纷、人身安全问题, 全部由线下门店全权负责, 平台无连带责任。</text>
+    <text>2. 门店线下自主收费产生的一切消费纠纷、投诉、经济纠纷, 均由门店独立承担。</text>
+    <text>3. 因门店操作不当、审核疏漏、违规经营导致平台被投诉、处罚、侵权追责, 门店需全权赔偿平台全部损失。</text>
   </view>
-</view>
+
+  <view class="legal-section">
+    <view class="legal-h">第六条 禁止行为</view>
+    <text>1. 禁止门店跨店修改其他门店会员数据。</text>
+    <text>2. 禁止门店利用平台开展违法婚恋中介、诈骗、引流套现行为。</text>
+    <text>3. 禁止门店泄露、倒卖用户隐私私密资料。</text>
+    <text>4. 禁止门店将平台导入的用户私下转移至其他婚恋平台或个人渠道。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第七条 违约与合作终止</view>
+    <text>1. 门店违反本协议约定的, 平台有权下架门店展示、暂停或永久终止合作, 因此造成的损失由违约方承担。</text>
+    <text>2. 门店违规经营、被用户大量投诉、核验失职、虚假宣传的, 平台可无条件永久终止合作、关闭后台权限。</text>
+    <text>3. 终止合作后, 门店应配合平台进行用户分流安置, 不得阻挠用户继续使用平台。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第八条 其他</view>
+    <text>本协议自门店入驻之日起生效, 详细条款以双方签署的书面协议为准, 平台保留更新本协议的权利, 更新后将在小程序内公告。</text>
+  </view>
+
+  <view class="legal-foot">— 完 —</view>
+</scroll-view>

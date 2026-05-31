@@ -1,29 +1,53 @@
-<view class="legal-page">
-  <view class="legal-title">线上报名退费协议</view>
+<scroll-view class="legal-page" scroll-y>
+  <view class="legal-title">线上报名费退费规则协议</view>
   <view class="legal-sub">本协议适用于在乾缘婚恋平台通过线上报名所产生的任何服务费用</view>
 
   <view class="legal-section">
-    <view class="legal-h">一、报名费用</view>
-    <text>用户在平台报名某项服务前, 应详细阅读门店或平台发布的服务内容及费用说明, 报名即视为同意相应条款。</text>
+    <view class="legal-h">第一条 费用定义</view>
+    <text>用户线上缴纳的 100 元 / 年 为线上建档、信息展示、平台引流、线上匹配技术服务费, 非线下相亲服务费用, 非会员终身套餐费用。</text>
+    <text>线下门店收取的报名费、会员费、套餐费等, 不在本协议退费范围内, 由用户与门店另行约定退费规则。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">二、退费规则</view>
-    <text>1. 服务未开始: 报名后 7 个自然日内, 服务尚未开始的, 用户可申请全额退费 (扣除已发生的手续费)。\n2. 服务进行中: 服务已部分提供, 按实际已发生比例扣费后退还剩余款项。\n3. 服务已完成: 不支持退费。\n4. 因门店原因无法提供约定服务的, 全额退还且无任何手续费扣除。</text>
+    <view class="legal-h">第二条 可退费条件</view>
+    <text>满足以下任意一条, 用户可申请全额退费 (100 元 / 年):</text>
+    <text>1. 未享受任何线上展示服务 (资料尚未上架展示)。</text>
+    <text>2. 平台系统故障、信息展示异常、无法正常提供线上建档服务。</text>
+    <text>3. 用户重复缴费、误缴费、系统自动扣款错误。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">三、退费流程</view>
-    <text>1. 用户提交退费申请, 提供订单号/付款凭证。\n2. 平台或门店在 3 个工作日内审核回复。\n3. 审核通过后, 平台/门店在 5-15 个工作日内原路返还款项。</text>
+    <view class="legal-h">第三条 不予退费条件 (核心)</view>
+    <text>1. 平台已完成线上建档、信息上架展示、已分配至对应线下门店, 不予退费。</text>
+    <text>2. 用户已获得门店对接、已查看相亲资源、已享受线上引流展示服务, 不予退费。</text>
+    <text>3. 用户个人原因不想相亲、临时反悔、没时间相亲, 不予退费。</text>
+    <text>4. 线下门店服务态度、线下收费、线下服务纠纷, 不构成平台退费理由 — 线下纠纷由门店与用户自行协商处理。</text>
+    <text>5. 用户因违反《用户服务协议》被封号的, 已缴费用不予退还。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">四、争议处理</view>
-    <text>1. 用户与门店因退费产生争议时, 可通过"意见反馈"提交至平台仲裁。\n2. 平台仲裁结果作为终局处理意见。</text>
+    <view class="legal-h">第四条 退费流程</view>
+    <text>1. 用户通过小程序"我的 - 意见反馈"联系平台官方客服, 提交缴费凭证、订单号、申请理由。</text>
+    <text>2. 平台核实服务状态, 3 个工作日内审核处理并答复。</text>
+    <text>3. 审核通过后, 平台在 5 - 15 个工作日内原路退回用户缴费账户。</text>
   </view>
 
   <view class="legal-section">
-    <view class="legal-h">五、其他</view>
-    <text>本协议自用户提交报名之日起生效, 平台保留更新本协议的权利, 更新后将在小程序内公告。</text>
+    <view class="legal-h">第五条 争议处理</view>
+    <text>1. 用户与平台因退费产生争议时, 双方应优先友好协商。</text>
+    <text>2. 协商不成的, 平台仲裁结果作为终局处理意见; 用户保留向有管辖权的人民法院提起诉讼的权利。</text>
   </view>
-</view>
+
+  <view class="legal-section">
+    <view class="legal-h">第六条 退费免责</view>
+    <text>1. 线下门店口头承诺、线下约定、线下服务纠纷, 与平台退费政策无关。</text>
+    <text>2. 平台仅负责线上 100 元 / 年 建档服务费的退费审核, 不承担线下服务退费责任。</text>
+  </view>
+
+  <view class="legal-section">
+    <view class="legal-h">第七条 其他</view>
+    <text>本协议自用户提交报名之日起生效。平台保留更新本协议的权利, 更新后将在小程序内公告, 公告后用户继续使用即视为接受新规则。</text>
+  </view>
+
+  <view class="legal-foot">— 完 —</view>
+</scroll-view>

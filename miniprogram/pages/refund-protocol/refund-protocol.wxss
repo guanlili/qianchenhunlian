@@ -19,6 +19,13 @@ page { background: #ffffff; }
   margin-bottom: 30rpx;
 }
 
+.legal-sub {
+  font-size: 24rpx;
+  color: #9a8e84;
+  line-height: 1.6;
+  margin-bottom: 30rpx;
+}
+
 .legal-section {
   margin-bottom: 28rpx;
 }
