@@ -5,6 +5,7 @@ import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { AdminService, UploadsService, type StorePublic } from "@/client"
+import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -120,11 +121,6 @@ function StoresPage() {
   )
 }
 
-const SHANDONG_CITIES = [
-  "济南", "青岛", "淄博", "枣庄", "东营", "烟台", "潍坊", "济宁",
-  "泰安", "威海", "日照", "临沂", "德州", "聊城", "滨州", "菏泽",
-]
-
 function StoreFormDialog({
   store,
   trigger,
@@ -196,7 +192,7 @@ function StoreFormDialog({
             <select
               className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
               value={form.city}
-              onChange={(e) => update("city")(e.target.value)}
+              onChange={(e) => setForm({ ...form, city: e.target.value, district: "" })}
             >
               {SHANDONG_CITIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -205,7 +201,16 @@ function StoreFormDialog({
           </div>
           <div>
             <Label>区/县</Label>
-            <Input value={form.district} onChange={(e) => update("district")(e.target.value)} placeholder="历下区" />
+            <select
+              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+              value={form.district}
+              onChange={(e) => update("district")(e.target.value)}
+            >
+              <option value="">— 不填 —</option>
+              {(SHANDONG_REGIONS[form.city] || []).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
           <div className="col-span-2">
             <Label>详细地址</Label>
