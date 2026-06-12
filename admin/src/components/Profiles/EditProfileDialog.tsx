@@ -244,8 +244,8 @@ export function EditProfileDialog({ item, trigger }: EditProfileDialogProps) {
         </Section>
 
         <Section title="籍贯 / 居住">
-          <Field label="户籍地" value={form.origin} onChange={update("origin")} placeholder="北京-北京-海淀区" />
-          <Field label="居住地" value={form.location} onChange={update("location")} placeholder="北京-北京-朝阳区" />
+          <Field label="户籍地" value={form.origin} onChange={update("origin")} placeholder="山东德州武城县 (写到区/县, 推荐池按此识别省内)" />
+          <Field label="居住地" value={form.location} onChange={update("location")} placeholder="山东济南历下区" />
           <Field label="家乡" value={form.hometown} onChange={update("hometown")} placeholder="" />
         </Section>
 

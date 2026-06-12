@@ -158,24 +158,19 @@ def _is_starred(session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
 
 
 # 山东省限制: 只推荐山东省下的用户.
-# origin / location 可能写成 "山东济南", 也可能直接写 "德州" / "淄博" 等市名
-# (用户输入太自由), 所以两种形式都接受.
-_SHANDONG_CITIES = (
-    "济南", "青岛", "淄博", "枣庄", "东营", "烟台", "潍坊", "济宁",
-    "泰安", "威海", "日照", "临沂", "德州", "聊城", "滨州", "菏泽",
-)
+# origin / location 是自由文本, 写法从 "山东济南" 到 "武城县向阳路" 都有,
+# 关键词表 (省/市/区县三级) 维护在 app.core.shandong.
 
 
 def _shandong_clause():
     from sqlalchemy import or_
-    clauses = [
-        Profile.origin.like("山东%"),     # type: ignore
-        Profile.location.like("山东%"),   # type: ignore
-    ]
-    for city in _SHANDONG_CITIES:
-        clauses.append(Profile.origin.like(f"{city}%"))   # type: ignore
-        clauses.append(Profile.location.like(f"{city}%"))  # type: ignore
-    return or_(*clauses)
+
+    from app.core.shandong import SHANDONG_PREFIX_RE
+
+    return or_(
+        Profile.origin.op("~")(SHANDONG_PREFIX_RE),    # type: ignore
+        Profile.location.op("~")(SHANDONG_PREFIX_RE),  # type: ignore
+    )
 
 
 # ---------------- Routes ----------------
