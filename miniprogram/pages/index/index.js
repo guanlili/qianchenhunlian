@@ -507,16 +507,20 @@ Page({
     ],
     meItems: [
       { icon: '资', label: '我的资料', sub: '' },
-      { icon: '我', label: '我看过的人', sub: '' },
-      { icon: '看', label: '看过我的人', sub: '0 人' },
-      { icon: '心', label: '我点过好感的人', sub: '' },
-      { icon: '藏', label: '我收藏的', sub: '0 人' },
-      { icon: '亲', label: '相过亲的人', sub: '' },
       { icon: '店', label: '我的当地门店', sub: '未选择 ›' },
       { icon: '设', label: '设置', sub: '' },
       { icon: '反', label: '意见反馈', sub: '' },
-      { icon: '关', label: '关于我们', sub: 'v1.0.0' },
+      { icon: '客', label: '在线客服', sub: '' },
     ],
+    // 好感消息页顶部快捷区 (原在"我的"页, 按需求挪到消息里)
+    affinityShortcuts: [
+      { key: 'i-visited', icon: '我', label: '我看过的人',     sub: '' },
+      { key: 'visitors',  icon: '看', label: '看过我的人',     sub: '0 人' },
+      { key: 'my-likes',  icon: '心', label: '我点过好感的人', sub: '' },
+      { key: 'favorites', icon: '藏', label: '我收藏的',       sub: '0 人' },
+      { key: 'requests',  icon: '亲', label: '相过亲的人',     sub: '' },
+    ],
+    childFrom: 'me',   // 子页 (visitors/favorites/...) 返回去向: 'me' 或 'affinity'
     // 当前登录用户(从 app.globalData 灌过来)
     me: null,
     myXyCode: '',
@@ -1935,16 +1939,47 @@ Page({
 
   tapMeItem(e) {
     const label = e.currentTarget.dataset.label;
+    this.setData({ childFrom: 'me' });
     if (label === '我的资料')        return this.setData({ screen: 'my-profile' });
-    if (label === '看过我的人')     return this.openVisitors();
-    if (label === '我看过的人')     return this.openIVisited();
-    if (label === '我收藏的')       return this.openFavorites();
-    if (label === '我点过好感的人') return this.openMyLikes();
-    if (label === '相过亲的人')     return this.openMyRequests();
     if (label === '我的当地门店')   return this.openMyStore();
     if (label === '设置')            return wx.navigateTo({ url: '/pages/settings/settings' });
     if (label === '意见反馈')        return wx.navigateTo({ url: '/pages/feedback/feedback' });
+    if (label === '在线客服')        return this.openCustomerService();
     wx.showToast({ title: '功能演示', icon: 'none' });
+  },
+
+  /** 好感页顶部快捷区点击 (我看过的人 / 看过我的人 / ...) */
+  tapAffinityShortcut(e) {
+    const key = e.currentTarget.dataset.key;
+    this.setData({ childFrom: 'affinity' });
+    if (key === 'i-visited') return this.openIVisited();
+    if (key === 'visitors')  return this.openVisitors();
+    if (key === 'my-likes')  return this.openMyLikes();
+    if (key === 'favorites') return this.openFavorites();
+    if (key === 'requests')  return this.openMyRequests();
+  },
+
+  /** 在线客服: 弹出客服邮箱 + 当地门店电话 */
+  openCustomerService() {
+    const home = this.data.myHomeStore;
+    const phone = home && home.phone;
+    const EMAIL = 'qianchenhunlian@163.com';
+    const itemList = [];
+    if (phone) itemList.push(`拨打门店电话 ${phone}`);
+    itemList.push('复制客服邮箱');
+    wx.showActionSheet({
+      itemList,
+      success: ({ tapIndex }) => {
+        if (phone && tapIndex === 0) {
+          wx.makePhoneCall({ phoneNumber: String(phone) });
+        } else {
+          wx.setClipboardData({
+            data: EMAIL,
+            success: () => wx.showToast({ title: '邮箱已复制', icon: 'success' }),
+          });
+        }
+      },
+    });
   },
 
   openMyStore() {
@@ -1966,13 +2001,13 @@ Page({
         favoriteSvc.listMine({ limit: 1 }).catch(() => ({ total: 0 })),
         contactSvc.listMyRequests({ limit: 1 }).catch(() => ({ total: 0 })),
       ]);
-      const items = this.data.meItems.map((it) => {
-        if (it.label === '看过我的人') return { ...it, sub: `${vis.total || 0} 人` };
-        if (it.label === '我收藏的')   return { ...it, sub: `${favs.total || 0} 人` };
-        if (it.label === '我的申请')   return { ...it, sub: `${reqs.total || 0} 条` };
+      const shortcuts = this.data.affinityShortcuts.map((it) => {
+        if (it.key === 'visitors')  return { ...it, sub: `${vis.total || 0} 人` };
+        if (it.key === 'favorites') return { ...it, sub: `${favs.total || 0} 人` };
+        if (it.key === 'requests')  return { ...it, sub: `${reqs.total || 0} 条` };
         return it;
       });
-      this.setData({ meItems: items });
+      this.setData({ affinityShortcuts: shortcuts });
     } catch (e) {
       console.warn('[index] loadMeStats', e);
     }
@@ -2082,6 +2117,7 @@ Page({
   /** 好感消息 (互相好感) — 进入 affinity screen */
   async openAffinity() {
     this.setData({ screen: 'affinity', activeTab: 'affinity' });
+    this.loadMeStats();  // 刷新顶部快捷区计数 (看过我的人/我收藏的)
     if (!this.data.apiReady) return;
     try {
       const r = await affinitySvc.listMutual({ limit: 50 });
@@ -2095,9 +2131,14 @@ Page({
     }
   },
 
-  /** 列表页返回"我的" */
+  /** 列表子页返回: 按来源回"我的"或"好感消息" */
   backToMe() {
-    this.setData({ screen: 'me', activeTab: 'me' });
+    if (this.data.childFrom === 'affinity') {
+      this.setData({ screen: 'affinity', activeTab: 'affinity', childFrom: 'me' });
+      this.openAffinity();
+    } else {
+      this.setData({ screen: 'me', activeTab: 'me' });
+    }
   },
 
   /** 红娘代录模式: 用户点 "修改资料" 时提示去联系门店 */
