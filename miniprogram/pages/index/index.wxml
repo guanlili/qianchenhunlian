@@ -417,8 +417,19 @@
           <view class="nav-placeholder"></view>
         </view>
       </view>
+      <view class="action-list affinity-shortcuts">
+        <view wx:for="{{affinityShortcuts}}" wx:key="key" class="action-row" bindtap="tapAffinityShortcut" data-key="{{item.key}}">
+          <view class="action-icon">{{item.icon}}</view>
+          <view>
+            <view>{{item.label}}</view>
+            <text wx:if="{{item.sub}}">{{item.sub}}</text>
+          </view>
+          <text>›</text>
+        </view>
+      </view>
+      <view class="affinity-section-title">互相好感</view>
       <view class="affinity-tip">
-        <text>只展示双方都点过 ❤ 好感的人, 红娘会主动联系撮合.</text>
+        <text>下面只展示双方都点过 ❤ 好感的人, 红娘会主动联系撮合.</text>
       </view>
       <view class="list-empty" wx:if="{{affinityMutualTotal == 0}}">
         <text>暂无互相好感</text>
