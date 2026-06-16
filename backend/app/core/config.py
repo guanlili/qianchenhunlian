@@ -1,4 +1,3 @@
-import secrets
 import warnings
 from typing import Annotated, Any, Literal
 
@@ -31,7 +30,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    # 必须在 .env 显式配置一个强随机值; 留默认值生产环境会启动报错 (见下方校验).
+    # 不再用 secrets.token_urlsafe(32) 做默认: 那样多 worker/重启会各自随机, token 互不认.
+    SECRET_KEY: str = "changethis"
     # 60 分钟 * 24 小时 * 2 天 = 2 天 (短一些, 降低 token 泄露窗口)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 2
     FRONTEND_HOST: str = "http://localhost:5173"
@@ -99,11 +100,29 @@ class Settings(BaseSettings):
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""
 
+    # 常见弱默认值 (含模板占位符与运维图省事的口令). 命中即视为"未真正配置".
+    _WEAK_SECRETS = frozenset(
+        {
+            "changethis",
+            "changeme",
+            "changeme123",
+            "password",
+            "passw0rd",
+            "123456",
+            "12345678",
+            "admin",
+            "admin123",
+            "secret",
+            "test",
+            "",
+        }
+    )
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
-        if value == "changethis":
+        if value is not None and value.strip().lower() in self._WEAK_SECRETS:
             message = (
-                f'The value of {var_name} is "changethis", '
-                "for security, please change it, at least for deployments."
+                f'{var_name} 仍是弱默认值/占位符, 出于安全请改成强随机值 '
+                "(本地仅告警, 部署环境会拒绝启动)."
             )
             if self.ENVIRONMENT == "local":
                 warnings.warn(message, stacklevel=1)

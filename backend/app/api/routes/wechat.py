@@ -2,13 +2,19 @@
 
 from datetime import timedelta
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from sqlmodel import select
 
 from app import crud
 from app.api.deps import SessionDep
 from app.core import security
 from app.core.config import settings
+from app.core.ratelimit import (
+    WXLOGIN_IP_MAX,
+    WXLOGIN_IP_WINDOW,
+    client_ip,
+    login_limiter,
+)
 from app.core.wechat import WechatError, jscode2session
 from app.models import (
     Criteria,
@@ -46,11 +52,20 @@ def _build_login_response(session, user) -> WechatLoginResponse:
 async def wechat_login(
     body: WechatLoginRequest,
     session: SessionDep,
+    request: Request,
 ) -> WechatLoginResponse:
     """小程序登录: code 换 openid, upsert User, 发 JWT.
 
     幂等. 已注册用户多次调用刷新 last_active_at.
+    限流: 单 IP 高频拒绝, 防被刷 (每次调用都打腾讯 jscode2session 接口).
     """
+    ip_key = f"wxlogin:ip:{client_ip(request)}"
+    if login_limiter.record(ip_key, WXLOGIN_IP_WINDOW) > WXLOGIN_IP_MAX:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="登录过于频繁, 请稍后再试",
+            headers={"Retry-After": str(login_limiter.retry_after(ip_key, WXLOGIN_IP_WINDOW))},
+        )
     try:
         info = await jscode2session(body.code)
     except WechatError as e:
