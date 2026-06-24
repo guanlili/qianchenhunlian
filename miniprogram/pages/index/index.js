@@ -427,8 +427,8 @@ Page({
     screen: 'home',
     activeTab: 'home',
     homeTab: 'today',
-    profiles,
-    selectedProfile: profiles[0],
+    profiles: [],
+    selectedProfile: null,
     selectedProfileIndex: 0,
     bannerVisible: true,
     relation: '',
@@ -525,7 +525,8 @@ Page({
     me: null,
     myXyCode: '',
     meVerified: false,  // 我自己是否实名认证 (彩色徽章)
-    apiReady: false,    // 登录成功后置 true; false 时各 load 走 mock fallback
+    loginFailed: false, // 登录失败时不展示任何示例资料
+    apiReady: false,    // 登录成功后置 true; false 时不请求推荐
   },
 
   // ============================================================
@@ -580,6 +581,7 @@ Page({
           me: payload.user,
           myXyCode: payload.user.xy_code || '',
           meVerified: payload.user.verified === 'passed',
+          loginFailed: false,
           apiReady: true,
         });
         // 已有 profile 的话, relation 取后端权威值 (覆盖 storage)
@@ -588,21 +590,34 @@ Page({
         }
       }
     } catch (e) {
-      console.warn('[index] 登录失败, 使用 mock', e);
+      console.warn('[index] 登录失败', e);
+      this.setData({
+        apiReady: false,
+        loginFailed: true,
+        profiles: [],
+        selectedProfile: null,
+        homeNextCursor: null,
+      });
+      wx.showModal({
+        title: '登录失败',
+        content: '网络连接异常，无法加载你的真实资料。当前不会展示示例数据，请检查网络后重新进入小程序。',
+        showCancel: false,
+        confirmText: '知道了',
+      });
     }
     this.loadHome();
 
     // 分享深链: 登录完成后自动打开 target 详情
-    if (this._pendingTargetId) {
+    if (this._pendingTargetId && this.data.apiReady) {
       this.openDetail({
         currentTarget: { dataset: { id: this._pendingTargetId } },
       });
-      this._pendingTargetId = null;
     }
+    this._pendingTargetId = null;
   },
 
   async loadHome() {
-    if (!this.data.apiReady) return; // 没登录就保留 mock
+    if (!this.data.apiReady) return;
     try {
       let items, next_cursor;
       if (this.data.activeFilter) {
@@ -1075,16 +1090,22 @@ Page({
         console.warn('[index] openDetail', e);
       }
     }
-    // fallback: 走 mock
-    const idx = profiles.findIndex((item) => item.id === id);
-    const index = idx >= 0 ? idx : 0;
+    if (!this.data.apiReady || this.data.loginFailed) {
+      wx.showToast({ title: '登录失败, 无法加载资料', icon: 'none' });
+      this.setData({
+        screen: 'home',
+        activeTab: 'home',
+        selectedProfile: null,
+      });
+      return;
+    }
+
+    // 后端详情失败时, 不回退到示例资料
+    wx.showToast({ title: '资料加载失败', icon: 'none' });
     this.setData({
-      selectedProfile: profiles[index],
-      selectedProfileIndex: index,
-      detailStarred: false,
-      detailUnlocked: false,
-      detailLiked: false,
-      detailMutual: false,
+      screen: 'home',
+      activeTab: 'home',
+      selectedProfile: null,
     });
   },
 
