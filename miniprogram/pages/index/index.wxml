@@ -62,7 +62,8 @@
 
       <view class="list-toolbar">
         <view class="list-toolbar-left">
-          <text wx:if="{{activeFilterCount > 0}}" class="list-toolbar-status">已筛选 {{activeFilterCount}} 项 · 命中 {{profiles.length}} 条</text>
+          <text wx:if="{{loginFailed}}" class="list-toolbar-status">登录失败, 无法加载推荐</text>
+          <text wx:elif="{{activeFilterCount > 0}}" class="list-toolbar-status">已筛选 {{activeFilterCount}} 项 · 命中 {{profiles.length}} 条</text>
           <text wx:else class="list-toolbar-status">为你推荐 {{profiles.length}} 条</text>
         </view>
         <view class="list-toolbar-right">
@@ -76,7 +77,8 @@
 
       <view class="profile-list">
         <view wx:if="{{profiles.length === 0}}" class="list-empty">
-          <text>暂无可推荐的资料, 试试调整筛选条件</text>
+          <text wx:if="{{loginFailed}}">登录失败, 暂时无法加载真实资料。请检查网络后重新进入小程序。</text>
+          <text wx:else>暂无可推荐的资料, 试试调整筛选条件</text>
         </view>
         <view wx:for="{{profiles}}" wx:key="id" class="profile-card">
           <view class="profile-id-row">
