@@ -1193,56 +1193,6 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* ICP / 经营合规公示 Section */}
-      <section className="bg-neutral-50 py-8 border-t border-neutral-200/60">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="bg-white p-6 md:p-8 rounded-2xl border border-neutral-200/80 shadow-sm max-w-4xl mx-auto">
-            <div className="flex justify-between items-center border-b border-neutral-100 pb-3 mb-4">
-              <span className="font-bold text-neutral-900 flex items-center gap-1.5">
-                <Shield className="size-4 text-rose-500" />
-                ICP / 经营合规公示
-              </span>
-              <span className="text-xs text-green-600 font-bold bg-green-50 px-2.5 py-0.5 rounded-full border border-green-150">
-                官方已审核
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
-                <span className="text-neutral-400">主办单位</span>
-                <span className="text-neutral-800 font-medium">德州乾瑞婚恋服务有限公司</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
-                <span className="text-neutral-400">统一社会信用代码</span>
-                <span className="font-mono text-neutral-800">91371402MADP1E1K8T</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
-                <span className="text-neutral-400">ICP 备案</span>
-                <a
-                  href="https://beian.miit.gov.cn/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-rose-500 hover:underline font-mono"
-                >
-                  鲁ICP备2026034161号-2
-                </a>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
-                <span className="text-neutral-400">经营许可</span>
-                <span className="text-neutral-800 font-medium">婚介许可证 DZHJ-2023-006</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
-                <span className="text-neutral-400">代表法人</span>
-                <span className="text-neutral-800 font-medium">管雪龙</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
-                <span className="text-neutral-400">服务专线</span>
-                <span className="text-rose-500 font-bold font-mono">15688804736</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="bg-neutral-900 text-neutral-400 text-xs py-12">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 border-b border-neutral-800 pb-8 mb-8">
@@ -1375,7 +1325,9 @@ function LandingPage() {
                 鲁ICP备2026034161号-2
               </a>
               <span>|</span>
-              <span>婚介经营许可证：DZHJ-2023-006</span>
+              <span>统一社会信用代码：91371402MADP1E1K8T</span>
+              <span>|</span>
+              <span>法定代表人：管雪龙</span>
             </p>
           </div>
           <div className="text-center md:text-right space-y-1">
