@@ -85,7 +85,8 @@ const columns: ColumnDef<AdminUserItem>[] = [
         passed: "已通过",
         rejected: "已驳回",
       }
-      return map[row.original.verified] || row.original.verified
+      const val = row.original.verified || "none"
+      return map[val] || val
     },
   },
   {

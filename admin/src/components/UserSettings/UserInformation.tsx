@@ -39,8 +39,8 @@ const UserInformation = () => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      full_name: currentUser?.full_name ?? undefined,
-      email: currentUser?.email,
+      full_name: currentUser?.name ?? undefined,
+      email: currentUser?.email ?? "",
     },
   })
 
@@ -65,10 +65,10 @@ const UserInformation = () => {
     const updateData: UserUpdateMe = {}
 
     // only include fields that have changed
-    if (data.full_name !== currentUser?.full_name) {
+    if (data.full_name !== (currentUser?.name ?? undefined)) {
       updateData.full_name = data.full_name
     }
-    if (data.email !== currentUser?.email) {
+    if (data.email !== (currentUser?.email ?? "")) {
       updateData.email = data.email
     }
 

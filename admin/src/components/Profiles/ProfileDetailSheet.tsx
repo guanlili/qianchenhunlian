@@ -127,8 +127,8 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
 
             {/* 照片 */}
             <section>
-              <h3 className="font-semibold mb-2">照片 ({data.profile.photos.length})</h3>
-              {data.profile.photos.length === 0 ? (
+              <h3 className="font-semibold mb-2">照片 ({data.profile.photos?.length || 0})</h3>
+              {!data.profile.photos || data.profile.photos.length === 0 ? (
                 <div className="text-sm text-muted-foreground">未上传</div>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
