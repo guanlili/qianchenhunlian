@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import {
   FileText,
@@ -675,13 +675,6 @@ function LandingPage() {
                 </button>
               </div>
             )}
-            <span className="text-neutral-700">|</span>
-            <Link
-              to="/login"
-              className="text-amber-400 hover:text-amber-300 hover:underline transition font-bold"
-            >
-              红娘管理后台 →
-            </Link>
           </div>
         </div>
       </div>
