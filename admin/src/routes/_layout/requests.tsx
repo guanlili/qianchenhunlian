@@ -122,21 +122,21 @@ function RequestCard({ item, canWrite }: { item: AdminContactRequestItem; canWri
         <div className="grid gap-3 md:grid-cols-2">
           <ContactInfo
             label="申请人"
-            xy_code={item.from_xy_code}
-            gender={item.from_gender}
-            year={item.from_year}
-            location={item.from_location}
-            wechat={item.from_contact_wechat}
-            phone={item.from_contact_phone}
+            xy_code={item.from_xy_code ?? null}
+            gender={item.from_gender ?? null}
+            year={item.from_year ?? null}
+            location={item.from_location ?? null}
+            wechat={item.from_contact_wechat ?? null}
+            phone={item.from_contact_phone ?? null}
           />
           <ContactInfo
             label="目标"
-            xy_code={item.to_xy_code}
-            gender={item.to_gender}
-            year={item.to_year}
-            location={item.to_location}
-            wechat={item.to_contact_wechat}
-            phone={item.to_contact_phone}
+            xy_code={item.to_xy_code ?? null}
+            gender={item.to_gender ?? null}
+            year={item.to_year ?? null}
+            location={item.to_location ?? null}
+            wechat={item.to_contact_wechat ?? null}
+            phone={item.to_contact_phone ?? null}
           />
         </div>
         {item.message && (
