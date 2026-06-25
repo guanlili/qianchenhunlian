@@ -97,7 +97,7 @@ const POLICIES = {
         <h4 className="font-bold text-neutral-800 text-base">工作时间</h4>
         <p>09:00 - 18:00（周一至周日全年无休）</p>
         <h4 className="font-bold text-neutral-800 text-base">邮箱</h4>
-        <p>service@dzqianrui.com（投诉与建议）</p>
+        <p>qianchenhunlian@163.com（投诉与建议）</p>
         <h4 className="font-bold text-neutral-800 text-base">来访路线</h4>
         <p>乘车请导航至"德百玫瑰园"，沿向阳路北首步行至底商铺 B 区 117 号 1 楼即到。如需上门服务，建议提前致电预约红娘老师。</p>
       </div>
@@ -868,7 +868,7 @@ function LandingPage() {
               </div>
               <div className="flex gap-2">
                 <span className="w-20 text-neutral-400 flex-shrink-0">投诉邮箱：</span>
-                <span className="text-neutral-800">service@dzqianrui.com</span>
+                <span className="text-neutral-800">qianchenhunlian@163.com</span>
               </div>
               <div className="flex gap-2">
                 <span className="w-20 text-neutral-400 flex-shrink-0">工作时间：</span>
@@ -949,7 +949,7 @@ function LandingPage() {
               <li>禁止发布虚假信息、色情低俗、违法违规、商业广告、骚扰他人等内容，一经发现立即下架并追究责任。</li>
               <li>所有会员需通过身份证实名认证，离异/丧偶会员需提交相关证明文件，单身证明真实有效。</li>
               <li>用户对自己发布的信息真实性负责，平台对涉嫌虚假/违法信息保留删除、封号、移交执法机关处理的权利。</li>
-              <li>用户可通过投诉邮箱 service@dzqianrui.com 或联系电话 15688804736 进行投诉与举报，平台在 24 小时内响应。</li>
+              <li>用户可通过投诉邮箱 qianchenhunlian@163.com 或联系电话 15688804736 进行投诉与举报，平台在 24 小时内响应。</li>
             </ol>
             <button
               type="button"
@@ -1333,8 +1333,8 @@ function LandingPage() {
           <div className="text-center md:text-right space-y-1">
             <p>
               本站受理违法和不良信息举报：
-              <a href="mailto:service@dzqianrui.com" className="text-neutral-400 hover:underline">
-                service@dzqianrui.com
+              <a href="mailto:qianchenhunlian@163.com" className="text-neutral-400 hover:underline">
+                qianchenhunlian@163.com
               </a>
             </p>
             <p>
