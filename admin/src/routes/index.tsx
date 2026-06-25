@@ -866,7 +866,7 @@ function LandingPage() {
               ★
             </div>
             <div>
-              <h4 className="font-bold text-neutral-900 mb-1">不成功不收费</h4>
+              <h4 className="font-bold text-neutral-900 mb-1">价格清晰透明</h4>
               <p className="text-neutral-500 text-xs leading-relaxed">
                 收费规则公开发布，明码标价，中途无任何隐形消费，让每一笔消费清晰透明。
               </p>
@@ -1237,7 +1237,7 @@ function LandingPage() {
               </div>
               <h4 className="font-bold text-neutral-800 text-sm mb-1">回访跟进</h4>
               <p className="text-neutral-400 text-xs leading-normal">
-                持续跟进，若不成功不收尾款，确保服务诚实守信。
+                持续服务跟进，定期沟通反馈，确保服务质量与诚实守信。
               </p>
             </div>
           </div>
