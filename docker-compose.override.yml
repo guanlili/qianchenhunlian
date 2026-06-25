@@ -62,7 +62,7 @@ services:
       # 避免 host node_modules 干扰 (容器内独立安装)
       - admin_node_modules:/app/node_modules
     environment:
-      - VITE_API_URL=http://10.129.209.249:8000
+      - VITE_API_URL=${VITE_API_URL:-http://${HOST_IP:-10.129.209.249}:8000}
       - NODE_ENV=development
     ports:
       - "0.0.0.0:5173:80"
