@@ -145,7 +145,7 @@ services:
     build:
       context: ./admin
       args:
-        - VITE_API_URL=http://10.129.209.249:8000
+        - VITE_API_URL=${VITE_API_URL:-https://api.${DOMAIN:-qianyuan.website}}
         - NODE_ENV=production
     labels:
       - traefik.enable=true
