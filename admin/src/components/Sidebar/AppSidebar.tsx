@@ -13,7 +13,7 @@ import { type Item, Main } from "./Main"
 import { User } from "./User"
 
 const baseItems: Item[] = [
-  { icon: Home, title: "Dashboard", path: "/" },
+  { icon: Home, title: "Dashboard", path: "/dashboard" },
   { icon: Heart, title: "申请工单", path: "/requests" },
   { icon: ClipboardList, title: "资料管理", path: "/profiles" },
   { icon: Users, title: "用户", path: "/admin" },

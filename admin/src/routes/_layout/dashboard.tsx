@@ -6,7 +6,7 @@ import { AdminService } from "@/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import useAuth from "@/hooks/useAuth"
 
-export const Route = createFileRoute("/_layout/")({
+export const Route = createFileRoute("/_layout/dashboard")({
   component: Dashboard,
   head: () => ({
     meta: [{ title: "Dashboard - 乾缘婚恋后台" }],

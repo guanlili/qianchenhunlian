@@ -69,12 +69,8 @@ services:
     # dev 模式不需要 build context, 也不挂 traefik 标签
     build: !reset null
 
-  landing:
-    restart: "no"
-    ports:
-      - "0.0.0.0:8088:80"
-
 volumes:
+
   admin_node_modules:
 
 networks:
