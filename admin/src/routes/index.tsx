@@ -335,6 +335,25 @@ const INITIAL_POSTS: LandingPost[] = [
   },
 ]
 
+const SHANDONG_CITIES: Record<string, string[]> = {
+  "济南": ["历下区", "市中区", "槐荫区", "天桥区", "历城区", "长清区", "章丘区", "济阳区", "莱芜区", "钢城区", "平阴县", "商河县"],
+  "青岛": ["市南区", "市北区", "李沧区", "黄岛区", "崂山区", "城阳区", "即墨区", "胶州区", "平度区", "莱西市"],
+  "淄博": ["淄川区", "张店区", "博山区", "周村区", "临淄区", "桓台县", "高青县", "沂源县"],
+  "枣庄": ["薛城区", "市中区", "峄城区", "台儿庄区", "山亭区", "滕州市"],
+  "东营": ["东营区", "河口区", "垦利区", "广饶县", "利津县"],
+  "烟台": ["芝罘区", "莱山区", "福山区", "牟平区", "蓬莱区", "龙口市", "栖霞市", "海阳市", "莱阳市", "招远市", "莱州市"],
+  "潍坊": ["潍城区", "奎文区", "坊子区", "寒亭区", "寿光市", "青州市", "诸城市", "高密市", "安丘市", "昌邑市", "昌乐县", "临朐县"],
+  "济宁": ["任城区", "兖州区", "曲阜市", "邹城市", "微山县", "鱼台县", "金乡县", "嘉祥县", "汶上县", "泗水县", "梁山县"],
+  "泰安": ["泰山区", "岱岳区", "新泰市", "肥城市", "宁阳县", "东平县"],
+  "威海": ["环翠区", "文登区", "荣成市", "乳山市"],
+  "日照": ["东港区", "岚山区", "五莲县", "莒县"],
+  "临沂": ["兰山区", "罗庄区", "河东区", "兰陵县", "费县", "平邑县", "莒南县", "蒙阴县", "临沭县", "沂水县", "郯城县", "沂南县"],
+  "德州": ["德城区", "陵城区", "武城县", "夏津县", "平原县", "禹城市", "齐河县", "临邑县", "宁津县", "乐陵县", "庆云县"],
+  "聊城": ["东昌府区", "茌平区", "临清市", "阳谷县", "莘县", "东阿县", "冠县", "高唐县"],
+  "滨州": ["滨城区", "沾化区", "邹平市", "惠民县", "阳信县", "无棣县", "博兴县"],
+  "菏泽": ["牡丹区", "定陶区", "曹县", "单县", "成武县", "巨野县", "郓城县", "鄄城县", "东明县"]
+}
+
 function LandingPage() {
   const [session, setSession] = useState<LandingUser | null>(null)
   const [users, setUsers] = useState<LandingUser[]>([])
@@ -347,6 +366,7 @@ function LandingPage() {
   // Filters for listings
   const [postTypeFilter, setPostTypeFilter] = useState<"全部" | "男士征婚" | "女士征婚">("全部")
   const [searchAreaFilter, setSearchAreaFilter] = useState<string>("")
+  const [searchCityFilter, setSearchCityFilter] = useState<string>("")
 
   // Form states and feedback messages
   const [loginMsg, setLoginMsg] = useState("")
@@ -355,6 +375,9 @@ function LandingPage() {
 
   // Toast status
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const [selectedCity, setSelectedCity] = useState("")
+  const [selectedDistrict, setSelectedDistrict] = useState("")
 
   // Initialize DB from LocalStorage
   useEffect(() => {
@@ -520,7 +543,9 @@ function LandingPage() {
     const type = formData.get("type") as "男士征婚" | "女士征婚"
     const age = formData.get("age") as string
     const height = formData.get("height") as string
-    const area = formData.get("area") as string
+    const city = formData.get("city") as string
+    const district = formData.get("district") as string
+    const area = city && district ? `${city} · ${district}` : city || district || ""
     const edu = formData.get("edu") as string
     const job = (formData.get("job") as string || "").trim()
     const marriage = formData.get("marriage") as string
@@ -586,7 +611,7 @@ function LandingPage() {
 
   const filteredPosts = posts.filter((p) => {
     const matchesType = postTypeFilter === "全部" || p.type === postTypeFilter
-    const matchesArea = !searchAreaFilter || p.area === searchAreaFilter
+    const matchesArea = !searchAreaFilter || p.area?.includes(searchAreaFilter)
     return matchesType && matchesArea
   })
 
@@ -1033,26 +1058,47 @@ function LandingPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-400">地区：</span>
-              <select
-                value={searchAreaFilter}
-                onChange={(e) => setSearchAreaFilter(e.target.value)}
-                className="text-xs border border-neutral-200 rounded-md p-1.5 bg-neutral-50 text-neutral-700 outline-none focus:border-rose-400"
-              >
-                <option value="">全部德州地区</option>
-                <option value="德城区">德城区</option>
-                <option value="陵城区">陵城区</option>
-                <option value="禹城市">禹城市</option>
-                <option value="乐陵市">乐陵市</option>
-                <option value="临邑县">临邑县</option>
-                <option value="齐河县">齐河县</option>
-                <option value="平原县">平原县</option>
-                <option value="夏津县">夏津县</option>
-                <option value="武城县">武城县</option>
-                <option value="宁津县">宁津县</option>
-                <option value="庆云县">庆云县</option>
-              </select>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-400">城市：</span>
+                <select
+                  value={searchCityFilter}
+                  onChange={(e) => {
+                    const city = e.target.value
+                    setSearchCityFilter(city)
+                    setSearchAreaFilter(city)
+                  }}
+                  className="text-xs border border-neutral-200 rounded-md p-1.5 bg-neutral-50 text-neutral-700 outline-none focus:border-rose-400"
+                >
+                  <option value="">全部城市</option>
+                  {Object.keys(SHANDONG_CITIES).map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {searchCityFilter && (
+                <div className="flex items-center gap-2 animate-in fade-in duration-200">
+                  <span className="text-xs text-neutral-400">区县：</span>
+                  <select
+                    value={searchAreaFilter === searchCityFilter ? "" : searchAreaFilter}
+                    onChange={(e) => {
+                      const dist = e.target.value
+                      setSearchAreaFilter(dist ? dist : searchCityFilter)
+                    }}
+                    className="text-xs border border-neutral-200 rounded-md p-1.5 bg-neutral-50 text-neutral-700 outline-none focus:border-rose-400"
+                  >
+                    <option value="">全部区县</option>
+                    {SHANDONG_CITIES[searchCityFilter].map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1688,26 +1734,45 @@ function LandingPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs text-neutral-500 font-medium block">所在地区</label>
+                    <label className="text-xs text-neutral-500 font-medium block">所在城市</label>
                     <select
-                      name="area"
+                      name="city"
+                      value={selectedCity}
+                      onChange={(e) => {
+                        setSelectedCity(e.target.value)
+                        setSelectedDistrict("")
+                      }}
                       className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition bg-white"
+                      required
                     >
-                      <option value="">选择地区</option>
-                      <option>德城区</option>
-                      <option>陵城区</option>
-                      <option>禹城市</option>
-                      <option>乐陵市</option>
-                      <option>临邑县</option>
-                      <option>齐河县</option>
-                      <option>平原县</option>
-                      <option>夏津县</option>
-                      <option>武城县</option>
-                      <option>宁津县</option>
-                      <option>庆云县</option>
-                      <option>其他</option>
+                      <option value="">选择城市</option>
+                      {Object.keys(SHANDONG_CITIES).map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
                     </select>
                   </div>
+
+                  {selectedCity && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <label className="text-xs text-neutral-500 font-medium block">所在区县</label>
+                      <select
+                        name="district"
+                        value={selectedDistrict}
+                        onChange={(e) => setSelectedDistrict(e.target.value)}
+                        className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition bg-white"
+                        required
+                      >
+                        <option value="">选择区县</option>
+                        {SHANDONG_CITIES[selectedCity].map((d) => (
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
                     <label className="text-xs text-neutral-500 font-medium block">学历</label>
