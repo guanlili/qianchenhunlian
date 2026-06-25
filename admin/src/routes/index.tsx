@@ -136,77 +136,37 @@ const POLICIES = {
     content: (
       <div className="space-y-4 text-sm text-neutral-600 leading-relaxed">
         <div className="bg-rose-50 border-l-4 border-rose-500 p-3 text-rose-800 rounded-r-md">
-          会员收费规则 · 明码标价 · 公开透明
+          会员收费规则 · 价格透明 · 诚信服务
         </div>
-        <h4 className="font-bold text-neutral-800 text-base">会员等级与发布权限</h4>
+        <h4 className="font-bold text-neutral-800 text-base">会员资费</h4>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse border border-neutral-200">
             <thead>
               <tr className="bg-neutral-50">
-                <th className="border border-neutral-200 p-2 font-semibold">等级</th>
-                <th className="border border-neutral-200 p-2 font-semibold">价格</th>
-                <th className="border border-neutral-200 p-2 font-semibold">每日发布</th>
-                <th className="border border-neutral-200 p-2 font-semibold">上传图片</th>
-                <th className="border border-neutral-200 p-2 font-semibold">超额费用</th>
+                <th className="border border-neutral-200 p-2 font-semibold">服务类别</th>
+                <th className="border border-neutral-200 p-2 font-semibold">资费标准</th>
+                <th className="border border-neutral-200 p-2 font-semibold">服务权限</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td className="border border-neutral-200 p-2">普通会员</td>
+                <td className="border border-neutral-200 p-2">注册会员</td>
                 <td className="border border-neutral-200 p-2">免费</td>
-                <td className="border border-neutral-200 p-2">5 条/天</td>
-                <td className="border border-neutral-200 p-2">不支持</td>
-                <td className="border border-neutral-200 p-2">1 元 / 条</td>
+                <td className="border border-neutral-200 p-2">基础征婚信息浏览</td>
               </tr>
               <tr className="bg-neutral-50/50">
-                <td className="border border-neutral-200 p-2">付费会员</td>
-                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">50 元/月</td>
-                <td className="border border-neutral-200 p-2">15 条/天（审核未通过的不计）</td>
-                <td className="border border-neutral-200 p-2 text-green-600">支持</td>
-                <td className="border border-neutral-200 p-2">—</td>
+                <td className="border border-neutral-200 p-2 font-semibold">付费会员</td>
+                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">100 元/年</td>
+                <td className="border border-neutral-200 p-2">无限发布征婚资料、支持上传个人照片、专属红娘推荐服务</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <h4 className="font-bold text-neutral-800 text-base mt-4">分类信息推荐扣费</h4>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse border border-neutral-200">
-            <thead>
-              <tr className="bg-neutral-50">
-                <th className="border border-neutral-200 p-2 font-semibold">项目</th>
-                <th className="border border-neutral-200 p-2 font-semibold">消耗金币</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border border-neutral-200 p-2">分类信息 · 大类置顶</td>
-                <td className="border border-neutral-200 p-2">5 个</td>
-              </tr>
-              <tr className="bg-neutral-50/50">
-                <td className="border border-neutral-200 p-2">分类信息 · 小类置顶</td>
-                <td className="border border-neutral-200 p-2">3 个</td>
-              </tr>
-              <tr>
-                <td className="border border-neutral-200 p-2">分类信息 · 首页置顶</td>
-                <td className="border border-neutral-200 p-2">5 个</td>
-              </tr>
-              <tr className="bg-neutral-50/50">
-                <td className="border border-neutral-200 p-2">分类信息 · 标题套红</td>
-                <td className="border border-neutral-200 p-2">2 个</td>
-              </tr>
-              <tr>
-                <td className="border border-neutral-200 p-2">分类信息 · 标题加粗</td>
-                <td className="border border-neutral-200 p-2">1 个</td>
-              </tr>
-              <tr className="bg-neutral-50/50">
-                <td className="border border-neutral-200 p-2">分类信息 · 标题刷新</td>
-                <td className="border border-neutral-200 p-2">1 个</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <h4 className="font-bold text-neutral-800 text-base mt-4">支付说明</h4>
-        <p>会员费用通过微信 / 支付宝在线支付，发票请联系客服 15688804736（管雪龙）申请。如对收费标准有疑问，欢迎随时致电咨询。</p>
+        <p className="text-xs text-neutral-400 mt-2">
+          说明：本平台无任何隐藏消费，无其他增值项目或置顶推广费用。
+        </p>
+        <h4 className="font-bold text-neutral-800 text-base mt-4">支付与发票说明</h4>
+        <p>会员年费通过微信或支付宝在线扫码支付。如需申请服务发票，请随时联系客服红娘：15688804736（管雪龙）。</p>
       </div>
     ),
   },
