@@ -734,93 +734,42 @@ function LandingPage() {
       </header>
 
       {/* Banner / Hero Section */}
-      <section className="bg-gradient-to-b from-rose-50/70 via-pink-50/30 to-slate-50 py-12 border-b border-rose-100/50">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100/70 text-rose-700 text-xs rounded-full font-bold">
-              <Shield className="size-3" />
-              线下实体执照 · 实名先审后公开
-            </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-neutral-900 leading-tight">
-              德州乾瑞婚恋服务有限公司
-            </h2>
-            <p className="text-neutral-600 text-base md:text-lg max-w-2xl leading-relaxed">
-              我们是一家在德州武城登记注册的专业实体婚介服务机构。我们提倡
-              <span className="text-rose-500 font-bold">"真诚相亲，踏实恋爱"</span>
-              ，专注于山东省各城市本地单身男女提供高品质、全渠道、人工审核红娘对接服务，为每一份真爱保驾护航。
-            </p>
-            <div className="flex gap-4 justify-center lg:justify-start">
-              <button
-                type="button"
-                onClick={() => {
-                  if (session) {
-                    setActiveModal("publish")
-                  } else {
-                    triggerToast("请先登录账号")
-                    setActiveModal("login")
-                  }
-                }}
-                className="bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-rose-100 transition duration-150 transform hover:-translate-y-0.5"
-              >
-                免费登记资料
-              </button>
-              <button
-                type="button"
-                onClick={() => openPolicy("about")}
-                className="bg-white hover:bg-neutral-50 text-rose-500 border border-rose-200 font-bold py-3 px-8 rounded-full shadow-sm transition"
-              >
-                公司资质介绍
-              </button>
-            </div>
+      <section className="bg-gradient-to-b from-rose-50/70 via-pink-50/30 to-slate-50 py-16 md:py-20 border-b border-rose-100/50">
+        <div className="max-w-4xl mx-auto px-4 text-center space-y-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100/70 text-rose-700 text-xs rounded-full font-bold">
+            <Shield className="size-3" />
+            线下实体执照 · 实名先审后公开
           </div>
-
-          <div className="lg:col-span-5">
-            {/* ICP & Business Information Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-xl shadow-neutral-100 border border-neutral-100/80 space-y-4">
-              <div className="flex justify-between items-center border-b border-neutral-100 pb-3">
-                <span className="font-bold text-neutral-900">ICP / 经营合规公示</span>
-                <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">
-                  已审核
-                </span>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-0.5">
-                  <span className="text-neutral-400">主办单位</span>
-                  <span className="text-neutral-800 font-medium">德州乾瑞婚恋服务有限公司</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-neutral-400">统一社会信用代码</span>
-                  <span className="font-mono text-neutral-800">91371402MADP1E1K8T</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-neutral-400">ICP 备案</span>
-                  <a
-                    href="https://beian.miit.gov.cn/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-rose-500 hover:underline font-mono"
-                  >
-                    鲁ICP备2026034161号-2
-                  </a>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-neutral-400">公安联网备案</span>
-                  <span className="font-mono text-neutral-800">鲁公网安备 37140000000000号</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-neutral-400">经营许可</span>
-                  <span className="text-neutral-800 font-medium">婚介许可证 DZHJ-2023-006</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-neutral-400">代表法人</span>
-                  <span className="text-neutral-800 font-medium">管雪龙</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-neutral-400">服务专线</span>
-                  <span className="text-rose-500 font-bold font-mono">15688804736</span>
-                </div>
-              </div>
-            </div>
+          <h2 className="text-3xl md:text-5xl font-extrabold text-neutral-900 leading-tight">
+            德州乾瑞婚恋服务有限公司
+          </h2>
+          <p className="text-neutral-600 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+            我们是一家在德州武城登记注册的专业实体婚介服务机构。我们提倡
+            <span className="text-rose-500 font-bold">"真诚相亲，踏实恋爱"</span>
+            ，专注于山东省各城市本地单身男女提供高品质、全渠道、人工审核红娘对接服务，为每一份真爱保驾护航。
+          </p>
+          <div className="flex gap-4 justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (session) {
+                  setActiveModal("publish")
+                } else {
+                  triggerToast("请先登录账号")
+                  setActiveModal("login")
+                }
+              }}
+              className="bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-rose-100 transition duration-150 transform hover:-translate-y-0.5"
+            >
+              免费登记资料
+            </button>
+            <button
+              type="button"
+              onClick={() => openPolicy("about")}
+              className="bg-white hover:bg-neutral-50 text-rose-500 border border-rose-200 font-bold py-3 px-8 rounded-full shadow-sm transition"
+            >
+              公司资质介绍
+            </button>
           </div>
         </div>
       </section>
@@ -1244,6 +1193,56 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* ICP / 经营合规公示 Section */}
+      <section className="bg-neutral-50 py-8 border-t border-neutral-200/60">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="bg-white p-6 md:p-8 rounded-2xl border border-neutral-200/80 shadow-sm max-w-4xl mx-auto">
+            <div className="flex justify-between items-center border-b border-neutral-100 pb-3 mb-4">
+              <span className="font-bold text-neutral-900 flex items-center gap-1.5">
+                <Shield className="size-4 text-rose-500" />
+                ICP / 经营合规公示
+              </span>
+              <span className="text-xs text-green-600 font-bold bg-green-50 px-2.5 py-0.5 rounded-full border border-green-150">
+                官方已审核
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
+                <span className="text-neutral-400">主办单位</span>
+                <span className="text-neutral-800 font-medium">德州乾瑞婚恋服务有限公司</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
+                <span className="text-neutral-400">统一社会信用代码</span>
+                <span className="font-mono text-neutral-800">91371402MADP1E1K8T</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
+                <span className="text-neutral-400">ICP 备案</span>
+                <a
+                  href="https://beian.miit.gov.cn/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-rose-500 hover:underline font-mono"
+                >
+                  鲁ICP备2026034161号-2
+                </a>
+              </div>
+              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
+                <span className="text-neutral-400">经营许可</span>
+                <span className="text-neutral-800 font-medium">婚介许可证 DZHJ-2023-006</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
+                <span className="text-neutral-400">代表法人</span>
+                <span className="text-neutral-800 font-medium">管雪龙</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-dashed border-neutral-100">
+                <span className="text-neutral-400">服务专线</span>
+                <span className="text-rose-500 font-bold font-mono">15688804736</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-neutral-900 text-neutral-400 text-xs py-12">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 border-b border-neutral-800 pb-8 mb-8">
@@ -1375,8 +1374,6 @@ function LandingPage() {
               >
                 鲁ICP备2026034161号-2
               </a>
-              <span>|</span>
-              <span>鲁公网安备 37140000000000号</span>
               <span>|</span>
               <span>婚介经营许可证：DZHJ-2023-006</span>
             </p>
