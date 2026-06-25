@@ -671,7 +671,7 @@ function LandingPage() {
                   onClick={() => setActiveModal("register")}
                   className="hover:text-rose-400 transition font-medium text-rose-400"
                 >
-                  免费注册
+                  立即注册
                 </button>
               </div>
             )}
@@ -754,7 +754,7 @@ function LandingPage() {
               }}
               className="bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-rose-100 transition duration-150 transform hover:-translate-y-0.5"
             >
-              免费登记资料
+              登记个人资料
             </button>
             <button
               type="button"
@@ -1422,7 +1422,7 @@ function LandingPage() {
                 }}
                 className="text-rose-500 font-bold hover:underline ml-1"
               >
-                立即免费注册
+                立即注册
               </button>
             </div>
           </div>
@@ -1440,7 +1440,7 @@ function LandingPage() {
             aria-modal="true"
           >
             <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
-              <h3 className="font-bold text-neutral-800 text-base">免费注册</h3>
+              <h3 className="font-bold text-neutral-800 text-base">立即注册</h3>
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
