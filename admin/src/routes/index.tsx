@@ -149,38 +149,66 @@ const POLICIES = {
           服务收费规则 · 价格透明 · 诚信履约
         </div>
         
-        <h4 className="font-bold text-neutral-800 text-base">一、第三方商户入驻资费</h4>
+        <h4 className="font-bold text-neutral-800 text-base">一、线上会员分润规则</h4>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse border border-neutral-200">
             <thead>
               <tr className="bg-neutral-50 text-xs">
                 <th className="border border-neutral-200 p-2 font-semibold">服务项目</th>
-                <th className="border border-neutral-200 p-2 font-semibold">资费标准</th>
-                <th className="border border-neutral-200 p-2 font-semibold">技术服务费率(交易扣点)</th>
-                <th className="border border-neutral-200 p-2 font-semibold">结算周期</th>
+                <th className="border border-neutral-200 p-2 font-semibold">付费金额</th>
+                <th className="border border-neutral-200 p-2 font-semibold">平台技术服务费率</th>
+                <th className="border border-neutral-200 p-2 font-semibold">门店分成比例</th>
+                <th className="border border-neutral-200 p-2 font-semibold">结算周期与冷静期</th>
               </tr>
             </thead>
             <tbody className="text-xs">
               <tr>
-                <td className="border border-neutral-200 p-2 font-medium">商户入驻年费</td>
-                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">1500 元/年 (公测期免收)</td>
-                <td className="border border-neutral-200 p-2">免收</td>
-                <td className="border border-neutral-200 p-2">T+1 自动结算</td>
-              </tr>
-              <tr className="bg-neutral-50/50">
-                <td className="border border-neutral-200 p-2 font-medium">联营商品交易服务费</td>
-                <td className="border border-neutral-200 p-2">无固定月租</td>
-                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">2% (按实际成交金额扣除)</td>
-                <td className="border border-neutral-200 p-2">T+1 自动结算</td>
+                <td className="border border-neutral-200 p-2 font-medium">普通相亲用户展示会员费</td>
+                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">100 元/年</td>
+                <td className="border border-neutral-200 p-2 text-rose-600">30% (30 元)</td>
+                <td className="border border-neutral-200 p-2 text-emerald-600 font-bold">70% (70 元)</td>
+                <td className="border border-neutral-200 p-2">D+7 自动分账 (含7天退款冷静期)</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="text-[11px] text-neutral-400">
-          说明：商户入驻需缴纳的年度服务费已获公测期特别扶持免收。交易提成佣金将直接从商户订单流水中由平台结算系统自动扣除，剩余交易资金在完成服务核销后次日 (T+1) 划拨至商户指定银行账户。
+          说明：普通相亲用户支付的 100 元线上展示会员费，资金通过微信支付官方“电商收付通”自动分账。平台收取 30% 技术服务费，剩余 70% 归属对应入驻门店。线上会员订单 D+7 自动分账、30% 平台佣金、7天退款冷静期。资金全程由微信支付托管，平台不代收、不沉淀用户付款资金。
         </p>
 
-        <h4 className="font-bold text-neutral-800 text-base mt-2">二、平台用户会员资费</h4>
+        <h4 className="font-bold text-neutral-800 text-base mt-2">二、门店年度入驻展示费</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse border border-neutral-200">
+            <thead>
+              <tr className="bg-neutral-50 text-xs">
+                <th className="border border-neutral-200 p-2 font-semibold">入驻门店范围</th>
+                <th className="border border-neutral-200 p-2 font-semibold">展示服务年费</th>
+                <th className="border border-neutral-200 p-2 font-semibold">在线缴费通道</th>
+                <th className="border border-neutral-200 p-2 font-semibold">交费与结算形式</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs">
+              <tr>
+                <td className="border border-neutral-200 p-2">区或县级门店</td>
+                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">300 元/年</td>
+                <td className="border border-neutral-200 p-2 text-neutral-400">不提供线上缴费</td>
+                <td className="border border-neutral-200 p-2" rowSpan={2}>线下签订纸质合作协议，门店对公转账至我司对公账户，公司给入驻门店开具正规增值税发票。</td>
+              </tr>
+              <tr className="bg-neutral-50/50">
+                <td className="border border-neutral-200 p-2">市级门店</td>
+                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">500 元/年</td>
+                <td className="border border-neutral-200 p-2 text-neutral-400">不提供线上缴费</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="font-bold text-neutral-800 text-base mt-2">三、结算约定与发票</h4>
+        <p className="text-xs text-neutral-600">
+          所有线上会员分润以微信官方分账记录为准；线下入驻年费以对公转账凭证、纸质合作协议作为结算依据。如需开具发票，请随时联系平台客服 15688804736 (管老师)。
+        </p>
+
+        <h4 className="font-bold text-neutral-800 text-base mt-2">四、平台用户会员资费</h4>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse border border-neutral-200">
             <thead>
@@ -2701,11 +2729,15 @@ function LandingPage() {
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-3 rounded-lg border border-neutral-200 max-h-[100px] overflow-y-auto text-[10px] text-neutral-500 leading-relaxed">
-                  <p className="font-bold mb-1">《三方商家入驻平台服务协议与守则》</p>
-                  <p>1. 商家必须保证提交的所有资质材料真实有效，无欺诈行为。</p>
-                  <p>2. 商家在平台销售的相亲服务必须真实履约，不得存在虚假宣传及欺诈消费者行为。</p>
-                  <p>3. 平台有权对违规交易进行拦截和下架，并扣留争议款项用于消费者赔付。</p>
+                <div className="bg-slate-50 p-3 rounded-lg border border-neutral-200 max-h-[120px] overflow-y-auto text-[10px] text-neutral-500 leading-relaxed space-y-1">
+                  <p className="font-bold text-neutral-700 mb-1">《三方商家入驻平台服务协议与守则》</p>
+                  <p className="font-bold text-neutral-600">一、招商流程与资质要求</p>
+                  <p>1. 平台属于半开放平台，有意向的婚介门店需联系平台所在公司进行考察评估。</p>
+                  <p>2. 考察通过后，由公司在后台为门店开立账号。门店需登录上传所有资质（含营业执照、地址、收费标准、定位等），并配合开通2-3个红娘工作账号。</p>
+                  <p className="font-bold text-neutral-600 mt-1">二、服务收费与分润结算规则</p>
+                  <p>1. 线上会员分润：用户在线支付 100 元平台展示会员费。平台收取 30% 技术服务费，剩余 70% 归属入驻门店。结算周期为 D+7 自动分账，包含 7 天退款冷静期。资金全程由微信支付“电商收付通”托管，平台不代收、不沉淀资金。</p>
+                  <p>2. 门店年度入驻展示费：区县门店 300 元/年，市级门店 500 元/年。本平台不设线上交费通道，需双方线下签署合作协议，通过门店对公转账结算，平台开具增值税发票。</p>
+                  <p>3. 结算凭证：线上分润以微信官方分账记录为准；线下入驻费以对公转账凭证和纸质协议为准。</p>
                 </div>
 
                 <div className="flex items-center gap-2">
