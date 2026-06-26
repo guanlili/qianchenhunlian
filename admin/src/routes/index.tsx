@@ -1,16 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import {
+  Briefcase,
+  Building,
+  CheckCircle,
+  CreditCard,
+  FileCheck2,
   FileText,
   Lock,
   Phone,
   PlusCircle,
+  QrCode,
   Scale,
   Shield,
   ShieldAlert,
+  ShoppingBag,
+  Store,
   User,
   X,
 } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
 
 // Types matching the reference landing page
 interface LandingUser {
@@ -335,6 +345,174 @@ const INITIAL_POSTS: LandingPost[] = [
   },
 ]
 
+interface MerchantApplication {
+  id: string
+  companyName: string
+  creditCode: string
+  contactName: string
+  phone: string
+  category: string
+  licenseUrl?: string
+  status: "pending" | "approved" | "rejected"
+  rejectReason?: string
+  appliedAt: number
+}
+
+interface ServiceOrder {
+  id: string
+  productId: string
+  productName: string
+  price: number
+  merchantId: string
+  merchantName: string
+  buyerName: string
+  buyerPhone: string
+  paymentMethod: "wechat" | "alipay"
+  transactionId: string
+  status: "paid" | "completed"
+  createdAt: number
+  buyerUid: string
+}
+
+const SEED_MERCHANTS: MerchantApplication[] = [
+  {
+    id: "m_seed1",
+    companyName: "久久情缘婚庆服务馆",
+    creditCode: "91371402MA3U9X8K2T",
+    contactName: "韩久久",
+    phone: "13853412345",
+    category: "婚庆策划",
+    status: "approved",
+    appliedAt: Date.now() - 3600000 * 48,
+  },
+  {
+    id: "m_seed2",
+    companyName: "知音情感咨询工作室",
+    creditCode: "91371402MA3TY78B4Y",
+    contactName: "赵知音",
+    phone: "15963498765",
+    category: "情感咨询",
+    status: "approved",
+    appliedAt: Date.now() - 3600000 * 24,
+  },
+  {
+    id: "m_seed3",
+    companyName: "爱之约户外相亲派对俱乐部",
+    creditCode: "91371402MA3R56YT1U",
+    contactName: "钱聚会",
+    phone: "17653456789",
+    category: "相亲派对",
+    status: "pending",
+    appliedAt: Date.now() - 3600000 * 2,
+  },
+  {
+    id: "m_seed4",
+    companyName: "美刻创意婚纱摄影工作室",
+    creditCode: "91371402MA3P89QW5E",
+    contactName: "孙美刻",
+    phone: "18563412311",
+    category: "摄影美妆",
+    status: "pending",
+    appliedAt: Date.now() - 3600000 * 1,
+  }
+]
+
+const SEED_ORDERS: ServiceOrder[] = [
+  {
+    id: "ORD_3u89xq2a",
+    productId: "p_1",
+    productName: "玫瑰相亲派对现场门票",
+    price: 99,
+    merchantId: "m_seed3",
+    merchantName: "爱之约户外相亲派对俱乐部",
+    buyerName: "张三",
+    buyerPhone: "13566667777",
+    paymentMethod: "wechat",
+    transactionId: "TX_wx778899aabbcc",
+    status: "completed",
+    createdAt: Date.now() - 3600000 * 20,
+    buyerUid: "u_demo1",
+  },
+  {
+    id: "ORD_7y2b7x9m",
+    productId: "p_2",
+    productName: "一对一金牌情感测评与咨询",
+    price: 199,
+    merchantId: "m_seed2",
+    merchantName: "知音情感咨询工作室",
+    buyerName: "李四",
+    buyerPhone: "18999998888",
+    paymentMethod: "alipay",
+    transactionId: "TX_alipay5544332211",
+    status: "paid",
+    createdAt: Date.now() - 3600000 * 4,
+    buyerUid: "u_demo2",
+  },
+  {
+    id: "ORD_2w8x8e7e",
+    productId: "p_3",
+    productName: "唯美高端定制婚礼策划案",
+    price: 999,
+    merchantId: "m_seed1",
+    merchantName: "久久情缘婚庆服务馆",
+    buyerName: "王五",
+    buyerPhone: "13877778888",
+    paymentMethod: "wechat",
+    transactionId: "TX_wx112233445566",
+    status: "paid",
+    createdAt: Date.now() - 3600000 * 1,
+    buyerUid: "u_demo3",
+  }
+]
+
+const PRODUCTS = [
+  {
+    id: "p_1",
+    name: "玫瑰相亲派对现场门票",
+    price: 99,
+    originalPrice: 199,
+    merchantId: "m_seed3",
+    merchantName: "爱之约户外相亲派对俱乐部",
+    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    desc: "参加同城周末户外趣味互动派对，含精美茶歇与专属红娘现场牵线撮合，快速结识同城心仪伙伴。",
+    specs: ["普通票", "VIP贵宾票 (+50元, 含定制精美伴手礼)"],
+  },
+  {
+    id: "p_2",
+    name: "一对一金牌情感测评与咨询服务",
+    price: 199,
+    originalPrice: 399,
+    merchantId: "m_seed2",
+    merchantName: "知音情感咨询工作室",
+    image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    desc: "由国家二级心理咨询师/情感专家进行1小时深度面谈测评，梳理恋爱卡点，量身定制匹配方案。",
+    specs: ["单次体验", "全套评估"],
+  },
+  {
+    id: "p_3",
+    name: "唯美定制高端婚礼策划案设计",
+    price: 999,
+    originalPrice: 1999,
+    merchantId: "m_seed1",
+    merchantName: "久久情缘婚庆服务馆",
+    image: "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    desc: "针对新人量身定制的主题婚礼设计案，包含现场3D效果草图、现场花艺布置方案及流程时间线策划。",
+    specs: ["新潮森系", "中式传统", "奢华西式"],
+  },
+  {
+    id: "p_4",
+    name: "唯美韩式户外婚纱照拍摄套餐",
+    price: 2999,
+    originalPrice: 4999,
+    merchantId: "m_seed4",
+    merchantName: "美刻创意婚纱摄影工作室",
+    image: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    desc: "资深摄影总监全程二对一贴心服务，含3套定制礼服、精致妆容与35张精修大片，留存幸福最美瞬间。",
+    specs: ["1天拍摄 (同城公园)", "2天外景拍摄 (海滨胜地, +1500元)"],
+  }
+]
+
+
 const SHANDONG_CITIES: Record<string, string[]> = {
   "济南": ["历下区", "市中区", "槐荫区", "天桥区", "历城区", "长清区", "章丘区", "济阳区", "莱芜区", "钢城区", "平阴县", "商河县"],
   "青岛": ["市南区", "市北区", "李沧区", "黄岛区", "崂山区", "城阳区", "即墨区", "胶州区", "平度区", "莱西市"],
@@ -379,6 +557,24 @@ function LandingPage() {
   const [selectedCity, setSelectedCity] = useState("")
   const [selectedDistrict, setSelectedDistrict] = useState("")
 
+  // Merchants and orders state
+  const [merchants, setMerchants] = useState<MerchantApplication[]>([])
+  const [orders, setOrders] = useState<ServiceOrder[]>([])
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  
+  // Checkout & Cashier form states
+  const [checkoutName, setCheckoutName] = useState("")
+  const [checkoutPhone, setCheckoutPhone] = useState("")
+  const [checkoutNotes, setCheckoutNotes] = useState("")
+  const [checkoutPayMethod, setCheckoutPayMethod] = useState<"wechat" | "alipay">("wechat")
+  const [checkoutSpec, setCheckoutSpec] = useState("")
+  const [currentOrder, setCurrentOrder] = useState<ServiceOrder | null>(null)
+  
+  // Merchant query states
+  const [queryCreditCode, setQueryCreditCode] = useState("")
+  const [merchantStatusResult, setMerchantStatusResult] = useState<MerchantApplication | null>(null)
+  const [queryError, setQueryError] = useState("")
+
   // Initialize DB from LocalStorage
   useEffect(() => {
     const savedUsers = localStorage.getItem("qr_users")
@@ -415,6 +611,30 @@ function LandingPage() {
         console.error(e)
       }
     }
+
+    const savedMerchants = localStorage.getItem("qr_merchants")
+    if (savedMerchants) {
+      try {
+        setMerchants(JSON.parse(savedMerchants))
+      } catch (e) {
+        console.error(e)
+      }
+    } else {
+      localStorage.setItem("qr_merchants", JSON.stringify(SEED_MERCHANTS))
+      setMerchants(SEED_MERCHANTS)
+    }
+
+    const savedOrders = localStorage.getItem("qr_orders")
+    if (savedOrders) {
+      try {
+        setOrders(JSON.parse(savedOrders))
+      } catch (e) {
+        console.error(e)
+      }
+    } else {
+      localStorage.setItem("qr_orders", JSON.stringify(SEED_ORDERS))
+      setOrders(SEED_ORDERS)
+    }
   }, [])
 
   const triggerToast = (msg: string) => {
@@ -433,6 +653,136 @@ function LandingPage() {
     localStorage.removeItem("qr_session")
     setSession(null)
     triggerToast("已退出登录")
+  }
+
+  // Submit merchant application
+  const handleMerchantApplySubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const companyName = (formData.get("companyName") as string || "").trim()
+    const creditCode = (formData.get("creditCode") as string || "").trim().toUpperCase()
+    const contactName = (formData.get("contactName") as string || "").trim()
+    const phone = (formData.get("phone") as string || "").trim()
+    const category = formData.get("category") as string
+    
+    if (!companyName || !creditCode || !contactName || !phone || !category) {
+      triggerToast("请填写完整信息")
+      return
+    }
+    
+    if (creditCode.length !== 18) {
+      triggerToast("请输入18位统一社会信用代码")
+      return
+    }
+
+    if (!/^1\d{10}$/.test(phone)) {
+      triggerToast("请输入正确的11位联系电话")
+      return
+    }
+
+    const isDuplicate = merchants.some((m) => m.creditCode === creditCode)
+    if (isDuplicate) {
+      triggerToast("该社会信用代码已提交过申请，请勿重复提交")
+      return
+    }
+
+    const newApp: MerchantApplication = {
+      id: "m_" + Date.now().toString(36),
+      companyName,
+      creditCode,
+      contactName,
+      phone,
+      category,
+      status: "pending",
+      appliedAt: Date.now()
+    }
+
+    const updated = [...merchants, newApp]
+    localStorage.setItem("qr_merchants", JSON.stringify(updated))
+    setMerchants(updated)
+    setActiveModal(null)
+    triggerToast("入驻申请已提交！我们将在1-3个工作日内完成审核。")
+  }
+
+  // Query merchant progress
+  const handleMerchantStatusQuery = (e: React.FormEvent) => {
+    e.preventDefault()
+    setQueryError("")
+    setMerchantStatusResult(null)
+    
+    const code = queryCreditCode.trim().toUpperCase()
+    if (!code) {
+      setQueryError("请输入统一社会信用代码")
+      return
+    }
+    
+    const matched = merchants.find((m) => m.creditCode === code)
+    if (matched) {
+      setMerchantStatusResult(matched)
+    } else {
+      setQueryError("未找到该信用代码的入驻记录，请检查是否输入正确")
+    }
+  }
+
+  // Handle order purchase submission
+  const handleOrderSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!session) {
+      triggerToast("请先登录账号")
+      setActiveModal("login")
+      return
+    }
+    if (!selectedProduct) return
+    
+    if (!checkoutName.trim() || !checkoutPhone.trim()) {
+      triggerToast("请填写联系人姓名和电话")
+      return
+    }
+
+    if (!/^1\d{10}$/.test(checkoutPhone.trim())) {
+      triggerToast("请填写正确的11位联系电话")
+      return
+    }
+
+    // Prepare a temporary order structure for the cashier modal
+    const orderId = "ORD_" + Math.random().toString(36).substring(2, 10)
+    const newOrder: ServiceOrder = {
+      id: orderId,
+      productId: selectedProduct.id,
+      productName: selectedProduct.name + (checkoutSpec ? ` (${checkoutSpec})` : ""),
+      price: selectedProduct.price,
+      merchantId: selectedProduct.merchantId,
+      merchantName: selectedProduct.merchantName,
+      buyerName: checkoutName,
+      buyerPhone: checkoutPhone,
+      paymentMethod: checkoutPayMethod,
+      transactionId: "", // Empty until paid
+      status: "paid",
+      createdAt: Date.now(),
+      buyerUid: session.id
+    }
+    
+    setCurrentOrder(newOrder)
+    setActiveModal("cashier")
+  }
+
+  // Handle mock cashier payment success
+  const handleConfirmPayment = () => {
+    if (!currentOrder) return
+    
+    const txId = "TX_" + currentOrder.paymentMethod + "_" + Date.now().toString().substring(4) + Math.random().toString(36).substring(2, 6)
+    const paidOrder: ServiceOrder = {
+      ...currentOrder,
+      transactionId: txId,
+      status: "paid"
+    }
+
+    const updatedOrders = [paidOrder, ...orders]
+    localStorage.setItem("qr_orders", JSON.stringify(updatedOrders))
+    setOrders(updatedOrders)
+    setCurrentOrder(paidOrder)
+    setActiveModal("payment_success")
+    triggerToast("模拟支付成功！交易已入账。")
   }
 
   // Handle forms
@@ -650,6 +1000,14 @@ function LandingPage() {
                 <span className="text-neutral-700">|</span>
                 <button
                   type="button"
+                  onClick={() => setActiveModal("my_orders")}
+                  className="hover:text-rose-400 transition"
+                >
+                  我的订单
+                </button>
+                <span className="text-neutral-700">|</span>
+                <button
+                  type="button"
                   onClick={handleLogout}
                   className="hover:text-rose-400 transition"
                 >
@@ -703,10 +1061,24 @@ function LandingPage() {
               <a href="#posts" className="text-neutral-600 hover:text-rose-500 transition">
                 征婚秀
               </a>
+              <a href="#mall" className="text-neutral-600 hover:text-rose-500 font-bold transition">
+                服务商城
+              </a>
+              <a href="#merchants-list" className="text-neutral-600 hover:text-rose-500 transition">
+                合作商户
+              </a>
               <a href="#process" className="text-neutral-600 hover:text-rose-500 transition">
                 服务流程
               </a>
             </nav>
+            <button
+              type="button"
+              onClick={() => setActiveModal("merchant_apply")}
+              className="border border-rose-400 hover:bg-rose-50 text-rose-500 font-medium text-sm py-2 px-4 rounded-full transition duration-200 transform active:scale-95 flex items-center gap-1.5"
+            >
+              <Briefcase className="size-4" />
+              商家入驻
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -1127,6 +1499,179 @@ function LandingPage() {
               })}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* 三方服务商城 (交易与付款流程合规) */}
+      <section id="mall" className="py-16 bg-white border-b border-neutral-100 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full uppercase tracking-wider">
+              甄选服务商城
+            </span>
+            <h3 className="text-2xl md:text-3xl font-extrabold text-neutral-900 mt-3">
+              第三方联营服务商城
+            </h3>
+            <p className="text-neutral-500 text-xs mt-2">
+              本商城服务均由平台入驻第三方专业商户提供并承接，交易款项由平台全程监管，保障您的消费权益。
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {PRODUCTS.map((prod) => (
+              <div
+                key={prod.id}
+                className="bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-rose-200 transition duration-300 flex flex-col group"
+              >
+                <div className="relative aspect-video w-full overflow-hidden bg-neutral-100">
+                  <img
+                    src={prod.image}
+                    alt={prod.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-3 left-3 bg-neutral-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Store className="size-3 text-rose-400" />
+                    {prod.merchantName}
+                  </div>
+                </div>
+                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-neutral-900 text-sm group-hover:text-rose-500 transition duration-150 line-clamp-1">
+                      {prod.name}
+                    </h4>
+                    <p className="text-xs text-neutral-500 leading-relaxed line-clamp-2">
+                      {prod.desc}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 flex justify-between items-center mt-auto border-t border-neutral-50">
+                    <div className="space-y-0.5">
+                      <span className="text-rose-600 font-extrabold text-base">
+                        ¥{prod.price}
+                      </span>
+                      {prod.originalPrice && (
+                        <span className="text-neutral-400 text-[10px] line-through ml-1.5">
+                          ¥{prod.originalPrice}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!session) {
+                          triggerToast("请先登录会员账号")
+                          setActiveModal("login")
+                          return
+                        }
+                        setSelectedProduct(prod)
+                        setCheckoutSpec(prod.specs[0])
+                        setCheckoutName(session.nickname || "")
+                        setCheckoutPhone(session.phone || "")
+                        setCheckoutNotes("")
+                        setActiveModal("product_detail")
+                      }}
+                      className="bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs py-1.5 px-4 rounded-lg shadow-sm hover:shadow-md transition duration-150"
+                    >
+                      立即订购
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 合作服务商户展示 (三方商家资质合规) */}
+      <section id="merchants-list" className="py-16 bg-slate-50 border-b border-neutral-100 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-end flex-wrap gap-4 mb-10">
+            <div>
+              <span className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full uppercase tracking-wider">
+                入驻合作商户
+              </span>
+              <h3 className="text-2xl font-extrabold text-neutral-900 mt-2">
+                合作服务商户展示
+              </h3>
+              <p className="text-neutral-500 text-xs mt-1">
+                所有商户均通过统一社会信用代码及营业执照人工双重验真，资质合规，服务放心。
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setQueryCreditCode("")
+                  setMerchantStatusResult(null)
+                  setQueryError("")
+                  setActiveModal("merchant_status")
+                }}
+                className="text-xs text-rose-500 hover:underline hover:text-rose-600 font-bold bg-white border border-rose-200 px-4 py-2 rounded-lg"
+              >
+                查询入驻进度
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveModal("merchant_apply")}
+                className="text-xs text-white bg-rose-500 hover:bg-rose-600 font-bold px-4 py-2 rounded-lg shadow-sm"
+              >
+                申请商家入驻
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {merchants.filter((m) => m.status === "approved").length === 0 ? (
+              <div className="col-span-full bg-white border border-neutral-200/50 rounded-2xl p-12 text-center text-neutral-400">
+                暂无入驻商家，欢迎点击申请商家入驻！
+              </div>
+            ) : (
+              merchants
+                .filter((m) => m.status === "approved")
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-rose-200 transition duration-150 flex flex-col justify-between"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start">
+                        <span className="size-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center font-bold text-sm">
+                          {m.companyName.substring(0, 1)}
+                        </span>
+                        <Badge variant="outline" className="border-rose-100 bg-rose-50/50 text-rose-700 text-[10px]">
+                          {m.category}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-neutral-900 text-sm">
+                          {m.companyName}
+                        </h4>
+                        <p className="text-[10px] text-neutral-400 font-mono">
+                          信用代码: {m.creditCode}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 text-xs text-amber-500 font-bold">
+                        <span>★★★★★</span>
+                        <span className="text-neutral-500 font-normal text-[10px]">(5.0)</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-neutral-100 pt-4 flex justify-between items-center mt-5">
+                      <span className="text-[10px] text-neutral-500">
+                        服务类别: {m.category}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold flex items-center gap-0.5">
+                        <FileCheck2 className="size-3" />
+                        已验真
+                      </span>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
         </div>
       </section>
 
@@ -1881,6 +2426,705 @@ function LandingPage() {
                       )
                     })}
                 </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 模态框 - MERCHANT APPLY (商家入驻申请) */}
+      {/* ========================================================================= */}
+      {activeModal === "merchant_apply" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div
+            className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+              <h3 className="font-bold text-neutral-800 text-base flex items-center gap-1.5">
+                <Briefcase className="size-5 text-rose-500" />
+                第三方商户入驻申请
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="text-neutral-400 hover:text-neutral-600 transition"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-6 max-h-[75vh] overflow-y-auto">
+              <form onSubmit={handleMerchantApplySubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-neutral-500 font-medium block">
+                    企业/商户名称 <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="companyName"
+                    placeholder="请输入营业执照上的企业名称"
+                    className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-neutral-500 font-medium block">
+                    统一社会信用代码 <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="creditCode"
+                    placeholder="请输入18位统一社会信用代码"
+                    maxLength={18}
+                    className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition font-mono uppercase"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-neutral-500 font-medium block">
+                      申请服务类目 <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      name="category"
+                      className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition bg-white"
+                      required
+                    >
+                      <option value="">请选择类目</option>
+                      <option value="婚庆策划">婚庆策划</option>
+                      <option value="情感咨询">情感咨询</option>
+                      <option value="相亲派对">相亲派对</option>
+                      <option value="摄影美妆">摄影美妆</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-neutral-500 font-medium block">
+                      联系人姓名 <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="contactName"
+                      placeholder="法人或负责人姓名"
+                      className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-neutral-500 font-medium block">
+                      联系电话 <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="请输入11位手机号"
+                      maxLength={11}
+                      className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-neutral-500 font-medium block">企业邮箱</label>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="用于接收审核通知信"
+                      className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-neutral-500 font-medium block">
+                    营业执照电子版扫描件 <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="border-2 border-dashed border-neutral-200 rounded-xl p-4 text-center hover:bg-slate-50 transition cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      required
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          triggerToast(`营业执照: ${e.target.files[0].name} 已选择 (模拟上传成功)`);
+                        }
+                      }}
+                    />
+                    <Building className="size-8 text-neutral-400 mx-auto mb-2" />
+                    <p className="text-xs text-neutral-500">点击或拖拽文件到此处上传</p>
+                    <p className="text-[10px] text-neutral-400 mt-1">支持 JPG, PNG 格式，文件大小不超过 5MB</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-lg border border-neutral-200 max-h-[100px] overflow-y-auto text-[10px] text-neutral-500 leading-relaxed">
+                  <p className="font-bold mb-1">《三方商家入驻平台服务协议与守则》</p>
+                  <p>1. 商家必须保证提交的所有资质材料真实有效，无欺诈行为。</p>
+                  <p>2. 商家在平台销售的相亲服务必须真实履约，不得存在虚假宣传及欺诈消费者行为。</p>
+                  <p>3. 平台有权对违规交易进行拦截和下架，并扣留争议款项用于消费者赔付。</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="merchantAgree" required className="mt-0.5" />
+                  <label htmlFor="merchantAgree" className="text-xs text-neutral-500 cursor-pointer">
+                    我已阅读并同意上述三方商家入驻协议与守则
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition"
+                >
+                  提 交 入 驻 申 请
+                </button>
+              </form>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-neutral-100 text-xs text-center text-neutral-500">
+              已有提交记录？
+              <button
+                type="button"
+                onClick={() => {
+                  setQueryCreditCode("")
+                  setMerchantStatusResult(null)
+                  setQueryError("")
+                  setActiveModal("merchant_status")
+                }}
+                className="text-rose-500 font-bold hover:underline ml-1"
+              >
+                点此查询入驻进度
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 模态框 - MERCHANT STATUS (商户入驻进度查询) */}
+      {/* ========================================================================= */}
+      {activeModal === "merchant_status" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+              <h3 className="font-bold text-neutral-800 text-base">商户入驻进度查询</h3>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="text-neutral-400 hover:text-neutral-600 transition"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleMerchantStatusQuery} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-neutral-500 font-medium block">
+                    统一社会信用代码
+                  </label>
+                  <input
+                    type="text"
+                    value={queryCreditCode}
+                    onChange={(e) => setQueryCreditCode(e.target.value)}
+                    placeholder="请输入18位统一社会信用代码"
+                    maxLength={18}
+                    className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition font-mono uppercase"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-lg text-sm shadow-sm transition"
+                >
+                  查 询 进 度
+                </button>
+              </form>
+
+              {queryError && (
+                <div className="bg-rose-50 text-rose-600 text-xs p-3 rounded-lg mt-4 flex items-center gap-1.5 border border-rose-100">
+                  <ShieldAlert className="size-3.5" />
+                  {queryError}
+                </div>
+              )}
+
+              {merchantStatusResult && (
+                <div className="mt-5 border border-neutral-100 bg-slate-50 p-4 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-sm text-neutral-800">
+                      {merchantStatusResult.companyName}
+                    </span>
+                    {merchantStatusResult.status === "approved" ? (
+                      <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                        审核通过
+                      </span>
+                    ) : merchantStatusResult.status === "rejected" ? (
+                      <span className="text-xs px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold">
+                        被驳回
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold">
+                        待审核
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-neutral-500 space-y-1">
+                    <p>申请类目：{merchantStatusResult.category}</p>
+                    <p>申请时间：{new Date(merchantStatusResult.appliedAt).toLocaleString("zh-CN")}</p>
+                    {merchantStatusResult.status === "rejected" && merchantStatusResult.rejectReason && (
+                      <p className="text-rose-500 font-bold">驳回原因：{merchantStatusResult.rejectReason}</p>
+                    )}
+                  </div>
+                  {merchantStatusResult.status === "approved" && (
+                    <div className="text-xs text-neutral-600 bg-white border border-neutral-200 p-2.5 rounded text-center">
+                      您的商户已激活上线。请在首页服务商城查看您的服务，或前往后台管理订单。
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 模态框 - PRODUCT DETAIL (商品详情) */}
+      {/* ========================================================================= */}
+      {activeModal === "product_detail" && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div
+            className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+              <h3 className="font-bold text-neutral-800 text-base">服务项目详情</h3>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="text-neutral-400 hover:text-neutral-600 transition"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="aspect-video w-full rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200">
+                <img
+                  src={selectedProduct.image}
+                  alt={selectedProduct.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-start">
+                  <h4 className="font-bold text-neutral-900 text-lg leading-tight">
+                    {selectedProduct.name}
+                  </h4>
+                  <span className="text-rose-600 font-black text-xl flex-shrink-0">
+                    ¥{selectedProduct.price}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-neutral-400">
+                  <Store className="size-3.5 text-neutral-400" />
+                  <span>服务提供商：</span>
+                  <span className="text-neutral-700 font-bold hover:underline">
+                    {selectedProduct.merchantName}
+                  </span>
+                </div>
+                <p className="text-neutral-600 text-xs leading-relaxed pt-2">
+                  {selectedProduct.desc}
+                </p>
+              </div>
+
+              <div className="space-y-2 border-t border-neutral-100 pt-3">
+                <label className="text-xs text-neutral-500 font-bold block">选择服务规格：</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {selectedProduct.specs.map((spec: string) => (
+                    <button
+                      key={spec}
+                      type="button"
+                      onClick={() => setCheckoutSpec(spec)}
+                      className={`text-xs text-left p-2.5 rounded-lg border font-medium transition flex justify-between items-center ${
+                        checkoutSpec === spec
+                          ? "border-rose-500 bg-rose-50 text-rose-700"
+                          : "border-neutral-200 text-neutral-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{spec}</span>
+                      {checkoutSpec === spec && <span className="text-rose-500 font-bold">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckoutName(session?.nickname || "")
+                  setCheckoutPhone(session?.phone || "")
+                  setCheckoutNotes("")
+                  setActiveModal("checkout")
+                }}
+                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition"
+              >
+                确 认 订 购
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 模态框 - CHECKOUT (订单结算) */}
+      {/* ========================================================================= */}
+      {activeModal === "checkout" && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+              <h3 className="font-bold text-neutral-800 text-base">服务订单确认</h3>
+              <button
+                type="button"
+                onClick={() => setActiveModal("product_detail")}
+                className="text-neutral-400 hover:text-neutral-600 transition"
+              >
+                返回
+              </button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleOrderSubmit} className="space-y-4">
+                <div className="bg-slate-50 p-3 rounded-xl border border-neutral-100 space-y-1.5 text-xs text-neutral-600 mb-2">
+                  <p className="flex justify-between">
+                    <span className="text-neutral-400">服务项目：</span>
+                    <span className="font-bold text-neutral-800">{selectedProduct.name}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-neutral-400">服务规格：</span>
+                    <span className="text-neutral-800">{checkoutSpec}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-neutral-400">提供商户：</span>
+                    <span className="font-bold text-neutral-800">{selectedProduct.merchantName}</span>
+                  </p>
+                  <p className="flex justify-between pt-1 border-t border-neutral-200">
+                    <span className="text-neutral-400">应付总额：</span>
+                    <span className="font-extrabold text-sm text-rose-600">¥{selectedProduct.price}</span>
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-neutral-500 font-medium block">
+                    联系人姓名 <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={checkoutName}
+                    onChange={(e) => setCheckoutName(e.target.value)}
+                    placeholder="方便商家与您电话取得联系"
+                    className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-neutral-500 font-medium block">
+                    联系电话 <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={checkoutPhone}
+                    onChange={(e) => setCheckoutPhone(e.target.value)}
+                    placeholder="请输入11位手机号"
+                    maxLength={11}
+                    className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-neutral-500 font-medium block">
+                    特殊要求 / 备注
+                  </label>
+                  <input
+                    type="text"
+                    value={checkoutNotes}
+                    onChange={(e) => setCheckoutNotes(e.target.value)}
+                    placeholder="选填：例如特定联系时间、对红娘的要求等"
+                    className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 outline-none focus:border-rose-400 transition"
+                  />
+                </div>
+
+                <div className="space-y-2 border-t border-neutral-100 pt-3">
+                  <label className="text-xs text-neutral-500 font-bold block">选择支付方式：</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutPayMethod("wechat")}
+                      className={`text-xs p-2.5 rounded-lg border font-medium flex items-center justify-center gap-1.5 transition ${
+                        checkoutPayMethod === "wechat"
+                          ? "border-emerald-500 bg-emerald-50/50 text-emerald-800"
+                          : "border-neutral-200 text-neutral-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="text-emerald-600 text-lg">●</span>
+                      微信支付
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutPayMethod("alipay")}
+                      className={`text-xs p-2.5 rounded-lg border font-medium flex items-center justify-center gap-1.5 transition ${
+                        checkoutPayMethod === "alipay"
+                          ? "border-blue-500 bg-blue-50/50 text-blue-800"
+                          : "border-neutral-200 text-neutral-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="text-blue-500 text-lg">●</span>
+                      支付宝支付
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition"
+                >
+                  提交订单并前往支付
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 模态框 - CASHIER (模拟收银台支付) */}
+      {/* ========================================================================= */}
+      {activeModal === "cashier" && currentOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div
+            className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="px-6 py-4 bg-neutral-900 text-white flex justify-between items-center">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">
+                <CreditCard className="size-4 text-rose-400" />
+                乾缘云收银台
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveModal("checkout")}
+                className="text-neutral-400 hover:text-white text-xs"
+              >
+                取消
+              </button>
+            </div>
+            <div className="p-6 text-center space-y-5">
+              <div className="space-y-1">
+                <p className="text-xs text-neutral-400">应付订单金额</p>
+                <p className="text-3xl font-black text-rose-600">¥{currentOrder.price.toFixed(2)}</p>
+              </div>
+
+              <div className="border border-neutral-100 bg-neutral-50 p-3 rounded-lg text-[11px] text-neutral-500 text-left space-y-1 font-mono">
+                <p>订单单号: {currentOrder.id}</p>
+                <p>商品名称: {currentOrder.productName}</p>
+                <p>商户名称: {currentOrder.merchantName}</p>
+              </div>
+
+              {/* MOCK SCANNING PAYMENT QR CODE */}
+              <div className="bg-white border border-neutral-200 p-4 rounded-xl w-48 h-48 mx-auto flex flex-col items-center justify-center space-y-2 relative shadow-inner">
+                <QrCode className="size-36 text-neutral-800" />
+                <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                  正在等待扫码...
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[11px] text-neutral-400 leading-normal">
+                  请使用手机打开{currentOrder.paymentMethod === "wechat" ? "微信" : "支付宝"}【扫一扫】扫描上述二维码完成支付，或直接点击下方按钮模拟支付回调。
+                </p>
+                
+                <button
+                  type="button"
+                  onClick={handleConfirmPayment}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-md hover:shadow-lg transition flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle className="size-4" />
+                  我已在手机上完成支付 (模拟回调)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 模态框 - PAYMENT SUCCESS (支付成功回单) */}
+      {/* ========================================================================= */}
+      {activeModal === "payment_success" && currentOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="p-8 text-center space-y-6">
+              <div className="size-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+                <CheckCircle className="size-10" />
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="font-extrabold text-neutral-900 text-xl">交易支付成功</h3>
+                <p className="text-xs text-neutral-400">
+                  您的款项已支付至平台保障账户，通知已下发给商户。
+                </p>
+              </div>
+
+              <div className="border border-neutral-100 bg-slate-50 p-4 rounded-xl text-left text-xs text-neutral-600 space-y-2 font-mono">
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">交易流水号:</span>
+                  <span className="text-neutral-800 font-bold">{currentOrder.transactionId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">订单单号:</span>
+                  <span className="text-neutral-800">{currentOrder.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">成交金额:</span>
+                  <span className="text-rose-600 font-bold">¥{currentOrder.price.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">收款商户:</span>
+                  <span className="text-neutral-800">{currentOrder.merchantName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">商品服务:</span>
+                  <span className="text-neutral-800">{currentOrder.productName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">支付时间:</span>
+                  <span className="text-neutral-800">{new Date(currentOrder.createdAt).toLocaleString("zh-CN")}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModal(null)
+                    triggerToast("感谢购买，服务红娘稍后将致电您确认对接。")
+                  }}
+                  className="flex-1 border border-neutral-200 hover:bg-neutral-50 text-neutral-600 font-bold py-2 rounded-lg text-xs transition"
+                >
+                  回到首页
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveModal("my_orders")}
+                  className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition"
+                >
+                  查看我的订单
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 模态框 - MY ORDERS (我的订单列表) */}
+      {/* ========================================================================= */}
+      {activeModal === "my_orders" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div
+            className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+              <h3 className="font-bold text-neutral-800 text-base flex items-center gap-1.5">
+                <ShoppingBag className="size-4 text-rose-500" />
+                我的商城订单
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="text-neutral-400 hover:text-neutral-600 transition"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              {orders.filter((o) => o.buyerUid === session?.id).length === 0 ? (
+                <div className="text-center py-12 text-neutral-400 space-y-3">
+                  <p>您目前还没有任何相亲商城订单。</p>
+                  <a
+                    href="#mall"
+                    onClick={() => setActiveModal(null)}
+                    className="inline-block bg-rose-500 text-white font-bold px-6 py-2 rounded-lg text-xs"
+                  >
+                    前往商城选购
+                  </a>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orders
+                    .filter((o) => o.buyerUid === session?.id)
+                    .map((o) => (
+                      <div
+                        key={o.id}
+                        className="border border-neutral-200 rounded-xl p-4 space-y-3 bg-slate-50/50 hover:bg-slate-50 hover:border-rose-100 transition duration-150"
+                      >
+                        <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                          <span className="font-mono text-xs text-neutral-400">
+                            订单号: {o.id}
+                          </span>
+                          {o.status === "completed" ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold">
+                              已服务/完成
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold animate-pulse">
+                              已付款/待确认
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="space-y-1">
+                            <h4 className="font-bold text-neutral-800 text-sm">
+                              {o.productName}
+                            </h4>
+                            <p className="text-[10px] text-neutral-400 flex items-center gap-1">
+                              <Store className="size-3" />
+                              服务商家: {o.merchantName}
+                            </p>
+                            <p className="text-[10px] text-neutral-400 font-mono">
+                              流水单号: {o.transactionId || "—"}
+                            </p>
+                          </div>
+                          <span className="text-rose-600 font-extrabold text-sm flex-shrink-0">
+                            ¥{o.price.toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[10px] text-neutral-400 mt-2">
+                          <span>
+                            交易时间：{new Date(o.createdAt).toLocaleString("zh-CN")}
+                          </span>
+                          <span className="font-medium">
+                            支付方式: {o.paymentMethod === "wechat" ? "微信支付" : "支付宝"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
               )}
             </div>
           </div>

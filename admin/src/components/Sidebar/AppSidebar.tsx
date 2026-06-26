@@ -1,4 +1,4 @@
-import { Award, ClipboardList, Heart, Home, MapPin, MessageSquare, Shield, Users } from "lucide-react"
+import { Award, Briefcase, ClipboardList, Heart, Home, MapPin, MessageSquare, Shield, ShoppingBag, Users } from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -18,6 +18,8 @@ const baseItems: Item[] = [
   { icon: ClipboardList, title: "资料管理", path: "/profiles" },
   { icon: Users, title: "用户", path: "/admin" },
   { icon: MapPin, title: "门店管理", path: "/stores" },
+  { icon: Briefcase, title: "三方入驻", path: "/merchants" },
+  { icon: ShoppingBag, title: "交易订单", path: "/orders" },
   { icon: MessageSquare, title: "意见反馈", path: "/feedback" },
   { icon: Award, title: "资质证明", path: "/qualifications" },
 ]
