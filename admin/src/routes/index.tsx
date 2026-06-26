@@ -144,39 +144,87 @@ const POLICIES = {
   fee: {
     title: "收费标准",
     content: (
-      <div className="space-y-4 text-sm text-neutral-600 leading-relaxed">
+      <div className="space-y-4 text-sm text-neutral-600 leading-relaxed max-h-[60vh] overflow-y-auto pr-2">
         <div className="bg-rose-50 border-l-4 border-rose-500 p-3 text-rose-800 rounded-r-md">
-          会员收费规则 · 价格透明 · 诚信服务
+          服务收费规则 · 价格透明 · 诚信履约
         </div>
-        <h4 className="font-bold text-neutral-800 text-base">会员资费</h4>
+        
+        <h4 className="font-bold text-neutral-800 text-base">一、第三方商户入驻资费</h4>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse border border-neutral-200">
             <thead>
-              <tr className="bg-neutral-50">
+              <tr className="bg-neutral-50 text-xs">
+                <th className="border border-neutral-200 p-2 font-semibold">服务项目</th>
+                <th className="border border-neutral-200 p-2 font-semibold">资费标准</th>
+                <th className="border border-neutral-200 p-2 font-semibold">技术服务费率(交易扣点)</th>
+                <th className="border border-neutral-200 p-2 font-semibold">结算周期</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs">
+              <tr>
+                <td className="border border-neutral-200 p-2 font-medium">商户入驻年费</td>
+                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">1500 元/年 (公测期免收)</td>
+                <td className="border border-neutral-200 p-2">免收</td>
+                <td className="border border-neutral-200 p-2">T+1 自动结算</td>
+              </tr>
+              <tr className="bg-neutral-50/50">
+                <td className="border border-neutral-200 p-2 font-medium">联营商品交易服务费</td>
+                <td className="border border-neutral-200 p-2">无固定月租</td>
+                <td className="border border-neutral-200 p-2 text-rose-600 font-bold">2% (按实际成交金额扣除)</td>
+                <td className="border border-neutral-200 p-2">T+1 自动结算</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-neutral-400">
+          说明：商户入驻需缴纳的年度服务费已获公测期特别扶持免收。交易提成佣金将直接从商户订单流水中由平台结算系统自动扣除，剩余交易资金在完成服务核销后次日 (T+1) 划拨至商户指定银行账户。
+        </p>
+
+        <h4 className="font-bold text-neutral-800 text-base mt-2">二、平台用户会员资费</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse border border-neutral-200">
+            <thead>
+              <tr className="bg-neutral-50 text-xs">
                 <th className="border border-neutral-200 p-2 font-semibold">服务类别</th>
                 <th className="border border-neutral-200 p-2 font-semibold">资费标准</th>
                 <th className="border border-neutral-200 p-2 font-semibold">服务权限</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-xs">
               <tr>
                 <td className="border border-neutral-200 p-2">注册会员</td>
                 <td className="border border-neutral-200 p-2">免费</td>
-                <td className="border border-neutral-200 p-2">基础征婚信息浏览</td>
+                <td className="border border-neutral-200 p-2">基础征婚信息浏览、个人档案自助维护</td>
               </tr>
               <tr className="bg-neutral-50/50">
-                <td className="border border-neutral-200 p-2 font-semibold">付费会员</td>
+                <td className="border border-neutral-200 p-2 font-semibold">VIP 付费会员</td>
                 <td className="border border-neutral-200 p-2 text-rose-600 font-bold">100 元/年</td>
-                <td className="border border-neutral-200 p-2">无限发布征婚资料、支持上传个人照片、专属红娘推荐服务</td>
+                <td className="border border-neutral-200 p-2">无限发布征婚资料、支持上传个人照片、专属红娘一对一推荐服务</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-neutral-400 mt-2">
-          说明：本平台无任何隐藏消费，无其他增值项目或置顶推广费用。
-        </p>
-        <h4 className="font-bold text-neutral-800 text-base mt-4">支付与发票说明</h4>
-        <p>会员年费通过微信在线扫码支付。如需申请服务发票，请随时联系客服红娘：15688804736（管雪龙）。</p>
+
+        <h4 className="font-bold text-neutral-800 text-base mt-2">三、支付与发票开具</h4>
+        <p className="text-xs text-neutral-600">本站支持微信/支付宝等在线扫码收银渠道。所有入驻商户与付费会员均可联系平台客服 15688804736 (管老师) 索取正规增值税发票，平台将在3个工作日内开具并寄出。</p>
+      </div>
+    ),
+  },
+  refund: {
+    title: "退款与售后保障协议",
+    content: (
+      <div className="space-y-4 text-sm text-neutral-600 leading-relaxed max-h-[60vh] overflow-y-auto pr-2">
+        <div className="bg-rose-50 border-l-4 border-rose-500 p-3 text-rose-800 rounded-r-md">
+          为维护平台消费者的合法权益，保障第三方商户服务交易的安全和履约质量，特制定本退款与售后保障协议。
+        </div>
+        <h4 className="font-bold text-neutral-800 text-base">一、退款基本原则</h4>
+        <p>1. **未消费退款保障**：用户购买的第三方商家相亲服务商品（如派对门票、情感面谈等），在未实际体验或活动开始前，享有 7 天内申请退款的权利。</p>
+        <p>2. **商户责任退款**：因第三方商户原因导致服务取消、延期或履约品质不符的，用户有权向商户或平台客服发起全额退款申请。</p>
+        <h4 className="font-bold text-neutral-800 text-base">二、退款处理时效</h4>
+        <p>1. 用户提交退款申请后，入驻商家应在 24 小时内进行响应与审核。</p>
+        <p>2. 若商家无故拖延，用户可申请平台客服介入仲裁，平台将在确认服务未消耗后，在 2 个工作日内将争议资金原路退回至用户支付账户。</p>
+        <h4 className="font-bold text-neutral-800 text-base">三、纠纷与客诉通道</h4>
+        <p>用户在交易过程中遇到服务质量纠纷，可拨打平台投诉专线 15688804736 (管老师) 或发送邮件至 qianchenhunlian@163.com。平台将根据事实依据介入促成调解并快速退款。</p>
       </div>
     ),
   },
@@ -476,6 +524,9 @@ const PRODUCTS = [
     image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     desc: "参加同城周末户外趣味互动派对，含精美茶歇与专属红娘现场牵线撮合，快速结识同城心仪伙伴。",
     specs: ["普通票", "VIP贵宾票 (+50元, 含定制精美伴手礼)"],
+    rating: "4.9",
+    sales: "128",
+    tags: ["实名防托", "未消费退"],
   },
   {
     id: "p_2",
@@ -487,6 +538,9 @@ const PRODUCTS = [
     image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     desc: "由国家二级心理咨询师/情感专家进行1小时深度面谈测评，梳理恋爱卡点，量身定制匹配方案。",
     specs: ["单次体验", "全套评估"],
+    rating: "4.8",
+    sales: "86",
+    tags: ["专家执业", "隐私加密"],
   },
   {
     id: "p_3",
@@ -498,6 +552,9 @@ const PRODUCTS = [
     image: "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     desc: "针对新人量身定制的主题婚礼设计案，包含现场3D效果草图、现场花艺布置方案及流程时间线策划。",
     specs: ["新潮森系", "中式传统", "奢华西式"],
+    rating: "5.0",
+    sales: "34",
+    tags: ["原创方案", "全景草图"],
   },
   {
     id: "p_4",
@@ -509,6 +566,9 @@ const PRODUCTS = [
     image: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     desc: "资深摄影总监全程二对一贴心服务，含3套定制礼服、精致妆容与35张精修大片，留存幸福最美瞬间。",
     specs: ["1天拍摄 (同城公园)", "2天外景拍摄 (海滨胜地, +1500元)"],
+    rating: "4.9",
+    sales: "52",
+    tags: ["无隐形消费", "样片承诺"],
   }
 ]
 
@@ -1537,6 +1597,19 @@ function LandingPage() {
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                   <div className="space-y-2">
+                    {/* 评分与标签 */}
+                    <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                      <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                        ★ {prod.rating}
+                      </span>
+                      <span className="text-neutral-400">已履约 {prod.sales}</span>
+                      {prod.tags.map((tag) => (
+                        <span key={tag} className="bg-slate-50 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+
                     <h4 className="font-bold text-neutral-900 text-sm group-hover:text-rose-500 transition duration-150 line-clamp-1">
                       {prod.name}
                     </h4>
@@ -1847,13 +1920,13 @@ function LandingPage() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-neutral-500 text-[11px]">
-          <div className="text-center md:text-left space-y-1">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row justify-between items-center gap-6 text-neutral-500 text-[11px] border-t border-neutral-800 pt-8">
+          <div className="text-center lg:text-left space-y-1.5">
             <p>
               Copyright © 2026 德州乾瑞婚恋服务有限公司 版权所有 &nbsp;|&nbsp;
               客服专线：15688804736 (管老师)
             </p>
-            <p className="flex flex-wrap gap-2 justify-center md:justify-start">
+            <p className="flex flex-wrap gap-2 justify-center lg:justify-start">
               <a
                 href="https://beian.miit.gov.cn/"
                 target="_blank"
@@ -1867,24 +1940,63 @@ function LandingPage() {
               <span>|</span>
               <span>法定代表人：管雪龙</span>
             </p>
-          </div>
-          <div className="text-center md:text-right space-y-1">
-            <p>
-              本站受理违法和不良信息举报：
-              <a href="mailto:qianchenhunlian@163.com" className="text-neutral-400 hover:underline">
-                qianchenhunlian@163.com
-              </a>
+            <p className="text-[10px] text-neutral-600">
+              公司地址：山东省德州市武城县广运街道文昌社区向阳路北首德百玫瑰园底商铺 B 区 117 号 1 楼
             </p>
-            <p>
+          </div>
+          
+          <div className="flex flex-col items-center lg:items-end gap-2.5">
+            <div className="text-center lg:text-right space-y-1">
+              <p>
+                本站受理违法和不良信息举报：
+                <a href="mailto:qianchenhunlian@163.com" className="text-neutral-400 hover:underline">
+                  qianchenhunlian@163.com
+                </a>
+              </p>
+              <p className="text-[10px] text-neutral-600">
+                虚假信息投诉邮箱：qianchenhunlian@163.com（如果用户发现网站有虚假或不实信息，可以发送邮件投诉）
+              </p>
+            </div>
+            
+            {/* 监管与举报平台微标直连 */}
+            <div className="flex flex-wrap gap-2 justify-center lg:justify-end">
               <a
                 href="https://www.12377.cn/"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:underline hover:text-rose-400"
+                className="flex items-center gap-1.5 bg-neutral-800/80 border border-neutral-700/60 hover:border-rose-500 rounded px-2.5 py-1 text-[10px] text-neutral-400 hover:text-white transition duration-150"
               >
-                网络违法犯罪举报网站
+                <span className="size-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                网络警察提醒你
               </a>
-            </p>
+              <a
+                href="https://www.12377.cn/"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 bg-neutral-800/80 border border-neutral-700/60 hover:border-rose-500 rounded px-2.5 py-1 text-[10px] text-neutral-400 hover:text-white transition duration-150"
+              >
+                <span className="size-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                中国互联网举报中心
+              </a>
+              <a
+                href="https://www.12377.cn/"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 bg-neutral-800/80 border border-neutral-700/60 hover:border-rose-500 rounded px-2.5 py-1 text-[10px] text-neutral-400 hover:text-white transition duration-150"
+              >
+                <span className="size-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                网络举报APP下载
+              </a>
+              <a
+                href="http://www.shdf.gov.cn/shdf/channels/740.html"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 bg-neutral-800/80 border border-neutral-700/60 hover:border-rose-500 rounded px-2.5 py-1 text-[10px] text-neutral-400 hover:text-white transition duration-150"
+              >
+                <span className="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                扫黄打非网举报专区
+              </a>
+            </div>
           </div>
         </div>
       </footer>
@@ -2456,6 +2568,34 @@ function LandingPage() {
               </button>
             </div>
             <div className="p-6 max-h-[75vh] overflow-y-auto">
+              {/* 商家入驻步骤指引 */}
+              <div className="mb-6 bg-rose-50/50 border border-rose-100/60 rounded-xl p-3.5">
+                <p className="text-xs font-bold text-rose-900 mb-2.5 flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                  三方商户标准入驻审核流程
+                </p>
+                <div className="grid grid-cols-4 gap-1 text-center text-[10px] relative">
+                  <div className="flex flex-col items-center">
+                    <span className="size-5 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold mb-1 shadow-sm">1</span>
+                    <span className="text-rose-900 font-medium scale-90">提交申请</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="size-5 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center font-bold mb-1">2</span>
+                    <span className="text-neutral-500 scale-90">资质初审</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="size-5 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center font-bold mb-1">3</span>
+                    <span className="text-neutral-500 scale-90">守则签约</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="size-5 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center font-bold mb-1">4</span>
+                    <span className="text-neutral-500 scale-90">授权开店</span>
+                  </div>
+                  {/* 连接线 */}
+                  <div className="absolute top-2.5 left-[12%] right-[12%] h-[1px] bg-rose-200 z-[-1] hidden md:block"></div>
+                </div>
+              </div>
+
               <form onSubmit={handleMerchantApplySubmit} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs text-neutral-500 font-medium block">
