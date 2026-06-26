@@ -21,6 +21,8 @@ import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
 import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
 import { Route as LayoutProfilesRouteImport } from './routes/_layout/profiles'
+import { Route as LayoutOrdersRouteImport } from './routes/_layout/orders'
+import { Route as LayoutMerchantsRouteImport } from './routes/_layout/merchants'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
@@ -85,6 +87,16 @@ const LayoutProfilesRoute = LayoutProfilesRouteImport.update({
   path: '/profiles',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutOrdersRoute = LayoutOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutMerchantsRoute = LayoutMerchantsRouteImport.update({
+  id: '/merchants',
+  path: '/merchants',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutItemsRoute = LayoutItemsRouteImport.update({
   id: '/items',
   path: '/items',
@@ -116,6 +128,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
   '/items': typeof LayoutItemsRoute
+  '/merchants': typeof LayoutMerchantsRoute
+  '/orders': typeof LayoutOrdersRoute
   '/profiles': typeof LayoutProfilesRoute
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
@@ -133,6 +147,8 @@ export interface FileRoutesByTo {
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
   '/items': typeof LayoutItemsRoute
+  '/merchants': typeof LayoutMerchantsRoute
+  '/orders': typeof LayoutOrdersRoute
   '/profiles': typeof LayoutProfilesRoute
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
@@ -152,6 +168,8 @@ export interface FileRoutesById {
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/feedback': typeof LayoutFeedbackRoute
   '/_layout/items': typeof LayoutItemsRoute
+  '/_layout/merchants': typeof LayoutMerchantsRoute
+  '/_layout/orders': typeof LayoutOrdersRoute
   '/_layout/profiles': typeof LayoutProfilesRoute
   '/_layout/qualifications': typeof LayoutQualificationsRoute
   '/_layout/requests': typeof LayoutRequestsRoute
@@ -171,6 +189,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/feedback'
     | '/items'
+    | '/merchants'
+    | '/orders'
     | '/profiles'
     | '/qualifications'
     | '/requests'
@@ -188,6 +208,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/feedback'
     | '/items'
+    | '/merchants'
+    | '/orders'
     | '/profiles'
     | '/qualifications'
     | '/requests'
@@ -206,6 +228,8 @@ export interface FileRouteTypes {
     | '/_layout/dashboard'
     | '/_layout/feedback'
     | '/_layout/items'
+    | '/_layout/merchants'
+    | '/_layout/orders'
     | '/_layout/profiles'
     | '/_layout/qualifications'
     | '/_layout/requests'
@@ -309,6 +333,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutProfilesRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/orders': {
+      id: '/_layout/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof LayoutOrdersRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/merchants': {
+      id: '/_layout/merchants'
+      path: '/merchants'
+      fullPath: '/merchants'
+      preLoaderRoute: typeof LayoutMerchantsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/items': {
       id: '/_layout/items'
       path: '/items'
@@ -345,6 +383,8 @@ interface LayoutRouteChildren {
   LayoutDashboardRoute: typeof LayoutDashboardRoute
   LayoutFeedbackRoute: typeof LayoutFeedbackRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
+  LayoutMerchantsRoute: typeof LayoutMerchantsRoute
+  LayoutOrdersRoute: typeof LayoutOrdersRoute
   LayoutProfilesRoute: typeof LayoutProfilesRoute
   LayoutQualificationsRoute: typeof LayoutQualificationsRoute
   LayoutRequestsRoute: typeof LayoutRequestsRoute
@@ -358,6 +398,8 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDashboardRoute: LayoutDashboardRoute,
   LayoutFeedbackRoute: LayoutFeedbackRoute,
   LayoutItemsRoute: LayoutItemsRoute,
+  LayoutMerchantsRoute: LayoutMerchantsRoute,
+  LayoutOrdersRoute: LayoutOrdersRoute,
   LayoutProfilesRoute: LayoutProfilesRoute,
   LayoutQualificationsRoute: LayoutQualificationsRoute,
   LayoutRequestsRoute: LayoutRequestsRoute,
