@@ -1149,9 +1149,9 @@ function LandingPage() {
               <a href="#posts" className="text-neutral-600 hover:text-rose-500 transition">
                 征婚秀
               </a>
-              <a href="#mall" className="text-neutral-600 hover:text-rose-500 font-bold transition">
+              {/* <a href="#mall" className="text-neutral-600 hover:text-rose-500 font-bold transition">
                 服务商城
-              </a>
+              </a> */}
               <a href="#merchants-list" className="text-neutral-600 hover:text-rose-500 transition">
                 合作商户
               </a>
@@ -1590,8 +1590,8 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* 三方服务商城 (交易与付款流程合规) */}
-      <section id="mall" className="py-16 bg-white border-b border-neutral-100 scroll-mt-20">
+      {/* 三方服务商城 (已隐藏) */}
+      <section id="mall" className="hidden">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <span className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full uppercase tracking-wider">
@@ -2854,7 +2854,7 @@ function LandingPage() {
                   </div>
                   {merchantStatusResult.status === "approved" && (
                     <div className="text-xs text-neutral-600 bg-white border border-neutral-200 p-2.5 rounded text-center">
-                      您的商户已激活上线。请在首页服务商城查看您的服务，或前往后台管理订单。
+                      您的商户已激活上线。请前往后台管理服务或订单。
                     </div>
                   )}
                 </div>
