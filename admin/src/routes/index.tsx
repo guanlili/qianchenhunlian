@@ -541,64 +541,6 @@ const SEED_ORDERS: ServiceOrder[] = [
   }
 ]
 
-const PRODUCTS = [
-  {
-    id: "p_1",
-    name: "玫瑰相亲派对现场门票",
-    price: 99,
-    originalPrice: 199,
-    merchantId: "m_seed3",
-    merchantName: "爱之约户外相亲派对俱乐部",
-    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    desc: "参加同城周末户外趣味互动派对，含精美茶歇与专属红娘现场牵线撮合，快速结识同城心仪伙伴。",
-    specs: ["普通票", "VIP贵宾票 (+50元, 含定制精美伴手礼)"],
-    rating: "4.9",
-    sales: "128",
-    tags: ["实名防托", "未消费退"],
-  },
-  {
-    id: "p_2",
-    name: "一对一金牌情感测评与咨询服务",
-    price: 199,
-    originalPrice: 399,
-    merchantId: "m_seed2",
-    merchantName: "知音情感咨询工作室",
-    image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    desc: "由国家二级心理咨询师/情感专家进行1小时深度面谈测评，梳理恋爱卡点，量身定制匹配方案。",
-    specs: ["单次体验", "全套评估"],
-    rating: "4.8",
-    sales: "86",
-    tags: ["专家执业", "隐私加密"],
-  },
-  {
-    id: "p_3",
-    name: "唯美定制高端婚礼策划案设计",
-    price: 999,
-    originalPrice: 1999,
-    merchantId: "m_seed1",
-    merchantName: "久久情缘婚庆服务馆",
-    image: "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    desc: "针对新人量身定制的主题婚礼设计案，包含现场3D效果草图、现场花艺布置方案及流程时间线策划。",
-    specs: ["新潮森系", "中式传统", "奢华西式"],
-    rating: "5.0",
-    sales: "34",
-    tags: ["原创方案", "全景草图"],
-  },
-  {
-    id: "p_4",
-    name: "唯美韩式户外婚纱照拍摄套餐",
-    price: 2999,
-    originalPrice: 4999,
-    merchantId: "m_seed4",
-    merchantName: "美刻创意婚纱摄影工作室",
-    image: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    desc: "资深摄影总监全程二对一贴心服务，含3套定制礼服、精致妆容与35张精修大片，留存幸福最美瞬间。",
-    specs: ["1天拍摄 (同城公园)", "2天外景拍摄 (海滨胜地, +1500元)"],
-    rating: "4.9",
-    sales: "52",
-    tags: ["无隐形消费", "样片承诺"],
-  }
-]
 
 
 const SHANDONG_CITIES: Record<string, string[]> = {
@@ -648,7 +590,7 @@ function LandingPage() {
   // Merchants and orders state
   const [merchants, setMerchants] = useState<MerchantApplication[]>([])
   const [orders, setOrders] = useState<ServiceOrder[]>([])
-  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [selectedProduct, _setSelectedProduct] = useState<any>(null)
   
   // Checkout & Cashier form states
   const [checkoutName, setCheckoutName] = useState("")
@@ -1590,99 +1532,7 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* 三方服务商城 (已隐藏) */}
-      <section id="mall" className="hidden">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full uppercase tracking-wider">
-              甄选服务商城
-            </span>
-            <h3 className="text-2xl md:text-3xl font-extrabold text-neutral-900 mt-3">
-              第三方联营服务商城
-            </h3>
-            <p className="text-neutral-500 text-xs mt-2">
-              本商城服务均由平台入驻第三方专业商户提供并承接，交易款项由平台全程监管，保障您的消费权益。
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PRODUCTS.map((prod) => (
-              <div
-                key={prod.id}
-                className="bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-rose-200 transition duration-300 flex flex-col group"
-              >
-                <div className="relative aspect-video w-full overflow-hidden bg-neutral-100">
-                  <img
-                    src={prod.image}
-                    alt={prod.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    loading="lazy"
-                  />
-                  <div className="absolute top-3 left-3 bg-neutral-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <Store className="size-3 text-rose-400" />
-                    {prod.merchantName}
-                  </div>
-                </div>
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    {/* 评分与标签 */}
-                    <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                      <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
-                        ★ {prod.rating}
-                      </span>
-                      <span className="text-neutral-400">已履约 {prod.sales}</span>
-                      {prod.tags.map((tag) => (
-                        <span key={tag} className="bg-slate-50 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <h4 className="font-bold text-neutral-900 text-sm group-hover:text-rose-500 transition duration-150 line-clamp-1">
-                      {prod.name}
-                    </h4>
-                    <p className="text-xs text-neutral-500 leading-relaxed line-clamp-2">
-                      {prod.desc}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 flex justify-between items-center mt-auto border-t border-neutral-50">
-                    <div className="space-y-0.5">
-                      <span className="text-rose-600 font-extrabold text-base">
-                        ¥{prod.price}
-                      </span>
-                      {prod.originalPrice && (
-                        <span className="text-neutral-400 text-[10px] line-through ml-1.5">
-                          ¥{prod.originalPrice}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!session) {
-                          triggerToast("请先登录会员账号")
-                          setActiveModal("login")
-                          return
-                        }
-                        setSelectedProduct(prod)
-                        setCheckoutSpec(prod.specs[0])
-                        setCheckoutName(session.nickname || "")
-                        setCheckoutPhone(session.phone || "")
-                        setCheckoutNotes("")
-                        setActiveModal("product_detail")
-                      }}
-                      className="bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs py-1.5 px-4 rounded-lg shadow-sm hover:shadow-md transition duration-150"
-                    >
-                      立即订购
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* 合作服务商户展示 (三方商家资质合规) */}
       <section id="merchants-list" className="py-16 bg-slate-50 border-b border-neutral-100 scroll-mt-20">
