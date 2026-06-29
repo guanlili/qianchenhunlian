@@ -493,6 +493,50 @@ const SEED_MERCHANTS: MerchantApplication[] = [
   }
 ]
 
+interface ServiceProduct {
+  id: string
+  name: string
+  price: number
+  merchantId: string
+  merchantName: string
+  image: string
+  desc: string
+  specs: string[]
+}
+
+const SEED_PRODUCTS: ServiceProduct[] = [
+  {
+    id: "p_1",
+    name: "玫瑰相亲派对现场门票",
+    price: 99,
+    merchantId: "m_seed3",
+    merchantName: "爱之约户外相亲派对俱乐部",
+    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=400&q=80",
+    desc: "参加本周末的玫瑰主题户外相亲派对，结识更多优秀单身青年。",
+    specs: ["男士票", "女士票"]
+  },
+  {
+    id: "p_2",
+    name: "一对一金牌情感测评与咨询",
+    price: 199,
+    merchantId: "m_seed2",
+    merchantName: "知音情感咨询工作室",
+    image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=400&q=80",
+    desc: "专业的心理咨询师提供一对一的情感测评与疏导服务，解开您的情感困惑。",
+    specs: ["单次咨询 (60分钟)"]
+  },
+  {
+    id: "p_3",
+    name: "唯美高端定制婚礼策划案",
+    price: 999,
+    merchantId: "m_seed1",
+    merchantName: "久久情缘婚庆服务馆",
+    image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=400&q=80",
+    desc: "提供高端定制的婚礼策划方案定金，专业策划团队为您打造梦幻婚礼。",
+    specs: ["中式婚礼策划", "西式婚礼策划"]
+  }
+]
+
 const SEED_ORDERS: ServiceOrder[] = [
   {
     id: "ORD_3u89xq2a",
@@ -590,7 +634,7 @@ function LandingPage() {
   // Merchants and orders state
   const [merchants, setMerchants] = useState<MerchantApplication[]>([])
   const [orders, setOrders] = useState<ServiceOrder[]>([])
-  const [selectedProduct, _setSelectedProduct] = useState<any>(null)
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
   
   // Checkout & Cashier form states
   const [checkoutName, setCheckoutName] = useState("")
@@ -1091,9 +1135,9 @@ function LandingPage() {
               <a href="#posts" className="text-neutral-600 hover:text-rose-500 transition">
                 征婚秀
               </a>
-              {/* <a href="#mall" className="text-neutral-600 hover:text-rose-500 font-bold transition">
+              <a href="#mall" className="text-neutral-600 hover:text-rose-500 font-bold transition">
                 服务商城
-              </a> */}
+              </a>
               <a href="#merchants-list" className="text-neutral-600 hover:text-rose-500 transition">
                 合作商户
               </a>
@@ -1533,6 +1577,62 @@ function LandingPage() {
       </section>
 
 
+
+      {/* 服务商城 (EDI 在线交易闭环演示) */}
+      <section id="mall" className="py-16 bg-white border-b border-neutral-100 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-end flex-wrap gap-4 mb-10">
+            <div>
+              <span className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full uppercase tracking-wider">
+                在线服务商城
+              </span>
+              <h3 className="text-2xl font-extrabold text-neutral-900 mt-2">
+                精选婚恋增值服务
+              </h3>
+              <p className="text-neutral-500 text-xs mt-1">
+                支持在线浏览、选购、支付，资金全程由第三方机构担保，保障您的交易安全。
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {SEED_PRODUCTS.map((product) => (
+              <div key={product.id} className="bg-white rounded-2xl border border-neutral-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div className="aspect-[4/3] overflow-hidden relative">
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur text-xs font-bold px-2 py-1 rounded text-neutral-800">
+                    {product.merchantName}
+                  </div>
+                </div>
+                <div className="p-5">
+                  <h4 className="font-bold text-neutral-900 text-lg mb-2 line-clamp-1 group-hover:text-rose-600 transition-colors">
+                    {product.name}
+                  </h4>
+                  <p className="text-neutral-500 text-sm mb-4 line-clamp-2">
+                    {product.desc}
+                  </p>
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="text-xl font-extrabold text-rose-600">
+                      <small className="text-sm font-medium mr-0.5">¥</small>{product.price}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProduct(product)
+                        setActiveModal("product_detail")
+                      }}
+                      className="bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white px-4 py-2 rounded-full text-sm font-bold transition-colors"
+                    >
+                      查看详情
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* 合作服务商户展示 (三方商家资质合规) */}
       <section id="merchants-list" className="py-16 bg-slate-50 border-b border-neutral-100 scroll-mt-20">
