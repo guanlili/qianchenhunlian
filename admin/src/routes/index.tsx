@@ -3160,12 +3160,9 @@ function LandingPage() {
                 <p>商户名称: {currentOrder.merchantName}</p>
               </div>
 
-              {/* MOCK SCANNING PAYMENT QR CODE */}
-              <div className="bg-white border border-neutral-200 p-4 rounded-xl w-48 h-48 mx-auto flex flex-col items-center justify-center space-y-2 relative shadow-inner">
-                <QrCode className="size-36 text-neutral-800" />
-                <span className="text-[10px] text-neutral-400 flex items-center gap-1">
-                  正在等待扫码...
-                </span>
+              {/* SCANNING PAYMENT QR CODE */}
+              <div className="bg-white border border-neutral-200 p-2 rounded-xl w-48 h-48 mx-auto flex flex-col items-center justify-center space-y-2 relative shadow-inner">
+                <img src="/payment_qr.png" alt="支付二维码" className="w-full h-full object-cover rounded-lg" />
               </div>
 
               <div className="space-y-3">
