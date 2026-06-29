@@ -10,7 +10,6 @@ import {
   Lock,
   Phone,
   PlusCircle,
-  QrCode,
   Scale,
   Shield,
   ShieldAlert,
