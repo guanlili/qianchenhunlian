@@ -233,7 +233,7 @@ const POLICIES = {
         </div>
 
         <h4 className="font-bold text-neutral-800 text-base mt-2">三、支付与发票开具</h4>
-        <p className="text-xs text-neutral-600">本站支持微信/支付宝等在线扫码收银渠道。所有入驻商户与付费会员均可联系平台客服 15688804736 (管老师) 索取正规增值税发票，平台将在3个工作日内开具并寄出。</p>
+        <p className="text-xs text-neutral-600">本站支持微信扫码在线收银渠道。所有入驻商户与付费会员均可联系平台客服 15688804736 (管老师) 索取正规增值税发票，平台将在3个工作日内开具并寄出。</p>
       </div>
     ),
   },
@@ -1640,7 +1640,7 @@ function LandingPage() {
                 </h3>
               </div>
               <p className="text-neutral-500 text-sm">
-                支持在线浏览、选购、支付，资金全程由微信/支付宝官方托管分账，保障交易安全。
+                支持在线浏览、选购、支付，资金全程由微信官方托管分账，保障交易安全。
               </p>
             </div>
           </div>
@@ -3084,7 +3084,7 @@ function LandingPage() {
 
                 <div className="space-y-2 border-t border-neutral-100 pt-3">
                   <label className="text-xs text-neutral-500 font-bold block">选择支付方式：</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <button
                       type="button"
                       onClick={() => setCheckoutPayMethod("wechat")}
@@ -3096,18 +3096,6 @@ function LandingPage() {
                     >
                       <span className="text-emerald-600 text-lg">●</span>
                       微信支付
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCheckoutPayMethod("alipay")}
-                      className={`text-xs p-2.5 rounded-lg border font-medium flex items-center justify-center gap-1.5 transition ${
-                        checkoutPayMethod === "alipay"
-                          ? "border-blue-500 bg-blue-50/50 text-blue-800"
-                          : "border-neutral-200 text-neutral-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span className="text-blue-500 text-lg">●</span>
-                      支付宝支付
                     </button>
                   </div>
                 </div>
@@ -3166,7 +3154,7 @@ function LandingPage() {
 
               <div className="space-y-3">
                 <p className="text-[11px] text-neutral-400 leading-normal">
-                  请使用手机打开{currentOrder.paymentMethod === "wechat" ? "微信" : "支付宝"}【扫一扫】扫描上述二维码完成支付，或直接点击下方按钮模拟支付回调。
+                  请使用手机打开微信【扫一扫】扫描上述二维码完成支付，或直接点击下方按钮模拟支付回调。
                 </p>
                 
                 <button
