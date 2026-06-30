@@ -111,6 +111,10 @@
         </view>
       </view>
 
+      <view class="home-footer">
+        <text>企业名称：德州乾瑞婚恋服务有限公司</text>
+        <text>统一社会信用代码：91371428MAKCPBR96B</text>
+      </view>
     </scroll-view>
   </block>
 
