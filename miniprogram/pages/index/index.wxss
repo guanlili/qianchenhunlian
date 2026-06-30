@@ -2412,3 +2412,13 @@ page {
   background: linear-gradient(135deg, #ffb3b3 0%, #c93434 100%);
   color: #fff;
 }
+
+.home-footer {
+  text-align: center;
+  padding: 40rpx 0;
+  color: #999;
+  font-size: 22rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
