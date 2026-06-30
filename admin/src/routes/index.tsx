@@ -82,6 +82,8 @@ const POLICIES = {
         <p>本公司坚持"客户得到满意、员工得到提升、企业得到发展"的企业经营理念，秉承"诚信赢天下"的经营理念。守合同、讲信用，携手新老客户，坚持质量效益型、管理效益型、科技效益型、环保节约型的发展道路。</p>
         <h4 className="font-bold text-neutral-800 text-base mt-4">联系方式</h4>
         <p className="bg-neutral-50 p-3 rounded border border-neutral-100">
+          企业名称：德州乾瑞婚恋服务有限公司<br />
+          信用代码：91371428MAKCPBR96B<br />
           公司地址：山东省德州市武城县广运街道文昌社区向阳路北首德百玫瑰园底商铺 B 区 117 号 1 楼<br />
           联&nbsp;系&nbsp;人：管雪龙<br />
           联系电话：15688804736<br />
@@ -1342,6 +1344,10 @@ function LandingPage() {
                 <span className="text-neutral-800 font-medium">德州乾瑞婚恋服务有限公司</span>
               </div>
               <div className="flex gap-2">
+                <span className="w-20 text-neutral-400 flex-shrink-0">信用代码：</span>
+                <span className="text-neutral-800">91371428MAKCPBR96B</span>
+              </div>
+              <div className="flex gap-2">
                 <span className="w-20 text-neutral-400 flex-shrink-0">公司地址：</span>
                 <span className="text-neutral-800">
                   山东省德州市武城县广运街道文昌社区向阳路北首德百玫瑰园底商铺 B 区 117 号 1 楼
@@ -2014,7 +2020,7 @@ function LandingPage() {
                 鲁ICP备2026034161号-2
               </a>
               <span>|</span>
-              <span>统一社会信用代码：91371402MADP1E1K8T</span>
+              <span>统一社会信用代码：91371428MAKCPBR96B</span>
               <span>|</span>
               <span>法定代表人：管雪龙</span>
             </p>
