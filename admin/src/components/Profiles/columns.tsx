@@ -8,7 +8,10 @@ import { ProfileActionsMenu } from "./ProfileActionsMenu"
 import { ProfileDetailSheet } from "./ProfileDetailSheet"
 
 function StatusBadge({ status }: { status: string }) {
-  const variant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  const variant: Record<
+    string,
+    "default" | "secondary" | "destructive" | "outline"
+  > = {
     pending: "outline",
     approved: "default",
     rejected: "destructive",
@@ -18,7 +21,11 @@ function StatusBadge({ status }: { status: string }) {
     approved: "已通过",
     rejected: "已驳回",
   }
-  return <Badge variant={variant[status] || "secondary"}>{label[status] || status}</Badge>
+  return (
+    <Badge variant={variant[status] || "secondary"}>
+      {label[status] || status}
+    </Badge>
+  )
 }
 
 export const columns: ColumnDef<AdminProfileItem>[] = [
@@ -42,8 +49,7 @@ export const columns: ColumnDef<AdminProfileItem>[] = [
   {
     accessorKey: "height",
     header: "身高",
-    cell: ({ row }) =>
-      row.original.height ? `${row.original.height}cm` : "—",
+    cell: ({ row }) => (row.original.height ? `${row.original.height}cm` : "—"),
   },
   {
     accessorKey: "location",

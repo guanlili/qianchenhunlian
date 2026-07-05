@@ -32,7 +32,7 @@ export function StaffActionsMenu({ item }: Props) {
       toast.success(item.is_active ? "已停用" : "已启用")
       setOpen(false)
     },
-    onError: (e) => toast.error("操作失败: " + (e as Error).message),
+    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
   })
 
   const remove = useMutation({
@@ -42,7 +42,7 @@ export function StaffActionsMenu({ item }: Props) {
       toast.success("已删除员工")
       setOpen(false)
     },
-    onError: (e) => toast.error("删除失败: " + (e as Error).message),
+    onError: (e) => toast.error(`删除失败: ${(e as Error).message}`),
   })
 
   return (

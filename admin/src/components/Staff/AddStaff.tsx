@@ -37,7 +37,7 @@ export function AddStaff() {
       setName("")
       setPassword("")
     },
-    onError: (e) => toast.error("添加失败: " + (e as Error).message),
+    onError: (e) => toast.error(`添加失败: ${(e as Error).message}`),
   })
 
   return (

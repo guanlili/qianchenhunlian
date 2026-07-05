@@ -4,8 +4,7 @@ import { Pencil, Plus, Trash2, Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, UploadsService, type StorePublic } from "@/client"
-import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
+import { AdminService, type StorePublic, UploadsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -27,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
 
 export const Route = createFileRoute("/_layout/stores")({
   component: StoresPage,
@@ -79,7 +79,9 @@ function StoresPage() {
                   <TableCell>{s.city}</TableCell>
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell>{s.district || "—"}</TableCell>
-                  <TableCell className="max-w-xs truncate">{s.address || "—"}</TableCell>
+                  <TableCell className="max-w-xs truncate">
+                    {s.address || "—"}
+                  </TableCell>
                   <TableCell>{s.phone || "—"}</TableCell>
                   <TableCell>
                     <span
@@ -105,7 +107,8 @@ function StoresPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        if (confirm(`确定关闭门店 "${s.name}" 吗?`)) del.mutate(s.id)
+                        if (confirm(`确定关闭门店 "${s.name}" 吗?`))
+                          del.mutate(s.id)
                       }}
                     >
                       <Trash2 className="text-rose-500" />
@@ -170,7 +173,7 @@ function StoreFormDialog({
       toast.success(store ? "已更新" : "已创建")
       setOpen(false)
     },
-    onError: (e) => toast.error("保存失败: " + (e as Error).message),
+    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
   })
 
   const update = (k: string) => (v: string) => setForm({ ...form, [k]: v })
@@ -185,17 +188,25 @@ function StoreFormDialog({
         <div className="grid grid-cols-2 gap-3 py-2">
           <div className="col-span-2">
             <Label>门店名字</Label>
-            <Input value={form.name} onChange={(e) => update("name")(e.target.value)} placeholder="济南·历下旗舰店" />
+            <Input
+              value={form.name}
+              onChange={(e) => update("name")(e.target.value)}
+              placeholder="济南·历下旗舰店"
+            />
           </div>
           <div>
             <Label>城市</Label>
             <select
               className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
               value={form.city}
-              onChange={(e) => setForm({ ...form, city: e.target.value, district: "" })}
+              onChange={(e) =>
+                setForm({ ...form, city: e.target.value, district: "" })
+              }
             >
               {SHANDONG_CITIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
           </div>
@@ -208,25 +219,43 @@ function StoreFormDialog({
             >
               <option value="">— 不填 —</option>
               {(SHANDONG_REGIONS[form.city] || []).map((d) => (
-                <option key={d} value={d}>{d}</option>
+                <option key={d} value={d}>
+                  {d}
+                </option>
               ))}
             </select>
           </div>
           <div className="col-span-2">
             <Label>详细地址</Label>
-            <Input value={form.address} onChange={(e) => update("address")(e.target.value)} placeholder="历下区泉城路 100 号" />
+            <Input
+              value={form.address}
+              onChange={(e) => update("address")(e.target.value)}
+              placeholder="历下区泉城路 100 号"
+            />
           </div>
           <div>
             <Label>经度 (可选)</Label>
-            <Input value={String(form.lng)} onChange={(e) => update("lng")(e.target.value)} placeholder="117.0009" />
+            <Input
+              value={String(form.lng)}
+              onChange={(e) => update("lng")(e.target.value)}
+              placeholder="117.0009"
+            />
           </div>
           <div>
             <Label>纬度 (可选)</Label>
-            <Input value={String(form.lat)} onChange={(e) => update("lat")(e.target.value)} placeholder="36.6512" />
+            <Input
+              value={String(form.lat)}
+              onChange={(e) => update("lat")(e.target.value)}
+              placeholder="36.6512"
+            />
           </div>
           <div>
             <Label>电话</Label>
-            <Input value={form.phone} onChange={(e) => update("phone")(e.target.value)} placeholder="0531-88888888" />
+            <Input
+              value={form.phone}
+              onChange={(e) => update("phone")(e.target.value)}
+              placeholder="0531-88888888"
+            />
           </div>
           <div>
             <Label>状态</Label>
@@ -255,16 +284,25 @@ function StoreFormDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
-          <LoadingButton loading={save.isPending} onClick={() => save.mutate()}>保存</LoadingButton>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            取消
+          </Button>
+          <LoadingButton loading={save.isPending} onClick={() => save.mutate()}>
+            保存
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
 
-
-function PhotoField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function PhotoField({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
   const ref = useRef<HTMLInputElement>(null)
   const upload = useMutation({
     mutationFn: (file: File) =>
@@ -273,13 +311,22 @@ function PhotoField({ value, onChange }: { value: string; onChange: (v: string) 
       onChange(res.url)
       toast.success("已上传")
     },
-    onError: (e) => toast.error("上传失败: " + (e as Error).message),
+    onError: (e) => toast.error(`上传失败: ${(e as Error).message}`),
   })
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="/files/xxx.jpg (或上传)" />
-        <Button type="button" variant="outline" onClick={() => ref.current?.click()} disabled={upload.isPending}>
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="/files/xxx.jpg (或上传)"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => ref.current?.click()}
+          disabled={upload.isPending}
+        >
           <Upload /> {upload.isPending ? "上传中" : "上传"}
         </Button>
         <input
@@ -295,7 +342,11 @@ function PhotoField({ value, onChange }: { value: string; onChange: (v: string) 
         />
       </div>
       {value && (
-        <img src={value} alt="店招" className="max-h-40 w-auto rounded border" />
+        <img
+          src={value}
+          alt="店招"
+          className="max-h-40 w-auto rounded border"
+        />
       )}
     </div>
   )

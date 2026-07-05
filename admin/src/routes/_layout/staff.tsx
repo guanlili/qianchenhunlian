@@ -41,9 +41,7 @@ function StaffPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <div className="text-2xl font-semibold mb-2">无权限</div>
-        <div className="text-muted-foreground">
-          员工管理仅 superuser 可见
-        </div>
+        <div className="text-muted-foreground">员工管理仅 superuser 可见</div>
       </div>
     )
   }

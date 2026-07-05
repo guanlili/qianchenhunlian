@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Check, Inbox, Phone, X } from "lucide-react"
 import { Suspense, useState } from "react"
 
-import { AdminService, type AdminContactRequestItem } from "@/client"
+import { type AdminContactRequestItem, AdminService } from "@/client"
 import { HandleDialog } from "@/components/Requests/HandleDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,7 +34,10 @@ type StatusFilter =
 
 const STATUS_BADGE: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  {
+    label: string
+    variant: "default" | "secondary" | "destructive" | "outline"
+  }
 > = {
   pending: { label: "待处理", variant: "outline" },
   accepted: { label: "对方同意", variant: "default" },
@@ -98,20 +101,33 @@ function ContactInfo({
   )
 }
 
-function RequestCard({ item, canWrite }: { item: AdminContactRequestItem; canWrite: boolean }) {
-  const badge = STATUS_BADGE[item.status] || { label: item.status, variant: "secondary" as const }
+function RequestCard({
+  item,
+  canWrite,
+}: {
+  item: AdminContactRequestItem
+  canWrite: boolean
+}) {
+  const badge = STATUS_BADGE[item.status] || {
+    label: item.status,
+    variant: "secondary" as const,
+  }
   return (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-base">
-              {item.from_xy_code} <span className="text-muted-foreground">→</span> {item.to_xy_code}
+              {item.from_xy_code}{" "}
+              <span className="text-muted-foreground">→</span> {item.to_xy_code}
             </CardTitle>
             <CardDescription>
               提交于 {new Date(item.created_at).toLocaleString("zh-CN")}
               {item.handled_at && (
-                <> · 处理于 {new Date(item.handled_at).toLocaleString("zh-CN")}</>
+                <>
+                  {" "}
+                  · 处理于 {new Date(item.handled_at).toLocaleString("zh-CN")}
+                </>
               )}
             </CardDescription>
           </div>
@@ -185,7 +201,9 @@ function RequestCard({ item, canWrite }: { item: AdminContactRequestItem; canWri
               item={item}
               status="closed"
               trigger={
-                <Button variant="ghost" size="sm">关闭</Button>
+                <Button variant="ghost" size="sm">
+                  关闭
+                </Button>
               }
             />
           </div>
@@ -195,7 +213,13 @@ function RequestCard({ item, canWrite }: { item: AdminContactRequestItem; canWri
   )
 }
 
-function RequestsList({ status, canWrite }: { status: StatusFilter; canWrite: boolean }) {
+function RequestsList({
+  status,
+  canWrite,
+}: {
+  status: StatusFilter
+  canWrite: boolean
+}) {
   const { data } = useSuspenseQuery(reqQuery({ status }))
   if (!data.items || data.items.length === 0) {
     return (
@@ -224,9 +248,7 @@ function RequestsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">申请工单</h1>
-        <p className="text-muted-foreground">
-          相亲撮合工单 · 红娘审核处理
-        </p>
+        <p className="text-muted-foreground">相亲撮合工单 · 红娘审核处理</p>
       </div>
 
       {!canWrite && (
@@ -236,7 +258,10 @@ function RequestsPage() {
       )}
 
       <div className="flex gap-3 items-center">
-        <Select value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
+        <Select
+          value={status}
+          onValueChange={(v) => setStatus(v as StatusFilter)}
+        >
           <SelectTrigger className="w-[160px]">
             <SelectValue />
           </SelectTrigger>

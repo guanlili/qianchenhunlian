@@ -28,7 +28,10 @@ function QualificationsPage() {
   // 拉到数据后 sync local state (只在第一次)
   if (data && !dirty && items.length === 0 && (data.items?.length || 0) > 0) {
     setItems(
-      (data.items || []).map((it) => ({ image_url: it.image_url, title: it.title ?? null }))
+      (data.items || []).map((it) => ({
+        image_url: it.image_url,
+        title: it.title ?? null,
+      })),
     )
   }
 
@@ -40,18 +43,17 @@ function QualificationsPage() {
       setDirty(true)
       toast.success("已上传")
     },
-    onError: (e) => toast.error("上传失败: " + (e as Error).message),
+    onError: (e) => toast.error(`上传失败: ${(e as Error).message}`),
   })
 
   const save = useMutation({
-    mutationFn: () =>
-      SiteService.putQualifications({ requestBody: { items } }),
+    mutationFn: () => SiteService.putQualifications({ requestBody: { items } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["site-qualifications"] })
       setDirty(false)
       toast.success("已保存")
     },
-    onError: (e) => toast.error("保存失败: " + (e as Error).message),
+    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
   })
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,10 +68,16 @@ function QualificationsPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>资质证明 / 营业执照</CardTitle>
           <div className="flex gap-2">
-            <Button onClick={() => fileInputRef.current?.click()} disabled={upload.isPending}>
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={upload.isPending}
+            >
               <Upload /> {upload.isPending ? "上传中..." : "上传图片"}
             </Button>
-            <Button onClick={() => save.mutate()} disabled={!dirty || save.isPending}>
+            <Button
+              onClick={() => save.mutate()}
+              disabled={!dirty || save.isPending}
+            >
               {save.isPending ? "保存中..." : "保存"}
             </Button>
             <input
@@ -83,14 +91,20 @@ function QualificationsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4 text-sm">
-            上传后请记得点 "保存" 让用户端可见. 用户端在 "我的 → 设置 → 资质证明" 看到这些图片.
+            上传后请记得点 "保存" 让用户端可见. 用户端在 "我的 → 设置 →
+            资质证明" 看到这些图片.
           </p>
           {items.length === 0 ? (
-            <div className="text-muted-foreground py-8 text-center">暂无资质图片</div>
+            <div className="text-muted-foreground py-8 text-center">
+              暂无资质图片
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {items.map((it, idx) => (
-                <div key={`${it.image_url}-${idx}`} className="rounded border p-3">
+                <div
+                  key={`${it.image_url}-${idx}`}
+                  className="rounded border p-3"
+                >
                   <div className="aspect-video overflow-hidden rounded bg-slate-50">
                     {/* 资源路径相对; admin host 跟 backend 同源, 浏览器会自动拼 */}
                     <img
@@ -105,7 +119,10 @@ function QualificationsPage() {
                     value={it.title ?? ""}
                     onChange={(e) => {
                       const next = [...items]
-                      next[idx] = { ...next[idx], title: e.target.value || null }
+                      next[idx] = {
+                        ...next[idx],
+                        title: e.target.value || null,
+                      }
                       setItems(next)
                       setDirty(true)
                     }}
