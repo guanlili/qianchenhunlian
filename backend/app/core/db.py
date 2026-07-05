@@ -83,6 +83,23 @@ def _ensure_favorite_unique(session: Session) -> None:
     logger.info("Added favorite_pair_uq unique constraint")
 
 
+def _migrate_staff_roles(session: Session) -> None:
+    """角色值规范化: staff → hq_staff, store_owner → matchmaker (docs/10)."""
+    inspector = inspect(engine)
+    if "staff" not in inspector.get_table_names():
+        return
+    result = session.execute(text(
+        "UPDATE staff SET role = CASE role"
+        " WHEN 'staff' THEN 'hq_staff'"
+        " WHEN 'store_owner' THEN 'matchmaker'"
+        " ELSE role END"
+        " WHERE role IN ('staff', 'store_owner')"
+    ))
+    session.commit()
+    if result.rowcount:
+        logger.info(f"Migrated {result.rowcount} staff role values")
+
+
 def init_db(session: Session) -> None:
     """初始化数据库.
 
@@ -93,6 +110,7 @@ def init_db(session: Session) -> None:
     _ensure_columns(session)
     SQLModel.metadata.create_all(engine)
     _ensure_favorite_unique(session)
+    _migrate_staff_roles(session)
 
     # 创建首个超级管理员
     user = session.exec(

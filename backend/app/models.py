@@ -415,8 +415,8 @@ class StaffBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     name: str = Field(max_length=64)
     is_active: bool = True
-    role: str = Field(default="staff", max_length=16)         # 'staff' / 'store_owner'
-    store_id: uuid.UUID | None = None                          # 仅 store_owner 必填
+    role: str = Field(default="hq_staff", max_length=16)       # 'hq_staff' / 'matchmaker'
+    store_id: uuid.UUID | None = None                          # 仅 matchmaker 必填
 
 
 class StaffCreate(StaffBase):
@@ -432,7 +432,8 @@ class StaffUpdate(SQLModel):
 
 
 class Staff(StaffBase, table=True):
-    """后台员工: 'staff' 只读, 'store_owner' 能管自己门店的用户 (认证/代录)."""
+    """后台员工: 'hq_staff' 总部员工 (全局读 + 审核/工单),
+    'matchmaker' 门店红娘 (仅本店用户: 认证/代录/工单)."""
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
@@ -522,6 +523,79 @@ class Feedback(SQLModel, table=True):
     contact: str | None = Field(default=None, max_length=64)   # 可填邮箱/微信
     status: str = Field(default="open", max_length=16, index=True)  # open / handled
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ------------------------------------------------------------
+# AuditLog · 后台敏感操作审计
+# ------------------------------------------------------------
+
+
+class AuditLog(SQLModel, table=True):
+    """后台敏感操作留痕: 审核/实名/封禁/赠送/查看联系方式/代录等."""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    actor_type: str = Field(max_length=8)                       # 'user'(superuser) / 'staff'
+    actor_id: uuid.UUID = Field(index=True)
+    actor_email: str | None = Field(default=None, max_length=255)
+    # audit_pass / audit_reject / verify / unverify / block / unblock /
+    # grant_balance / view_contact / update_profile / assign_store / ...
+    action: str = Field(max_length=32, index=True)
+    target_user_id: uuid.UUID | None = Field(default=None, index=True)
+    detail: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class AuditLogPublic(SQLModel):
+    id: uuid.UUID
+    actor_type: str
+    actor_id: uuid.UUID
+    actor_email: str | None = None
+    action: str
+    target_user_id: uuid.UUID | None = None
+    detail: dict = {}
+    created_at: datetime
+
+
+class AuditLogList(SQLModel):
+    items: list[AuditLogPublic] = []
+    total: int = 0
+
+
+# ------------------------------------------------------------
+# BalanceTransaction · 解锁次数流水 (正=入账, 负=消耗)
+# ------------------------------------------------------------
+
+
+class BalanceTransaction(SQLModel, table=True):
+    """解锁次数变动流水. 未来接支付时, 购买只是多一种 source."""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
+    )
+    amount: int                                                 # +2 / -1
+    balance_after: int
+    # register_gift / admin_grant / unlock_cost / contact_request_cost / refund
+    source: str = Field(max_length=32, index=True)
+    ref_id: uuid.UUID | None = None                             # 关联工单/解锁/日志 id
+    note: str | None = Field(default=None, max_length=255)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class BalanceTransactionPublic(SQLModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    amount: int
+    balance_after: int
+    source: str
+    ref_id: uuid.UUID | None = None
+    note: str | None = None
+    created_at: datetime
+
+
+class BalanceTransactionList(SQLModel):
+    items: list[BalanceTransactionPublic] = []
+    total: int = 0
 
 
 # ------------------------------------------------------------
