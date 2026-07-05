@@ -19,7 +19,8 @@ from app.api.deps import CurrentUser
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 # 容器内上传目录, 与 docker-compose 里 ./data/uploads:/app/uploads 对齐
-UPLOAD_DIR = Path("/app/uploads")
+# (容器外跑脚本/生成 openapi 时可用 UPLOAD_DIR 环境变量覆盖)
+UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/app/uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # 公开访问的 URL 前缀 (从环境变量取, 默认走 dev IP)

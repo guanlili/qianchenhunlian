@@ -15,6 +15,7 @@ from fastapi import APIRouter, Body, HTTPException
 from sqlalchemy import update as sa_update
 from sqlmodel import Field, SQLModel, and_, func, select
 
+from app import crud
 from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
 from app.models import ContactRequest, Profile, User
 
@@ -129,6 +130,19 @@ def submit_contact_request(
         status="pending",
     )
     session.add(req)
+    # 扣减流水 (与扣减同事务提交)
+    balance_after = session.exec(
+        select(User.unlock_balance).where(User.id == current_user.id)
+    ).one()
+    crud.add_balance_txn(
+        session=session,
+        user_id=current_user.id,
+        amount=-1,
+        balance_after=balance_after,
+        source="contact_request_cost",
+        ref_id=req.id,
+        note=f"申请联系 {target_user.xy_code or ''}".strip(),
+    )
     session.commit()
     session.refresh(req)
     session.refresh(current_user)

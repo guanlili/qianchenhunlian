@@ -19,8 +19,16 @@ from app.api.deps import (
     require_admin_or_staff,
 )
 from app.models import (
+    Affinity,
+    AuditLog,
+    AuditLogList,
+    AuditLogPublic,
+    BalanceTransaction,
+    BalanceTransactionList,
+    BalanceTransactionPublic,
     ContactRequest,
     Criteria,
+    Favorite,
     Feedback,
     Message,
     ParentsInfo,
@@ -35,6 +43,7 @@ from app.models import (
     StorePublic,
     StoreUpdate,
     User,
+    View,
 )
 from datetime import date
 
@@ -44,6 +53,26 @@ router = APIRouter(
     # 整组要求至少能读 (superuser 或 staff). 写操作各自再加 require_admin.
     dependencies=[Depends(require_admin_or_staff)],
 )
+
+
+def _audit(
+    session: SessionDep,
+    actor: CurrentActor,
+    action: str,
+    target_user_id: uuid.UUID | None = None,
+    detail: dict | None = None,
+) -> AuditLog:
+    """记敏感操作审计 (不 commit, 与业务变更同事务提交)."""
+    log = AuditLog(
+        actor_type=actor.actor_type,
+        actor_id=uuid.UUID(actor.id),
+        actor_email=actor.email,
+        action=action,
+        target_user_id=target_user_id,
+        detail=detail or {},
+    )
+    session.add(log)
+    return log
 
 
 # ---------------- DTOs ----------------
@@ -345,10 +374,14 @@ def list_profiles(
         base.order_by(Profile.updated_at.desc()).offset(skip).limit(limit)  # type: ignore
     ).all()
 
-    return AdminProfileList(
-        items=[_to_admin_profile_item(p, u) for p, u in rows],
-        total=total,
-    )
+    items = []
+    for p, u in rows:
+        item = _to_admin_profile_item(p, u)
+        if not _can_see_contact(actor, p):
+            item.contact_wechat = None
+            item.contact_phone = None
+        items.append(item)
+    return AdminProfileList(items=items, total=total)
 
 
 @router.get("/profiles/{user_id}/detail", response_model=AdminProfileDetail)
@@ -371,8 +404,12 @@ def get_profile_detail(
     parents = session.exec(
         select(ParentsInfo).where(ParentsInfo.user_id == user_id)
     ).first()
+    item = _to_admin_profile_item(profile, user)
+    if not _can_see_contact(actor, profile):
+        item.contact_wechat = None
+        item.contact_phone = None
     return AdminProfileDetail(
-        profile=_to_admin_profile_item(profile, user),
+        profile=item,
         criteria=_to_admin_criteria_item(criteria) if criteria else None,
         parents_info=_to_admin_parents_info_item(parents) if parents else None,
     )
@@ -386,6 +423,7 @@ def get_profile_detail(
 def audit_profile(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
     body: AuditRequest = Body(),
 ) -> AdminProfileItem:
     """审核某人的资料 (通过 / 驳回) - 仅 superuser"""
@@ -400,6 +438,12 @@ def audit_profile(
     profile.audit_reason = (body.reason or None) if not body.approve else None
     profile.updated_at = datetime.utcnow()
     session.add(profile)
+    _audit(
+        session, actor,
+        "audit_pass" if body.approve else "audit_reject",
+        target_user_id=user_id,
+        detail={"reason": body.reason} if body.reason else {},
+    )
     session.commit()
     session.refresh(profile)
 
@@ -471,7 +515,7 @@ def admin_update_profile(
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
-    _check_store_scope(actor, profile)
+    _check_edit_permission(actor, profile)
 
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
@@ -486,6 +530,10 @@ def admin_update_profile(
     profile.progress = _calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
+    _audit(
+        session, actor, "update_profile", target_user_id=user_id,
+        detail={"fields": sorted(data.keys())},
+    )
     session.commit()
     session.refresh(profile)
     return _to_admin_profile_item(profile, user)
@@ -507,8 +555,7 @@ def admin_update_criteria(
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
-    if profile:
-        _check_store_scope(actor, profile)
+    _check_edit_permission(actor, profile)
 
     criteria = session.exec(
         select(Criteria).where(Criteria.user_id == user_id)
@@ -544,8 +591,7 @@ def admin_update_parents_info(
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
-    if profile:
-        _check_store_scope(actor, profile)
+    _check_edit_permission(actor, profile)
 
     parents = session.exec(
         select(ParentsInfo).where(ParentsInfo.user_id == user_id)
@@ -567,37 +613,56 @@ def admin_update_parents_info(
 
 
 def _store_owner_id(actor: CurrentActor) -> uuid.UUID | None:
-    """如果当前 actor 是 store_owner 类型 staff, 返回其 store_id; 否则 None.
-    admin / 普通 staff 返 None (= 不受 store 限制)."""
+    """如果当前 actor 是门店红娘 (matchmaker), 返回其 store_id; 否则 None.
+    admin / 总部员工 (hq_staff) 返 None (= 不受 store 限制)."""
     if (
         actor.actor_type == "staff"
         and actor.staff
-        and actor.staff.role == "store_owner"
+        and actor.staff.role == "matchmaker"
     ):
         return actor.staff.store_id
     return None
 
 
 def _can_verify(actor: CurrentActor, target_profile: Profile) -> bool:
-    """admin: 任何用户都能标; store_owner: 只能标自己门店下的用户"""
+    """实名认证: admin 任何用户; 红娘仅本店 (线下当面核验); 总部员工不可 (docs/10 权限矩阵)."""
     if actor.actor_type == "user" and actor.is_superuser:
         return True
     sid = _store_owner_id(actor)
     if sid is not None:
         return target_profile.home_store_id == sid
-    # 普通 staff (无 store_id 限制 role='staff') — 视为全局, 暂同 admin
-    if actor.actor_type == "staff" and actor.staff and actor.staff.role == "staff":
-        return True
     return False
 
 
 def _check_store_scope(actor: CurrentActor, target_profile: Profile) -> None:
-    """store_owner 只能操作本店用户; 不在本店则 403. admin/staff 不受限."""
+    """红娘只能操作本店用户; 不在本店则 403. admin/总部员工不受限."""
     sid = _store_owner_id(actor)
     if sid is None:
         return
     if target_profile.home_store_id != sid:
         raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
+
+
+def _can_see_contact(actor: CurrentActor, target_profile: Profile | None) -> bool:
+    """联系方式可见性: admin 可见 (记审计); 红娘仅本店可见; 总部员工不可见."""
+    if actor.actor_type == "user" and actor.is_superuser:
+        return True
+    sid = _store_owner_id(actor)
+    if sid is not None and target_profile is not None:
+        return target_profile.home_store_id == sid
+    return False
+
+
+def _check_edit_permission(actor: CurrentActor, target_profile: Profile | None) -> None:
+    """代录/编辑会员资料: 仅 admin 或 本店红娘 (docs/10 权限矩阵, 总部员工不可编辑)."""
+    if actor.actor_type == "user" and actor.is_superuser:
+        return
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        if target_profile is not None and target_profile.home_store_id != sid:
+            raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
+        return
+    raise HTTPException(status_code=403, detail="总部员工无代录权限")
 
 
 class VerifyResponse(SQLModel):
@@ -633,6 +698,10 @@ def verify_profile(
     profile.verified_at = datetime.utcnow()
     profile.updated_at = datetime.utcnow()
     session.add(profile)
+    _audit(
+        session, actor, "verify", target_user_id=user_id,
+        detail={"store_id": str(profile.verified_by_store_id) if profile.verified_by_store_id else None},
+    )
     session.commit()
     session.refresh(profile)
     session.refresh(user)
@@ -667,6 +736,7 @@ def unverify_profile(
     profile.verified_at = None
     profile.updated_at = datetime.utcnow()
     session.add(profile)
+    _audit(session, actor, "unverify", target_user_id=user_id)
     session.commit()
     session.refresh(profile)
     session.refresh(user)
@@ -688,6 +758,7 @@ class HomeStoreUpdate(SQLModel):
 def admin_set_home_store(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
     body: HomeStoreUpdate = Body(),
 ) -> AdminProfileItem:
     """admin 设置 / 改变用户主属门店"""
@@ -701,9 +772,17 @@ def admin_set_home_store(
         store = session.get(Store, body.store_id)
         if not store or store.status != "active":
             raise HTTPException(status_code=400, detail="门店不存在或已关闭")
+    old_store = profile.home_store_id
     profile.home_store_id = body.store_id
     profile.updated_at = datetime.utcnow()
     session.add(profile)
+    _audit(
+        session, actor, "assign_store", target_user_id=user_id,
+        detail={
+            "from": str(old_store) if old_store else None,
+            "to": str(body.store_id) if body.store_id else None,
+        },
+    )
     session.commit()
     session.refresh(profile)
     return _to_admin_profile_item(profile, user)
@@ -864,6 +943,7 @@ def admin_list_feedback(
 def grant_unlock_balance(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
     body: GrantBalanceRequest = Body(),
 ) -> AdminUserBrief:
     """运营手动加/减 解锁次数 - 仅 superuser"""
@@ -871,9 +951,23 @@ def grant_unlock_balance(
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     new_balance = max(0, user.unlock_balance + body.delta)
+    actual_delta = new_balance - user.unlock_balance
     user.unlock_balance = new_balance
     user.updated_at = datetime.utcnow()
     session.add(user)
+    if actual_delta != 0:
+        crud.add_balance_txn(
+            session=session,
+            user_id=user_id,
+            amount=actual_delta,
+            balance_after=new_balance,
+            source="admin_grant",
+            note=body.reason,
+        )
+    _audit(
+        session, actor, "grant_balance", target_user_id=user_id,
+        detail={"delta": actual_delta, "balance_after": new_balance, "reason": body.reason},
+    )
     session.commit()
     session.refresh(user)
     return AdminUserBrief(
@@ -897,6 +991,7 @@ def grant_unlock_balance(
 def block_user(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
 ) -> AdminUserBrief:
     """封禁用户 - 仅 superuser"""
     user = session.get(User, user_id)
@@ -906,6 +1001,7 @@ def block_user(
     user.is_active = False  # 同步禁用 token, 让 get_current_user 立即拦住
     user.updated_at = datetime.utcnow()
     session.add(user)
+    _audit(session, actor, "block", target_user_id=user_id)
     session.commit()
     session.refresh(user)
     return AdminUserBrief(
@@ -929,6 +1025,7 @@ def block_user(
 def unblock_user(
     session: SessionDep,
     user_id: uuid.UUID,
+    actor: CurrentActor,
 ) -> AdminUserBrief:
     """解封用户 - 仅 superuser"""
     user = session.get(User, user_id)
@@ -938,6 +1035,7 @@ def unblock_user(
     user.is_active = True  # 解封同时恢复 token 有效性
     user.updated_at = datetime.utcnow()
     session.add(user)
+    _audit(session, actor, "unblock", target_user_id=user_id)
     session.commit()
     session.refresh(user)
     return AdminUserBrief(
@@ -964,6 +1062,9 @@ class StatsResponse(SQLModel):
     verified_users: int = 0       # 已实名认证用户数
     verified_ratio: int = 0       # 已认证比例 (0-100)
     active_stores: int = 0        # 营业中门店数
+    # — 工作台待办 (docs/10) —
+    pending_verifies: int = 0     # 待实名核验 (User.verified='pending')
+    open_feedback: int = 0        # 未处理反馈 (Feedback.status='open')
 
 
 @router.get("/stats", response_model=StatsResponse)
@@ -1011,6 +1112,12 @@ def admin_stats(session: SessionDep) -> StatsResponse:
         verified_ratio=int(verified_users / total_users * 100) if total_users else 0,
         active_stores=session.exec(
             select(func.count()).select_from(Store).where(Store.status == "active")
+        ).one() or 0,
+        pending_verifies=session.exec(
+            select(func.count()).select_from(User).where(User.verified == "pending")
+        ).one() or 0,
+        open_feedback=session.exec(
+            select(func.count()).select_from(Feedback).where(Feedback.status == "open")
         ).one() or 0,
     )
 
@@ -1309,3 +1416,432 @@ def handle_contact_request(
     session.commit()
     session.refresh(req)
     return _build_request_item(session, req)
+
+
+# ============================================================
+# 会员管理 (docs/10 · 用户+资料合并视图 / 360° 详情)
+# ============================================================
+
+
+class AdminMemberItem(SQLModel):
+    """会员列表行: User + Profile 摘要 (不含联系方式)."""
+
+    user_id: uuid.UUID
+    xy_code: str | None = None
+    nickname: str | None = None
+    real_name: str | None = None
+    avatar_url: str | None = None
+    gender: str | None = None
+    year: int | None = None
+    birth_date: date | None = None
+    relation: str | None = None
+    location: str | None = None
+    home_store_id: uuid.UUID | None = None
+    audit_status: str | None = None      # None = 还没建资料
+    progress: int = 0
+    verified: str = "none"
+    unlock_balance: int = 0
+    user_status: str = "active"
+    last_active_at: datetime | None = None
+    created_at: datetime
+
+
+class AdminMemberList(SQLModel):
+    items: list[AdminMemberItem] = []
+    total: int = 0
+
+
+class MemberCounts(SQLModel):
+    favorites_given: int = 0
+    favorites_received: int = 0
+    views_given: int = 0
+    views_received: int = 0
+    affinity_given: int = 0
+    affinity_received: int = 0
+    requests_sent: int = 0
+    requests_received: int = 0
+
+
+class AdminMemberFull(SQLModel):
+    """会员 360° 聚合: 一次请求拿全 (前端详情页专用)."""
+
+    member: AdminMemberItem
+    profile: AdminProfileItem | None = None
+    criteria: AdminCriteriaItem | None = None
+    parents_info: AdminParentsInfoItem | None = None
+    home_store_name: str | None = None
+    verified_by_store_id: uuid.UUID | None = None
+    verified_at: datetime | None = None
+    counts: MemberCounts = MemberCounts()
+    can_view_contact: bool = False       # 当前操作者是否有权查看联系方式
+
+
+class ContactViewResponse(SQLModel):
+    contact_wechat: str | None = None
+    contact_phone: str | None = None
+
+
+class ActivityItem(SQLModel):
+    counterpart_user_id: uuid.UUID
+    xy_code: str | None = None
+    nickname: str | None = None
+    avatar_url: str | None = None
+    created_at: datetime
+
+
+class ActivityList(SQLModel):
+    items: list[ActivityItem] = []
+    total: int = 0
+
+
+def _to_member_item(u: User, p: Profile | None) -> AdminMemberItem:
+    return AdminMemberItem(
+        user_id=u.id,
+        xy_code=u.xy_code,
+        nickname=p.nickname if p else None,
+        real_name=p.real_name if p else None,
+        avatar_url=p.avatar_url if p else None,
+        gender=p.gender if p else None,
+        year=p.year if p else None,
+        birth_date=p.birth_date if p else None,
+        relation=p.relation if p else None,
+        location=p.location if p else None,
+        home_store_id=p.home_store_id if p else None,
+        audit_status=p.audit_status if p else None,
+        progress=p.progress if p else 0,
+        verified=u.verified,
+        unlock_balance=u.unlock_balance,
+        user_status=u.status,
+        last_active_at=u.last_active_at,
+        created_at=u.created_at,
+    )
+
+
+@router.get("/members", response_model=AdminMemberList)
+def list_members(
+    session: SessionDep,
+    actor: CurrentActor,
+    audit_status: Literal["all", "none", "pending", "approved", "rejected"] = Query("all"),
+    verified: Literal["all", "none", "pending", "passed", "rejected"] = Query("all"),
+    user_status: Literal["all", "active", "blocked"] = Query("all"),
+    store_id: uuid.UUID | None = Query(None),
+    gender: str | None = Query(None),
+    keyword: str | None = Query(None, description="寻缘号 / 姓名 / 昵称 / 手机号"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> AdminMemberList:
+    """会员统一列表 (User + Profile 合并). 替代旧 /users + /profiles 两个入口.
+
+    仅小程序会员 (有 openid); 红娘只看本店.
+    """
+    base = (
+        select(User, Profile)
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore
+        .where(User.openid.is_not(None))  # type: ignore
+    )
+
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        base = base.where(Profile.home_store_id == sid)
+
+    if audit_status == "none":
+        base = base.where(Profile.id.is_(None))  # type: ignore
+    elif audit_status != "all":
+        base = base.where(Profile.audit_status == audit_status)
+    if verified != "all":
+        base = base.where(User.verified == verified)
+    if user_status != "all":
+        base = base.where(User.status == user_status)
+    if store_id is not None:
+        base = base.where(Profile.home_store_id == store_id)
+    if gender:
+        base = base.where(Profile.gender == gender)
+    if keyword:
+        kw = f"%{keyword.strip()}%"
+        base = base.where(
+            (User.xy_code.like(kw))  # type: ignore
+            | (Profile.real_name.like(kw))  # type: ignore
+            | (Profile.nickname.like(kw))  # type: ignore
+            | (Profile.contact_phone.like(kw))  # type: ignore
+        )
+
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(User.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+    ).all()
+    return AdminMemberList(
+        items=[_to_member_item(u, p) for u, p in rows],
+        total=total,
+    )
+
+
+def _member_counts(session: SessionDep, user_id: uuid.UUID) -> MemberCounts:
+    def _cnt(model, col) -> int:
+        return session.exec(
+            select(func.count()).select_from(model).where(col == user_id)
+        ).one() or 0
+
+    return MemberCounts(
+        favorites_given=_cnt(Favorite, Favorite.user_id),
+        favorites_received=_cnt(Favorite, Favorite.target_user_id),
+        views_given=_cnt(View, View.user_id),
+        views_received=_cnt(View, View.target_user_id),
+        affinity_given=_cnt(Affinity, Affinity.from_user_id),
+        affinity_received=_cnt(Affinity, Affinity.to_user_id),
+        requests_sent=_cnt(ContactRequest, ContactRequest.from_user_id),
+        requests_received=_cnt(ContactRequest, ContactRequest.to_user_id),
+    )
+
+
+@router.get("/members/{user_id}/full", response_model=AdminMemberFull)
+def get_member_full(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+) -> AdminMemberFull:
+    """会员 360° 详情: 资料 + 择偶 + 父母 + 行为计数, 一次拿全.
+
+    联系方式默认脱敏 (置 None); 有权者通过 POST /members/{id}/contact-view 查看 (记审计).
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == user_id)
+    ).first()
+    if profile:
+        _check_store_scope(actor, profile)
+    elif _store_owner_id(actor) is not None:
+        raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
+
+    criteria = session.exec(
+        select(Criteria).where(Criteria.user_id == user_id)
+    ).first()
+    parents = session.exec(
+        select(ParentsInfo).where(ParentsInfo.user_id == user_id)
+    ).first()
+
+    profile_item = None
+    store_name = None
+    if profile:
+        profile_item = _to_admin_profile_item(profile, user)
+        # 联系方式一律走 contact-view 端点 (强制审计), 这里不返回明文
+        profile_item.contact_wechat = None
+        profile_item.contact_phone = None
+        if profile.home_store_id:
+            store = session.get(Store, profile.home_store_id)
+            store_name = store.name if store else None
+
+    return AdminMemberFull(
+        member=_to_member_item(user, profile),
+        profile=profile_item,
+        criteria=_to_admin_criteria_item(criteria) if criteria else None,
+        parents_info=_to_admin_parents_info_item(parents) if parents else None,
+        home_store_name=store_name,
+        verified_by_store_id=profile.verified_by_store_id if profile else None,
+        verified_at=profile.verified_at if profile else None,
+        counts=_member_counts(session, user_id),
+        can_view_contact=_can_see_contact(actor, profile),
+    )
+
+
+@router.post("/members/{user_id}/contact-view", response_model=ContactViewResponse)
+def view_member_contact(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+) -> ContactViewResponse:
+    """查看会员联系方式 (admin / 本店红娘), 每次查看写审计日志."""
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == user_id)
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="资料不存在")
+    if not _can_see_contact(actor, profile):
+        raise HTTPException(status_code=403, detail="无权查看该会员联系方式")
+    _audit(session, actor, "view_contact", target_user_id=user_id)
+    session.commit()
+    return ContactViewResponse(
+        contact_wechat=profile.contact_wechat,
+        contact_phone=profile.contact_phone,
+    )
+
+
+@router.get("/members/{user_id}/transactions", response_model=BalanceTransactionList)
+def list_member_transactions(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> BalanceTransactionList:
+    """会员解锁次数流水 (赠送/消耗全程可查)."""
+    base = select(BalanceTransaction).where(BalanceTransaction.user_id == user_id)
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(BalanceTransaction.created_at.desc())  # type: ignore
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    return BalanceTransactionList(
+        items=[
+            BalanceTransactionPublic.model_validate(t, from_attributes=True)
+            for t in rows
+        ],
+        total=total,
+    )
+
+
+_ACTIVITY_KINDS = {
+    "favorite_given": (Favorite, "user_id", "target_user_id"),
+    "favorite_received": (Favorite, "target_user_id", "user_id"),
+    "view_given": (View, "user_id", "target_user_id"),
+    "view_received": (View, "target_user_id", "user_id"),
+    "affinity_given": (Affinity, "from_user_id", "to_user_id"),
+    "affinity_received": (Affinity, "to_user_id", "from_user_id"),
+}
+
+
+@router.get("/members/{user_id}/activities", response_model=ActivityList)
+def list_member_activities(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    kind: Literal[
+        "favorite_given", "favorite_received",
+        "view_given", "view_received",
+        "affinity_given", "affinity_received",
+    ] = Query("favorite_received"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> ActivityList:
+    """会员行为记录: 收藏/浏览/好感 的双向流水."""
+    model, self_col, other_col = _ACTIVITY_KINDS[kind]
+    base = select(model).where(getattr(model, self_col) == user_id)
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(model.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+    ).all()
+
+    items: list[ActivityItem] = []
+    for r in rows:
+        cid = getattr(r, other_col)
+        cu = session.get(User, cid)
+        cp = session.exec(select(Profile).where(Profile.user_id == cid)).first()
+        items.append(
+            ActivityItem(
+                counterpart_user_id=cid,
+                xy_code=cu.xy_code if cu else None,
+                nickname=(cp.nickname or cp.real_name) if cp else None,
+                avatar_url=cp.avatar_url if cp else None,
+                created_at=r.created_at,
+            )
+        )
+    return ActivityList(items=items, total=total)
+
+
+@router.get("/members/{user_id}/requests", response_model=AdminContactRequestList)
+def list_member_requests(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> AdminContactRequestList:
+    """会员发起 / 收到的撮合工单历史."""
+    base = select(ContactRequest).where(
+        (ContactRequest.from_user_id == user_id)
+        | (ContactRequest.to_user_id == user_id)
+    )
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(ContactRequest.created_at.desc())  # type: ignore
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    items = []
+    for r in rows:
+        item = _build_request_item(session, r)
+        if not (actor.actor_type == "user" and actor.is_superuser):
+            # 非 admin 在工单历史里不展示双方联系方式
+            item.from_contact_wechat = None
+            item.from_contact_phone = None
+            item.to_contact_wechat = None
+            item.to_contact_phone = None
+        items.append(item)
+    return AdminContactRequestList(items=items, total=total)
+
+
+@router.get(
+    "/members/{user_id}/audit-logs",
+    response_model=AuditLogList,
+    dependencies=[Depends(require_admin)],
+)
+def list_member_audit_logs(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> AuditLogList:
+    """后台对该会员的操作日志 - 仅 superuser."""
+    base = select(AuditLog).where(AuditLog.target_user_id == user_id)
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+    ).all()
+    return AuditLogList(
+        items=[AuditLogPublic.model_validate(l, from_attributes=True) for l in rows],
+        total=total,
+    )
+
+
+@router.get(
+    "/audit-logs",
+    response_model=AuditLogList,
+    dependencies=[Depends(require_admin)],
+)
+def list_audit_logs(
+    session: SessionDep,
+    action: str | None = Query(None),
+    target_user_id: uuid.UUID | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> AuditLogList:
+    """全局操作审计日志 - 仅 superuser."""
+    base = select(AuditLog)
+    if action:
+        base = base.where(AuditLog.action == action)
+    if target_user_id is not None:
+        base = base.where(AuditLog.target_user_id == target_user_id)
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+    ).all()
+    return AuditLogList(
+        items=[AuditLogPublic.model_validate(l, from_attributes=True) for l in rows],
+        total=total,
+    )
+
+
+@router.get("/verify-queue", response_model=AdminMemberList)
+def list_verify_queue(
+    session: SessionDep,
+    actor: CurrentActor,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> AdminMemberList:
+    """实名认证队列: verified='pending' 的会员. 红娘只看本店."""
+    base = (
+        select(User, Profile)
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore
+        .where(User.verified == "pending")
+    )
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        base = base.where(Profile.home_store_id == sid)
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(User.updated_at.desc()).offset(skip).limit(limit)  # type: ignore
+    ).all()
+    return AdminMemberList(
+        items=[_to_member_item(u, p) for u, p in rows],
+        total=total,
+    )
