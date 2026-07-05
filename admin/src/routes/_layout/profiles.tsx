@@ -20,7 +20,10 @@ import useAuth from "@/hooks/useAuth"
 
 type AuditFilter = "all" | "pending" | "approved" | "rejected"
 
-function profilesQueryOptions(args: { auditStatus: AuditFilter; keyword: string }) {
+function profilesQueryOptions(args: {
+  auditStatus: AuditFilter
+  keyword: string
+}) {
   return {
     queryFn: () =>
       AdminService.listProfiles({
@@ -52,8 +55,16 @@ function StatsCards() {
   const items: { label: string; value: number; tone: string }[] = [
     { label: "总用户", value: data.total_users ?? 0, tone: "" },
     { label: "总资料", value: data.total_profiles ?? 0, tone: "" },
-    { label: "待审核", value: data.pending_audits ?? 0, tone: "text-amber-600" },
-    { label: "今日新增", value: data.today_signups ?? 0, tone: "text-emerald-600" },
+    {
+      label: "待审核",
+      value: data.pending_audits ?? 0,
+      tone: "text-amber-600",
+    },
+    {
+      label: "今日新增",
+      value: data.today_signups ?? 0,
+      tone: "text-emerald-600",
+    },
   ]
   return (
     <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -82,7 +93,9 @@ function ProfilesTableContent({
   keyword: string
   canWrite: boolean
 }) {
-  const { data } = useSuspenseQuery(profilesQueryOptions({ auditStatus, keyword }))
+  const { data } = useSuspenseQuery(
+    profilesQueryOptions({ auditStatus, keyword }),
+  )
 
   if (!data.items || data.items.length === 0) {
     return (
@@ -116,7 +129,9 @@ function Profiles() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">资料管理</h1>
-        <p className="text-muted-foreground">审核相亲资料 / 调整解锁次数 / 处理违规</p>
+        <p className="text-muted-foreground">
+          审核相亲资料 / 调整解锁次数 / 处理违规
+        </p>
       </div>
 
       <Suspense
@@ -170,7 +185,11 @@ function Profiles() {
           </div>
         }
       >
-        <ProfilesTableContent auditStatus={auditStatus} keyword={keyword} canWrite={canWrite} />
+        <ProfilesTableContent
+          auditStatus={auditStatus}
+          keyword={keyword}
+          canWrite={canWrite}
+        />
       </Suspense>
     </div>
   )

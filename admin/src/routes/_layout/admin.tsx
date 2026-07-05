@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
 import { createFileRoute } from "@tanstack/react-router"
+import type { ColumnDef } from "@tanstack/react-table"
 import { Search } from "lucide-react"
 import { Suspense, useState } from "react"
 
@@ -135,7 +135,9 @@ function UsersTableContent({
   }
   return (
     <div>
-      <div className="text-sm text-muted-foreground mb-2">共 {data.total} 个用户</div>
+      <div className="text-sm text-muted-foreground mb-2">
+        共 {data.total} 个用户
+      </div>
       <DataTable columns={columns} data={data.items} />
     </div>
   )

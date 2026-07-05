@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
-import { AdminService, type AdminProfileItem } from "@/client"
+import { type AdminProfileItem, AdminService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -29,7 +29,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-function rangeLabel(min: number | null | undefined, max: number | null | undefined, suffix = "") {
+function rangeLabel(
+  min: number | null | undefined,
+  max: number | null | undefined,
+  suffix = "",
+) {
   if (!min && !max) return "不限"
   if (min && max) return `${min}${suffix} - ${max}${suffix}`
   return `${min || max}${suffix}`
@@ -51,7 +55,8 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
         <SheetHeader className="px-6 pt-6">
           <SheetTitle>资料详情</SheetTitle>
           <SheetDescription className="font-mono">
-            寻缘号 {item.xy_code || "—"} · openid {item.openid?.slice(0, 16) || "—"}
+            寻缘号 {item.xy_code || "—"} · openid{" "}
+            {item.openid?.slice(0, 16) || "—"}
           </SheetDescription>
         </SheetHeader>
 
@@ -90,8 +95,14 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
               )}
               <Row label="资料人" value={data.profile.relation || "未填写"} />
               <Row label="性别" value={data.profile.gender} />
-              <Row label="出生年" value={data.profile.year ? `${data.profile.year}年` : null} />
-              <Row label="身高" value={data.profile.height ? `${data.profile.height} cm` : null} />
+              <Row
+                label="出生年"
+                value={data.profile.year ? `${data.profile.year}年` : null}
+              />
+              <Row
+                label="身高"
+                value={data.profile.height ? `${data.profile.height} cm` : null}
+              />
               <Row label="学历" value={data.profile.edu} />
               <Row label="年收入" value={data.profile.income} />
               <Row label="婚姻状况" value={data.profile.marriage} />
@@ -119,15 +130,31 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
             {/* 联系方式 */}
             <section>
               <h3 className="font-semibold mb-2">联系方式</h3>
-              <Row label="微信号" value={<span className="font-mono">{data.profile.contact_wechat}</span>} />
-              <Row label="手机号" value={<span className="font-mono">{data.profile.contact_phone}</span>} />
+              <Row
+                label="微信号"
+                value={
+                  <span className="font-mono">
+                    {data.profile.contact_wechat}
+                  </span>
+                }
+              />
+              <Row
+                label="手机号"
+                value={
+                  <span className="font-mono">
+                    {data.profile.contact_phone}
+                  </span>
+                }
+              />
             </section>
 
             <Separator />
 
             {/* 照片 */}
             <section>
-              <h3 className="font-semibold mb-2">照片 ({data.profile.photos?.length || 0})</h3>
+              <h3 className="font-semibold mb-2">
+                照片 ({data.profile.photos?.length || 0})
+              </h3>
               {!data.profile.photos || data.profile.photos.length === 0 ? (
                 <div className="text-sm text-muted-foreground">未上传</div>
               ) : (
@@ -155,11 +182,19 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
                 <>
                   <Row
                     label="出生年范围"
-                    value={rangeLabel(data.criteria.year_min, data.criteria.year_max, "年")}
+                    value={rangeLabel(
+                      data.criteria.year_min,
+                      data.criteria.year_max,
+                      "年",
+                    )}
                   />
                   <Row
                     label="身高范围"
-                    value={rangeLabel(data.criteria.height_min, data.criteria.height_max, "cm")}
+                    value={rangeLabel(
+                      data.criteria.height_min,
+                      data.criteria.height_max,
+                      "cm",
+                    )}
                   />
                   <Row label="学历要求" value={data.criteria.edu} />
                   <Row label="收入要求" value={data.criteria.income} />
@@ -199,13 +234,17 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
                 label="最近活跃"
                 value={
                   data.profile.last_active_at
-                    ? new Date(data.profile.last_active_at).toLocaleString("zh-CN")
+                    ? new Date(data.profile.last_active_at).toLocaleString(
+                        "zh-CN",
+                      )
                     : null
                 }
               />
               <Row
                 label="创建时间"
-                value={new Date(data.profile.created_at).toLocaleString("zh-CN")}
+                value={new Date(data.profile.created_at).toLocaleString(
+                  "zh-CN",
+                )}
               />
             </section>
 
