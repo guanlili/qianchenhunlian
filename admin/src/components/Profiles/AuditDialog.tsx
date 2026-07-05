@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, type AdminProfileItem } from "@/client"
+import { type AdminProfileItem, AdminService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,12 +18,17 @@ import { Label } from "@/components/ui/label"
 
 interface AuditDialogProps {
   item: AdminProfileItem
-  approve: boolean   // true = 通过, false = 驳回
+  approve: boolean // true = 通过, false = 驳回
   trigger: React.ReactNode
   onClose?: () => void
 }
 
-export function AuditDialog({ item, approve, trigger, onClose }: AuditDialogProps) {
+export function AuditDialog({
+  item,
+  approve,
+  trigger,
+  onClose,
+}: AuditDialogProps) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState("")
   const qc = useQueryClient()
@@ -34,11 +39,13 @@ export function AuditDialog({ item, approve, trigger, onClose }: AuditDialogProp
         userId: item.user_id,
         requestBody: {
           approve,
-          reason: approve ? null : (reason || null),
+          reason: approve ? null : reason || null,
         },
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["member-full"] })
       qc.invalidateQueries({ queryKey: ["admin-stats"] })
       toast.success(approve ? "已通过审核" : "已驳回")
       setOpen(false)
@@ -46,7 +53,7 @@ export function AuditDialog({ item, approve, trigger, onClose }: AuditDialogProp
       onClose?.()
     },
     onError: (err) => {
-      toast.error("操作失败: " + (err as Error).message)
+      toast.error(`操作失败: ${(err as Error).message}`)
     },
   })
 
@@ -82,7 +89,11 @@ export function AuditDialog({ item, approve, trigger, onClose }: AuditDialogProp
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
           >
-            {mutation.isPending ? "处理中..." : approve ? "确认通过" : "确认驳回"}
+            {mutation.isPending
+              ? "处理中..."
+              : approve
+                ? "确认通过"
+                : "确认驳回"}
           </Button>
         </DialogFooter>
       </DialogContent>

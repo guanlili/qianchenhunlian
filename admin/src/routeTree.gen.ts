@@ -18,15 +18,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
 import { Route as LayoutStaffRouteImport } from './routes/_layout/staff'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
 import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
 import { Route as LayoutProfilesRouteImport } from './routes/_layout/profiles'
-import { Route as LayoutOrdersRouteImport } from './routes/_layout/orders'
-import { Route as LayoutMerchantsRouteImport } from './routes/_layout/merchants'
-import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
+import { Route as LayoutMembersRouteImport } from './routes/_layout/members'
 import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutMembersUserIdRouteImport } from './routes/_layout/members.$userId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -72,6 +72,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutReviewRoute = LayoutReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutRequestsRoute = LayoutRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
@@ -87,19 +92,9 @@ const LayoutProfilesRoute = LayoutProfilesRouteImport.update({
   path: '/profiles',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutOrdersRoute = LayoutOrdersRouteImport.update({
-  id: '/orders',
-  path: '/orders',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutMerchantsRoute = LayoutMerchantsRouteImport.update({
-  id: '/merchants',
-  path: '/merchants',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutItemsRoute = LayoutItemsRouteImport.update({
-  id: '/items',
-  path: '/items',
+const LayoutMembersRoute = LayoutMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutFeedbackRoute = LayoutFeedbackRouteImport.update({
@@ -117,6 +112,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutMembersUserIdRoute = LayoutMembersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => LayoutMembersRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -127,15 +127,15 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
-  '/items': typeof LayoutItemsRoute
-  '/merchants': typeof LayoutMerchantsRoute
-  '/orders': typeof LayoutOrdersRoute
+  '/members': typeof LayoutMembersRouteWithChildren
   '/profiles': typeof LayoutProfilesRoute
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
+  '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
   '/staff': typeof LayoutStaffRoute
   '/stores': typeof LayoutStoresRoute
+  '/members/$userId': typeof LayoutMembersUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -146,15 +146,15 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
-  '/items': typeof LayoutItemsRoute
-  '/merchants': typeof LayoutMerchantsRoute
-  '/orders': typeof LayoutOrdersRoute
+  '/members': typeof LayoutMembersRouteWithChildren
   '/profiles': typeof LayoutProfilesRoute
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
+  '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
   '/staff': typeof LayoutStaffRoute
   '/stores': typeof LayoutStoresRoute
+  '/members/$userId': typeof LayoutMembersUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -167,15 +167,15 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/feedback': typeof LayoutFeedbackRoute
-  '/_layout/items': typeof LayoutItemsRoute
-  '/_layout/merchants': typeof LayoutMerchantsRoute
-  '/_layout/orders': typeof LayoutOrdersRoute
+  '/_layout/members': typeof LayoutMembersRouteWithChildren
   '/_layout/profiles': typeof LayoutProfilesRoute
   '/_layout/qualifications': typeof LayoutQualificationsRoute
   '/_layout/requests': typeof LayoutRequestsRoute
+  '/_layout/review': typeof LayoutReviewRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/staff': typeof LayoutStaffRoute
   '/_layout/stores': typeof LayoutStoresRoute
+  '/_layout/members/$userId': typeof LayoutMembersUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -188,15 +188,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/feedback'
-    | '/items'
-    | '/merchants'
-    | '/orders'
+    | '/members'
     | '/profiles'
     | '/qualifications'
     | '/requests'
+    | '/review'
     | '/settings'
     | '/staff'
     | '/stores'
+    | '/members/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -207,15 +207,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/feedback'
-    | '/items'
-    | '/merchants'
-    | '/orders'
+    | '/members'
     | '/profiles'
     | '/qualifications'
     | '/requests'
+    | '/review'
     | '/settings'
     | '/staff'
     | '/stores'
+    | '/members/$userId'
   id:
     | '__root__'
     | '/'
@@ -227,15 +227,15 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/dashboard'
     | '/_layout/feedback'
-    | '/_layout/items'
-    | '/_layout/merchants'
-    | '/_layout/orders'
+    | '/_layout/members'
     | '/_layout/profiles'
     | '/_layout/qualifications'
     | '/_layout/requests'
+    | '/_layout/review'
     | '/_layout/settings'
     | '/_layout/staff'
     | '/_layout/stores'
+    | '/_layout/members/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -312,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/review': {
+      id: '/_layout/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof LayoutReviewRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/requests': {
       id: '/_layout/requests'
       path: '/requests'
@@ -333,25 +340,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutProfilesRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/orders': {
-      id: '/_layout/orders'
-      path: '/orders'
-      fullPath: '/orders'
-      preLoaderRoute: typeof LayoutOrdersRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/merchants': {
-      id: '/_layout/merchants'
-      path: '/merchants'
-      fullPath: '/merchants'
-      preLoaderRoute: typeof LayoutMerchantsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/items': {
-      id: '/_layout/items'
-      path: '/items'
-      fullPath: '/items'
-      preLoaderRoute: typeof LayoutItemsRouteImport
+    '/_layout/members': {
+      id: '/_layout/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof LayoutMembersRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/feedback': {
@@ -375,19 +368,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/members/$userId': {
+      id: '/_layout/members/$userId'
+      path: '/$userId'
+      fullPath: '/members/$userId'
+      preLoaderRoute: typeof LayoutMembersUserIdRouteImport
+      parentRoute: typeof LayoutMembersRoute
+    }
   }
 }
+
+interface LayoutMembersRouteChildren {
+  LayoutMembersUserIdRoute: typeof LayoutMembersUserIdRoute
+}
+
+const LayoutMembersRouteChildren: LayoutMembersRouteChildren = {
+  LayoutMembersUserIdRoute: LayoutMembersUserIdRoute,
+}
+
+const LayoutMembersRouteWithChildren = LayoutMembersRoute._addFileChildren(
+  LayoutMembersRouteChildren,
+)
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
   LayoutFeedbackRoute: typeof LayoutFeedbackRoute
-  LayoutItemsRoute: typeof LayoutItemsRoute
-  LayoutMerchantsRoute: typeof LayoutMerchantsRoute
-  LayoutOrdersRoute: typeof LayoutOrdersRoute
+  LayoutMembersRoute: typeof LayoutMembersRouteWithChildren
   LayoutProfilesRoute: typeof LayoutProfilesRoute
   LayoutQualificationsRoute: typeof LayoutQualificationsRoute
   LayoutRequestsRoute: typeof LayoutRequestsRoute
+  LayoutReviewRoute: typeof LayoutReviewRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutStaffRoute: typeof LayoutStaffRoute
   LayoutStoresRoute: typeof LayoutStoresRoute
@@ -397,12 +408,11 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
   LayoutFeedbackRoute: LayoutFeedbackRoute,
-  LayoutItemsRoute: LayoutItemsRoute,
-  LayoutMerchantsRoute: LayoutMerchantsRoute,
-  LayoutOrdersRoute: LayoutOrdersRoute,
+  LayoutMembersRoute: LayoutMembersRouteWithChildren,
   LayoutProfilesRoute: LayoutProfilesRoute,
   LayoutQualificationsRoute: LayoutQualificationsRoute,
   LayoutRequestsRoute: LayoutRequestsRoute,
+  LayoutReviewRoute: LayoutReviewRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutStaffRoute: LayoutStaffRoute,
   LayoutStoresRoute: LayoutStoresRoute,
