@@ -42,6 +42,8 @@ _PENDING_ADD_COLUMNS: list[tuple[str, str, str]] = [
     ("profile", "verified_at",           "TIMESTAMP"),
     ("staff",   "role",                  "VARCHAR(16) NOT NULL DEFAULT 'staff'"),
     ("staff",   "store_id",              "UUID"),
+    # — Phase 2: 撮合工单门店归属 (任务 A) —
+    ("contactrequest", "store_id",       "UUID"),
 ]
 
 

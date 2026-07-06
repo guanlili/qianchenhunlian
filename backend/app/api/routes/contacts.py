@@ -123,11 +123,16 @@ def submit_contact_request(
             detail="申请额度不足, 可联系运营充值",
         )
 
+    from_profile = session.exec(
+        select(Profile).where(Profile.user_id == current_user.id)
+    ).first()
+
     req = ContactRequest(
         from_user_id=current_user.id,
         to_user_id=target_id,
         message=(body.message or "").strip()[:200] or None,
         status="pending",
+        store_id=from_profile.home_store_id if from_profile else None,
     )
     session.add(req)
     # 扣减流水 (与扣减同事务提交)
