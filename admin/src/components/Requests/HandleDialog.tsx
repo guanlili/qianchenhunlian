@@ -44,6 +44,7 @@ export function HandleDialog({ item, status, trigger }: Props) {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-requests"] })
+      qc.invalidateQueries({ queryKey: ["admin-stats"] })
       toast.success(`已标记: ${STATUS_LABEL[status]}`)
       setOpen(false)
       setNote("")
