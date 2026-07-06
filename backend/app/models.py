@@ -393,6 +393,9 @@ class ContactRequest(SQLModel, table=True):
     )
     message: str | None = Field(default=None, max_length=200)
 
+    # 归属门店 (取发起方 home_store_id, 用于红娘门店范围过滤; 可能为 None)
+    store_id: uuid.UUID | None = Field(default=None, index=True)
+
     # 工单状态: pending(待红娘处理) / accepted(对方同意) /
     # rejected(对方拒绝) / contacted(已建群) / closed(过期归档)
     status: str = Field(default="pending", max_length=16, index=True)

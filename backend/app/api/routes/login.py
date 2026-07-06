@@ -48,6 +48,9 @@ class WhoAmI(SQLModel):
     is_superuser: bool = False
     can_read_admin: bool = False
     can_write_admin: bool = False
+    # staff 专属 (user 时为 None): 前端据此区分 hq_staff / matchmaker 及门店范围
+    role: str | None = None            # "hq_staff" / "matchmaker"
+    store_id: uuid.UUID | None = None  # matchmaker 所在门店
 
 router = APIRouter(tags=["login"])
 
@@ -142,6 +145,12 @@ def whoami(actor: CurrentActor) -> WhoAmI:
         is_superuser=actor.is_superuser,
         can_read_admin=actor.can_read_admin,
         can_write_admin=actor.can_write_admin,
+        role=actor.staff.role if (actor.actor_type == "staff" and actor.staff) else None,
+        store_id=(
+            actor.staff.store_id
+            if (actor.actor_type == "staff" and actor.staff)
+            else None
+        ),
     )
 
 
