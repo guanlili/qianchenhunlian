@@ -5,7 +5,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
@@ -45,7 +45,6 @@ from app.models import (
     User,
     View,
 )
-from datetime import date
 
 router = APIRouter(
     prefix="/admin",
@@ -651,6 +650,18 @@ def _can_see_contact(actor: CurrentActor, target_profile: Profile | None) -> boo
     if sid is not None and target_profile is not None:
         return target_profile.home_store_id == sid
     return False
+
+
+def _request_contact_visible(actor: CurrentActor, req: ContactRequest) -> bool:
+    """工单联系方式可见性: superuser 可见; 红娘仅本单归属店可见; 总部员工不可见.
+
+    以工单 store_id (发起方门店) 为准 —— 即使对方在别店, 本店红娘处理本单时
+    仍可见双方联系方式. hq_staff (sid=None 且非 superuser) 一律不可见.
+    """
+    if actor.actor_type == "user" and actor.is_superuser:
+        return True
+    sid = _store_owner_id(actor)
+    return sid is not None and req.store_id == sid
 
 
 def _check_edit_permission(actor: CurrentActor, target_profile: Profile | None) -> None:
@@ -1308,8 +1319,11 @@ class AdminContactRequestItem(SQLModel):
     # 工单信息
     message: str | None = None
     status: str
+    store_id: uuid.UUID | None = None
+    handled_by: uuid.UUID | None = None
     admin_note: str | None = None
     handled_at: datetime | None = None
+    overdue: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -1325,9 +1339,13 @@ class HandleRequestBody(SQLModel):
 
 
 def _build_request_item(
-    session, req: ContactRequest
+    session, req: ContactRequest, actor: CurrentActor
 ) -> AdminContactRequestItem:
-    """填好双方资料 + 联系方式的工单项 (admin 视角)"""
+    """填好双方资料 + 联系方式的工单项 (admin 视角).
+
+    联系方式按工单归属店脱敏 (见 _request_contact_visible); list 和 handle
+    两条返回路径都走这里, 保证 hq_staff / 他店红娘拿不到明文联系方式.
+    """
     from_user = session.get(User, req.from_user_id)
     to_user = session.get(User, req.to_user_id)
     from_profile = session.exec(
@@ -1336,6 +1354,12 @@ def _build_request_item(
     to_profile = session.exec(
         select(Profile).where(Profile.user_id == req.to_user_id)
     ).first()
+    see = _request_contact_visible(actor, req)
+    overdue = (
+        req.status == "pending"
+        and req.created_at is not None
+        and (datetime.utcnow() - req.created_at) > timedelta(hours=48)
+    )
     return AdminContactRequestItem(
         id=req.id,
         from_user_id=req.from_user_id,
@@ -1343,19 +1367,30 @@ def _build_request_item(
         from_gender=from_profile.gender if from_profile else None,
         from_year=from_profile.year if from_profile else None,
         from_location=from_profile.location if from_profile else None,
-        from_contact_wechat=from_profile.contact_wechat if from_profile else None,
-        from_contact_phone=from_profile.contact_phone if from_profile else None,
+        from_contact_wechat=(
+            from_profile.contact_wechat if (from_profile and see) else None
+        ),
+        from_contact_phone=(
+            from_profile.contact_phone if (from_profile and see) else None
+        ),
         to_user_id=req.to_user_id,
         to_xy_code=to_user.xy_code if to_user else None,
         to_gender=to_profile.gender if to_profile else None,
         to_year=to_profile.year if to_profile else None,
         to_location=to_profile.location if to_profile else None,
-        to_contact_wechat=to_profile.contact_wechat if to_profile else None,
-        to_contact_phone=to_profile.contact_phone if to_profile else None,
+        to_contact_wechat=(
+            to_profile.contact_wechat if (to_profile and see) else None
+        ),
+        to_contact_phone=(
+            to_profile.contact_phone if (to_profile and see) else None
+        ),
         message=req.message,
         status=req.status,
+        store_id=req.store_id,
+        handled_by=req.handled_by,
         admin_note=req.admin_note,
         handled_at=req.handled_at,
+        overdue=overdue,
         created_at=req.created_at,
         updated_at=req.updated_at,
     )
@@ -1364,15 +1399,24 @@ def _build_request_item(
 @router.get("/contact-requests", response_model=AdminContactRequestList)
 def list_contact_requests(
     session: SessionDep,
+    actor: CurrentActor,
     status_filter: Literal["all", "pending", "accepted", "rejected", "contacted", "closed"]
     = Query("all", alias="status"),
+    store_id: uuid.UUID | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminContactRequestList:
-    """工单列表 (admin/staff 都能看)"""
+    """工单列表. 红娘强制只看本店 (DB 层过滤, total/分页一致); 其余角色可按 store_id 过滤."""
     base = select(ContactRequest)
     if status_filter != "all":
         base = base.where(ContactRequest.status == status_filter)
+    # 门店范围 (DB 层, count 与分页共用此 base): 红娘强制本店并忽略传入 store_id;
+    # 其余角色按传入 store_id 可选过滤. 历史 store_id=None 的单仅 superuser/hq_staff 可见.
+    owner_sid = _store_owner_id(actor)
+    if owner_sid is not None:
+        base = base.where(ContactRequest.store_id == owner_sid)
+    elif store_id is not None:
+        base = base.where(ContactRequest.store_id == store_id)
 
     total = session.exec(
         select(func.count()).select_from(base.subquery())
@@ -1383,7 +1427,7 @@ def list_contact_requests(
         .limit(limit)
     ).all()
     return AdminContactRequestList(
-        items=[_build_request_item(session, r) for r in rows],
+        items=[_build_request_item(session, r, actor) for r in rows],
         total=total,
     )
 
@@ -1391,7 +1435,7 @@ def list_contact_requests(
 @router.post(
     "/contact-requests/{request_id}/handle",
     response_model=AdminContactRequestItem,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_admin_or_staff)],
 )
 def handle_contact_request(
     session: SessionDep,
@@ -1399,10 +1443,15 @@ def handle_contact_request(
     request_id: uuid.UUID,
     body: HandleRequestBody,
 ) -> AdminContactRequestItem:
-    """红娘处理工单: 同意 / 拒绝 / 已建群 / 关闭"""
+    """红娘处理工单: 同意 / 拒绝 / 已建群 / 关闭. 红娘限本店."""
     req = session.get(ContactRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="工单不存在")
+
+    # 红娘只能处理本店工单 (历史未归属单 store_id=None, 不属任何红娘 → 403)
+    owner_sid = _store_owner_id(actor)
+    if owner_sid is not None and req.store_id != owner_sid:
+        raise HTTPException(status_code=403, detail="该工单不在您的门店")
 
     req.status = body.status
     req.admin_note = (body.admin_note or "").strip()[:255] or None
@@ -1412,10 +1461,62 @@ def handle_contact_request(
         req.handled_by = uuid.UUID(actor.id)
     except (ValueError, TypeError):
         pass
+    _audit(
+        session,
+        actor,
+        "handle_ticket",
+        target_user_id=req.from_user_id,
+        detail={
+            "request_id": str(req.id),
+            "status": body.status,
+            "note": req.admin_note,
+        },
+    )
     session.add(req)
     session.commit()
     session.refresh(req)
-    return _build_request_item(session, req)
+    return _build_request_item(session, req, actor)
+
+
+class AssignRequestBody(SQLModel):
+    store_id: uuid.UUID | None = None
+
+
+@router.post(
+    "/contact-requests/{request_id}/assign",
+    response_model=AdminContactRequestItem,
+    dependencies=[Depends(require_admin)],
+)
+def assign_contact_request(
+    session: SessionDep,
+    actor: CurrentActor,
+    request_id: uuid.UUID,
+    body: AssignRequestBody,
+) -> AdminContactRequestItem:
+    """改派工单归属门店 (仅 superuser). store_id=None 表示取消归属."""
+    req = session.get(ContactRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if body.store_id is not None:
+        store = session.get(Store, body.store_id)
+        if not store or store.status != "active":
+            raise HTTPException(status_code=400, detail="门店不存在或已停用")
+    req.store_id = body.store_id
+    req.updated_at = datetime.utcnow()
+    _audit(
+        session,
+        actor,
+        "assign_ticket",
+        target_user_id=req.from_user_id,
+        detail={
+            "request_id": str(req.id),
+            "store_id": str(body.store_id) if body.store_id else None,
+        },
+    )
+    session.add(req)
+    session.commit()
+    session.refresh(req)
+    return _build_request_item(session, req, actor)
 
 
 # ============================================================
@@ -1759,7 +1860,7 @@ def list_member_requests(
     ).all()
     items = []
     for r in rows:
-        item = _build_request_item(session, r)
+        item = _build_request_item(session, r, actor)
         if not (actor.actor_type == "user" and actor.is_superuser):
             # 非 admin 在工单历史里不展示双方联系方式
             item.from_contact_wechat = None
