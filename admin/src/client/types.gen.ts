@@ -31,8 +31,11 @@ export type AdminContactRequestItem = {
     to_contact_phone?: (string | null);
     message?: (string | null);
     status: string;
+    store_id?: (string | null);
+    handled_by?: (string | null);
     admin_note?: (string | null);
     handled_at?: (string | null);
+    overdue?: boolean;
     created_at: string;
     updated_at: string;
 };
@@ -308,6 +311,10 @@ export type AffinityToggleResponse = {
     liked: boolean;
     mutual: boolean;
     created_at?: (string | null);
+};
+
+export type AssignRequestBody = {
+    store_id?: (string | null);
 };
 
 export type AuditLogList = {
@@ -955,6 +962,8 @@ export type WhoAmI = {
     is_superuser?: boolean;
     can_read_admin?: boolean;
     can_write_admin?: boolean;
+    role?: (string | null);
+    store_id?: (string | null);
 };
 
 export type AdminListProfilesData = {
@@ -1117,6 +1126,7 @@ export type AdminListContactRequestsData = {
     limit?: number;
     skip?: number;
     status?: 'all' | 'pending' | 'accepted' | 'rejected' | 'contacted' | 'closed';
+    storeId?: (string | null);
 };
 
 export type AdminListContactRequestsResponse = (AdminContactRequestList);
@@ -1127,6 +1137,13 @@ export type AdminHandleContactRequestData = {
 };
 
 export type AdminHandleContactRequestResponse = (AdminContactRequestItem);
+
+export type AdminAssignContactRequestData = {
+    requestBody: AssignRequestBody;
+    requestId: string;
+};
+
+export type AdminAssignContactRequestResponse = (AdminContactRequestItem);
 
 export type AdminListMembersData = {
     auditStatus?: 'all' | 'none' | 'pending' | 'approved' | 'rejected';

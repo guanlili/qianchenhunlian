@@ -235,6 +235,30 @@ export const AdminContactRequestItemSchema = {
             type: 'string',
             title: 'Status'
         },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        },
+        handled_by: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Handled By'
+        },
         admin_note: {
             anyOf: [
                 {
@@ -257,6 +281,11 @@ export const AdminContactRequestItemSchema = {
                 }
             ],
             title: 'Handled At'
+        },
+        overdue: {
+            type: 'boolean',
+            title: 'Overdue',
+            default: false
         },
         created_at: {
             type: 'string',
@@ -2300,6 +2329,25 @@ export const AffinityToggleResponseSchema = {
     type: 'object',
     required: ['liked', 'mutual'],
     title: 'AffinityToggleResponse'
+} as const;
+
+export const AssignRequestBodySchema = {
+    properties: {
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        }
+    },
+    type: 'object',
+    title: 'AssignRequestBody'
 } as const;
 
 export const AuditLogListSchema = {
@@ -6456,6 +6504,29 @@ export const WhoAmISchema = {
             type: 'boolean',
             title: 'Can Write Admin',
             default: false
+        },
+        role: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Role'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
         }
     },
     type: 'object',

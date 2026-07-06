@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminVerifyProfileData, AdminVerifyProfileResponse, AdminUnverifyProfileData, AdminUnverifyProfileResponse, AdminAdminSetHomeStoreData, AdminAdminSetHomeStoreResponse, AdminAdminListStoresData, AdminAdminListStoresResponse, AdminAdminCreateStoreData, AdminAdminCreateStoreResponse, AdminAdminUpdateStoreData, AdminAdminUpdateStoreResponse, AdminAdminDeleteStoreData, AdminAdminDeleteStoreResponse, AdminAdminListFeedbackData, AdminAdminListFeedbackResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, AdminListMembersData, AdminListMembersResponse, AdminGetMemberFullData, AdminGetMemberFullResponse, AdminViewMemberContactData, AdminViewMemberContactResponse, AdminListMemberTransactionsData, AdminListMemberTransactionsResponse, AdminListMemberActivitiesData, AdminListMemberActivitiesResponse, AdminListMemberRequestsData, AdminListMemberRequestsResponse, AdminListMemberAuditLogsData, AdminListMemberAuditLogsResponse, AdminListAuditLogsData, AdminListAuditLogsResponse, AdminListVerifyQueueData, AdminListVerifyQueueResponse, AffinityToggleAffinityData, AffinityToggleAffinityResponse, AffinityListMineData, AffinityListMineResponse, AffinityListMutualData, AffinityListMutualResponse, AffinityCheckAffinityData, AffinityCheckAffinityResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, FavoritesListSeenByMeData, FavoritesListSeenByMeResponse, FeedbackSubmitFeedbackData, FeedbackSubmitFeedbackResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, PrivateCreateUserData, PrivateCreateUserResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesSetHomeStoreData, ProfilesSetHomeStoreResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, ProfilesDeactivateMeResponse, ProfilesReactivateMeResponse, ProfilesCancelAccountRequestResponse, SiteGetQualificationsResponse, SitePutQualificationsData, SitePutQualificationsResponse, StoresListCitiesResponse, StoresListStoresData, StoresListStoresResponse, StoresGetStoreData, StoresGetStoreResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse } from './types.gen';
+import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminVerifyProfileData, AdminVerifyProfileResponse, AdminUnverifyProfileData, AdminUnverifyProfileResponse, AdminAdminSetHomeStoreData, AdminAdminSetHomeStoreResponse, AdminAdminListStoresData, AdminAdminListStoresResponse, AdminAdminCreateStoreData, AdminAdminCreateStoreResponse, AdminAdminUpdateStoreData, AdminAdminUpdateStoreResponse, AdminAdminDeleteStoreData, AdminAdminDeleteStoreResponse, AdminAdminListFeedbackData, AdminAdminListFeedbackResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, AdminAssignContactRequestData, AdminAssignContactRequestResponse, AdminListMembersData, AdminListMembersResponse, AdminGetMemberFullData, AdminGetMemberFullResponse, AdminViewMemberContactData, AdminViewMemberContactResponse, AdminListMemberTransactionsData, AdminListMemberTransactionsResponse, AdminListMemberActivitiesData, AdminListMemberActivitiesResponse, AdminListMemberRequestsData, AdminListMemberRequestsResponse, AdminListMemberAuditLogsData, AdminListMemberAuditLogsResponse, AdminListAuditLogsData, AdminListAuditLogsResponse, AdminListVerifyQueueData, AdminListVerifyQueueResponse, AffinityToggleAffinityData, AffinityToggleAffinityResponse, AffinityListMineData, AffinityListMineResponse, AffinityListMutualData, AffinityListMutualResponse, AffinityCheckAffinityData, AffinityCheckAffinityResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, FavoritesListSeenByMeData, FavoritesListSeenByMeResponse, FeedbackSubmitFeedbackData, FeedbackSubmitFeedbackResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, PrivateCreateUserData, PrivateCreateUserResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesSetHomeStoreData, ProfilesSetHomeStoreResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, ProfilesDeactivateMeResponse, ProfilesReactivateMeResponse, ProfilesCancelAccountRequestResponse, SiteGetQualificationsResponse, SitePutQualificationsData, SitePutQualificationsResponse, StoresListCitiesResponse, StoresListStoresData, StoresListStoresResponse, StoresGetStoreData, StoresGetStoreResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse } from './types.gen';
 
 export class AdminService {
     /**
@@ -524,9 +524,10 @@ export class AdminService {
     
     /**
      * List Contact Requests
-     * 工单列表 (admin/staff 都能看)
+     * 工单列表. 红娘强制只看本店 (DB 层过滤, total/分页一致); 其余角色可按 store_id 过滤.
      * @param data The data for the request.
      * @param data.status
+     * @param data.storeId
      * @param data.skip
      * @param data.limit
      * @returns AdminContactRequestList Successful Response
@@ -538,6 +539,7 @@ export class AdminService {
             url: '/api/v1/admin/contact-requests',
             query: {
                 status: data.status,
+                store_id: data.storeId,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -549,7 +551,7 @@ export class AdminService {
     
     /**
      * Handle Contact Request
-     * 红娘处理工单: 同意 / 拒绝 / 已建群 / 关闭
+     * 红娘处理工单: 同意 / 拒绝 / 已建群 / 关闭. 红娘限本店.
      * @param data The data for the request.
      * @param data.requestId
      * @param data.requestBody
@@ -560,6 +562,30 @@ export class AdminService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/admin/contact-requests/{request_id}/handle',
+            path: {
+                request_id: data.requestId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Assign Contact Request
+     * 改派工单归属门店 (仅 superuser). store_id=None 表示取消归属.
+     * @param data The data for the request.
+     * @param data.requestId
+     * @param data.requestBody
+     * @returns AdminContactRequestItem Successful Response
+     * @throws ApiError
+     */
+    public static assignContactRequest(data: AdminAssignContactRequestData): CancelablePromise<AdminAssignContactRequestResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/contact-requests/{request_id}/assign',
             path: {
                 request_id: data.requestId
             },
