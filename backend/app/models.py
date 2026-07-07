@@ -629,7 +629,7 @@ class Token(SQLModel):
 
 
 class TokenPayload(SQLModel):
-    sub: str | None = None
+    sub: uuid.UUID | None = None
     actor: str = "user"  # "user" (含 superuser/wx_user) 或 "staff"
 
 

@@ -48,28 +48,29 @@ def test_use_access_token(
 def test_recovery_password(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
-    with (
-        patch("app.core.config.settings.SMTP_HOST", "smtp.example.com"),
-        patch("app.core.config.settings.SMTP_USER", "admin@example.com"),
-    ):
+    # mock 掉真实邮件发送 (避免测试依赖 SMTP 网络); 端点仍走完整逻辑.
+    with patch("app.api.routes.login.send_email") as mock_send:
         email = "test@example.com"
         r = client.post(
             f"{settings.API_V1_STR}/password-recovery/{email}",
             headers=normal_user_token_headers,
         )
         assert r.status_code == 200
-        assert r.json() == {"message": "Password recovery email sent"}
+        assert r.json() == {"message": "如果该邮箱已注册, 我们已发送找回链接, 请查收"}
+        mock_send.assert_called_once()
 
 
 def test_recovery_password_user_not_exits(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
+    # 防邮箱枚举: 用户不存在也返 200 + 同样 message, 不暴露存在性.
     email = "jVgQr@example.com"
     r = client.post(
         f"{settings.API_V1_STR}/password-recovery/{email}",
         headers=normal_user_token_headers,
     )
-    assert r.status_code == 404
+    assert r.status_code == 200
+    assert r.json() == {"message": "如果该邮箱已注册, 我们已发送找回链接, 请查收"}
 
 
 def test_reset_password(client: TestClient, db: Session) -> None:
