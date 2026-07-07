@@ -21,8 +21,8 @@ router = APIRouter(prefix="/affinity", tags=["affinity"])
 
 
 class AffinityToggleResponse(SQLModel):
-    liked: bool        # 现在我是否点了
-    mutual: bool       # 是否互相好感
+    liked: bool  # 现在我是否点了
+    mutual: bool  # 是否互相好感
     created_at: datetime | None = None
 
 
@@ -33,7 +33,7 @@ class AffinityBrief(SQLModel):
     year: int | None = None
     location: str | None = None
     photos: list[str] = []
-    affinity_at: datetime           # 我点这条好感的时间
+    affinity_at: datetime  # 我点这条好感的时间
     is_mutual: bool = False
 
 
@@ -104,7 +104,9 @@ def toggle_affinity(
         )
     ).first()
     return AffinityToggleResponse(
-        liked=True, mutual=reverse is not None, created_at=new_a.created_at,
+        liked=True,
+        mutual=reverse is not None,
+        created_at=new_a.created_at,
     )
 
 
@@ -220,5 +222,7 @@ def check_affinity(
         )
     ).first()
     return AffinityToggleResponse(
-        liked=True, mutual=reverse is not None, created_at=mine.created_at,
+        liked=True,
+        mutual=reverse is not None,
+        created_at=mine.created_at,
     )

@@ -90,6 +90,7 @@ def submit_contact_request(
     # 24h 重复申请防护 (同一对) - 不论之前 status 如何, 都禁止
     one_day_ago = datetime.utcnow().replace(microsecond=0)
     from datetime import timedelta as _td
+
     one_day_ago = datetime.utcnow() - _td(hours=24)
     recent = session.exec(
         select(ContactRequest).where(

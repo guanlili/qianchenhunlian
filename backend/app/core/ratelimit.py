@@ -18,19 +18,19 @@ from app.core.config import settings
 
 # ---- 登录限流策略常量 ----
 # IP 维度: 防单 IP 狂刷 (任意账号)
-LOGIN_IP_WINDOW = 60        # 秒
-LOGIN_IP_MAX = 10           # 每窗口最多 10 次后台登录请求
+LOGIN_IP_WINDOW = 60  # 秒
+LOGIN_IP_MAX = 10  # 每窗口最多 10 次后台登录请求
 
 # 账号维度: 防针对单个账号的密码爆破
-LOGIN_FAIL_WINDOW = 900     # 15 分钟
-LOGIN_FAIL_MAX = 5          # 窗口内失败满 5 次 → 临时锁定
+LOGIN_FAIL_WINDOW = 900  # 15 分钟
+LOGIN_FAIL_MAX = 5  # 窗口内失败满 5 次 → 临时锁定
 
 # 微信登录: 正常用户入口, 阈值放宽 (同一出口 IP 可能多个用户共用)
 WXLOGIN_IP_WINDOW = 60
 WXLOGIN_IP_MAX = 60
 
 # 找回 / 重置密码等敏感操作: 按 IP 限频
-SENSITIVE_WINDOW = 3600     # 1 小时
+SENSITIVE_WINDOW = 3600  # 1 小时
 SENSITIVE_MAX = 10
 
 

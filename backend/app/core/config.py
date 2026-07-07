@@ -130,7 +130,7 @@ class Settings(BaseSettings):
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value is not None and value.strip().lower() in self._WEAK_SECRETS:
             message = (
-                f'{var_name} 仍是弱默认值/占位符, 出于安全请改成强随机值 '
+                f"{var_name} 仍是弱默认值/占位符, 出于安全请改成强随机值 "
                 "(本地仅告警, 部署环境会拒绝启动)."
             )
             if self.ENVIRONMENT == "local":

@@ -27,7 +27,9 @@ def _get_qualifications(session: SessionDep) -> list[dict]:
     row = session.get(SiteSetting, _KEY_QUALIFICATIONS)
     if not row or not isinstance(row.value, dict):
         return []
-    return row.value.get("items", []) if isinstance(row.value.get("items"), list) else []
+    return (
+        row.value.get("items", []) if isinstance(row.value.get("items"), list) else []
+    )
 
 
 @router.get("/qualifications", response_model=QualificationList)

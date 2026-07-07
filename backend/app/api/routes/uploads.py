@@ -26,10 +26,10 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # 公开访问的 URL 前缀 (从环境变量取, 默认走 dev IP)
 PUBLIC_BASE = os.environ.get(
     "PUBLIC_FILE_BASE",
-    f"http://{os.environ.get('HOST_IP', '60.205.171.207')}:8000/files"
+    f"http://{os.environ.get('HOST_IP', '60.205.171.207')}:8000/files",
 )
 
-ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}   # 去掉 .gif 减少滥用面
+ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}  # 去掉 .gif 减少滥用面
 MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 
 

@@ -74,6 +74,7 @@ jobs:
           PROJECT_NAME: "qianchenhunlian-ci"
           POSTGRES_SERVER: "localhost"
           POSTGRES_USER: "postgres"
+          UPLOAD_DIR: "/tmp/ci-uploads"
 
       - name: Coverage report
         run: uv run coverage report
