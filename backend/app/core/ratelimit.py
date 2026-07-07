@@ -14,6 +14,8 @@ from collections import defaultdict, deque
 
 from starlette.requests import Request
 
+from app.core.config import settings
+
 # ---- 登录限流策略常量 ----
 # IP 维度: 防单 IP 狂刷 (任意账号)
 LOGIN_IP_WINDOW = 60        # 秒
@@ -84,8 +86,25 @@ login_limiter = SlidingWindowLimiter()
 
 
 def client_ip(request: Request) -> str:
-    """取真实客户端 IP. 经 traefik 反代, 优先 X-Forwarded-For 首段."""
+    """取真实客户端 IP.
+
+    经 traefik 反代时, X-Forwarded-For 是一条 IP 链 (左=最远客户端, 右=最近代理).
+    仅当直连 peer 在可信代理集合内时, 才从链上由右向左剥离可信代理, 取第一个非可信 IP;
+    否则忽略 XFF 直接用直连 IP, 防止客户端伪造头绕过限流 (安全降级).
+    """
+    remote = request.client.host if request.client else "unknown"
     xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    if not xff:
+        return remote
+    # 直连 peer 不是可信代理 → 客户端可能伪造 XFF, 不予采信
+    if remote not in settings.trusted_proxies:
+        return remote
+    parts = [p.strip() for p in xff.split(",") if p.strip()]
+    if not parts:
+        return remote
+    # 由右向左剥离可信代理, 第一个非可信 IP 即真实客户端
+    for ip in reversed(parts):
+        if ip not in settings.trusted_proxies:
+            return ip
+    # 全链路都是可信代理 (罕见) → 取最左 (链路最前端的入口 IP)
+    return parts[0]
