@@ -1338,22 +1338,41 @@ class HandleRequestBody(SQLModel):
     admin_note: str | None = None
 
 
+def _prefetch_request_parties(
+    session: SessionDep,
+    reqs: list[ContactRequest],
+) -> tuple[dict[uuid.UUID, User], dict[uuid.UUID, Profile]]:
+    """批量预取工单双方 User + Profile, 消除 _build_request_item 的 N+1.
+
+    list 端点和单条端点 (handle/assign) 共用: 一次 IN 查询取所有涉及的 user_id,
+    再 map 成 dict; builder 用 dict.get 取值 (缺失返回 None, 与原防御语义一致).
+    """
+    if not reqs:
+        return {}, {}
+    user_ids = {r.from_user_id for r in reqs} | {r.to_user_id for r in reqs}
+    users = session.exec(select(User).where(User.id.in_(user_ids))).all()  # type: ignore
+    profiles = session.exec(
+        select(Profile).where(Profile.user_id.in_(user_ids))  # type: ignore
+    ).all()
+    return {u.id: u for u in users}, {p.user_id: p for p in profiles}
+
+
 def _build_request_item(
-    session, req: ContactRequest, actor: CurrentActor
+    req: ContactRequest,
+    actor: CurrentActor,
+    users_by_id: dict[uuid.UUID, User],
+    profiles_by_uid: dict[uuid.UUID, Profile],
 ) -> AdminContactRequestItem:
     """填好双方资料 + 联系方式的工单项 (admin 视角).
 
     联系方式按工单归属店脱敏 (见 _request_contact_visible); list 和 handle
     两条返回路径都走这里, 保证 hq_staff / 他店红娘拿不到明文联系方式.
+    调用方须先 _prefetch_request_parties 预取, 避免 list 时逐行查询 (N+1).
     """
-    from_user = session.get(User, req.from_user_id)
-    to_user = session.get(User, req.to_user_id)
-    from_profile = session.exec(
-        select(Profile).where(Profile.user_id == req.from_user_id)
-    ).first()
-    to_profile = session.exec(
-        select(Profile).where(Profile.user_id == req.to_user_id)
-    ).first()
+    from_user = users_by_id.get(req.from_user_id)
+    to_user = users_by_id.get(req.to_user_id)
+    from_profile = profiles_by_uid.get(req.from_user_id)
+    to_profile = profiles_by_uid.get(req.to_user_id)
     see = _request_contact_visible(actor, req)
     overdue = (
         req.status == "pending"
@@ -1426,8 +1445,12 @@ def list_contact_requests(
         .offset(skip)
         .limit(limit)
     ).all()
+    users_by_id, profiles_by_uid = _prefetch_request_parties(session, list(rows))
     return AdminContactRequestList(
-        items=[_build_request_item(session, r, actor) for r in rows],
+        items=[
+            _build_request_item(r, actor, users_by_id, profiles_by_uid)
+            for r in rows
+        ],
         total=total,
     )
 
@@ -1475,7 +1498,7 @@ def handle_contact_request(
     session.add(req)
     session.commit()
     session.refresh(req)
-    return _build_request_item(session, req, actor)
+    return _build_request_item(req, actor, *_prefetch_request_parties(session, [req]))
 
 
 class AssignRequestBody(SQLModel):
@@ -1516,7 +1539,7 @@ def assign_contact_request(
     session.add(req)
     session.commit()
     session.refresh(req)
-    return _build_request_item(session, req, actor)
+    return _build_request_item(req, actor, *_prefetch_request_parties(session, [req]))
 
 
 # ============================================================
@@ -1816,22 +1839,27 @@ def list_member_activities(
 ) -> ActivityList:
     """会员行为记录: 收藏/浏览/好感 的双向流水."""
     model, self_col, other_col = _ACTIVITY_KINDS[kind]
-    base = select(model).where(getattr(model, self_col) == user_id)
+    other_attr = getattr(model, other_col)
+    # 一次 join 取出对方 User + Profile, 消除逐行 session.get/select (N+1).
+    # isouter=True 保留 "对方缺失则字段为 None" 的防御语义 (inner join 会丢行).
+    base = (
+        select(model, User, Profile)
+        .join(User, User.id == other_attr, isouter=True)
+        .join(Profile, Profile.user_id == other_attr, isouter=True)
+        .where(getattr(model, self_col) == user_id)
+    )
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
     rows = session.exec(
         base.order_by(model.created_at.desc()).offset(skip).limit(limit)  # type: ignore
     ).all()
 
     items: list[ActivityItem] = []
-    for r in rows:
-        cid = getattr(r, other_col)
-        cu = session.get(User, cid)
-        cp = session.exec(select(Profile).where(Profile.user_id == cid)).first()
+    for r, cu, cp in rows:
         items.append(
             ActivityItem(
-                counterpart_user_id=cid,
+                counterpart_user_id=getattr(r, other_col),
                 xy_code=cu.xy_code if cu else None,
-                nickname=(cp.nickname or cp.real_name) if cp else None,
+                nickname=((cp.nickname or cp.real_name) if cp else None),
                 avatar_url=cp.avatar_url if cp else None,
                 created_at=r.created_at,
             )
@@ -1858,9 +1886,10 @@ def list_member_requests(
         .offset(skip)
         .limit(limit)
     ).all()
+    users_by_id, profiles_by_uid = _prefetch_request_parties(session, list(rows))
     items = []
     for r in rows:
-        item = _build_request_item(session, r, actor)
+        item = _build_request_item(r, actor, users_by_id, profiles_by_uid)
         if not (actor.actor_type == "user" and actor.is_superuser):
             # 非 admin 在工单历史里不展示双方联系方式
             item.from_contact_wechat = None
