@@ -71,6 +71,9 @@ jobs:
           SECRET_KEY: "ci-test-secret-key-not-for-production"
           FIRST_SUPERUSER: "admin@example.com"
           FIRST_SUPERUSER_PASSWORD: "ci-test-password"
+          PROJECT_NAME: "qianchenhunlian-ci"
+          POSTGRES_SERVER: "localhost"
+          POSTGRES_USER: "postgres"
 
       - name: Coverage report
         run: uv run coverage report
