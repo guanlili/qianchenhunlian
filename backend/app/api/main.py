@@ -8,7 +8,6 @@ from app.api.routes import (
     feedback,
     login,
     matches,
-    private,
     profiles,
     site,
     stores,
@@ -17,7 +16,6 @@ from app.api.routes import (
     utils,
     wechat,
 )
-from app.core.config import settings
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -34,7 +32,3 @@ api_router.include_router(feedback.router)
 api_router.include_router(site.router)
 api_router.include_router(admin.router)
 api_router.include_router(uploads.router)
-
-
-if settings.ENVIRONMENT == "local":
-    api_router.include_router(private.router)
