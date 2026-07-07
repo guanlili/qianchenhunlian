@@ -22,10 +22,7 @@
         "noArrayIndexKey": "off"
       },
       "a11y": {
-        "noStaticElementInteractions": "off",
-        "useKeyWithClickEvents": "off",
-        "noSvgWithoutTitle": "off",
-        "noLabelWithoutControl": "off"
+        "recommended": false
       },
       "style": {
         "noNonNullAssertion": "off",
