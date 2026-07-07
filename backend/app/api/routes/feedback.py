@@ -3,11 +3,11 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Body, HTTPException, Query
-from sqlmodel import SQLModel, func, select
+from fastapi import APIRouter, Body, HTTPException
+from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Feedback, User
+from app.models import Feedback
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 

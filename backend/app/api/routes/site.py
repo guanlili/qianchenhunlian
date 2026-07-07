@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Body, Depends
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel
 
 from app.api.deps import SessionDep, require_admin
 from app.models import SiteSetting

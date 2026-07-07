@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlmodel import SQLModel, and_, func, select
+from sqlmodel import SQLModel, func, select
 
 from app import crud
 from app.api.deps import (
@@ -36,8 +36,8 @@ from app.models import (
     Staff,
     StaffCreate,
     StaffPublic,
-    StaffUpdate,
     StaffsPublic,
+    StaffUpdate,
     Store,
     StoreCreate,
     StorePublic,
@@ -1918,7 +1918,7 @@ def list_member_audit_logs(
         base.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)  # type: ignore
     ).all()
     return AuditLogList(
-        items=[AuditLogPublic.model_validate(l, from_attributes=True) for l in rows],
+        items=[AuditLogPublic.model_validate(row, from_attributes=True) for row in rows],
         total=total,
     )
 
@@ -1946,7 +1946,7 @@ def list_audit_logs(
         base.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)  # type: ignore
     ).all()
     return AuditLogList(
-        items=[AuditLogPublic.model_validate(l, from_attributes=True) for l in rows],
+        items=[AuditLogPublic.model_validate(row, from_attributes=True) for row in rows],
         total=total,
     )
 

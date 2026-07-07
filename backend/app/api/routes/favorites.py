@@ -2,7 +2,6 @@
 
 import uuid
 from datetime import datetime
-from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import update as sa_update
@@ -193,7 +192,7 @@ def list_visitors(
     ).all()
 
     items = []
-    for uid, viewed_at, user, profile in rows:
+    for _uid, viewed_at, user, profile in rows:
         items.append(
             VisitorBrief(
                 user_id=user.id,
@@ -237,7 +236,7 @@ def list_seen_by_me(
     ).all()
 
     items = []
-    for tid, viewed_at, user, profile in rows:
+    for _tid, viewed_at, user, profile in rows:
         items.append(
             VisitorBrief(
                 user_id=user.id,

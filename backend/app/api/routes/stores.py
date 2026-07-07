@@ -6,12 +6,11 @@
 """
 
 import uuid
-from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import SQLModel, func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import SessionDep
 from app.models import Store, StorePublic
 
 router = APIRouter(prefix="/stores", tags=["stores"])

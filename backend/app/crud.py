@@ -7,12 +7,11 @@
 from __future__ import annotations
 
 import random
+import uuid
 from datetime import datetime
 from typing import Any
 
 from sqlmodel import Session, select
-
-import uuid
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (

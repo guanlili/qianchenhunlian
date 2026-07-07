@@ -9,9 +9,8 @@
 
 import uuid
 from datetime import datetime
-from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import update as sa_update
 from sqlmodel import Field, SQLModel, and_, func, select
 
@@ -104,7 +103,7 @@ def submit_contact_request(
     if recent:
         raise HTTPException(
             status_code=429,
-            detail=f"DUPLICATE|24 小时内已申请过, 请耐心等待红娘处理",
+            detail="DUPLICATE|24 小时内已申请过, 请耐心等待红娘处理",
         )
 
     # 原子扣额度 (与 unlock_balance 共用字段, 含义改为"申请额度")
@@ -204,7 +203,7 @@ def list_my_contact_requests(
 
 
 @router.post("/{target_id}/unlock")
-def unlock_contact_deprecated(target_id: uuid.UUID):
+def unlock_contact_deprecated(_target_id: uuid.UUID):
     """已废弃: 双方联系方式不再通过本端解锁, 改用 /contacts/requests 申请红娘撮合."""
     raise HTTPException(
         status_code=410,
