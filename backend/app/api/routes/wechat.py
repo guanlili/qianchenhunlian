@@ -32,9 +32,7 @@ router = APIRouter(prefix="/wechat", tags=["wechat"])
 def _build_login_response(session: Session, user: User) -> WechatLoginResponse:
     expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(user.id, expires_delta=expires)
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user.id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user.id)).first()
     has_criteria = (
         session.exec(select(Criteria).where(Criteria.user_id == user.id)).first()
         is not None
@@ -66,7 +64,9 @@ async def wechat_login(
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="登录过于频繁, 请稍后再试",
-            headers={"Retry-After": str(login_limiter.retry_after(ip_key, WXLOGIN_IP_WINDOW))},
+            headers={
+                "Retry-After": str(login_limiter.retry_after(ip_key, WXLOGIN_IP_WINDOW))
+            },
         )
     try:
         info = await jscode2session(body.code)

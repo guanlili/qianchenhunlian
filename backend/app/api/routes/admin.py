@@ -390,16 +390,12 @@ def get_profile_detail(
     actor: CurrentActor,
 ) -> AdminProfileDetail:
     """单个资料详情 + 对方择偶要求 (admin/staff 都能看; store_owner 限本店)"""
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user_id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
     _check_store_scope(actor, profile)
-    criteria = session.exec(
-        select(Criteria).where(Criteria.user_id == user_id)
-    ).first()
+    criteria = session.exec(select(Criteria).where(Criteria.user_id == user_id)).first()
     parents = session.exec(
         select(ParentsInfo).where(ParentsInfo.user_id == user_id)
     ).first()
@@ -438,7 +434,8 @@ def audit_profile(
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     _audit(
-        session, actor,
+        session,
+        actor,
         "audit_pass" if body.approve else "audit_reject",
         target_user_id=user_id,
         detail={"reason": body.reason} if body.reason else {},
@@ -451,23 +448,51 @@ def audit_profile(
 
 # 计算资料完善度时考虑的字段 (跟 profiles.py 保持同步; 可后续抽公共)
 _PROFILE_PROGRESS_FIELDS = (
-    "real_name", "gender", "ethnicity", "year", "height", "weight",
-    "health_status", "edu", "major", "hobbies", "income", "marriage",
-    "origin", "location", "hometown", "job", "employer_type",
-    "has_social_insurance", "has_house", "has_car", "house_car_loan",
-    "body_type", "personality_type", "desc",
+    "real_name",
+    "gender",
+    "ethnicity",
+    "year",
+    "height",
+    "weight",
+    "health_status",
+    "edu",
+    "major",
+    "hobbies",
+    "income",
+    "marriage",
+    "origin",
+    "location",
+    "hometown",
+    "job",
+    "employer_type",
+    "has_social_insurance",
+    "has_house",
+    "has_car",
+    "house_car_loan",
+    "body_type",
+    "personality_type",
+    "desc",
 )
 _CRITERIA_PROGRESS_FIELDS = (
-    "year_min", "year_max", "height_min", "height_max",
-    "weight_min", "weight_max", "income", "edu", "marriage",
-    "house", "car", "job", "social_insurance",
+    "year_min",
+    "year_max",
+    "height_min",
+    "height_max",
+    "weight_min",
+    "weight_max",
+    "income",
+    "edu",
+    "marriage",
+    "house",
+    "car",
+    "job",
+    "social_insurance",
 )
 
 
 def _calc_profile_progress(profile: Profile) -> int:
     filled = sum(
-        1 for f in _PROFILE_PROGRESS_FIELDS
-        if getattr(profile, f) not in (None, "", [])
+        1 for f in _PROFILE_PROGRESS_FIELDS if getattr(profile, f) not in (None, "", [])
     )
     if profile.photos:
         filled += 2
@@ -479,8 +504,7 @@ def _calc_profile_progress(profile: Profile) -> int:
 
 def _calc_criteria_progress(criteria: Criteria) -> int:
     filled = sum(
-        1 for f in _CRITERIA_PROGRESS_FIELDS
-        if getattr(criteria, f) not in (None, "")
+        1 for f in _CRITERIA_PROGRESS_FIELDS if getattr(criteria, f) not in (None, "")
     )
     if criteria.origins:
         filled += 1
@@ -508,9 +532,7 @@ def admin_update_profile(
     - 自动重算 progress
     - audit_status 强制置 approved (代录视为已审核)
     """
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user_id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
@@ -530,7 +552,10 @@ def admin_update_profile(
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     _audit(
-        session, actor, "update_profile", target_user_id=user_id,
+        session,
+        actor,
+        "update_profile",
+        target_user_id=user_id,
         detail={"fields": sorted(data.keys())},
     )
     session.commit()
@@ -556,9 +581,7 @@ def admin_update_criteria(
     profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     _check_edit_permission(actor, profile)
 
-    criteria = session.exec(
-        select(Criteria).where(Criteria.user_id == user_id)
-    ).first()
+    criteria = session.exec(select(Criteria).where(Criteria.user_id == user_id)).first()
     data = body.model_dump(exclude_unset=True)
     if criteria is None:
         criteria = Criteria(user_id=user_id, **data)
@@ -614,11 +637,7 @@ def admin_update_parents_info(
 def _store_owner_id(actor: CurrentActor) -> uuid.UUID | None:
     """如果当前 actor 是门店红娘 (matchmaker), 返回其 store_id; 否则 None.
     admin / 总部员工 (hq_staff) 返 None (= 不受 store 限制)."""
-    if (
-        actor.actor_type == "staff"
-        and actor.staff
-        and actor.staff.role == "matchmaker"
-    ):
+    if actor.actor_type == "staff" and actor.staff and actor.staff.role == "matchmaker":
         return actor.staff.store_id
     return None
 
@@ -690,9 +709,7 @@ def verify_profile(
     actor: CurrentActor,
 ) -> VerifyResponse:
     """标用户为已认证 (admin 任意用户; 门店账号仅本店用户)"""
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user_id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
@@ -710,8 +727,15 @@ def verify_profile(
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     _audit(
-        session, actor, "verify", target_user_id=user_id,
-        detail={"store_id": str(profile.verified_by_store_id) if profile.verified_by_store_id else None},
+        session,
+        actor,
+        "verify",
+        target_user_id=user_id,
+        detail={
+            "store_id": str(profile.verified_by_store_id)
+            if profile.verified_by_store_id
+            else None
+        },
     )
     session.commit()
     session.refresh(profile)
@@ -731,9 +755,7 @@ def unverify_profile(
     actor: CurrentActor,
 ) -> VerifyResponse:
     """撤销认证"""
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user_id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
@@ -773,9 +795,7 @@ def admin_set_home_store(
     body: HomeStoreUpdate = Body(),
 ) -> AdminProfileItem:
     """admin 设置 / 改变用户主属门店"""
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user_id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     user = session.get(User, user_id)
     if not profile or not user:
         raise HTTPException(status_code=404, detail="资料不存在")
@@ -788,7 +808,10 @@ def admin_set_home_store(
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     _audit(
-        session, actor, "assign_store", target_user_id=user_id,
+        session,
+        actor,
+        "assign_store",
+        target_user_id=user_id,
         detail={
             "from": str(old_store) if old_store else None,
             "to": str(body.store_id) if body.store_id else None,
@@ -976,8 +999,15 @@ def grant_unlock_balance(
             note=body.reason,
         )
     _audit(
-        session, actor, "grant_balance", target_user_id=user_id,
-        detail={"delta": actual_delta, "balance_after": new_balance, "reason": body.reason},
+        session,
+        actor,
+        "grant_balance",
+        target_user_id=user_id,
+        detail={
+            "delta": actual_delta,
+            "balance_after": new_balance,
+            "reason": body.reason,
+        },
     )
     session.commit()
     session.refresh(user)
@@ -1068,14 +1098,14 @@ class StatsResponse(SQLModel):
     pending_audits: int = 0
     today_signups: int = 0
     # — 新增 5 项 —
-    pending_tickets: int = 0      # 待处理工单 (status='pending')
+    pending_tickets: int = 0  # 待处理工单 (status='pending')
     mutual_affinity_pairs: int = 0  # 互相好感对子 (有 A→B 和 B→A 同时存在的对)
-    verified_users: int = 0       # 已实名认证用户数
-    verified_ratio: int = 0       # 已认证比例 (0-100)
-    active_stores: int = 0        # 营业中门店数
+    verified_users: int = 0  # 已实名认证用户数
+    verified_ratio: int = 0  # 已认证比例 (0-100)
+    active_stores: int = 0  # 营业中门店数
     # — 工作台待办 (docs/10) —
-    pending_verifies: int = 0     # 待实名核验 (User.verified='pending')
-    open_feedback: int = 0        # 未处理反馈 (Feedback.status='open')
+    pending_verifies: int = 0  # 待实名核验 (User.verified='pending')
+    open_feedback: int = 0  # 未处理反馈 (Feedback.status='open')
 
 
 @router.get("/stats", response_model=StatsResponse)
@@ -1085,9 +1115,12 @@ def admin_stats(session: SessionDep) -> StatsResponse:
 
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     total_users = session.exec(select(func.count()).select_from(User)).one() or 0
-    verified_users = session.exec(
-        select(func.count()).select_from(User).where(User.verified == "passed")
-    ).one() or 0
+    verified_users = (
+        session.exec(
+            select(func.count()).select_from(User).where(User.verified == "passed")
+        ).one()
+        or 0
+    )
 
     # 互相好感对子数: 同时存在 (A→B) 和 (B→A), 每个对子只算一次 → /2
     # 这里偷懒用 join 自连接, 然后 //2 (推荐场景下数据量小, 性能 OK)
@@ -1108,28 +1141,39 @@ def admin_stats(session: SessionDep) -> StatsResponse:
 
     return StatsResponse(
         total_users=total_users,
-        total_profiles=session.exec(select(func.count()).select_from(Profile)).one() or 0,
+        total_profiles=session.exec(select(func.count()).select_from(Profile)).one()
+        or 0,
         pending_audits=session.exec(
-            select(func.count()).select_from(Profile).where(Profile.audit_status == "pending")
-        ).one() or 0,
+            select(func.count())
+            .select_from(Profile)
+            .where(Profile.audit_status == "pending")
+        ).one()
+        or 0,
         today_signups=session.exec(
             select(func.count()).select_from(User).where(User.created_at >= today_start)
-        ).one() or 0,
+        ).one()
+        or 0,
         pending_tickets=session.exec(
-            select(func.count()).select_from(ContactRequest).where(ContactRequest.status == "pending")
-        ).one() or 0,
+            select(func.count())
+            .select_from(ContactRequest)
+            .where(ContactRequest.status == "pending")
+        ).one()
+        or 0,
         mutual_affinity_pairs=mutual_pairs,
         verified_users=verified_users,
         verified_ratio=int(verified_users / total_users * 100) if total_users else 0,
         active_stores=session.exec(
             select(func.count()).select_from(Store).where(Store.status == "active")
-        ).one() or 0,
+        ).one()
+        or 0,
         pending_verifies=session.exec(
             select(func.count()).select_from(User).where(User.verified == "pending")
-        ).one() or 0,
+        ).one()
+        or 0,
         open_feedback=session.exec(
             select(func.count()).select_from(Feedback).where(Feedback.status == "open")
-        ).one() or 0,
+        ).one()
+        or 0,
     )
 
 
@@ -1172,7 +1216,9 @@ def _mask_openid(openid: str | None) -> str | None:
 def list_admin_users(
     session: SessionDep,
     actor: Literal["all", "wx", "admin"] = Query("all"),
-    user_status: Literal["all", "active", "inactive", "deactivating", "blocked"] = Query("all"),
+    user_status: Literal[
+        "all", "active", "inactive", "deactivating", "blocked"
+    ] = Query("all"),
     keyword: str | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -1397,12 +1443,8 @@ def _build_request_item(
         to_gender=to_profile.gender if to_profile else None,
         to_year=to_profile.year if to_profile else None,
         to_location=to_profile.location if to_profile else None,
-        to_contact_wechat=(
-            to_profile.contact_wechat if (to_profile and see) else None
-        ),
-        to_contact_phone=(
-            to_profile.contact_phone if (to_profile and see) else None
-        ),
+        to_contact_wechat=(to_profile.contact_wechat if (to_profile and see) else None),
+        to_contact_phone=(to_profile.contact_phone if (to_profile and see) else None),
         message=req.message,
         status=req.status,
         store_id=req.store_id,
@@ -1419,8 +1461,9 @@ def _build_request_item(
 def list_contact_requests(
     session: SessionDep,
     actor: CurrentActor,
-    status_filter: Literal["all", "pending", "accepted", "rejected", "contacted", "closed"]
-    = Query("all", alias="status"),
+    status_filter: Literal[
+        "all", "pending", "accepted", "rejected", "contacted", "closed"
+    ] = Query("all", alias="status"),
     store_id: uuid.UUID | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -1437,9 +1480,7 @@ def list_contact_requests(
     elif store_id is not None:
         base = base.where(ContactRequest.store_id == store_id)
 
-    total = session.exec(
-        select(func.count()).select_from(base.subquery())
-    ).one()
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
     rows = session.exec(
         base.order_by(ContactRequest.created_at.desc())  # type: ignore
         .offset(skip)
@@ -1448,8 +1489,7 @@ def list_contact_requests(
     users_by_id, profiles_by_uid = _prefetch_request_parties(session, list(rows))
     return AdminContactRequestList(
         items=[
-            _build_request_item(r, actor, users_by_id, profiles_by_uid)
-            for r in rows
+            _build_request_item(r, actor, users_by_id, profiles_by_uid) for r in rows
         ],
         total=total,
     )
@@ -1561,7 +1601,7 @@ class AdminMemberItem(SQLModel):
     relation: str | None = None
     location: str | None = None
     home_store_id: uuid.UUID | None = None
-    audit_status: str | None = None      # None = 还没建资料
+    audit_status: str | None = None  # None = 还没建资料
     progress: int = 0
     verified: str = "none"
     unlock_balance: int = 0
@@ -1597,7 +1637,7 @@ class AdminMemberFull(SQLModel):
     verified_by_store_id: uuid.UUID | None = None
     verified_at: datetime | None = None
     counts: MemberCounts = MemberCounts()
-    can_view_contact: bool = False       # 当前操作者是否有权查看联系方式
+    can_view_contact: bool = False  # 当前操作者是否有权查看联系方式
 
 
 class ContactViewResponse(SQLModel):
@@ -1645,7 +1685,9 @@ def _to_member_item(u: User, p: Profile | None) -> AdminMemberItem:
 def list_members(
     session: SessionDep,
     actor: CurrentActor,
-    audit_status: Literal["all", "none", "pending", "approved", "rejected"] = Query("all"),
+    audit_status: Literal["all", "none", "pending", "approved", "rejected"] = Query(
+        "all"
+    ),
     verified: Literal["all", "none", "pending", "passed", "rejected"] = Query("all"),
     user_status: Literal["all", "active", "blocked"] = Query("all"),
     store_id: uuid.UUID | None = Query(None),
@@ -1701,9 +1743,12 @@ def list_members(
 
 def _member_counts(session: SessionDep, user_id: uuid.UUID) -> MemberCounts:
     def _cnt(model, col) -> int:
-        return session.exec(
-            select(func.count()).select_from(model).where(col == user_id)
-        ).one() or 0
+        return (
+            session.exec(
+                select(func.count()).select_from(model).where(col == user_id)
+            ).one()
+            or 0
+        )
 
     return MemberCounts(
         favorites_given=_cnt(Favorite, Favorite.user_id),
@@ -1730,17 +1775,13 @@ def get_member_full(
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user_id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     if profile:
         _check_store_scope(actor, profile)
     elif _store_owner_id(actor) is not None:
         raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
 
-    criteria = session.exec(
-        select(Criteria).where(Criteria.user_id == user_id)
-    ).first()
+    criteria = session.exec(select(Criteria).where(Criteria.user_id == user_id)).first()
     parents = session.exec(
         select(ParentsInfo).where(ParentsInfo.user_id == user_id)
     ).first()
@@ -1776,9 +1817,7 @@ def view_member_contact(
     actor: CurrentActor,
 ) -> ContactViewResponse:
     """查看会员联系方式 (admin / 本店红娘), 每次查看写审计日志."""
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user_id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     if not profile:
         raise HTTPException(status_code=404, detail="资料不存在")
     if not _can_see_contact(actor, profile):
@@ -1830,9 +1869,12 @@ def list_member_activities(
     session: SessionDep,
     user_id: uuid.UUID,
     kind: Literal[
-        "favorite_given", "favorite_received",
-        "view_given", "view_received",
-        "affinity_given", "affinity_received",
+        "favorite_given",
+        "favorite_received",
+        "view_given",
+        "view_received",
+        "affinity_given",
+        "affinity_received",
     ] = Query("favorite_received"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -1918,7 +1960,9 @@ def list_member_audit_logs(
         base.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)  # type: ignore
     ).all()
     return AuditLogList(
-        items=[AuditLogPublic.model_validate(row, from_attributes=True) for row in rows],
+        items=[
+            AuditLogPublic.model_validate(row, from_attributes=True) for row in rows
+        ],
         total=total,
     )
 
@@ -1946,7 +1990,9 @@ def list_audit_logs(
         base.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)  # type: ignore
     ).all()
     return AuditLogList(
-        items=[AuditLogPublic.model_validate(row, from_attributes=True) for row in rows],
+        items=[
+            AuditLogPublic.model_validate(row, from_attributes=True) for row in rows
+        ],
         total=total,
     )
 

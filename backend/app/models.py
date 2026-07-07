@@ -21,7 +21,9 @@ from sqlmodel import Field, Relationship, SQLModel
 class UserBase(SQLModel):
     """共享字段。小程序用户的 email 可空; admin 必填。"""
 
-    email: EmailStr | None = Field(default=None, unique=True, index=True, max_length=255)
+    email: EmailStr | None = Field(
+        default=None, unique=True, index=True, max_length=255
+    )
     is_active: bool = True
     is_superuser: bool = False
     full_name: str | None = Field(default=None, max_length=255)
@@ -105,28 +107,40 @@ class UsersPublic(SQLModel):
 
 
 class ProfileBase(SQLModel):
-    nickname: str | None = Field(default=None, max_length=64)        # 微信昵称 / 用户填的昵称
-    avatar_url: str | None = Field(default=None, max_length=500)     # 头像 URL (来自 chooseAvatar 上传)
-    real_name: str | None = Field(default=None, max_length=64)       # 真实姓名 (登记表)
-    ethnicity: str | None = Field(default=None, max_length=16)       # 民族
+    nickname: str | None = Field(default=None, max_length=64)  # 微信昵称 / 用户填的昵称
+    avatar_url: str | None = Field(
+        default=None, max_length=500
+    )  # 头像 URL (来自 chooseAvatar 上传)
+    real_name: str | None = Field(default=None, max_length=64)  # 真实姓名 (登记表)
+    ethnicity: str | None = Field(default=None, max_length=16)  # 民族
     relation: str | None = Field(default=None, max_length=16)
     gender: str | None = Field(default=None, max_length=8)
-    year: int | None = Field(default=None, ge=1950, le=2015)         # 兼容老数据, 推荐用 birth_date
-    birth_date: date | None = None                                   # 出生年月 (新, 精确到日)
+    year: int | None = Field(
+        default=None, ge=1950, le=2015
+    )  # 兼容老数据, 推荐用 birth_date
+    birth_date: date | None = None  # 出生年月 (新, 精确到日)
     height: int | None = Field(default=None, ge=100, le=220)
-    weight: int | None = Field(default=None, ge=20, le=200)          # 体重 kg
-    health_status: str | None = Field(default=None, max_length=64)   # 身体状况
+    weight: int | None = Field(default=None, ge=20, le=200)  # 体重 kg
+    health_status: str | None = Field(default=None, max_length=64)  # 身体状况
     edu: str | None = Field(default=None, max_length=32)
-    major: str | None = Field(default=None, max_length=64)           # 专业
-    hobbies: str | None = Field(default=None, max_length=120)        # 兴趣爱好
-    income: str | None = Field(default=None, max_length=32)          # 月收入档位 (b1: 改为月收入)
-    marriage: str | None = Field(default=None, max_length=16)        # c1: 改为 select, 选项见前端
+    major: str | None = Field(default=None, max_length=64)  # 专业
+    hobbies: str | None = Field(default=None, max_length=120)  # 兴趣爱好
+    income: str | None = Field(
+        default=None, max_length=32
+    )  # 月收入档位 (b1: 改为月收入)
+    marriage: str | None = Field(
+        default=None, max_length=16
+    )  # c1: 改为 select, 选项见前端
     origin: str | None = Field(default=None, max_length=128)
     location: str | None = Field(default=None, max_length=128)
     hometown: str | None = Field(default=None, max_length=128)
     job: str | None = Field(default=None, max_length=64)
-    employer_type: str | None = Field(default=None, max_length=32)   # 工作单位性质 (国企/民企/事业单位/外企/自由职业等)
-    has_social_insurance: str | None = Field(default=None, max_length=8)  # 是否有社保 (有/无)
+    employer_type: str | None = Field(
+        default=None, max_length=32
+    )  # 工作单位性质 (国企/民企/事业单位/外企/自由职业等)
+    has_social_insurance: str | None = Field(
+        default=None, max_length=8
+    )  # 是否有社保 (有/无)
     has_house: str | None = Field(default=None, max_length=32)
     has_car: str | None = Field(default=None, max_length=16)
     house_car_loan: str | None = Field(default=None, max_length=64)  # 房贷车贷情况
@@ -142,13 +156,17 @@ class ProfileUpdate(ProfileBase):
 class Profile(ProfileBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", unique=True, index=True
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        unique=True,
+        index=True,
     )
 
     # 用户主属门店 (用于工单分配 / 撮合 / 认证)
     home_store_id: uuid.UUID | None = Field(default=None, index=True)
-    verified_by_store_id: uuid.UUID | None = None    # 谁认证的 (追溯)
-    verified_at: datetime | None = None              # 认证时间
+    verified_by_store_id: uuid.UUID | None = None  # 谁认证的 (追溯)
+    verified_at: datetime | None = None  # 认证时间
 
     # 仅管理员/已解锁用户可见
     contact_wechat: str | None = Field(default=None, max_length=64)
@@ -199,15 +217,15 @@ class CriteriaBase(SQLModel):
     year_max: int | None = None
     height_min: int | None = None
     height_max: int | None = None
-    weight_min: int | None = None                                       # 体重要求 (新)
+    weight_min: int | None = None  # 体重要求 (新)
     weight_max: int | None = None
     income: str | None = Field(default=None, max_length=32)
     edu: str | None = Field(default=None, max_length=64)
     marriage: str | None = Field(default=None, max_length=16)
     house: str | None = Field(default=None, max_length=32)
-    car: str | None = Field(default=None, max_length=32)                # 车要求 (新)
-    job: str | None = Field(default=None, max_length=64)                # 职业要求 (新)
-    social_insurance: str | None = Field(default=None, max_length=8)    # 对方是否有社保
+    car: str | None = Field(default=None, max_length=32)  # 车要求 (新)
+    job: str | None = Field(default=None, max_length=64)  # 职业要求 (新)
+    social_insurance: str | None = Field(default=None, max_length=8)  # 对方是否有社保
     note: str | None = Field(default=None, max_length=180)
 
 
@@ -219,7 +237,11 @@ class CriteriaUpdate(CriteriaBase):
 class Criteria(CriteriaBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", unique=True, index=True
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        unique=True,
+        index=True,
     )
 
     # 多选项, 存 JSON 数组
@@ -247,10 +269,12 @@ class CriteriaPublic(CriteriaBase):
 
 
 class ParentsInfoBase(SQLModel):
-    parents_health: str | None = Field(default=None, max_length=64)   # 父母身体状况
-    parents_job: str | None = Field(default=None, max_length=64)      # 父母职业
-    parents_pension: str | None = Field(default=None, max_length=16)  # 父母养老保险 有/无
-    siblings: str | None = Field(default=None, max_length=120)        # 兄弟姐妹情况
+    parents_health: str | None = Field(default=None, max_length=64)  # 父母身体状况
+    parents_job: str | None = Field(default=None, max_length=64)  # 父母职业
+    parents_pension: str | None = Field(
+        default=None, max_length=16
+    )  # 父母养老保险 有/无
+    siblings: str | None = Field(default=None, max_length=120)  # 兄弟姐妹情况
 
 
 class ParentsInfoUpdate(ParentsInfoBase):
@@ -260,7 +284,11 @@ class ParentsInfoUpdate(ParentsInfoBase):
 class ParentsInfo(ParentsInfoBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", unique=True, index=True
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        unique=True,
+        index=True,
     )
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -418,8 +446,8 @@ class StaffBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     name: str = Field(max_length=64)
     is_active: bool = True
-    role: str = Field(default="hq_staff", max_length=16)       # 'hq_staff' / 'matchmaker'
-    store_id: uuid.UUID | None = None                          # 仅 matchmaker 必填
+    role: str = Field(default="hq_staff", max_length=16)  # 'hq_staff' / 'matchmaker'
+    store_id: uuid.UUID | None = None  # 仅 matchmaker 必填
 
 
 class StaffCreate(StaffBase):
@@ -462,7 +490,7 @@ class StaffsPublic(SQLModel):
 
 class StoreBase(SQLModel):
     name: str = Field(max_length=64)
-    city: str = Field(max_length=32, index=True)              # 山东省下的市 (例: 济南)
+    city: str = Field(max_length=32, index=True)  # 山东省下的市 (例: 济南)
     district: str | None = Field(default=None, max_length=32)  # 区/县 (例: 历下区)
     address: str | None = Field(default=None, max_length=255)
     lng: float | None = None
@@ -470,7 +498,9 @@ class StoreBase(SQLModel):
     phone: str | None = Field(default=None, max_length=32)
     photo: str | None = Field(default=None, max_length=500)
     fees_desc: str | None = Field(default=None, max_length=500)  # 收费简介
-    status: str = Field(default="active", max_length=16, index=True)  # 'active' | 'closed'
+    status: str = Field(
+        default="active", max_length=16, index=True
+    )  # 'active' | 'closed'
 
 
 class StoreCreate(StoreBase):
@@ -507,11 +537,15 @@ class StorePublic(StoreBase):
 
 class Affinity(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    from_user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    from_user_id: uuid.UUID = Field(
+        foreign_key="user.id", ondelete="CASCADE", index=True
+    )
     to_user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    __table_args__ = (UniqueConstraint("from_user_id", "to_user_id", name="affinity_pair_uq"),)
+    __table_args__ = (
+        UniqueConstraint("from_user_id", "to_user_id", name="affinity_pair_uq"),
+    )
 
 
 # ------------------------------------------------------------
@@ -523,7 +557,7 @@ class Feedback(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
     content: str = Field(max_length=1000)
-    contact: str | None = Field(default=None, max_length=64)   # 可填邮箱/微信
+    contact: str | None = Field(default=None, max_length=64)  # 可填邮箱/微信
     status: str = Field(default="open", max_length=16, index=True)  # open / handled
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -537,7 +571,7 @@ class AuditLog(SQLModel, table=True):
     """后台敏感操作留痕: 审核/实名/封禁/赠送/查看联系方式/代录等."""
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    actor_type: str = Field(max_length=8)                       # 'user'(superuser) / 'staff'
+    actor_type: str = Field(max_length=8)  # 'user'(superuser) / 'staff'
     actor_id: uuid.UUID = Field(index=True)
     actor_email: str | None = Field(default=None, max_length=255)
     # audit_pass / audit_reject / verify / unverify / block / unblock /
@@ -576,11 +610,11 @@ class BalanceTransaction(SQLModel, table=True):
     user_id: uuid.UUID = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
     )
-    amount: int                                                 # +2 / -1
+    amount: int  # +2 / -1
     balance_after: int
     # register_gift / admin_grant / unlock_cost / contact_request_cost / refund
     source: str = Field(max_length=32, index=True)
-    ref_id: uuid.UUID | None = None                             # 关联工单/解锁/日志 id
+    ref_id: uuid.UUID | None = None  # 关联工单/解锁/日志 id
     note: str | None = Field(default=None, max_length=255)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
@@ -649,4 +683,4 @@ class WechatLoginResponse(SQLModel):
     user: UserPublic
     has_profile: bool = False
     has_criteria: bool = False
-    is_welcomed: bool = False    # nickname + avatar 都已设置
+    is_welcomed: bool = False  # nickname + avatar 都已设置
