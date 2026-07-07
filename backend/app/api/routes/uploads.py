@@ -56,7 +56,7 @@ class UploadResponse(SQLModel):
 
 
 @router.post("/image", response_model=UploadResponse)
-async def upload_image(
+def upload_image(
     current_user: CurrentUser,
     file: UploadFile = File(...),
 ) -> UploadResponse:
@@ -70,7 +70,8 @@ async def upload_image(
         )
 
     # 读全文件 (一期简单, 二期接 COS 后改成流式)
-    content = await file.read()
+    # def 路由由 FastAPI 丢进 threadpool, 同步读底层 SpooledTemporaryFile 不阻塞事件循环
+    content = file.file.read()
     if len(content) > MAX_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
