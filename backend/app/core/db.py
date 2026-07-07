@@ -104,8 +104,9 @@ def _migrate_staff_roles(session: Session) -> None:
         )
     )
     session.commit()
-    if result.rowcount:
-        logger.info(f"Migrated {result.rowcount} staff role values")
+    migrated = result.rowcount  # type: ignore[attr-defined]
+    if migrated:
+        logger.info(f"Migrated {migrated} staff role values")
 
 
 def init_db(session: Session) -> None:

@@ -6,7 +6,7 @@
 
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlmodel import SQLModel, func, select
@@ -59,7 +59,7 @@ def _audit(
     actor: CurrentActor,
     action: str,
     target_user_id: uuid.UUID | None = None,
-    detail: dict | None = None,
+    detail: dict[str, Any] | None = None,
 ) -> AuditLog:
     """记敏感操作审计 (不 commit, 与业务变更同事务提交)."""
     log = AuditLog(
@@ -851,7 +851,7 @@ def admin_list_stores(
         base = base.where(Store.city == city)
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
     rows = session.exec(
-        base.order_by(Store.city, Store.name).offset(skip).limit(limit)  # type: ignore
+        base.order_by(Store.city, Store.name).offset(skip).limit(limit)
     ).all()
     return StoreList(
         items=[StorePublic.model_validate(s, from_attributes=True) for s in rows],
@@ -1130,11 +1130,11 @@ def admin_stats(session: SessionDep) -> StatsResponse:
         .join(
             Affinity.__table__.alias("rev"),  # type: ignore
             (Affinity.from_user_id == Affinity.__table__.alias("rev").c.to_user_id)  # type: ignore
-            & (Affinity.to_user_id == Affinity.__table__.alias("rev").c.from_user_id),
+            & (Affinity.to_user_id == Affinity.__table__.alias("rev").c.from_user_id),  # type: ignore[attr-defined]
         )
     )
     try:
-        mutual_total = session.exec(mutual_rows).one() or 0
+        mutual_total = session.exec(mutual_rows).one() or 0  # type: ignore[call-overload]
     except Exception:
         mutual_total = 0
     mutual_pairs = int(mutual_total) // 2
@@ -1742,7 +1742,7 @@ def list_members(
 
 
 def _member_counts(session: SessionDep, user_id: uuid.UUID) -> MemberCounts:
-    def _cnt(model, col) -> int:
+    def _cnt(model: Any, col: Any) -> int:
         return (
             session.exec(
                 select(func.count()).select_from(model).where(col == user_id)
@@ -1903,7 +1903,7 @@ def list_member_activities(
                 xy_code=cu.xy_code if cu else None,
                 nickname=((cp.nickname or cp.real_name) if cp else None),
                 avatar_url=cp.avatar_url if cp else None,
-                created_at=r.created_at,
+                created_at=r.created_at,  # type: ignore[attr-defined]
             )
         )
     return ActivityList(items=items, total=total)

@@ -5,10 +5,10 @@
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlmodel import Field, SQLModel, and_, or_, select
+from sqlmodel import Field, Session, SQLModel, and_, or_, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
@@ -104,7 +104,9 @@ def _to_brief(
     )
 
 
-def _starred_set(session, viewer_id: uuid.UUID, target_ids: list[uuid.UUID]) -> set:
+def _starred_set(
+    session: Session, viewer_id: uuid.UUID, target_ids: list[uuid.UUID]
+) -> set[uuid.UUID]:
     """批量查 viewer 收藏过的目标, 返回 set; 一次 SQL 避免 N+1."""
     if not target_ids:
         return set()
@@ -132,7 +134,7 @@ def _encode_cursor(offset: int, has_more: bool) -> str | None:
     return str(offset) if has_more else None
 
 
-def _is_unlocked(session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
+def _is_unlocked(session: Session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
     return (
         session.exec(
             select(Unlock).where(
@@ -143,7 +145,7 @@ def _is_unlocked(session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
     )
 
 
-def _is_starred(session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
+def _is_starred(session: Session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
     from app.models import Favorite  # 局部导入避免循环
 
     return (
@@ -163,7 +165,7 @@ def _is_starred(session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
 # 关键词表 (省/市/区县三级) 维护在 app.core.shandong.
 
 
-def _shandong_clause():
+def _shandong_clause() -> Any:
     from sqlalchemy import or_
 
     from app.core.shandong import SHANDONG_PREFIX_RE
@@ -260,13 +262,13 @@ def apply_filter(
     if body.gender:
         stmt = stmt.where(Profile.gender == body.gender)
     if body.year_min is not None:
-        stmt = stmt.where(Profile.year >= body.year_min)
+        stmt = stmt.where(Profile.year >= body.year_min)  # type: ignore[operator]
     if body.year_max is not None:
-        stmt = stmt.where(Profile.year <= body.year_max)
+        stmt = stmt.where(Profile.year <= body.year_max)  # type: ignore[operator]
     if body.height_min is not None:
-        stmt = stmt.where(Profile.height >= body.height_min)
+        stmt = stmt.where(Profile.height >= body.height_min)  # type: ignore[operator]
     if body.height_max is not None:
-        stmt = stmt.where(Profile.height <= body.height_max)
+        stmt = stmt.where(Profile.height <= body.height_max)  # type: ignore[operator]
     if body.edu:
         stmt = stmt.where(Profile.edu.in_(body.edu))  # type: ignore
     if body.income:
@@ -344,7 +346,7 @@ def get_profile_detail(
 
         session.execute(
             sa_update(Profile)
-            .where(Profile.user_id == user_id)
+            .where(Profile.user_id == user_id)  # type: ignore[arg-type]
             .values(hot=Profile.hot + 1, viewed_count=Profile.viewed_count + 1)
         )
         session.commit()

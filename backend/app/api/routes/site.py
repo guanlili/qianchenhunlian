@@ -1,6 +1,7 @@
 """平台级配置: 资质证明 / 公告等"""
 
 from datetime import datetime
+from typing import Any, cast
 
 from fastapi import APIRouter, Body, Depends
 from sqlmodel import SQLModel
@@ -23,13 +24,12 @@ class QualificationList(SQLModel):
 _KEY_QUALIFICATIONS = "qualifications"
 
 
-def _get_qualifications(session: SessionDep) -> list[dict]:
+def _get_qualifications(session: SessionDep) -> list[dict[str, Any]]:
     row = session.get(SiteSetting, _KEY_QUALIFICATIONS)
     if not row or not isinstance(row.value, dict):
         return []
-    return (
-        row.value.get("items", []) if isinstance(row.value.get("items"), list) else []
-    )
+    items = row.value.get("items", [])
+    return cast(list[dict[str, Any]], items) if isinstance(items, list) else []
 
 
 @router.get("/qualifications", response_model=QualificationList)
