@@ -5,17 +5,16 @@
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Annotated, Literal
+from typing import Literal
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
-from sqlmodel import Field, SQLModel, and_, func, or_, select
+from fastapi import APIRouter, HTTPException, Query
+from sqlmodel import Field, SQLModel, and_, or_, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Favorite,
     Profile,
     ProfilePublic,
-    ProfileWithContact,
     Unlock,
     User,
     View,

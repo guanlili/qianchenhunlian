@@ -3,11 +3,12 @@
 只面向当前登录用户; 浏览他人资料走 matches.py.
 """
 
+import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, status
-from sqlmodel import select
+from fastapi import APIRouter, Body, HTTPException
+from sqlmodel import SQLModel, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
@@ -18,13 +19,11 @@ from app.models import (
     ParentsInfo,
     ParentsInfoPublic,
     Profile,
-    ProfileWithContact,
     ProfileUpdate,
+    ProfileWithContact,
     Store,
     StorePublic,
 )
-import uuid
-from sqlmodel import SQLModel
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 

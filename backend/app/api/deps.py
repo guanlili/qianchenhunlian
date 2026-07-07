@@ -163,7 +163,7 @@ def get_user_with_complete_profile(
     if not profile:
         raise HTTPException(
             status_code=403,
-            detail=f"NEED_PROFILE|请先完善你的相亲资料",
+            detail="NEED_PROFILE|请先完善你的相亲资料",
         )
     if profile.progress < MIN_PROFILE_PROGRESS:
         raise HTTPException(
