@@ -1,15 +1,14 @@
-import { FaGithub, FaLinkedinIn } from "react-icons/fa"
-import { FaXTwitter } from "react-icons/fa6"
+import { Github, Linkedin, Twitter } from "lucide-react"
 
 const socialLinks = [
   {
-    icon: FaGithub,
+    icon: Github,
     href: "https://github.com/fastapi/fastapi",
     label: "GitHub",
   },
-  { icon: FaXTwitter, href: "https://x.com/fastapi", label: "X" },
+  { icon: Twitter, href: "https://x.com/fastapi", label: "X" },
   {
-    icon: FaLinkedinIn,
+    icon: Linkedin,
     href: "https://linkedin.com/company/fastapi",
     label: "LinkedIn",
   },
