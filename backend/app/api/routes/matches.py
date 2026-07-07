@@ -5,17 +5,16 @@
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Annotated, Literal
+from typing import Literal
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
-from sqlmodel import Field, SQLModel, and_, func, or_, select
+from fastapi import APIRouter, HTTPException, Query
+from sqlmodel import Field, SQLModel, and_, or_, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Favorite,
     Profile,
     ProfilePublic,
-    ProfileWithContact,
     Unlock,
     User,
     View,
@@ -43,8 +42,8 @@ class MatchBrief(SQLModel):
     photos: list[str] = []
     likes: int = 0
     hot: int = 0
-    starred: bool = False    # 调用者是否已收藏此人
-    verified: str = "none"   # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
+    starred: bool = False  # 调用者是否已收藏此人
+    verified: str = "none"  # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
 
 
 class MatchListResponse(SQLModel):
@@ -75,7 +74,7 @@ class MatchDetailResponse(SQLModel):
     xy_code: str | None = None  # 资料人寻缘号 (8 位数字), 显示用
     unlocked: bool = False
     starred: bool = False
-    verified: str = "none"   # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
+    verified: str = "none"  # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
 
 
 # ---------------- Helpers ----------------
@@ -150,7 +149,9 @@ def _is_starred(session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
     return (
         session.exec(
             select(Favorite).where(
-                and_(Favorite.user_id == viewer_id, Favorite.target_user_id == target_id)
+                and_(
+                    Favorite.user_id == viewer_id, Favorite.target_user_id == target_id
+                )
             )
         ).first()
         is not None
@@ -168,7 +169,7 @@ def _shandong_clause():
     from app.core.shandong import SHANDONG_PREFIX_RE
 
     return or_(
-        Profile.origin.op("~")(SHANDONG_PREFIX_RE),    # type: ignore
+        Profile.origin.op("~")(SHANDONG_PREFIX_RE),  # type: ignore
         Profile.location.op("~")(SHANDONG_PREFIX_RE),  # type: ignore
     )
 
@@ -310,7 +311,9 @@ def get_profile_detail(
     - 同时 profiles.hot += 1
     """
     if user_id == current_user.id:
-        raise HTTPException(status_code=400, detail="不能查看自己的资料, 请用 /profiles/me")
+        raise HTTPException(
+            status_code=400, detail="不能查看自己的资料, 请用 /profiles/me"
+        )
 
     profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     if not profile:
@@ -338,6 +341,7 @@ def get_profile_detail(
         session.add(View(user_id=current_user.id, target_user_id=user_id))
         # 原子 +1 (避免并发 read-modify-write 丢更新)
         from sqlalchemy import update as sa_update
+
         session.execute(
             sa_update(Profile)
             .where(Profile.user_id == user_id)
@@ -388,8 +392,8 @@ def get_neighbor(
             .where(User.status == "active")
             .where(User.is_superuser == False)  # noqa: E712
             .where(User.xy_code.is_not(None))  # type: ignore
-        .where(Profile.audit_status == "approved")
-        .where(_shandong_clause())
+            .where(Profile.audit_status == "approved")
+            .where(_shandong_clause())
             .where(Profile.user_id != current_user.id)
             .where(Profile.updated_at < current.updated_at)
             .order_by(Profile.updated_at.desc())  # type: ignore
@@ -402,8 +406,8 @@ def get_neighbor(
             .where(User.status == "active")
             .where(User.is_superuser == False)  # noqa: E712
             .where(User.xy_code.is_not(None))  # type: ignore
-        .where(Profile.audit_status == "approved")
-        .where(_shandong_clause())
+            .where(Profile.audit_status == "approved")
+            .where(_shandong_clause())
             .where(Profile.user_id != current_user.id)
             .where(Profile.updated_at > current.updated_at)
             .order_by(Profile.updated_at.asc())  # type: ignore

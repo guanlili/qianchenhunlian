@@ -9,12 +9,12 @@
 
 import uuid
 from datetime import datetime
-from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import update as sa_update
 from sqlmodel import Field, SQLModel, and_, func, select
 
+from app import crud
 from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
 from app.models import ContactRequest, Profile, User
 
@@ -90,6 +90,7 @@ def submit_contact_request(
     # 24h 重复申请防护 (同一对) - 不论之前 status 如何, 都禁止
     one_day_ago = datetime.utcnow().replace(microsecond=0)
     from datetime import timedelta as _td
+
     one_day_ago = datetime.utcnow() - _td(hours=24)
     recent = session.exec(
         select(ContactRequest).where(
@@ -103,7 +104,7 @@ def submit_contact_request(
     if recent:
         raise HTTPException(
             status_code=429,
-            detail=f"DUPLICATE|24 小时内已申请过, 请耐心等待红娘处理",
+            detail="DUPLICATE|24 小时内已申请过, 请耐心等待红娘处理",
         )
 
     # 原子扣额度 (与 unlock_balance 共用字段, 含义改为"申请额度")
@@ -122,13 +123,31 @@ def submit_contact_request(
             detail="申请额度不足, 可联系运营充值",
         )
 
+    from_profile = session.exec(
+        select(Profile).where(Profile.user_id == current_user.id)
+    ).first()
+
     req = ContactRequest(
         from_user_id=current_user.id,
         to_user_id=target_id,
         message=(body.message or "").strip()[:200] or None,
         status="pending",
+        store_id=from_profile.home_store_id if from_profile else None,
     )
     session.add(req)
+    # 扣减流水 (与扣减同事务提交)
+    balance_after = session.exec(
+        select(User.unlock_balance).where(User.id == current_user.id)
+    ).one()
+    crud.add_balance_txn(
+        session=session,
+        user_id=current_user.id,
+        amount=-1,
+        balance_after=balance_after,
+        source="contact_request_cost",
+        ref_id=req.id,
+        note=f"申请联系 {target_user.xy_code or ''}".strip(),
+    )
     session.commit()
     session.refresh(req)
     session.refresh(current_user)
@@ -185,7 +204,7 @@ def list_my_contact_requests(
 
 
 @router.post("/{target_id}/unlock")
-def unlock_contact_deprecated(target_id: uuid.UUID):
+def unlock_contact_deprecated(_target_id: uuid.UUID):
     """已废弃: 双方联系方式不再通过本端解锁, 改用 /contacts/requests 申请红娘撮合."""
     raise HTTPException(
         status_code=410,

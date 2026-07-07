@@ -1,12 +1,11 @@
+import uuid
 from datetime import timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
-
 from sqlmodel import SQLModel
-import uuid
 
 from app import crud
 from app.api.deps import (
@@ -48,6 +47,10 @@ class WhoAmI(SQLModel):
     is_superuser: bool = False
     can_read_admin: bool = False
     can_write_admin: bool = False
+    # staff 专属 (user 时为 None): 前端据此区分 hq_staff / matchmaker 及门店范围
+    role: str | None = None  # "hq_staff" / "matchmaker"
+    store_id: uuid.UUID | None = None  # matchmaker 所在门店
+
 
 router = APIRouter(tags=["login"])
 
@@ -73,7 +76,9 @@ def login_access_token(
         raise HTTPException(
             status_code=429,
             detail="登录尝试过于频繁, 请稍后再试",
-            headers={"Retry-After": str(login_limiter.retry_after(ip_key, LOGIN_IP_WINDOW))},
+            headers={
+                "Retry-After": str(login_limiter.retry_after(ip_key, LOGIN_IP_WINDOW))
+            },
         )
 
     # 2. 账号锁定: 该账号近 15 分钟失败已达上限, 直接拒绝 (不再走密码校验)
@@ -81,7 +86,11 @@ def login_access_token(
         raise HTTPException(
             status_code=429,
             detail="该账号登录失败次数过多, 已临时锁定, 请稍后再试",
-            headers={"Retry-After": str(login_limiter.retry_after(fail_key, LOGIN_FAIL_WINDOW))},
+            headers={
+                "Retry-After": str(
+                    login_limiter.retry_after(fail_key, LOGIN_FAIL_WINDOW)
+                )
+            },
         )
 
     expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -142,6 +151,14 @@ def whoami(actor: CurrentActor) -> WhoAmI:
         is_superuser=actor.is_superuser,
         can_read_admin=actor.can_read_admin,
         can_write_admin=actor.can_write_admin,
+        role=actor.staff.role
+        if (actor.actor_type == "staff" and actor.staff)
+        else None,
+        store_id=(
+            actor.staff.store_id
+            if (actor.actor_type == "staff" and actor.staff)
+            else None
+        ),
     )
 
 
@@ -153,7 +170,9 @@ def recover_password(email: str, session: SessionDep, request: Request) -> Messa
         raise HTTPException(
             status_code=429,
             detail="操作过于频繁, 请稍后再试",
-            headers={"Retry-After": str(login_limiter.retry_after(ip_key, SENSITIVE_WINDOW))},
+            headers={
+                "Retry-After": str(login_limiter.retry_after(ip_key, SENSITIVE_WINDOW))
+            },
         )
     user = crud.get_user_by_email(session=session, email=email)
     if user:
@@ -179,7 +198,9 @@ def reset_password(session: SessionDep, request: Request, body: NewPassword) -> 
         raise HTTPException(
             status_code=429,
             detail="操作过于频繁, 请稍后再试",
-            headers={"Retry-After": str(login_limiter.retry_after(ip_key, SENSITIVE_WINDOW))},
+            headers={
+                "Retry-After": str(login_limiter.retry_after(ip_key, SENSITIVE_WINDOW))
+            },
         )
     email = verify_password_reset_token(token=body.token)
     if not email:

@@ -1,4 +1,13 @@
-import { Award, Briefcase, ClipboardList, Heart, Home, MapPin, MessageSquare, Shield, ShoppingBag, Users } from "lucide-react"
+import {
+  Award,
+  ClipboardCheck,
+  Heart,
+  Home,
+  MapPin,
+  MessageSquare,
+  Shield,
+  Users,
+} from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -12,24 +21,27 @@ import useAuth from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
+// 信息架构见 docs/10-后台功能重设计.md
 const baseItems: Item[] = [
-  { icon: Home, title: "Dashboard", path: "/dashboard" },
-  { icon: Heart, title: "申请工单", path: "/requests" },
-  { icon: ClipboardList, title: "资料管理", path: "/profiles" },
-  { icon: Users, title: "用户", path: "/admin" },
+  { icon: Home, title: "工作台", path: "/dashboard" },
+  { icon: Users, title: "会员管理", path: "/members" },
+  { icon: ClipboardCheck, title: "审核中心", path: "/review" },
+  { icon: Heart, title: "撮合工单", path: "/requests" },
   { icon: MapPin, title: "门店管理", path: "/stores" },
-  { icon: Briefcase, title: "三方入驻", path: "/merchants" },
-  { icon: ShoppingBag, title: "交易订单", path: "/orders" },
   { icon: MessageSquare, title: "意见反馈", path: "/feedback" },
-  { icon: Award, title: "资质证明", path: "/qualifications" },
+]
+
+// 仅总部管理员可见
+const adminItems: Item[] = [
+  { icon: Award, title: "平台设置", path: "/qualifications" },
+  { icon: Shield, title: "员工管理", path: "/staff" },
 ]
 
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
 
-  // superuser 才看到员工管理
   const items = currentUser?.is_superuser
-    ? [...baseItems, { icon: Shield, title: "员工", path: "/staff" }]
+    ? [...baseItems, ...adminItems]
     : baseItems
 
   return (

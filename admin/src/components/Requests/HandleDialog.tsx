@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, type AdminContactRequestItem } from "@/client"
+import { type AdminContactRequestItem, AdminService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -44,11 +44,12 @@ export function HandleDialog({ item, status, trigger }: Props) {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-requests"] })
+      qc.invalidateQueries({ queryKey: ["admin-stats"] })
       toast.success(`已标记: ${STATUS_LABEL[status]}`)
       setOpen(false)
       setNote("")
     },
-    onError: (e) => toast.error("操作失败: " + (e as Error).message),
+    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
   })
 
   return (
@@ -78,7 +79,9 @@ export function HandleDialog({ item, status, trigger }: Props) {
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            取消
+          </Button>
           <Button
             variant={status === "rejected" ? "destructive" : "default"}
             onClick={() => m.mutate()}

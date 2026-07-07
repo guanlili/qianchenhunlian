@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 2
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    # 可信反向代理 IP (逗号分隔). 生产部署在 traefik 后时填 traefik 容器 IP,
+    # 用于从 X-Forwarded-For 链中剥离可信代理、还原真实客户端 IP (限流防爆破).
+    # 留空则不信任 XFF, 限流按直连 IP 聚合 (不会被伪造头绕过, 但粒度变粗).
+    TRUSTED_PROXIES: str = ""
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def trusted_proxies(self) -> set[str]:
+        return {p.strip() for p in self.TRUSTED_PROXIES.split(",") if p.strip()}
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
@@ -84,7 +93,7 @@ class Settings(BaseSettings):
             self.EMAILS_FROM_NAME = self.PROJECT_NAME
         return self
 
-    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
+    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 1
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -121,7 +130,7 @@ class Settings(BaseSettings):
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value is not None and value.strip().lower() in self._WEAK_SECRETS:
             message = (
-                f'{var_name} 仍是弱默认值/占位符, 出于安全请改成强随机值 '
+                f"{var_name} 仍是弱默认值/占位符, 出于安全请改成强随机值 "
                 "(本地仅告警, 部署环境会拒绝启动)."
             )
             if self.ENVIRONMENT == "local":

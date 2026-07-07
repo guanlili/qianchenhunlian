@@ -7,13 +7,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
-from sqlmodel import select
-
 from app.models import Profile, Staff, TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -165,7 +163,7 @@ def get_user_with_complete_profile(
     if not profile:
         raise HTTPException(
             status_code=403,
-            detail=f"NEED_PROFILE|请先完善你的相亲资料",
+            detail="NEED_PROFILE|请先完善你的相亲资料",
         )
     if profile.progress < MIN_PROFILE_PROGRESS:
         raise HTTPException(

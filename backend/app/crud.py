@@ -7,13 +7,45 @@
 from __future__ import annotations
 
 import random
+import uuid
 from datetime import datetime
 from typing import Any
 
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import Staff, StaffCreate, StaffUpdate, User, UserCreate, UserUpdate
+from app.models import (
+    BalanceTransaction,
+    Staff,
+    StaffCreate,
+    StaffUpdate,
+    User,
+    UserCreate,
+    UserUpdate,
+)
+
+
+def add_balance_txn(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    amount: int,
+    balance_after: int,
+    source: str,
+    ref_id: uuid.UUID | None = None,
+    note: str | None = None,
+) -> BalanceTransaction:
+    """记一条解锁次数流水 (不 commit, 由调用方与余额变更同事务提交)."""
+    txn = BalanceTransaction(
+        user_id=user_id,
+        amount=amount,
+        balance_after=balance_after,
+        source=source,
+        ref_id=ref_id,
+        note=note,
+    )
+    session.add(txn)
+    return txn
 
 
 # ------------------------------------------------------------
@@ -156,6 +188,16 @@ def get_or_create_wx_user(
     )
     session.add(user)
     try:
+        # 先 flush 让 user 行落库 (同事务), 再记赠送流水, 保证 FK 顺序
+        session.flush()
+        add_balance_txn(
+            session=session,
+            user_id=user.id,
+            amount=3,
+            balance_after=3,
+            source="register_gift",
+            note="注册赠送",
+        )
         session.commit()
     except IntegrityError:
         # 并发: 另一路已经 insert; 回滚后重 SELECT 拿到那个 user

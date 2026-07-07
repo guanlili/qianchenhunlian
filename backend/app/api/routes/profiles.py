@@ -3,11 +3,12 @@
 只面向当前登录用户; 浏览他人资料走 matches.py.
 """
 
+import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, status
-from sqlmodel import select
+from fastapi import APIRouter, Body, HTTPException
+from sqlmodel import SQLModel, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
@@ -18,36 +19,61 @@ from app.models import (
     ParentsInfo,
     ParentsInfoPublic,
     Profile,
-    ProfileWithContact,
     ProfileUpdate,
+    ProfileWithContact,
     Store,
     StorePublic,
 )
-import uuid
-from sqlmodel import SQLModel
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 # 计算资料完善度时考虑的字段 (含登记表新增字段)
 _PROFILE_FIELDS = (
-    "real_name", "gender", "ethnicity", "year", "height", "weight",
-    "health_status", "edu", "major", "hobbies", "income", "marriage",
-    "origin", "location", "hometown", "job", "employer_type",
-    "has_social_insurance", "has_house", "has_car", "house_car_loan",
-    "body_type", "personality_type", "desc",
+    "real_name",
+    "gender",
+    "ethnicity",
+    "year",
+    "height",
+    "weight",
+    "health_status",
+    "edu",
+    "major",
+    "hobbies",
+    "income",
+    "marriage",
+    "origin",
+    "location",
+    "hometown",
+    "job",
+    "employer_type",
+    "has_social_insurance",
+    "has_house",
+    "has_car",
+    "house_car_loan",
+    "body_type",
+    "personality_type",
+    "desc",
 )
 _CRITERIA_FIELDS = (
-    "year_min", "year_max", "height_min", "height_max",
-    "weight_min", "weight_max", "income", "edu", "marriage",
-    "house", "car", "job", "social_insurance",
+    "year_min",
+    "year_max",
+    "height_min",
+    "height_max",
+    "weight_min",
+    "weight_max",
+    "income",
+    "edu",
+    "marriage",
+    "house",
+    "car",
+    "job",
+    "social_insurance",
 )
 
 
 def _calc_profile_progress(profile: Profile) -> int:
     filled = sum(
-        1
-        for f in _PROFILE_FIELDS
-        if getattr(profile, f) not in (None, "", [])
+        1 for f in _PROFILE_FIELDS if getattr(profile, f) not in (None, "", [])
     )
     if profile.photos:
         filled += 2  # 照片权重大些
@@ -58,11 +84,7 @@ def _calc_profile_progress(profile: Profile) -> int:
 
 
 def _calc_criteria_progress(criteria: Criteria) -> int:
-    filled = sum(
-        1
-        for f in _CRITERIA_FIELDS
-        if getattr(criteria, f) not in (None, "")
-    )
+    filled = sum(1 for f in _CRITERIA_FIELDS if getattr(criteria, f) not in (None, ""))
     if criteria.origins:
         filled += 1
     if criteria.locations:
@@ -78,12 +100,12 @@ class ProfileMeResponse(SQLModel):
     profile: ProfileWithContact | None = None
     criteria: CriteriaPublic | None = None
     parents_info: ParentsInfoPublic | None = None
-    home_store: StorePublic | None = None    # 用户主属门店 (已选)
-    verified: str = "none"                    # 'none' / 'passed' / ...
+    home_store: StorePublic | None = None  # 用户主属门店 (已选)
+    verified: str = "none"  # 'none' / 'passed' / ...
     home_store_id: uuid.UUID | None = None
     has_profile: bool = False
     has_criteria: bool = False
-    is_welcomed: bool = False    # 头像 + 昵称 都已设置
+    is_welcomed: bool = False  # 头像 + 昵称 都已设置
 
 
 class PhotoCommit(SQLModel):
