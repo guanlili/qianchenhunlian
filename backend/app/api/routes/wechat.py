@@ -3,7 +3,8 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, Request, status
-from sqlmodel import select
+from fastapi.concurrency import run_in_threadpool
+from sqlmodel import Session, select
 
 from app import crud
 from app.api.deps import SessionDep
@@ -19,6 +20,7 @@ from app.core.wechat import WechatError, jscode2session
 from app.models import (
     Criteria,
     Profile,
+    User,
     UserPublic,
     WechatLoginRequest,
     WechatLoginResponse,
@@ -27,12 +29,10 @@ from app.models import (
 router = APIRouter(prefix="/wechat", tags=["wechat"])
 
 
-def _build_login_response(session, user) -> WechatLoginResponse:
+def _build_login_response(session: Session, user: User) -> WechatLoginResponse:
     expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(user.id, expires_delta=expires)
-    profile = session.exec(
-        select(Profile).where(Profile.user_id == user.id)
-    ).first()
+    profile = session.exec(select(Profile).where(Profile.user_id == user.id)).first()
     has_criteria = (
         session.exec(select(Criteria).where(Criteria.user_id == user.id)).first()
         is not None
@@ -64,7 +64,9 @@ async def wechat_login(
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="登录过于频繁, 请稍后再试",
-            headers={"Retry-After": str(login_limiter.retry_after(ip_key, WXLOGIN_IP_WINDOW))},
+            headers={
+                "Retry-After": str(login_limiter.retry_after(ip_key, WXLOGIN_IP_WINDOW))
+            },
         )
     try:
         info = await jscode2session(body.code)
@@ -74,9 +76,12 @@ async def wechat_login(
             detail=f"微信登录失败: [{e.errcode}] {e.errmsg}",
         )
 
-    user, _ = crud.get_or_create_wx_user(
+    # 同步 DB 调用丢进线程池, 避免阻塞事件循环
+    # (路由本身因 await jscode2session 必须保持 async)
+    user, _ = await run_in_threadpool(
+        crud.get_or_create_wx_user,
         session=session,
         openid=info["openid"],
         unionid=info.get("unionid") or None,
     )
-    return _build_login_response(session, user)
+    return await run_in_threadpool(_build_login_response, session, user)

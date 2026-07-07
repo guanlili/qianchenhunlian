@@ -1,0 +1,21 @@
+# 本机 (Mac) 预览用的端口覆盖, 避开本机已占用的 5432 (其它项目 PG) 和 8000.
+# 用法:
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.local.yml up -d --build
+# 访问: Admin http://localhost:5173 · API http://localhost:18000/docs · Adminer http://localhost:18081
+services:
+  db:
+    ports: !override
+      - "127.0.0.1:15432:5432"
+
+  backend:
+    ports: !override
+      - "127.0.0.1:18000:8000"
+    environment:
+      PUBLIC_FILE_BASE: http://localhost:18000/files
+      # 本机预览: 允许 localhost 前端跨域
+      BACKEND_CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+
+  admin:
+    environment:
+      - VITE_API_URL=http://localhost:18000
+      - NODE_ENV=development

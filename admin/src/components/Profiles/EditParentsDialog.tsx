@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type ReactNode, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, type AdminProfileItem } from "@/client"
+import { type AdminProfileItem, AdminService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -42,8 +42,7 @@ export function EditParentsDialog({ item, trigger }: EditParentsDialogProps) {
   const qc = useQueryClient()
 
   const detailQuery = useQuery({
-    queryFn: () =>
-      AdminService.getProfileDetail({ userId: item.user_id }),
+    queryFn: () => AdminService.getProfileDetail({ userId: item.user_id }),
     queryKey: ["admin-profile-detail", item.user_id],
     enabled: open,
   })
@@ -79,11 +78,13 @@ export function EditParentsDialog({ item, trigger }: EditParentsDialogProps) {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["member-full"] })
       qc.invalidateQueries({ queryKey: ["admin-profile-detail", item.user_id] })
       toast.success("父母信息已保存")
       setOpen(false)
     },
-    onError: (e) => toast.error("保存失败: " + (e as Error).message),
+    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
   })
 
   return (
@@ -91,16 +92,33 @@ export function EditParentsDialog({ item, trigger }: EditParentsDialogProps) {
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>代录父母 / 兄弟姐妹信息 · 寻缘号 {item.xy_code || "—"}</DialogTitle>
+          <DialogTitle>
+            代录父母 / 兄弟姐妹信息 · 寻缘号 {item.xy_code || "—"}
+          </DialogTitle>
           <DialogDescription>
             登记表中"家庭成员情况"栏对应字段; 留空表示不填.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-4 py-2">
-          <Field label="父母身体状况" value={form.parents_health} onChange={update("parents_health")} placeholder="健康 / 母亲糖尿病" />
-          <Field label="父母职业" value={form.parents_job} onChange={update("parents_job")} placeholder="工人 / 退休" />
-          <Field label="父母有无养老保险" value={form.parents_pension} onChange={update("parents_pension")} placeholder="有 / 无" />
+          <Field
+            label="父母身体状况"
+            value={form.parents_health}
+            onChange={update("parents_health")}
+            placeholder="健康 / 母亲糖尿病"
+          />
+          <Field
+            label="父母职业"
+            value={form.parents_job}
+            onChange={update("parents_job")}
+            placeholder="工人 / 退休"
+          />
+          <Field
+            label="父母有无养老保险"
+            value={form.parents_pension}
+            onChange={update("parents_pension")}
+            placeholder="有 / 无"
+          />
         </div>
 
         <div className="space-y-2">
@@ -115,7 +133,9 @@ export function EditParentsDialog({ item, trigger }: EditParentsDialogProps) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            取消
+          </Button>
           <LoadingButton loading={save.isPending} onClick={() => save.mutate()}>
             保存
           </LoadingButton>
@@ -139,7 +159,11 @@ function Field({
   return (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   )
 }

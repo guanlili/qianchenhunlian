@@ -19,16 +19,17 @@ from app.api.deps import CurrentUser
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 # 容器内上传目录, 与 docker-compose 里 ./data/uploads:/app/uploads 对齐
-UPLOAD_DIR = Path("/app/uploads")
+# (容器外跑脚本/生成 openapi 时可用 UPLOAD_DIR 环境变量覆盖)
+UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/app/uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # 公开访问的 URL 前缀 (从环境变量取, 默认走 dev IP)
 PUBLIC_BASE = os.environ.get(
     "PUBLIC_FILE_BASE",
-    f"http://{os.environ.get('HOST_IP', '60.205.171.207')}:8000/files"
+    f"http://{os.environ.get('HOST_IP', '60.205.171.207')}:8000/files",
 )
 
-ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}   # 去掉 .gif 减少滥用面
+ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}  # 去掉 .gif 减少滥用面
 MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
@@ -55,7 +56,7 @@ class UploadResponse(SQLModel):
 
 
 @router.post("/image", response_model=UploadResponse)
-async def upload_image(
+def upload_image(
     current_user: CurrentUser,
     file: UploadFile = File(...),
 ) -> UploadResponse:
@@ -69,7 +70,8 @@ async def upload_image(
         )
 
     # 读全文件 (一期简单, 二期接 COS 后改成流式)
-    content = await file.read()
+    # def 路由由 FastAPI 丢进 threadpool, 同步读底层 SpooledTemporaryFile 不阻塞事件循环
+    content = file.file.read()
     if len(content) > MAX_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,

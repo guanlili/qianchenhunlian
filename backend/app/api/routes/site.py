@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Body, Depends
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel
 
 from app.api.deps import SessionDep, require_admin
 from app.models import SiteSetting
@@ -27,7 +27,9 @@ def _get_qualifications(session: SessionDep) -> list[dict]:
     row = session.get(SiteSetting, _KEY_QUALIFICATIONS)
     if not row or not isinstance(row.value, dict):
         return []
-    return row.value.get("items", []) if isinstance(row.value.get("items"), list) else []
+    return (
+        row.value.get("items", []) if isinstance(row.value.get("items"), list) else []
+    )
 
 
 @router.get("/qualifications", response_model=QualificationList)

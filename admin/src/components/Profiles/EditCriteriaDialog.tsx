@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type ReactNode, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, type AdminProfileItem } from "@/client"
+import { type AdminProfileItem, AdminService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -66,8 +66,7 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
   const qc = useQueryClient()
 
   const detailQuery = useQuery({
-    queryFn: () =>
-      AdminService.getProfileDetail({ userId: item.user_id }),
+    queryFn: () => AdminService.getProfileDetail({ userId: item.user_id }),
     queryKey: ["admin-profile-detail", item.user_id],
     enabled: open,
   })
@@ -105,7 +104,10 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
   const save = useMutation({
     mutationFn: () => {
       const splitList = (s: string) =>
-        s.split(/[,，;；]/).map((x) => x.trim()).filter(Boolean)
+        s
+          .split(/[,，;；]/)
+          .map((x) => x.trim())
+          .filter(Boolean)
       const body = {
         year_min: form.year_min ? Number(form.year_min) : null,
         year_max: form.year_max ? Number(form.year_max) : null,
@@ -131,11 +133,13 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["member-full"] })
       qc.invalidateQueries({ queryKey: ["admin-profile-detail", item.user_id] })
       toast.success("择偶要求已保存")
       setOpen(false)
     },
-    onError: (e) => toast.error("保存失败: " + (e as Error).message),
+    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
   })
 
   return (
@@ -150,19 +154,90 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-4 py-2">
-          <Field label="出生年份-最早" value={form.year_min} onChange={update("year_min")} placeholder="1985" inputMode="numeric" />
-          <Field label="出生年份-最晚" value={form.year_max} onChange={update("year_max")} placeholder="1995" inputMode="numeric" />
-          <Field label="身高-最低 (cm)" value={form.height_min} onChange={update("height_min")} placeholder="160" inputMode="numeric" />
-          <Field label="身高-最高 (cm)" value={form.height_max} onChange={update("height_max")} placeholder="180" inputMode="numeric" />
-          <Field label="体重-最低 (kg)" value={form.weight_min} onChange={update("weight_min")} placeholder="45" inputMode="numeric" />
-          <Field label="体重-最高 (kg)" value={form.weight_max} onChange={update("weight_max")} placeholder="75" inputMode="numeric" />
-          <Field label="月收入要求" value={form.income} onChange={update("income")} placeholder="8000-12000元" />
-          <Field label="学历要求" value={form.edu} onChange={update("edu")} placeholder="本科及以上" />
-          <Field label="婚姻要求" value={form.marriage} onChange={update("marriage")} placeholder="未婚" />
-          <Field label="婚房要求" value={form.house} onChange={update("house")} placeholder="有婚房" />
-          <Field label="车要求" value={form.car} onChange={update("car")} placeholder="有车 / 不限" />
-          <Field label="职业要求" value={form.job} onChange={update("job")} placeholder="稳定工作" />
-          <Field label="对方是否有社保" value={form.social_insurance} onChange={update("social_insurance")} placeholder="有 / 无 / 不限" />
+          <Field
+            label="出生年份-最早"
+            value={form.year_min}
+            onChange={update("year_min")}
+            placeholder="1985"
+            inputMode="numeric"
+          />
+          <Field
+            label="出生年份-最晚"
+            value={form.year_max}
+            onChange={update("year_max")}
+            placeholder="1995"
+            inputMode="numeric"
+          />
+          <Field
+            label="身高-最低 (cm)"
+            value={form.height_min}
+            onChange={update("height_min")}
+            placeholder="160"
+            inputMode="numeric"
+          />
+          <Field
+            label="身高-最高 (cm)"
+            value={form.height_max}
+            onChange={update("height_max")}
+            placeholder="180"
+            inputMode="numeric"
+          />
+          <Field
+            label="体重-最低 (kg)"
+            value={form.weight_min}
+            onChange={update("weight_min")}
+            placeholder="45"
+            inputMode="numeric"
+          />
+          <Field
+            label="体重-最高 (kg)"
+            value={form.weight_max}
+            onChange={update("weight_max")}
+            placeholder="75"
+            inputMode="numeric"
+          />
+          <Field
+            label="月收入要求"
+            value={form.income}
+            onChange={update("income")}
+            placeholder="8000-12000元"
+          />
+          <Field
+            label="学历要求"
+            value={form.edu}
+            onChange={update("edu")}
+            placeholder="本科及以上"
+          />
+          <Field
+            label="婚姻要求"
+            value={form.marriage}
+            onChange={update("marriage")}
+            placeholder="未婚"
+          />
+          <Field
+            label="婚房要求"
+            value={form.house}
+            onChange={update("house")}
+            placeholder="有婚房"
+          />
+          <Field
+            label="车要求"
+            value={form.car}
+            onChange={update("car")}
+            placeholder="有车 / 不限"
+          />
+          <Field
+            label="职业要求"
+            value={form.job}
+            onChange={update("job")}
+            placeholder="稳定工作"
+          />
+          <Field
+            label="对方是否有社保"
+            value={form.social_insurance}
+            onChange={update("social_insurance")}
+            placeholder="有 / 无 / 不限"
+          />
         </div>
 
         <div className="space-y-2">
@@ -195,7 +270,9 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            取消
+          </Button>
           <LoadingButton loading={save.isPending} onClick={() => save.mutate()}>
             保存
           </LoadingButton>

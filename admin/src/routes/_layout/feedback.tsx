@@ -46,7 +46,9 @@ function FeedbackPage() {
                     {new Date(f.created_at).toLocaleString("zh-CN")}
                   </TableCell>
                   <TableCell>{f.user_xy_code || "—"}</TableCell>
-                  <TableCell className="max-w-md whitespace-pre-wrap">{f.content}</TableCell>
+                  <TableCell className="max-w-md whitespace-pre-wrap">
+                    {f.content}
+                  </TableCell>
                   <TableCell>{f.contact || "—"}</TableCell>
                   <TableCell>
                     <span

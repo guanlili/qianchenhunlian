@@ -1,9 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Ban, BadgeCheck, BadgeMinus, Check, EllipsisVertical, Pencil, ShieldCheck, X, Zap } from "lucide-react"
+import {
+  BadgeCheck,
+  BadgeMinus,
+  Ban,
+  Check,
+  EllipsisVertical,
+  Pencil,
+  ShieldCheck,
+  X,
+  Zap,
+} from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, type AdminProfileItem } from "@/client"
+import { type AdminProfileItem, AdminService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -33,40 +43,48 @@ export function ProfileActionsMenu({ item }: ProfileActionsMenuProps) {
       }),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["member-full"] })
       toast.success(`余额已更新, 当前 ${data.unlock_balance} 次`)
       setOpen(false)
     },
-    onError: (e) => toast.error("发放失败: " + (e as Error).message),
+    onError: (e) => toast.error(`发放失败: ${(e as Error).message}`),
   })
 
   const block = useMutation({
     mutationFn: () => AdminService.blockUser({ userId: item.user_id }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["member-full"] })
       toast.success("已封禁")
       setOpen(false)
     },
-    onError: (e) => toast.error("封禁失败: " + (e as Error).message),
+    onError: (e) => toast.error(`封禁失败: ${(e as Error).message}`),
   })
 
   const verify = useMutation({
     mutationFn: () => AdminService.verifyProfile({ userId: item.user_id }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["member-full"] })
       toast.success("已标为实名认证")
       setOpen(false)
     },
-    onError: (e) => toast.error("操作失败: " + (e as Error).message),
+    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
   })
 
   const unverify = useMutation({
     mutationFn: () => AdminService.unverifyProfile({ userId: item.user_id }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-profiles"] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["member-full"] })
       toast.success("已撤销认证")
       setOpen(false)
     },
-    onError: (e) => toast.error("操作失败: " + (e as Error).message),
+    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
   })
 
   return (
@@ -149,10 +167,7 @@ export function ProfileActionsMenu({ item }: ProfileActionsMenuProps) {
           <ShieldCheck className="text-amber-500" /> 加 10 次解锁
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={() => block.mutate()}
-          variant="destructive"
-        >
+        <DropdownMenuItem onSelect={() => block.mutate()} variant="destructive">
           <Ban /> 封禁用户
         </DropdownMenuItem>
       </DropdownMenuContent>

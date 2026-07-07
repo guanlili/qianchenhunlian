@@ -16,32 +16,34 @@ engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 # (table, column, ddl) - 给已存在的表加列, 保留现有数据 (替代正式 alembic 迁移)
 _PENDING_ADD_COLUMNS: list[tuple[str, str, str]] = [
     # — 早期已合并 —
-    ("profile", "nickname",   "VARCHAR(64)"),
+    ("profile", "nickname", "VARCHAR(64)"),
     ("profile", "avatar_url", "VARCHAR(500)"),
     # — 登记表新增 (Profile) —
-    ("profile", "real_name",            "VARCHAR(64)"),
-    ("profile", "ethnicity",            "VARCHAR(16)"),
-    ("profile", "birth_date",           "DATE"),
-    ("profile", "weight",               "INTEGER"),
-    ("profile", "health_status",        "VARCHAR(64)"),
-    ("profile", "major",                "VARCHAR(64)"),
-    ("profile", "hobbies",              "VARCHAR(120)"),
-    ("profile", "employer_type",        "VARCHAR(32)"),
+    ("profile", "real_name", "VARCHAR(64)"),
+    ("profile", "ethnicity", "VARCHAR(16)"),
+    ("profile", "birth_date", "DATE"),
+    ("profile", "weight", "INTEGER"),
+    ("profile", "health_status", "VARCHAR(64)"),
+    ("profile", "major", "VARCHAR(64)"),
+    ("profile", "hobbies", "VARCHAR(120)"),
+    ("profile", "employer_type", "VARCHAR(32)"),
     ("profile", "has_social_insurance", "VARCHAR(8)"),
-    ("profile", "house_car_loan",       "VARCHAR(64)"),
-    ("profile", "personality_type",     "VARCHAR(32)"),
+    ("profile", "house_car_loan", "VARCHAR(64)"),
+    ("profile", "personality_type", "VARCHAR(32)"),
     # — 登记表新增 (Criteria) —
-    ("criteria", "weight_min",       "INTEGER"),
-    ("criteria", "weight_max",       "INTEGER"),
-    ("criteria", "car",              "VARCHAR(32)"),
-    ("criteria", "job",              "VARCHAR(64)"),
+    ("criteria", "weight_min", "INTEGER"),
+    ("criteria", "weight_max", "INTEGER"),
+    ("criteria", "car", "VARCHAR(32)"),
+    ("criteria", "job", "VARCHAR(64)"),
     ("criteria", "social_insurance", "VARCHAR(8)"),
     # — Phase 1: 门店 / 好感 / 反馈 / 认证关联 —
-    ("profile", "home_store_id",         "UUID"),
-    ("profile", "verified_by_store_id",  "UUID"),
-    ("profile", "verified_at",           "TIMESTAMP"),
-    ("staff",   "role",                  "VARCHAR(16) NOT NULL DEFAULT 'staff'"),
-    ("staff",   "store_id",              "UUID"),
+    ("profile", "home_store_id", "UUID"),
+    ("profile", "verified_by_store_id", "UUID"),
+    ("profile", "verified_at", "TIMESTAMP"),
+    ("staff", "role", "VARCHAR(16) NOT NULL DEFAULT 'staff'"),
+    ("staff", "store_id", "UUID"),
+    # — Phase 2: 撮合工单门店归属 (任务 A) —
+    ("contactrequest", "store_id", "UUID"),
 ]
 
 
@@ -72,15 +74,38 @@ def _ensure_favorite_unique(session: Session) -> None:
     if "favorite_pair_uq" in existing_uqs:
         return
     # 先去重 (保留最早的)
-    session.execute(text("""
+    session.execute(
+        text("""
         DELETE FROM favorite a USING favorite b
         WHERE a.id > b.id AND a.user_id = b.user_id AND a.target_user_id = b.target_user_id
-    """))
-    session.execute(text(
-        "ALTER TABLE favorite ADD CONSTRAINT favorite_pair_uq UNIQUE (user_id, target_user_id)"
-    ))
+    """)
+    )
+    session.execute(
+        text(
+            "ALTER TABLE favorite ADD CONSTRAINT favorite_pair_uq UNIQUE (user_id, target_user_id)"
+        )
+    )
     session.commit()
     logger.info("Added favorite_pair_uq unique constraint")
+
+
+def _migrate_staff_roles(session: Session) -> None:
+    """角色值规范化: staff → hq_staff, store_owner → matchmaker (docs/10)."""
+    inspector = inspect(engine)
+    if "staff" not in inspector.get_table_names():
+        return
+    result = session.execute(
+        text(
+            "UPDATE staff SET role = CASE role"
+            " WHEN 'staff' THEN 'hq_staff'"
+            " WHEN 'store_owner' THEN 'matchmaker'"
+            " ELSE role END"
+            " WHERE role IN ('staff', 'store_owner')"
+        )
+    )
+    session.commit()
+    if result.rowcount:
+        logger.info(f"Migrated {result.rowcount} staff role values")
 
 
 def init_db(session: Session) -> None:
@@ -93,6 +118,7 @@ def init_db(session: Session) -> None:
     _ensure_columns(session)
     SQLModel.metadata.create_all(engine)
     _ensure_favorite_unique(session)
+    _migrate_staff_roles(session)
 
     # 创建首个超级管理员
     user = session.exec(
