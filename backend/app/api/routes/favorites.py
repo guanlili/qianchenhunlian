@@ -89,7 +89,7 @@ def toggle_favorite(
         # 原子 -1 (并发安全, 避免 read-modify-write 丢更新; 加 >0 守护防负数)
         session.execute(
             sa_update(Profile)
-            .where(Profile.user_id == target_id, Profile.likes > 0)
+            .where(Profile.user_id == target_id, Profile.likes > 0)  # type: ignore[arg-type]
             .values(likes=Profile.likes - 1)
         )
         session.commit()
@@ -106,7 +106,7 @@ def toggle_favorite(
         session.add(Favorite(user_id=current_user.id, target_user_id=target_id))
         session.execute(
             sa_update(Profile)
-            .where(Profile.user_id == target_id)
+            .where(Profile.user_id == target_id)  # type: ignore[arg-type]
             .values(likes=Profile.likes + 1)
         )
         session.commit()
@@ -137,7 +137,7 @@ def list_my_favorites(
     rows = session.exec(
         select(Favorite, Profile, User)
         .join(User, Favorite.target_user_id == User.id)  # type: ignore
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]  # type: ignore
         .where(Favorite.user_id == current_user.id)
         .order_by(Favorite.created_at.desc())  # type: ignore
         .offset(skip)
@@ -176,7 +176,7 @@ def list_visitors(
             func.max(View.created_at).label("last_viewed_at"),
         )
         .where(View.target_user_id == current_user.id)
-        .group_by(View.user_id)
+        .group_by(View.user_id)  # type: ignore[arg-type]
         .subquery()
     )
 
@@ -184,8 +184,8 @@ def list_visitors(
 
     rows = session.exec(
         select(sub.c.user_id, sub.c.last_viewed_at, User, Profile)
-        .join(User, User.id == sub.c.user_id)
-        .join(Profile, Profile.user_id == User.id, isouter=True)
+        .join(User, User.id == sub.c.user_id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .order_by(sub.c.last_viewed_at.desc())
         .offset(skip)
         .limit(limit)
@@ -220,7 +220,7 @@ def list_seen_by_me(
             func.max(View.created_at).label("last_viewed_at"),
         )
         .where(View.user_id == current_user.id)
-        .group_by(View.target_user_id)
+        .group_by(View.target_user_id)  # type: ignore[arg-type]
         .subquery()
     )
 
@@ -228,8 +228,8 @@ def list_seen_by_me(
 
     rows = session.exec(
         select(sub.c.target_user_id, sub.c.last_viewed_at, User, Profile)
-        .join(User, User.id == sub.c.target_user_id)
-        .join(Profile, Profile.user_id == User.id, isouter=True)
+        .join(User, User.id == sub.c.target_user_id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .order_by(sub.c.last_viewed_at.desc())
         .offset(skip)
         .limit(limit)

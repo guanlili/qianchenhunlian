@@ -8,6 +8,7 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import EmailStr
 from sqlalchemy import JSON, Column, UniqueConstraint
@@ -45,7 +46,7 @@ class UserRegister(SQLModel):
 
 
 class UserUpdate(UserBase):
-    email: EmailStr | None = Field(default=None, max_length=255)  # type: ignore
+    email: EmailStr | None = Field(default=None, max_length=255)
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
@@ -578,7 +579,7 @@ class AuditLog(SQLModel, table=True):
     # grant_balance / view_contact / update_profile / assign_store / ...
     action: str = Field(max_length=32, index=True)
     target_user_id: uuid.UUID | None = Field(default=None, index=True)
-    detail: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    detail: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
@@ -589,7 +590,7 @@ class AuditLogPublic(SQLModel):
     actor_email: str | None = None
     action: str
     target_user_id: uuid.UUID | None = None
-    detail: dict = {}
+    detail: dict[str, Any] = {}
     created_at: datetime
 
 
@@ -644,7 +645,7 @@ class SiteSetting(SQLModel, table=True):
     """key-value 配置. value 用 JSON, 灵活塞任意结构 (e.g. 资质图片数组)."""
 
     key: str = Field(primary_key=True, max_length=64)
-    value: dict | list = Field(default_factory=dict, sa_column=Column(JSON))
+    value: dict[str, Any] | list[Any] = Field(default_factory=dict, sa_column=Column(JSON))
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
