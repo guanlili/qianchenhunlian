@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 2
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    # 可信反向代理 IP (逗号分隔). 生产部署在 traefik 后时填 traefik 容器 IP,
+    # 用于从 X-Forwarded-For 链中剥离可信代理、还原真实客户端 IP (限流防爆破).
+    # 留空则不信任 XFF, 限流按直连 IP 聚合 (不会被伪造头绕过, 但粒度变粗).
+    TRUSTED_PROXIES: str = ""
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def trusted_proxies(self) -> set[str]:
+        return {p.strip() for p in self.TRUSTED_PROXIES.split(",") if p.strip()}
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
