@@ -96,7 +96,7 @@ jobs:
         run: npm ci
 
       - name: Biome lint
-        run: npx biome check --no-errors-on-unmatched --files-ignore-unknown=true ./
+        run: ./node_modules/.bin/biome check --no-errors-on-unmatched --files-ignore-unknown=true ./
 
       - name: Type check
         run: npx tsc --noEmit
