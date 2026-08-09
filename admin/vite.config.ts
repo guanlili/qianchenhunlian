@@ -11,6 +11,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    // 反代场景：允许通过这些域名访问 dev server（Vite 默认只放行 localhost）
+    allowedHosts: [".qianyuan.website", "localhost", "127.0.0.1"],
+  },
   plugins: [
     tanstackRouter({
       target: "react",
