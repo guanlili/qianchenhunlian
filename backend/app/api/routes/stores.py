@@ -37,7 +37,7 @@ def list_cities(session: SessionDep) -> CityList:
         select(Store.city, func.count(Store.id))  # type: ignore
         .where(Store.status == "active")
         .group_by(Store.city)
-        .order_by(Store.city)  # type: ignore
+        .order_by(Store.city)
     ).all()
     return CityList(items=[CityItem(city=r[0], count=r[1]) for r in rows])
 
@@ -55,7 +55,7 @@ def list_stores(
         base = base.where(Store.city == city)
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
     items = session.exec(
-        base.order_by(Store.city, Store.name).offset(skip).limit(limit)  # type: ignore
+        base.order_by(Store.city, Store.name).offset(skip).limit(limit)
     ).all()
     return StoreList(
         items=[StorePublic.model_validate(s, from_attributes=True) for s in items],

@@ -110,14 +110,14 @@ def submit_contact_request(
     # 原子扣额度 (与 unlock_balance 共用字段, 含义改为"申请额度")
     result = session.execute(
         sa_update(User)
-        .where(User.id == current_user.id)
-        .where(User.unlock_balance >= 1)
+        .where(User.id == current_user.id)  # type: ignore[arg-type]
+        .where(User.unlock_balance >= 1)  # type: ignore[arg-type]
         .values(
             unlock_balance=User.unlock_balance - 1,
             updated_at=datetime.utcnow(),
         )
     )
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore[attr-defined]
         raise HTTPException(
             status_code=402,
             detail="申请额度不足, 可联系运营充值",
@@ -204,7 +204,7 @@ def list_my_contact_requests(
 
 
 @router.post("/{target_id}/unlock")
-def unlock_contact_deprecated(_target_id: uuid.UUID):
+def unlock_contact_deprecated(_target_id: uuid.UUID) -> None:
     """已废弃: 双方联系方式不再通过本端解锁, 改用 /contacts/requests 申请红娘撮合."""
     raise HTTPException(
         status_code=410,
