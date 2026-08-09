@@ -107,3 +107,50 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  admin-test:
+    name: Admin Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  miniprogram-lint:
+    name: Miniprogram Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: JS 语法检查 (全量)
+        run: find miniprogram -name "*.js" -not -path "*/miniprogram_npm/*" -exec node --check {} \;
+
+  compose-smoke:
+    name: Compose Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - name: 校验 compose 配置
+        run: docker compose config -q
+      - name: 构建 backend
+        run: docker compose build backend
+      - name: 启动 db + backend (等健康)
+        run: docker compose up -d --wait backend
+      - name: 健康检查
+        run: curl -f http://localhost:8000/api/v1/utils/health-check/
+      - name: 清理
+        if: always()
+        run: docker compose down -v --remove-orphans
