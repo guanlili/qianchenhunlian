@@ -74,7 +74,7 @@ async def jscode2session(code: str) -> dict[str, str]:
 # 同步实现: uploads.py / profiles.py 是同步路由, 直接调用。
 # access_token 模块级缓存 (单实例够用; 多实例再上 Redis + 锁)。
 
-_access_token_cache: dict = {"token": "", "expires_at": 0.0}
+_access_token_cache: dict[str, object] = {"token": "", "expires_at": 0.0}
 
 
 def get_access_token() -> str:
@@ -101,8 +101,10 @@ def get_access_token() -> str:
     if not token:
         raise WechatError(-1, f"获取 access_token 失败: {data}")
     _access_token_cache["token"] = token
-    _access_token_cache["expires_at"] = time.time() + int(data.get("expires_in", 7200)) - 300
-    return token
+    _access_token_cache["expires_at"] = (
+        time.time() + int(data.get("expires_in", 7200)) - 300
+    )
+    return str(token)
 
 
 def msg_sec_check(content: str, openid: str, *, scene: int = 1) -> bool:
@@ -122,9 +124,11 @@ def msg_sec_check(content: str, openid: str, *, scene: int = 1) -> bool:
     resp.raise_for_status()
     data = resp.json()
     if data.get("errcode", 0) != 0:
-        raise WechatError(int(data.get("errcode", -1)), data.get("errmsg", "msg_sec_check err"))
+        raise WechatError(
+            int(data.get("errcode", -1)), data.get("errmsg", "msg_sec_check err")
+        )
     # result.results[].suggest: "pass" | "review" | "risk"  (risk=违规)
-    for r in ((data.get("result") or {}).get("results") or []):
+    for r in (data.get("result") or {}).get("results") or []:
         if r.get("suggest") == "risk":
             return False
     return True
