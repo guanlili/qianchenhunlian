@@ -1424,6 +1424,7 @@ Page({
 
   /** 前置检查: 关键操作要求自己资料 progress >= 60. 不达标弹窗引导, 返 false. */
   _gateCompleteProfile() {
+    if (!getApp().requireWelcomed()) return false; // 先确保完成首启动引导(头像/昵称/协议)
     const progress = this.data.profileProgress || 0;
     if (progress >= 60) return true;
     this.setData({ contactOpen: false });
@@ -2035,6 +2036,7 @@ Page({
   },
 
   async openVisitors() {
+    if (!getApp().requireWelcomed()) return;
     this.setData({ screen: 'visitors' });
     if (!this.data.apiReady) return;
     try {
@@ -2053,6 +2055,7 @@ Page({
   },
 
   async openFavorites() {
+    if (!getApp().requireWelcomed()) return;
     this.setData({ screen: 'favorites-list' });
     if (!this.data.apiReady) return;
     try {
