@@ -23,7 +23,7 @@ App({
         this.globalData.hasProfile = !!(payload && payload.has_profile);
         this.globalData.hasCriteria = !!(payload && payload.has_criteria);
         this.globalData.isWelcomed = !!(payload && payload.is_welcomed);
-        this._redirectIfNeedWelcome();
+        // 引导改为用户主动触发 (见 requireWelcomed), 启动/登录时不强制跳转 —— 满足"先浏览再授权"
         return payload;
       })
       .catch((err) => {
@@ -49,28 +49,25 @@ App({
         this.globalData.hasProfile = !!(payload && payload.has_profile);
         this.globalData.hasCriteria = !!(payload && payload.has_criteria);
         this.globalData.isWelcomed = !!(payload && payload.is_welcomed);
-        this._redirectIfNeedWelcome();
+        // 引导改为用户主动触发 (见 requireWelcomed), 启动/登录时不强制跳转 —— 满足"先浏览再授权"
         return payload;
       });
     }
     return this.globalData.loginReady;
   },
 
-  /** 未完成首启动引导 (头像+昵称+协议) 时重定向到 welcome 页 */
-  _redirectIfNeedWelcome() {
-    if (this.globalData.isWelcomed) return;
+  /** 用户主动操作需要身份时调用: 未完成引导则跳 welcome，返回 false。
+   * 调用方写法: if (!getApp().requireWelcomed()) return; */
+  requireWelcomed() {
+    if (this.globalData.isWelcomed) return true;
     // 本地缓存兜底: 用户已完成本地引导但后端还没刷新 (兼容老库)
     try {
       if (wx.getStorageSync('qy_welcomed')) {
         this.globalData.isWelcomed = true;
-        return;
+        return true;
       }
     } catch (e) { /* noop */ }
-    // 当前栈顶若已是 welcome / agreement / privacy 就不重复跳
-    const pages = getCurrentPages ? getCurrentPages() : [];
-    const top = pages.length ? pages[pages.length - 1] : null;
-    const route = top && top.route;
-    if (route && /^pages\/(welcome|agreement|privacy)\//.test(route)) return;
-    wx.reLaunch({ url: '/pages/welcome/welcome' });
+    wx.navigateTo({ url: '/pages/welcome/welcome' });
+    return false;
   },
 });
