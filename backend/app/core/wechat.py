@@ -74,13 +74,15 @@ async def jscode2session(code: str) -> dict[str, str]:
 # 同步实现: uploads.py / profiles.py 是同步路由, 直接调用。
 # access_token 模块级缓存 (单实例够用; 多实例再上 Redis + 锁)。
 
-_access_token_cache: dict[str, object] = {"token": "", "expires_at": 0.0}
+_cached_access_token: str = ""
+_access_token_expires_at: float = 0.0
 
 
 def get_access_token() -> str:
     """获取微信 access_token (stable_token 方式), 带缓存。有效期 7200s, 提前 5 分钟刷新。"""
-    if _access_token_cache["token"] and time.time() < _access_token_cache["expires_at"]:
-        return str(_access_token_cache["token"])
+    global _cached_access_token, _access_token_expires_at
+    if _cached_access_token and time.time() < _access_token_expires_at:
+        return _cached_access_token
     if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -100,11 +102,9 @@ def get_access_token() -> str:
     token = data.get("access_token")
     if not token:
         raise WechatError(-1, f"获取 access_token 失败: {data}")
-    _access_token_cache["token"] = token
-    _access_token_cache["expires_at"] = (
-        time.time() + int(data.get("expires_in", 7200)) - 300
-    )
-    return str(token)
+    _cached_access_token = str(token)
+    _access_token_expires_at = time.time() + int(data.get("expires_in", 7200)) - 300
+    return _cached_access_token
 
 
 def msg_sec_check(content: str, openid: str, *, scene: int = 1) -> bool:
