@@ -15,6 +15,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser
+from app.core.wechat import img_sec_check
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
@@ -85,6 +86,27 @@ def upload_image(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="文件不是合法的图片 (扩展名 / 内容不匹配)",
+        )
+
+    # 内容安全: 微信 img_sec_check 上限 1MB; 超过要求客户端压缩。
+    # 检测失败也 fail-closed(拒绝), 安全优先。
+    if len(content) > 1 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="图片过大，请压缩到 1MB 以内再上传",
+        )
+    try:
+        if not img_sec_check(content):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="图片含违规内容，请更换",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="图片安全检测失败，请稍后重试",
         )
 
     # 用 uuid 命名避免冲突 + 防猜测
