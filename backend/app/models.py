@@ -645,7 +645,9 @@ class SiteSetting(SQLModel, table=True):
     """key-value 配置. value 用 JSON, 灵活塞任意结构 (e.g. 资质图片数组)."""
 
     key: str = Field(primary_key=True, max_length=64)
-    value: dict[str, Any] | list[Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    value: dict[str, Any] | list[Any] = Field(
+        default_factory=dict, sa_column=Column(JSON)
+    )
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
