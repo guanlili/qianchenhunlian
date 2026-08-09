@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -9,6 +10,11 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.config import settings
+
+# httpx 默认在 INFO 级别打印每个请求的完整 URL，而 jscode2session 的 URL 里带 AppSecret，
+# 降级到 WARNING，避免密钥泄露进日志。
+for _name in ("httpx", "httpcore"):
+    logging.getLogger(_name).setLevel(logging.WARNING)
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
