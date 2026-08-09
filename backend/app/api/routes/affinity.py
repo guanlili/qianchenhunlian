@@ -64,8 +64,8 @@ def toggle_affinity(
     existing = session.exec(
         select(Affinity).where(
             and_(
-                Affinity.from_user_id == current_user.id,
-                Affinity.to_user_id == target_user_id,
+                Affinity.from_user_id == current_user.id,  # type: ignore[arg-type]
+                Affinity.to_user_id == target_user_id,  # type: ignore[arg-type]
             )
         )
     ).first()
@@ -98,8 +98,8 @@ def toggle_affinity(
     reverse = session.exec(
         select(Affinity).where(
             and_(
-                Affinity.from_user_id == target_user_id,
-                Affinity.to_user_id == current_user.id,
+                Affinity.from_user_id == target_user_id,  # type: ignore[arg-type]
+                Affinity.to_user_id == current_user.id,  # type: ignore[arg-type]
             )
         )
     ).first()
@@ -206,8 +206,8 @@ def check_affinity(
     mine = session.exec(
         select(Affinity).where(
             and_(
-                Affinity.from_user_id == current_user.id,
-                Affinity.to_user_id == target_user_id,
+                Affinity.from_user_id == current_user.id,  # type: ignore[arg-type]
+                Affinity.to_user_id == target_user_id,  # type: ignore[arg-type]
             )
         )
     ).first()
@@ -216,8 +216,8 @@ def check_affinity(
     reverse = session.exec(
         select(Affinity).where(
             and_(
-                Affinity.from_user_id == target_user_id,
-                Affinity.to_user_id == current_user.id,
+                Affinity.from_user_id == target_user_id,  # type: ignore[arg-type]
+                Affinity.to_user_id == current_user.id,  # type: ignore[arg-type]
             )
         )
     ).first()

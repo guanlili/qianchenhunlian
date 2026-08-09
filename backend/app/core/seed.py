@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from sqlmodel import Session, select
 
@@ -14,7 +15,7 @@ from app.core.config import settings
 from app.models import Criteria, Profile, User
 
 # 6 个 demo 用户 - 基于原小程序 data.js 的 mock
-_DEMO_USERS = [
+_DEMO_USERS: list[dict[str, Any]] = [
     {
         "openid": "seed_demo_rose",
         "xy_code": "53366922",
@@ -222,7 +223,7 @@ _DEMO_USERS = [
 ]
 
 
-def _calc_progress(d: dict, fields: tuple[str, ...]) -> int:
+def _calc_progress(d: dict[str, Any], fields: tuple[str, ...]) -> int:
     filled = sum(1 for f in fields if d.get(f) not in (None, "", []))
     return min(100, int(filled / len(fields) * 100))
 
