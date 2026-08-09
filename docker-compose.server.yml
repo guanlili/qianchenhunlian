@@ -1,0 +1,39 @@
+# ============================================================
+# 生产部署 override —— 1Panel + OpenResty 服务器
+# ------------------------------------------------------------
+# 用法（在服务器 /root/qianchenhunlian 下）:
+#   docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
+#
+# 与 docker-compose.override.yml(dev) 的区别:
+#   - 不启动 Traefik；由宿主机 1Panel 的 OpenResty 做反向代理
+#   - admin 走生产构建(多阶段 node 编译 -> nginx 托管静态 dist), 不跑 Vite dev server
+#   - backend/admin/db 端口只绑 127.0.0.1, 仅本机 OpenResty 可达, 不直接对外
+#     OpenResty 反代: api.qianyuan.website     -> 127.0.0.1:8000
+#                     dashboard/www.qianyuan.website -> 127.0.0.1:5173
+#
+# 前置: .env 需设置
+#   VITE_API_URL  (现阶段 http://api.qianyuan.website; 配好 HTTPS 证书后改 https)
+#   BACKEND_CORS_ORIGINS 需包含 admin 的来源域名
+#   以及 DOCKER_IMAGE_BACKEND / DOCKER_IMAGE_FRONTEND / DOMAIN / 各 SECRET 等
+# ============================================================
+services:
+
+  db:
+    restart: always
+    ports:
+      - "127.0.0.1:5432:5432"      # 仅本机（运维/adminer），不对外
+
+  backend:
+    restart: always
+    ports:
+      - "127.0.0.1:8000:8000"      # OpenResty: api.qianyuan.website -> 8000
+
+  admin:
+    restart: always
+    ports:
+      - "127.0.0.1:5173:80"        # OpenResty: dashboard/www.qianyuan.website -> 5173
+
+networks:
+  traefik-public:
+    # 服务器无外部 Traefik；建一个空网络，让 base 里的 traefik labels 不报错
+    external: false
