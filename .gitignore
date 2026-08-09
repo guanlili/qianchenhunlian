@@ -36,6 +36,8 @@ admin/openapi.json
 
 # --- 微信小程序 ---
 miniprogram/miniprogram_npm/
+# 开发者工具本地状态(个人/机器相关), 不入库
+miniprogram/project.private.config.json
 *.sketch.json
 
 # --- IDE / OS ---
