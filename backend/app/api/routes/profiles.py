@@ -11,6 +11,7 @@ from fastapi import APIRouter, Body, HTTPException
 from sqlmodel import SQLModel, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.core.wechat import msg_sec_check
 from app.models import (
     Criteria,
     CriteriaPublic,
@@ -91,6 +92,23 @@ def _calc_criteria_progress(criteria: Criteria) -> int:
         filled += 1
     total = len(_CRITERIA_FIELDS) + 2
     return min(100, int(filled / total * 100))
+
+
+# UGC 自由文本字段: PUT /me 提交时过微信 msg_sec_check (合规要求)
+_FREE_TEXT_FIELDS = ("nickname", "desc", "real_name", "hobbies", "job")
+
+
+def _assert_text_safe(text: object, openid: str | None) -> None:
+    """UGC 文字过微信 msg_sec_check; 违规或检测失败都 400(fail-closed, 安全优先)。"""
+    if not isinstance(text, str) or not text.strip() or not openid:
+        return
+    try:
+        if not msg_sec_check(text, openid):
+            raise HTTPException(status_code=400, detail="内容含违规信息，请修改")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="内容安全检测失败，请稍后重试")
 
 
 # ---------------- Response DTOs ----------------
@@ -181,6 +199,7 @@ def submit_welcome(
         avatar_url = "default"  # 前端见到 'default' / '' 自己渲染默认头像
     if len(nickname) > 64:
         raise HTTPException(status_code=400, detail="昵称过长 (最多 64 字符)")
+    _assert_text_safe(nickname, current_user.openid)
 
     profile = session.exec(
         select(Profile).where(Profile.user_id == current_user.id)
@@ -220,6 +239,9 @@ def upsert_my_profile(
     ).first()
 
     data = body.model_dump(exclude_unset=True)
+    for _f in _FREE_TEXT_FIELDS:
+        if _f in data:
+            _assert_text_safe(data.get(_f), current_user.openid)
     if profile is None:
         profile = Profile(user_id=current_user.id, **data)
     else:
