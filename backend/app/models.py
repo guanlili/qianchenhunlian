@@ -662,12 +662,14 @@ class Message(SQLModel):
 
 class Token(SQLModel):
     access_token: str
+    refresh_token: str | None = None  # 仅 admin 登录返回; 小程序不接 refresh
     token_type: str = "bearer"
 
 
 class TokenPayload(SQLModel):
     sub: uuid.UUID | None = None
     actor: str = "user"  # "user" (含 superuser/wx_user) 或 "staff"
+    type: str = "access"  # "access"(调业务接口) / "refresh"(仅续期); 老 token 无此字段默认 access
 
 
 class NewPassword(SQLModel):

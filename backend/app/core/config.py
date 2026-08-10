@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "changethis"
     # 60 分钟 * 24 小时 * 2 天 = 2 天 (短一些, 降低 token 泄露窗口)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 2
+    # Refresh token 有效期 7 天; access 过期后用它在后台静默续期 (admin)。
+    # 小程序不接 refresh, access 过期靠静默 wx.login 重登。
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     # 可信反向代理 IP (逗号分隔). 生产部署在 traefik 后时填 traefik 容器 IP,

@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import and_
 from sqlmodel import SQLModel, func, select
 
-from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
+from app.api.deps import ApiReadLimited, CompleteProfileUser, CurrentUser, SessionDep
 from app.models import Affinity, Profile, User
 
 _AFFINITY_DAILY_LIMIT = 20
@@ -114,6 +114,7 @@ def toggle_affinity(
 def list_mine(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ) -> AffinityList:
@@ -155,6 +156,7 @@ def list_mine(
 def list_mutual(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ) -> AffinityList:
@@ -200,6 +202,7 @@ def list_mutual(
 def check_affinity(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     target_user_id: uuid.UUID,
 ) -> AffinityToggleResponse:
     """查我对 target 是否点过好感 (用于详情页渲染按钮状态)"""

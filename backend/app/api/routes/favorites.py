@@ -8,7 +8,7 @@ from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel, and_, func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ApiReadLimited, CurrentUser, SessionDep
 from app.models import Favorite, Profile, User, View
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
@@ -124,6 +124,7 @@ def toggle_favorite(
 def list_my_favorites(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> FavoriteList:
@@ -165,6 +166,7 @@ def list_my_favorites(
 def list_visitors(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> VisitorList:
@@ -210,6 +212,7 @@ def list_visitors(
 def list_seen_by_me(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> VisitorList:

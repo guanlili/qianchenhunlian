@@ -7,6 +7,7 @@ from fastapi import APIRouter, Body, HTTPException
 from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
+from app.core.wechat import assert_text_safe
 from app.models import Feedback
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
@@ -33,6 +34,7 @@ def submit_feedback(
         raise HTTPException(status_code=400, detail="内容不能为空")
     if len(content) > 1000:
         raise HTTPException(status_code=400, detail="内容过长 (最多 1000 字)")
+    assert_text_safe(content, current_user.openid, scene=2)
     fb = Feedback(
         user_id=current_user.id,
         content=content,
