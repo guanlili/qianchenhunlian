@@ -134,6 +134,22 @@ def msg_sec_check(content: str, openid: str, *, scene: int = 1) -> bool:
     return True
 
 
+def assert_text_safe(text: object, openid: str | None, *, scene: int = 1) -> None:
+    """UGC 文字过微信 msg_sec_check; 违规或检测失败都 400(fail-closed, 安全优先)。
+
+    scene: 1=资料(默认) 2=评论/留言。openid 缺省(非微信登录)时跳过(降级放行)。
+    """
+    if not isinstance(text, str) or not text.strip() or not openid:
+        return
+    try:
+        if not msg_sec_check(text, openid, scene=scene):
+            raise HTTPException(status_code=400, detail="内容含违规信息，请修改")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="内容安全检测失败，请稍后重试")
+
+
 def img_sec_check(media_bytes: bytes, *, filename: str = "img.jpg") -> bool:
     """图片内容安全检测(同步, 仅 ≤1MB)。True=合规, False=违规。
 
