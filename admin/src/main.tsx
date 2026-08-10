@@ -22,9 +22,12 @@ let refreshPromise: Promise<string> | null = null
 
 function jwtExpMs(token: string): number {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1] ?? "")) as {
-      exp?: number
-    }
+    // JWT payload 是 base64url 编码; atob 只吃标准 base64, 需转换 + 补 padding
+    const b64 = (token.split(".")[1] ?? "")
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+    const raw = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4))
+    const payload = JSON.parse(raw) as { exp?: number }
     return (payload.exp ?? 0) * 1000
   } catch {
     return 0

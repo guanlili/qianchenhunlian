@@ -12,7 +12,7 @@ from app.api.deps import (
     CurrentActor,
     CurrentUser,
     SessionDep,
-    _decode_token,
+    decode_token,
     get_current_active_superuser,
 )
 from app.core import security
@@ -142,14 +142,24 @@ class RefreshTokenBody(SQLModel):
 
 
 @router.post("/login/refresh", response_model=Token)
-def refresh_access_token(session: SessionDep, body: RefreshTokenBody) -> Token:
+def refresh_access_token(
+    session: SessionDep, request: Request, body: RefreshTokenBody
+) -> Token:
     """用 refresh token 换新的 access token。
 
     refresh 自身不轮换 (7 天到期后重登); 本期不做服务端黑名单, 撤销靠重登。
+    IP 维度限流: 防 refresh_token 泄露后被无限刷 access。
     """
-    data = _decode_token(body.refresh_token)
-    if data.type != "refresh":
-        raise HTTPException(status_code=403, detail="无效的 refresh token")
+    ip_key = f"refresh:ip:{client_ip(request)}"
+    if login_limiter.record(ip_key, SENSITIVE_WINDOW) > SENSITIVE_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail="操作过于频繁, 请稍后再试",
+            headers={
+                "Retry-After": str(login_limiter.retry_after(ip_key, SENSITIVE_WINDOW))
+            },
+        )
+    data = decode_token(body.refresh_token, expected_type="refresh")
     obj: User | Staff | None
     if data.actor == "staff":
         obj = session.get(Staff, data.sub)

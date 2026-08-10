@@ -9,6 +9,7 @@
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
+from app.core.ratelimit import SENSITIVE_MAX
 
 
 def _login(client: TestClient) -> dict:
@@ -77,3 +78,21 @@ def test_refresh_invalid_token(client: TestClient) -> None:
         json={"refresh_token": "not.a.valid.token"},
     )
     assert r.status_code == 403
+
+
+def test_refresh_rate_limited(client: TestClient) -> None:
+    """/login/refresh 按 IP 限流: 超 SENSITIVE_MAX 次 → 429。"""
+    tokens = _login(client)
+    for _ in range(SENSITIVE_MAX):
+        assert (
+            client.post(
+                "/api/v1/login/refresh",
+                json={"refresh_token": tokens["refresh_token"]},
+            ).status_code
+            == 200
+        )
+    r = client.post(
+        "/api/v1/login/refresh",
+        json={"refresh_token": tokens["refresh_token"]},
+    )
+    assert r.status_code == 429
