@@ -1,0 +1,129 @@
+# 多模型 PR review 配置。改这里就能加/删/换 reviewer 和 judge，无需动 review.py。
+#
+# ============================================================================
+# ⚠️ 部署前必读 —— 需要你配置的地方
+# ============================================================================
+#
+# 1) 三种 provider 类型（决定 SDK 走哪条路径）:
+#    - anthropic:  Anthropic 官方 Claude API，读 ANTHROPIC_API_KEY
+#    - ark:        火山方舟 OpenAI-compat 端点，读 ARK_API_KEY
+#    - openai:     OpenAI 或任何 OpenAI-compat 端点，读 OPENAI_API_KEY
+#    自定义 api_key_env 可覆盖默认 env var 名。
+#
+# 2) 每个 reviewer/judge 需要填的字段:
+#    name          展示名，用于最终评论
+#    provider      anthropic | ark | openai
+#    model         ⚠️ 模型 ID —— 必须填当前实际可用的 ID (随版本变化)
+#    base_url      (可选) provider 的自定义 endpoint
+#    api_key_env   (可选) 从哪个 env var 读 key，默认按 provider 匹配
+#    temperature   (可选) 默认 0.2 —— reviewer 建议 0.2，judge 建议 0.1
+#    max_tokens    (可选) 默认 4096
+#
+# 3) 如何查当前可用的模型 ID:
+#    - Anthropic:    https://docs.anthropic.com/en/docs/about-claude/models
+#    - 火山方舟:      控制台 → 模型广场，或 `arkcli models list`（如果装了 arkcli）
+#    - OpenAI:       https://platform.openai.com/docs/models
+#
+# 4) 未配置对应 API key 的 reviewer 会被 review.py 自动跳过 (优雅降级)。
+#    最少配 2 家 provider 就能跑；配 3 家融合效果最好。
+#
+# 5) Judge 建议用能力最强的模型 (Claude Opus 或 Qwen3-Max 级别)，
+#    因为它要读三份 reviewer JSON + 完整 diff + AGENTS.md 做去重和幻觉过滤。
+# ============================================================================
+
+reviewers:
+  # Reviewer A —— 建议放能力最强、判断类问题最灵敏的模型
+  - name: TODO-FILL-ME-A  # 建议改成 "Claude Sonnet" 或类似
+    provider: anthropic   # anthropic | ark | openai
+    model: TODO-FILL-ME   # 示例: claude-sonnet-4-5-20250929 (以官方文档为准)
+    temperature: 0.2
+    max_tokens: 4096
+
+  # Reviewer B —— 建议放覆盖广、擅长机械型问题的模型
+  - name: TODO-FILL-ME-B  # 建议改成 "DeepSeek V3.5" 或类似
+    provider: ark         # 走火山方舟
+    model: TODO-FILL-ME   # 示例: deepseek-v3-5-241226 (需在火山"接入模型"里开通)
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    temperature: 0.2
+    max_tokens: 4096
+
+  # Reviewer C —— 第三视角，跟前两个尽量不同门派
+  - name: TODO-FILL-ME-C  # 建议改成 "Doubao Pro" / "Qwen3-Max" 或类似
+    provider: ark
+    model: TODO-FILL-ME   # 示例: doubao-1-5-pro-32k-250115 (需在火山"接入模型"里开通)
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    temperature: 0.2
+    max_tokens: 4096
+
+  # ---- 可选扩展位: 想加更多 reviewer 就取消注释 ----
+  # - name: GPT-5
+  #   provider: openai
+  #   model: TODO-FILL-ME     # 示例: gpt-5-2026-06
+  #   temperature: 0.2
+  #   max_tokens: 4096
+
+# Judge —— 融合三份 reviewer 意见的裁判模型 (只要 1 个)
+judge:
+  name: TODO-FILL-ME-JUDGE  # 建议改成 "Claude Opus" 或 "Qwen3-Max"
+  provider: anthropic       # anthropic | ark | openai
+  model: TODO-FILL-ME       # 示例: claude-opus-4-20250514 (Anthropic) 或 qwen3-max-latest (火山)
+  temperature: 0.1          # judge 温度更低, 减少幻觉
+  max_tokens: 6144          # judge 输出 markdown 通常比单 reviewer 长
+
+# ============================================================================
+# 融合规则 —— 决定什么样的 finding 会被最终发出
+# ============================================================================
+consensus:
+  # ≥N 个 reviewer 都提到 → high-confidence, 一定发
+  high_confidence_threshold: 2
+
+  # 单个 reviewer 提到但 title/description 命中以下关键词 → 强制保留
+  security_keywords:
+    - sql injection
+    - xss
+    - csrf
+    - auth
+    - authorization
+    - password
+    - secret
+    - token
+    - jwt
+    - cve
+    - injection
+    - race condition
+    - deadlock
+    - data loss
+    - 越权
+    - 注入
+    - 密钥
+    - 权限
+    - 数据丢失
+    - 竞态
+    - 泄露
+
+  # nit / style 类只有 ≥N 个 reviewer 都提到才发, 减少噪音
+  nit_min_reviewers: 2
+
+# ============================================================================
+# 触发 / 输出策略
+# ============================================================================
+policy:
+  # PR diff 超过这个行数就切分处理; 0 = 不切分
+  max_diff_lines: 2000
+
+  # PR 上有这些 label 则跳过 review (避免烧 API 额度)
+  skip_labels:
+    - skip-review
+    - wip
+
+  # 只审这些路径 (glob), 空数组 = 全审
+  include_paths: []
+
+  # 排除这些路径
+  exclude_paths:
+    - "**/*.lock"
+    - "**/package-lock.json"
+    - "**/uv.lock"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "docs/**"
