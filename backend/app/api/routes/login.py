@@ -12,6 +12,7 @@ from app.api.deps import (
     CurrentActor,
     CurrentUser,
     SessionDep,
+    _decode_token,
     get_current_active_superuser,
 )
 from app.core import security
@@ -27,7 +28,7 @@ from app.core.ratelimit import (
     login_limiter,
 )
 from app.core.security import get_password_hash
-from app.models import Message, NewPassword, Token, UserPublic
+from app.models import Message, NewPassword, Staff, Token, User, UserPublic
 from app.utils import (
     generate_password_reset_token,
     generate_reset_password_email,
@@ -105,7 +106,12 @@ def login_access_token(
         return Token(
             access_token=security.create_access_token(
                 user.id, expires_delta=expires, actor="user"
-            )
+            ),
+            refresh_token=security.create_refresh_token(
+                user.id,
+                expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                actor="user",
+            ),
         )
 
     staff = crud.authenticate_staff(
@@ -118,12 +124,45 @@ def login_access_token(
         return Token(
             access_token=security.create_access_token(
                 staff.id, expires_delta=expires, actor="staff"
-            )
+            ),
+            refresh_token=security.create_refresh_token(
+                staff.id,
+                expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                actor="staff",
+            ),
         )
 
     # 密码错误: 记一次失败 (账号维度)
     login_limiter.record(fail_key, LOGIN_FAIL_WINDOW)
     raise HTTPException(status_code=400, detail="Incorrect email or password")
+
+
+class RefreshTokenBody(SQLModel):
+    refresh_token: str
+
+
+@router.post("/login/refresh", response_model=Token)
+def refresh_access_token(session: SessionDep, body: RefreshTokenBody) -> Token:
+    """用 refresh token 换新的 access token。
+
+    refresh 自身不轮换 (7 天到期后重登); 本期不做服务端黑名单, 撤销靠重登。
+    """
+    data = _decode_token(body.refresh_token)
+    if data.type != "refresh":
+        raise HTTPException(status_code=403, detail="无效的 refresh token")
+    obj: User | Staff | None
+    if data.actor == "staff":
+        obj = session.get(Staff, data.sub)
+    else:
+        obj = session.get(User, data.sub)
+    if not obj or not obj.is_active:
+        raise HTTPException(status_code=403, detail="账号不可用或已停用")
+    access = security.create_access_token(
+        obj.id,
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        actor=data.actor,
+    )
+    return Token(access_token=access, refresh_token=body.refresh_token)
 
 
 @router.post("/login/test-token", response_model=UserPublic)
