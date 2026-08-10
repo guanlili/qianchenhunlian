@@ -65,24 +65,26 @@ class Actor:
         return self.actor_type == "user" and self.is_superuser
 
 
-def _decode_token(token: str) -> TokenPayload:
+def decode_token(token: str, *, expected_type: str = "access") -> TokenPayload:
+    """解码 JWT 并校验 token 类型。expected_type 不符 → 403。"""
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
         )
-        return TokenPayload(**payload)
+        data = TokenPayload(**payload)
     except (InvalidTokenError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
+    if data.type != expected_type:
+        raise HTTPException(status_code=403, detail="此 token 不能调用业务接口")
+    return data
 
 
 def get_current_user(session: SessionDep, token: TokenDep) -> User:
     """小程序业务接口用. 仅认 actor=user 的 access token."""
-    data = _decode_token(token)
-    if data.type != "access":
-        raise HTTPException(status_code=403, detail="此 token 不能调用业务接口")
+    data = decode_token(token)  # expected_type 默认 access
     if data.actor != "user":
         raise HTTPException(status_code=403, detail="此 token 不能调用业务接口")
     user = session.get(User, data.sub)
@@ -128,9 +130,7 @@ ApiDetailLimited = Annotated[None, Depends(_enforce_api_detail_limit)]
 
 def get_current_actor(session: SessionDep, token: TokenDep) -> Actor:
     """后台路由用: 解 JWT 拿到 User 或 Staff, 包成 Actor."""
-    data = _decode_token(token)
-    if data.type != "access":
-        raise HTTPException(status_code=403, detail="此 token 不能调用业务接口")
+    data = decode_token(token)  # expected_type 默认 access
     if data.actor == "staff":
         staff = session.get(Staff, data.sub)
         if not staff:
