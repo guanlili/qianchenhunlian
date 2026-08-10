@@ -33,6 +33,14 @@ WXLOGIN_IP_MAX = 60
 SENSITIVE_WINDOW = 3600  # 1 小时
 SENSITIVE_MAX = 10
 
+# ---- 业务读接口限流策略常量 (按用户维度, 防整库爬取) ----
+# 列表/推荐类: 每分钟 60 次 (正常翻页足够, 机器遍历会被压住)
+API_READ_WINDOW = 60
+API_READ_MAX = 60
+# 资料详情类: 每分钟 30 次 (详情是枚举 user_id 的主要向量, 收紧)
+API_DETAIL_WINDOW = 60
+API_DETAIL_MAX = 30
+
 
 class SlidingWindowLimiter:
     """线程安全的滑动窗口计数器."""
@@ -83,6 +91,9 @@ class SlidingWindowLimiter:
 
 
 login_limiter = SlidingWindowLimiter()
+
+# 业务读接口限流单例 (与 login_limiter 分开, 不互相影响计数/重置)
+api_limiter = SlidingWindowLimiter()
 
 
 def client_ip(request: Request) -> str:
