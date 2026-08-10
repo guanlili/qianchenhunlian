@@ -16,6 +16,7 @@ from sqlmodel import Field, SQLModel, and_, func, select
 
 from app import crud
 from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
+from app.core.wechat import assert_text_safe
 from app.models import ContactRequest, Profile, User
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
@@ -87,6 +88,10 @@ def submit_contact_request(
     if target_profile.audit_status != "approved":
         raise HTTPException(status_code=404, detail="对方资料未通过审核")
 
+    # 留言内容审核 (fail-fast: 在扣额度/建单之前, 避免扣了额度又因违规 400)
+    message = (body.message or "").strip()[:200] or None
+    assert_text_safe(message, current_user.openid, scene=2)
+
     # 24h 重复申请防护 (同一对) - 不论之前 status 如何, 都禁止
     one_day_ago = datetime.utcnow().replace(microsecond=0)
     from datetime import timedelta as _td
@@ -130,7 +135,7 @@ def submit_contact_request(
     req = ContactRequest(
         from_user_id=current_user.id,
         to_user_id=target_id,
-        message=(body.message or "").strip()[:200] or None,
+        message=message,
         status="pending",
         store_id=from_profile.home_store_id if from_profile else None,
     )

@@ -10,7 +10,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, and_, or_, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ApiDetailLimited, ApiReadLimited, CurrentUser, SessionDep
 from app.models import (
     Favorite,
     Profile,
@@ -183,6 +183,7 @@ def _shandong_clause() -> Any:
 def get_daily_recommendations(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     tab: Literal["today", "new", "missed"] = Query("today"),
     cursor: str | None = None,
     limit: int = Query(10, ge=1, le=50),
@@ -243,6 +244,7 @@ def get_daily_recommendations(
 def apply_filter(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     body: FilterRequest,
 ) -> MatchListResponse:
     """根据筛选条件查询资料."""
@@ -303,6 +305,7 @@ def apply_filter(
 def get_profile_detail(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiDetailLimited,
     user_id: uuid.UUID,
 ) -> MatchDetailResponse:
     """获取他人资料详情.
@@ -317,7 +320,9 @@ def get_profile_detail(
             status_code=400, detail="不能查看自己的资料, 请用 /profiles/me"
         )
 
-    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == user_id).where(_shandong_clause())
+    ).first()
     if not profile:
         raise HTTPException(status_code=404, detail="资料不存在")
     # 资料未通过审核 / 用户被封禁 → 对外不可见
@@ -375,6 +380,7 @@ class NeighborResponse(SQLModel):
 def get_neighbor(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     user_id: uuid.UUID,
     direction: Literal["prev", "next"] = Query("next"),
 ) -> NeighborResponse:

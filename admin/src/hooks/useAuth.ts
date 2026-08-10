@@ -12,7 +12,8 @@ import { handleError } from "@/utils"
 import useCustomToast from "./useCustomToast"
 
 const isLoggedIn = () => {
-  return localStorage.getItem("access_token") !== null
+  // 判 refresh_token: access 可能已过期(惰性刷新会自动补), refresh 在 = 会话有效
+  return localStorage.getItem("refresh_token") !== null
 }
 
 const useAuth = () => {
@@ -44,6 +45,10 @@ const useAuth = () => {
       formData: data,
     })
     localStorage.setItem("access_token", response.access_token)
+    // refresh_token 字段需重新生成 client 后才有类型; 暂用兼容取法
+    const refresh = (response as unknown as { refresh_token?: string })
+      .refresh_token
+    if (refresh) localStorage.setItem("refresh_token", refresh)
   }
 
   const loginMutation = useMutation({
@@ -56,6 +61,7 @@ const useAuth = () => {
 
   const logout = () => {
     localStorage.removeItem("access_token")
+    localStorage.removeItem("refresh_token")
     navigate({ to: "/login" })
   }
 
