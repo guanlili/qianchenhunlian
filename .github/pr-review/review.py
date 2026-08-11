@@ -275,7 +275,7 @@ async def call_openai_compat(
     if not api_key:
         raise RuntimeError(f"未设置 {key_env}, 跳过 {cfg.name}")
 
-    kwargs: dict[str, Any] = {"api_key": api_key}
+    kwargs: dict[str, Any] = {"api_key": api_key, "timeout": 180.0}
     if cfg.base_url:
         kwargs["base_url"] = cfg.base_url
     client = AsyncOpenAI(**kwargs)
@@ -336,6 +336,8 @@ def build_reviewer_user_msg(pr: PRContext) -> str:
 
 def parse_reviewer_json(raw: str) -> dict[str, Any]:
     """从 raw 输出里抓 JSON. 容忍模型输出被 markdown code block 包裹或有前后噪声."""
+    # 剥掉 DeepSeek/GLM 的 <think>...</think> 思考块
+    raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
     # 剥 ```json ... ``` 或 ``` ... ```
     m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if m:
@@ -357,13 +359,16 @@ async def run_reviewer(
     t0 = time.time()
     result = ReviewResult(reviewer_name=cfg.name, success=False)
     try:
-        raw = await call_llm(cfg, system, user)
+        raw = await asyncio.wait_for(call_llm(cfg, system, user), timeout=180)
         result.raw_output = raw
         result.parsed = parse_reviewer_json(raw)
         result.success = True
         log.info(
             f"✓ {cfg.name} 完成: {len(result.parsed.get('findings', []))} findings"
         )
+    except asyncio.TimeoutError:
+        result.error = "超时 (>180s), 跳过该 reviewer"
+        log.warning(f"✗ {cfg.name} 超时")
     except Exception as e:
         result.error = f"{type(e).__name__}: {e}"
         log.warning(f"✗ {cfg.name} 失败: {result.error}")
