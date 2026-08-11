@@ -284,7 +284,6 @@ async def call_openai_compat(
         model=cfg.model,
         max_tokens=cfg.max_tokens,
         temperature=cfg.temperature,
-        response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -337,6 +336,8 @@ def build_reviewer_user_msg(pr: PRContext) -> str:
 
 def parse_reviewer_json(raw: str) -> dict[str, Any]:
     """从 raw 输出里抓 JSON. 容忍模型输出被 markdown code block 包裹或有前后噪声."""
+    original_len = len(raw)
+    raw_original = raw  # 保留原始副本, fallback 时用
     # 剥掉各种模型的思考标签 (DeepSeek <think>, GLM <reflection>/<reasoning> 等)
     raw = re.sub(
         r"<(think|thinking|reflection|reasoning|thought)>.*?</\1>",
@@ -344,6 +345,20 @@ def parse_reviewer_json(raw: str) -> dict[str, Any]:
         raw,
         flags=re.DOTALL | re.IGNORECASE,
     ).strip()
+    log.info(f"  parse: raw={original_len} chars → stripped={len(raw)} chars")
+    if len(raw) < 10:
+        log.warning(f"  parse: 剥除 think 标签后几乎为空, 尝试从标签内部提取 JSON")
+        # 模型把 JSON 放在了 think 标签里面，只剥标签不剥内容
+        raw_original_copy = re.sub(
+            r"</?(?:think|thinking|reflection|reasoning|thought)>",
+            "",
+            raw_original,
+            flags=re.IGNORECASE,
+        ).strip()
+        if raw_original_copy:
+            raw = raw_original_copy
+        else:
+            raise ValueError("模型输出全部在 think 标签内且不含 JSON")
     # 剥 ```json ... ``` 或 ``` ... ```
     m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if m:
@@ -352,6 +367,7 @@ def parse_reviewer_json(raw: str) -> dict[str, Any]:
     start = raw.find("{")
     end = raw.rfind("}")
     if start == -1 or end == -1 or end <= start:
+        log.warning(f"  parse: 找不到 JSON, 内容前 300 字: {raw[:300]}")
         raise ValueError("无法从输出里定位 JSON 对象")
     candidate = raw[start : end + 1]
     # 先尝试直接解析
@@ -367,6 +383,7 @@ def parse_reviewer_json(raw: str) -> dict[str, Any]:
         return json.loads(repaired)
     except Exception:
         pass
+    log.warning(f"  parse: JSON 修复也失败, 前 200 字: {candidate[:200]}")
     raise ValueError(f"JSON 解析失败, 前 200 字: {candidate[:200]}")
 
 
