@@ -284,6 +284,7 @@ async def call_openai_compat(
         model=cfg.model,
         max_tokens=cfg.max_tokens,
         temperature=cfg.temperature,
+        response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -336,8 +337,13 @@ def build_reviewer_user_msg(pr: PRContext) -> str:
 
 def parse_reviewer_json(raw: str) -> dict[str, Any]:
     """从 raw 输出里抓 JSON. 容忍模型输出被 markdown code block 包裹或有前后噪声."""
-    # 剥掉 DeepSeek/GLM 的 <think>...</think> 思考块
-    raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+    # 剥掉各种模型的思考标签 (DeepSeek <think>, GLM <reflection>/<reasoning> 等)
+    raw = re.sub(
+        r"<(think|thinking|reflection|reasoning|thought)>.*?</\1>",
+        "",
+        raw,
+        flags=re.DOTALL | re.IGNORECASE,
+    ).strip()
     # 剥 ```json ... ``` 或 ``` ... ```
     m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if m:
@@ -347,7 +353,21 @@ def parse_reviewer_json(raw: str) -> dict[str, Any]:
     end = raw.rfind("}")
     if start == -1 or end == -1 or end <= start:
         raise ValueError("无法从输出里定位 JSON 对象")
-    return json.loads(raw[start : end + 1])
+    candidate = raw[start : end + 1]
+    # 先尝试直接解析
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+    # json.loads 失败 → 用 json_repair 修复常见问题 (尾逗号、未转义引号等)
+    try:
+        from json_repair import repair_json  # type: ignore[import-untyped]
+
+        repaired = repair_json(candidate, return_objects=False)
+        return json.loads(repaired)
+    except Exception:
+        pass
+    raise ValueError(f"JSON 解析失败, 前 200 字: {candidate[:200]}")
 
 
 async def run_reviewer(
