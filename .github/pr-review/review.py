@@ -289,7 +289,19 @@ async def call_openai_compat(
             {"role": "user", "content": user},
         ],
     )
-    return resp.choices[0].message.content or ""
+    msg = resp.choices[0].message
+    content = msg.content or ""
+    # DeepSeek 开 thinking 时把思考放在 reasoning_content, 答案放在 content;
+    # 但 Flash 有时把全部内容都放在 reasoning_content, content 返空。
+    # 兜底: 如果 content 为空或太短(没有 JSON), 拼上 reasoning_content。
+    reasoning = getattr(msg, "reasoning_content", None) or ""
+    if not content.strip() and reasoning:
+        log.info(f"  content 为空, 从 reasoning_content 提取 ({len(reasoning)} chars)")
+        content = reasoning
+    elif content.strip() and reasoning and "{" not in content:
+        # content 有值但不含 JSON (可能只是一句话), reasoning 里有完整输出
+        content = reasoning + "\n" + content
+    return content
 
 
 async def call_llm(cfg: ReviewerConfig, system: str, user: str) -> str:
