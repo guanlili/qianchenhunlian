@@ -384,7 +384,8 @@ def parse_reviewer_json(raw: str) -> dict[str, Any]:
     candidate = raw[start : end + 1]
     # 先尝试直接解析
     try:
-        return json.loads(candidate)
+        result = json.loads(candidate)
+        return _normalize_parsed(result)
     except json.JSONDecodeError:
         pass
     # json.loads 失败 → 用 json_repair 修复常见问题 (尾逗号、未转义引号等)
@@ -392,11 +393,26 @@ def parse_reviewer_json(raw: str) -> dict[str, Any]:
         from json_repair import repair_json  # type: ignore[import-untyped]
 
         repaired = repair_json(candidate, return_objects=False)
-        return json.loads(repaired)
+        result = json.loads(repaired)
+        return _normalize_parsed(result)
     except Exception:
         pass
     log.warning(f"  parse: JSON 修复也失败, 前 200 字: {candidate[:200]}")
     raise ValueError(f"JSON 解析失败, 前 200 字: {candidate[:200]}")
+
+
+def _normalize_parsed(obj: Any) -> dict[str, Any]:
+    """确保解析结果是符合 schema 的 dict. 兼容模型直接输出 list 的情况."""
+    if isinstance(obj, list):
+        # 模型直接输出了 findings 数组
+        return {"summary": "", "verdict": "comment", "findings": obj}
+    if isinstance(obj, dict):
+        # 确保 findings 是 list of dict
+        findings = obj.get("findings", [])
+        if isinstance(findings, list):
+            obj["findings"] = [f for f in findings if isinstance(f, dict)]
+        return obj
+    raise ValueError(f"JSON 解析结果类型异常: {type(obj)}")
 
 
 async def run_reviewer(
