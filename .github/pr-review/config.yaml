@@ -28,10 +28,10 @@ reviewers:
     temperature: 0.2
     max_tokens: 4096
 
-  # Reviewer C — 智谱 GLM-5.2, 第三家 vendor, thinking 能力强 + 1M 上下文
-  - name: GLM-5.2
+  # Reviewer C — DeepSeek V4 Flash, 速度快 + 1M 上下文, 与 Pro 互补
+  - name: DeepSeek V4 Flash
     provider: ark
-    model: glm-5-2-260617
+    model: deepseek-v4-flash-260425
     base_url: https://ark.cn-beijing.volces.com/api/v3
     temperature: 0.2
     max_tokens: 4096
