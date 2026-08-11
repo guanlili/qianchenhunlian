@@ -44,11 +44,11 @@ reviewers:
   #   temperature: 0.2
   #   max_tokens: 4096
 
-# Judge — 字节最新旗舰 pro, 融合三份 reviewer 意见 + 过滤幻觉
+# Judge — Seed-Evolving: 字节持续升级的最强 Coding & Agent 模型, 融合判断力最猛
 judge:
-  name: Doubao Seed 2.1 Pro
+  name: Doubao Seed Evolving
   provider: ark
-  model: doubao-seed-2-1-pro-260628
+  model: doubao-seed-evolving-latest-version
   base_url: https://ark.cn-beijing.volces.com/api/v3
   temperature: 0.1     # judge 温度更低, 减少幻觉
   max_tokens: 6144     # judge 输出 markdown 通常比单 reviewer 长
