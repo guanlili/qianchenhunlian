@@ -34,7 +34,8 @@ class Perm(str, Enum):
     GRANT_BALANCE = "grant_balance"  # 赠送解锁次数 (门店管理员仅本店会员)
     BLOCK_USER = "block_user"  # 封禁/解封会员 (门店管理员仅本店会员)
     STORE_MANAGE = "store_manage"  # 门店 CRUD / 指定主属门店
-    SETTINGS_MANAGE = "settings_manage"  # 平台设置 (资质/公告)
+    SETTINGS_MANAGE = "settings_manage"  # 平台设置 (资质/公告/协议文案)
+    FEEDBACK_HANDLE = "feedback_handle"  # 处理意见反馈
     STAFF_MANAGE = "staff_manage"  # 员工账号管理
     ADMIN_ACCOUNT_MANAGE = "admin_account_manage"  # 管理员账号管理
     AUDIT_LOG_VIEW = "audit_log_view"  # 查看操作审计日志
