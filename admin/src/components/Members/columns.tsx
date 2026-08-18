@@ -6,6 +6,7 @@ import type { AdminMemberItem } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { resolveFileUrl } from "@/lib/utils"
 
 export function AuditBadge({ status }: { status: string | null | undefined }) {
   if (!status) return <Badge variant="secondary">未填资料</Badge>
@@ -68,7 +69,7 @@ export const memberColumns: ColumnDef<AdminMemberItem>[] = [
           className="flex items-center gap-2 hover:underline"
         >
           <Avatar className="size-8">
-            <AvatarImage src={m.avatar_url || undefined} />
+            <AvatarImage src={resolveFileUrl(m.avatar_url) || undefined} />
             <AvatarFallback>
               {(memberDisplayName(m) || "?").slice(0, 1)}
             </AvatarFallback>
