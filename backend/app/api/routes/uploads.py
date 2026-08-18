@@ -1,10 +1,10 @@
-"""图片上传 (一期 FastAPI 自托管)
+"""图片上传 (一期 FastAPI 本地磁盘自托管 / 二期阿里云 OSS)
 
-- 文件落到 /app/uploads/ (容器内, 宿主机 bind mount 到 data/uploads/)
-- 通过 GET /uploads/<filename> 公开访问 (静态文件路由在 main.py 挂载)
+- OSS 已配置 (OSS_ACCESS_KEY_ID/SECRET/BUCKET) 时: 文件上传到私有 Bucket,
+  经 GET /files/<key> 302 跳转到带签名的临时 URL 访问 (路由在 main.py)
+- OSS 未配置时: 文件落到 /app/uploads/ (容器内, dev 由 docker-compose.override.yml
+  bind mount 到 data/uploads/), 通过 GET /files/<filename> 直接读本地文件
 - 必须登录才能上传
-
-二期可改为腾讯云 COS / 七牛 / 阿里云 OSS, 接口对外不变.
 """
 
 import os
@@ -15,6 +15,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser
+from app.core import oss
 from app.core.wechat import img_sec_check
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
@@ -111,19 +112,30 @@ def upload_image(
 
     # 用 uuid 命名避免冲突 + 防猜测
     new_name = f"{uuid.uuid4().hex}{ext}"
-    # 按用户分子目录, 便于追溯/清理
-    user_dir = UPLOAD_DIR / str(current_user.id)
-    user_dir.mkdir(parents=True, exist_ok=True)
-    target = user_dir / new_name
+    # OSS 对象 key 与本地路径同构 (<user_id>/<filename>), 对外 URL 契约不变
+    key = f"{current_user.id}/{new_name}"
 
-    with open(target, "wb") as f:
-        f.write(content)
+    if oss.enabled():
+        try:
+            oss.put_object(key, content)
+        except oss.OssError:
+            # fail-closed: 存储不可用时拒绝本次上传, 不允许静默退回本地
+            # (生产容器无持久卷, 本地文件会随部署丢失, 假成功比失败更糟)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="图片存储暂不可用，请稍后重试",
+            ) from None
+    else:
+        # 未配置 OSS: 本地磁盘兜底 (本地开发 / 一期行为)
+        user_dir = UPLOAD_DIR / str(current_user.id)
+        user_dir.mkdir(parents=True, exist_ok=True)
+        with open(user_dir / new_name, "wb") as f:
+            f.write(content)
 
-    # 返回相对路径 (e.g., /files/<user_id>/<filename>)
+    # 返回相对路径 (e.g. /files/<user_id>/<filename>)
     # 客户端按当前 BASE_URL 的 host 拼成完整 URL, 跨环境 (内网/外网) 永远正确.
-    # PUBLIC_BASE 仅用作向后兼容: 如老客户端期望绝对 URL, 仍可拿到一个;
-    # 但 photos 字段会落入 DB, 用相对路径更稳健.
-    rel_path = f"/files/{current_user.id}/{new_name}"
+    # photos 字段会落入 DB, 用相对路径更稳健.
+    rel_path = f"/files/{key}"
     return UploadResponse(
         url=rel_path,
         filename=new_name,
