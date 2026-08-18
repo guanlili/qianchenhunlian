@@ -5,7 +5,8 @@ import {
   Home,
   MapPin,
   MessageSquare,
-  Shield,
+  ScrollText,
+  UserCog,
   Users,
 } from "lucide-react"
 
@@ -34,7 +35,8 @@ const baseItems: Item[] = [
 // 仅总部管理员可见
 const adminItems: Item[] = [
   { icon: Award, title: "平台设置", path: "/qualifications" },
-  { icon: Shield, title: "员工管理", path: "/staff" },
+  { icon: UserCog, title: "管理员账号", path: "/admins" },
+  { icon: ScrollText, title: "操作日志", path: "/audit-logs" },
 ]
 
 export function AppSidebar() {

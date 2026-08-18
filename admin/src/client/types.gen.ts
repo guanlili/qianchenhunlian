@@ -13,6 +13,35 @@ export type ActivityList = {
     total?: number;
 };
 
+export type AdminAccountCreate = {
+    email: string;
+    password: string;
+    full_name?: (string | null);
+};
+
+export type AdminAccountItem = {
+    id: string;
+    email?: (string | null);
+    full_name?: (string | null);
+    is_active?: boolean;
+    created_at?: (string | null);
+    last_active_at?: (string | null);
+};
+
+export type AdminAccountList = {
+    items?: Array<AdminAccountItem>;
+    total?: number;
+};
+
+export type AdminAccountPasswordReset = {
+    new_password: string;
+};
+
+export type AdminAccountUpdate = {
+    full_name?: (string | null);
+    is_active?: (boolean | null);
+};
+
 export type AdminContactRequestItem = {
     id: string;
     from_user_id: string;
@@ -597,13 +626,6 @@ export type PhotoCommit = {
     file_url: string;
 };
 
-export type PrivateUserCreate = {
-    email: string;
-    password: string;
-    full_name: string;
-    is_verified?: boolean;
-};
-
 export type ProfileMeResponse = {
     profile?: (ProfileWithContact | null);
     criteria?: (CriteriaPublic | null);
@@ -742,6 +764,10 @@ export type QualificationList = {
     items?: Array<QualificationItem>;
 };
 
+export type RefreshTokenBody = {
+    refresh_token: string;
+};
+
 export type StaffCreate = {
     email: string;
     name: string;
@@ -841,6 +867,7 @@ export type ToggleResponse = {
 
 export type Token = {
     access_token: string;
+    refresh_token?: (string | null);
     token_type?: string;
 };
 
@@ -1222,6 +1249,37 @@ export type AdminListVerifyQueueData = {
 
 export type AdminListVerifyQueueResponse = (AdminMemberList);
 
+export type AdminListAdminAccountsData = {
+    limit?: number;
+    /**
+     * 按邮箱/姓名模糊搜索
+     */
+    q?: (string | null);
+    skip?: number;
+};
+
+export type AdminListAdminAccountsResponse = (AdminAccountList);
+
+export type AdminCreateAdminAccountData = {
+    requestBody: AdminAccountCreate;
+};
+
+export type AdminCreateAdminAccountResponse = (AdminAccountItem);
+
+export type AdminUpdateAdminAccountData = {
+    requestBody: AdminAccountUpdate;
+    userId: string;
+};
+
+export type AdminUpdateAdminAccountResponse = (AdminAccountItem);
+
+export type AdminResetAdminPasswordData = {
+    requestBody: AdminAccountPasswordReset;
+    userId: string;
+};
+
+export type AdminResetAdminPasswordResponse = (Message);
+
 export type AffinityToggleAffinityData = {
     targetUserId: string;
 };
@@ -1300,11 +1358,23 @@ export type FeedbackSubmitFeedbackData = {
 
 export type FeedbackSubmitFeedbackResponse = (FeedbackResponse);
 
+export type FilesGetFileData = {
+    key: string;
+};
+
+export type FilesGetFileResponse = (unknown);
+
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
 };
 
 export type LoginLoginAccessTokenResponse = (Token);
+
+export type LoginRefreshAccessTokenData = {
+    requestBody: RefreshTokenBody;
+};
+
+export type LoginRefreshAccessTokenResponse = (Token);
 
 export type LoginTestTokenResponse = (UserPublic);
 
@@ -1354,12 +1424,6 @@ export type MatchesGetNeighborData = {
 };
 
 export type MatchesGetNeighborResponse = (NeighborResponse);
-
-export type PrivateCreateUserData = {
-    requestBody: PrivateUserCreate;
-};
-
-export type PrivateCreateUserResponse = (UserPublic);
 
 export type ProfilesReadMyProfileResponse = (ProfileMeResponse);
 

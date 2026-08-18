@@ -6,7 +6,8 @@ from typing import Any, cast
 from fastapi import APIRouter, Body, Depends
 from sqlmodel import SQLModel
 
-from app.api.deps import SessionDep, require_admin
+from app.api.deps import SessionDep
+from app.api.permissions import Perm, require_perm
 from app.models import SiteSetting
 
 router = APIRouter(prefix="/site", tags=["site"])
@@ -44,7 +45,7 @@ def get_qualifications(session: SessionDep) -> QualificationList:
 @router.put(
     "/qualifications",
     response_model=QualificationList,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.SETTINGS_MANAGE))],
 )
 def put_qualifications(
     session: SessionDep,

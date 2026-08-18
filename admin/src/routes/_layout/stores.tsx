@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
-import { Pencil, Plus, Trash2, Upload } from "lucide-react"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { Pencil, Plus, Trash2, Upload, UsersRound } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
-
 import { AdminService, type StorePublic, UploadsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,14 +25,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import useAuth from "@/hooks/useAuth"
 import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
 
 export const Route = createFileRoute("/_layout/stores")({
   component: StoresPage,
+  head: () => ({ meta: [{ title: "门店管理 - 乾缘后台" }] }),
 })
 
 function StoresPage() {
   const qc = useQueryClient()
+  const { user } = useAuth()
+  const isSuperuser = !!user?.is_superuser
   const { data } = useQuery({
     queryFn: () => AdminService.adminListStores({ limit: 200 }),
     queryKey: ["admin-stores"],
@@ -95,6 +98,13 @@ function StoresPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
+                    {isSuperuser && (
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to="/stores/$storeId" params={{ storeId: s.id }}>
+                          <UsersRound /> 管理员
+                        </Link>
+                      </Button>
+                    )}
                     <StoreFormDialog
                       store={s}
                       trigger={

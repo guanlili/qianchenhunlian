@@ -16,7 +16,6 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
-import { Route as LayoutStaffRouteImport } from './routes/_layout/staff'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
@@ -25,7 +24,10 @@ import { Route as LayoutProfilesRouteImport } from './routes/_layout/profiles'
 import { Route as LayoutMembersRouteImport } from './routes/_layout/members'
 import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
+import { Route as LayoutAuditLogsRouteImport } from './routes/_layout/audit-logs'
+import { Route as LayoutAdminsRouteImport } from './routes/_layout/admins'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutStoresStoreIdRouteImport } from './routes/_layout/stores.$storeId'
 import { Route as LayoutMembersUserIdRouteImport } from './routes/_layout/members.$userId'
 
 const SignupRoute = SignupRouteImport.update({
@@ -60,11 +62,6 @@ const IndexRoute = IndexRouteImport.update({
 const LayoutStoresRoute = LayoutStoresRouteImport.update({
   id: '/stores',
   path: '/stores',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutStaffRoute = LayoutStaffRouteImport.update({
-  id: '/staff',
-  path: '/staff',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
@@ -107,10 +104,25 @@ const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAuditLogsRoute = LayoutAuditLogsRouteImport.update({
+  id: '/audit-logs',
+  path: '/audit-logs',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAdminsRoute = LayoutAdminsRouteImport.update({
+  id: '/admins',
+  path: '/admins',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutStoresStoreIdRoute = LayoutStoresStoreIdRouteImport.update({
+  id: '/$storeId',
+  path: '/$storeId',
+  getParentRoute: () => LayoutStoresRoute,
 } as any)
 const LayoutMembersUserIdRoute = LayoutMembersUserIdRouteImport.update({
   id: '/$userId',
@@ -125,6 +137,8 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/admins': typeof LayoutAdminsRoute
+  '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
   '/members': typeof LayoutMembersRouteWithChildren
@@ -133,9 +147,9 @@ export interface FileRoutesByFullPath {
   '/requests': typeof LayoutRequestsRoute
   '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
-  '/staff': typeof LayoutStaffRoute
-  '/stores': typeof LayoutStoresRoute
+  '/stores': typeof LayoutStoresRouteWithChildren
   '/members/$userId': typeof LayoutMembersUserIdRoute
+  '/stores/$storeId': typeof LayoutStoresStoreIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -144,6 +158,8 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/admins': typeof LayoutAdminsRoute
+  '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
   '/members': typeof LayoutMembersRouteWithChildren
@@ -152,9 +168,9 @@ export interface FileRoutesByTo {
   '/requests': typeof LayoutRequestsRoute
   '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
-  '/staff': typeof LayoutStaffRoute
-  '/stores': typeof LayoutStoresRoute
+  '/stores': typeof LayoutStoresRouteWithChildren
   '/members/$userId': typeof LayoutMembersUserIdRoute
+  '/stores/$storeId': typeof LayoutStoresStoreIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -165,6 +181,8 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/admins': typeof LayoutAdminsRoute
+  '/_layout/audit-logs': typeof LayoutAuditLogsRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/feedback': typeof LayoutFeedbackRoute
   '/_layout/members': typeof LayoutMembersRouteWithChildren
@@ -173,9 +191,9 @@ export interface FileRoutesById {
   '/_layout/requests': typeof LayoutRequestsRoute
   '/_layout/review': typeof LayoutReviewRoute
   '/_layout/settings': typeof LayoutSettingsRoute
-  '/_layout/staff': typeof LayoutStaffRoute
-  '/_layout/stores': typeof LayoutStoresRoute
+  '/_layout/stores': typeof LayoutStoresRouteWithChildren
   '/_layout/members/$userId': typeof LayoutMembersUserIdRoute
+  '/_layout/stores/$storeId': typeof LayoutStoresStoreIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -186,6 +204,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/admins'
+    | '/audit-logs'
     | '/dashboard'
     | '/feedback'
     | '/members'
@@ -194,9 +214,9 @@ export interface FileRouteTypes {
     | '/requests'
     | '/review'
     | '/settings'
-    | '/staff'
     | '/stores'
     | '/members/$userId'
+    | '/stores/$storeId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -205,6 +225,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/admins'
+    | '/audit-logs'
     | '/dashboard'
     | '/feedback'
     | '/members'
@@ -213,9 +235,9 @@ export interface FileRouteTypes {
     | '/requests'
     | '/review'
     | '/settings'
-    | '/staff'
     | '/stores'
     | '/members/$userId'
+    | '/stores/$storeId'
   id:
     | '__root__'
     | '/'
@@ -225,6 +247,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_layout/admin'
+    | '/_layout/admins'
+    | '/_layout/audit-logs'
     | '/_layout/dashboard'
     | '/_layout/feedback'
     | '/_layout/members'
@@ -233,9 +257,9 @@ export interface FileRouteTypes {
     | '/_layout/requests'
     | '/_layout/review'
     | '/_layout/settings'
-    | '/_layout/staff'
     | '/_layout/stores'
     | '/_layout/members/$userId'
+    | '/_layout/stores/$storeId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -298,13 +322,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutStoresRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/staff': {
-      id: '/_layout/staff'
-      path: '/staff'
-      fullPath: '/staff'
-      preLoaderRoute: typeof LayoutStaffRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
@@ -361,12 +378,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDashboardRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/audit-logs': {
+      id: '/_layout/audit-logs'
+      path: '/audit-logs'
+      fullPath: '/audit-logs'
+      preLoaderRoute: typeof LayoutAuditLogsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admins': {
+      id: '/_layout/admins'
+      path: '/admins'
+      fullPath: '/admins'
+      preLoaderRoute: typeof LayoutAdminsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/admin': {
       id: '/_layout/admin'
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/_layout/stores/$storeId': {
+      id: '/_layout/stores/$storeId'
+      path: '/$storeId'
+      fullPath: '/stores/$storeId'
+      preLoaderRoute: typeof LayoutStoresStoreIdRouteImport
+      parentRoute: typeof LayoutStoresRoute
     }
     '/_layout/members/$userId': {
       id: '/_layout/members/$userId'
@@ -390,8 +428,22 @@ const LayoutMembersRouteWithChildren = LayoutMembersRoute._addFileChildren(
   LayoutMembersRouteChildren,
 )
 
+interface LayoutStoresRouteChildren {
+  LayoutStoresStoreIdRoute: typeof LayoutStoresStoreIdRoute
+}
+
+const LayoutStoresRouteChildren: LayoutStoresRouteChildren = {
+  LayoutStoresStoreIdRoute: LayoutStoresStoreIdRoute,
+}
+
+const LayoutStoresRouteWithChildren = LayoutStoresRoute._addFileChildren(
+  LayoutStoresRouteChildren,
+)
+
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutAdminsRoute: typeof LayoutAdminsRoute
+  LayoutAuditLogsRoute: typeof LayoutAuditLogsRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
   LayoutFeedbackRoute: typeof LayoutFeedbackRoute
   LayoutMembersRoute: typeof LayoutMembersRouteWithChildren
@@ -400,12 +452,13 @@ interface LayoutRouteChildren {
   LayoutRequestsRoute: typeof LayoutRequestsRoute
   LayoutReviewRoute: typeof LayoutReviewRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
-  LayoutStaffRoute: typeof LayoutStaffRoute
-  LayoutStoresRoute: typeof LayoutStoresRoute
+  LayoutStoresRoute: typeof LayoutStoresRouteWithChildren
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
+  LayoutAdminsRoute: LayoutAdminsRoute,
+  LayoutAuditLogsRoute: LayoutAuditLogsRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
   LayoutFeedbackRoute: LayoutFeedbackRoute,
   LayoutMembersRoute: LayoutMembersRouteWithChildren,
@@ -414,8 +467,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutRequestsRoute: LayoutRequestsRoute,
   LayoutReviewRoute: LayoutReviewRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
-  LayoutStaffRoute: LayoutStaffRoute,
-  LayoutStoresRoute: LayoutStoresRoute,
+  LayoutStoresRoute: LayoutStoresRouteWithChildren,
 }
 
 const LayoutRouteWithChildren =
