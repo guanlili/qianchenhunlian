@@ -12,12 +12,9 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlmodel import SQLModel, func, select
 
 from app import crud
-from app.api.deps import (
-    CurrentActor,
-    SessionDep,
-    require_admin,
-    require_admin_or_staff,
-)
+from app.api.audit import write_audit as _audit
+from app.api.deps import CurrentActor, SessionDep, require_admin_or_staff
+from app.api.permissions import Perm, has_perm, require_perm
 from app.models import (
     Affinity,
     AuditLog,
@@ -49,29 +46,9 @@ from app.models import (
 router = APIRouter(
     prefix="/admin",
     tags=["admin"],
-    # 整组要求至少能读 (superuser 或 staff). 写操作各自再加 require_admin.
+    # 整组要求至少能读 (superuser 或 staff). 写操作各自再加 require_perm(功能权限点).
     dependencies=[Depends(require_admin_or_staff)],
 )
-
-
-def _audit(
-    session: SessionDep,
-    actor: CurrentActor,
-    action: str,
-    target_user_id: uuid.UUID | None = None,
-    detail: dict[str, Any] | None = None,
-) -> AuditLog:
-    """记敏感操作审计 (不 commit, 与业务变更同事务提交)."""
-    log = AuditLog(
-        actor_type=actor.actor_type,
-        actor_id=uuid.UUID(actor.id),
-        actor_email=actor.email,
-        action=action,
-        target_user_id=target_user_id,
-        detail=detail or {},
-    )
-    session.add(log)
-    return log
 
 
 # ---------------- DTOs ----------------
@@ -413,7 +390,7 @@ def get_profile_detail(
 @router.post(
     "/profiles/{user_id}/audit",
     response_model=AdminProfileItem,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.PROFILE_AUDIT))],
 )
 def audit_profile(
     session: SessionDep,
@@ -635,21 +612,37 @@ def admin_update_parents_info(
 
 
 def _store_owner_id(actor: CurrentActor) -> uuid.UUID | None:
-    """如果当前 actor 是门店红娘 (matchmaker), 返回其 store_id; 否则 None.
-    admin / 总部员工 (hq_staff) 返 None (= 不受 store 限制)."""
-    if actor.actor_type == "staff" and actor.staff and actor.staff.role == "matchmaker":
+    """如果当前 actor 是门店管理员 (store_admin), 返回其 store_id; 否则 None.
+    系统管理员返回 None (= 不受 store 限制)."""
+    if (
+        actor.actor_type == "staff"
+        and actor.staff
+        and actor.staff.role == "store_admin"
+    ):
         return actor.staff.store_id
     return None
 
 
+def _check_member_scope(
+    actor: CurrentActor, session: SessionDep, user_id: uuid.UUID
+) -> None:
+    """会员级操作的数据范围: 门店管理员只能操作本店会员 (home_store 匹配)."""
+    sid = _store_owner_id(actor)
+    if sid is None:
+        return
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
+    if not profile or profile.home_store_id != sid:
+        raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
+
+
 def _can_verify(actor: CurrentActor, target_profile: Profile) -> bool:
-    """实名认证: admin 任何用户; 红娘仅本店 (线下当面核验); 总部员工不可 (docs/10 权限矩阵)."""
-    if actor.actor_type == "user" and actor.is_superuser:
-        return True
+    """实名认证: 功能权限查矩阵 (admin / 红娘), 红娘再限本店 (线下当面核验)."""
+    if not has_perm(actor, Perm.PROFILE_VERIFY):
+        return False
     sid = _store_owner_id(actor)
     if sid is not None:
         return target_profile.home_store_id == sid
-    return False
+    return True
 
 
 def _check_store_scope(actor: CurrentActor, target_profile: Profile) -> None:
@@ -662,37 +655,36 @@ def _check_store_scope(actor: CurrentActor, target_profile: Profile) -> None:
 
 
 def _can_see_contact(actor: CurrentActor, target_profile: Profile | None) -> bool:
-    """联系方式可见性: admin 可见 (记审计); 红娘仅本店可见; 总部员工不可见."""
-    if actor.actor_type == "user" and actor.is_superuser:
-        return True
+    """联系方式可见性: 功能权限查矩阵, 红娘再限本店."""
+    if not has_perm(actor, Perm.VIEW_CONTACT):
+        return False
     sid = _store_owner_id(actor)
-    if sid is not None and target_profile is not None:
-        return target_profile.home_store_id == sid
-    return False
+    if sid is not None:
+        return target_profile is not None and target_profile.home_store_id == sid
+    return True
 
 
 def _request_contact_visible(actor: CurrentActor, req: ContactRequest) -> bool:
-    """工单联系方式可见性: superuser 可见; 红娘仅本单归属店可见; 总部员工不可见.
-
-    以工单 store_id (发起方门店) 为准 —— 即使对方在别店, 本店红娘处理本单时
-    仍可见双方联系方式. hq_staff (sid=None 且非 superuser) 一律不可见.
+    """工单联系方式可见性: 功能权限查矩阵; 红娘以工单 store_id (发起方门店) 为准 ——
+    即使对方在别店, 本店红娘处理本单时仍可见双方联系方式.
     """
-    if actor.actor_type == "user" and actor.is_superuser:
-        return True
+    if not has_perm(actor, Perm.VIEW_REQUEST_CONTACT):
+        return False
     sid = _store_owner_id(actor)
     return sid is not None and req.store_id == sid
 
 
 def _check_edit_permission(actor: CurrentActor, target_profile: Profile | None) -> None:
-    """代录/编辑会员资料: 仅 admin 或 本店红娘 (docs/10 权限矩阵, 总部员工不可编辑)."""
-    if actor.actor_type == "user" and actor.is_superuser:
-        return
+    """代录/编辑会员资料: 功能权限查矩阵 (admin / 本店红娘)."""
+    if not has_perm(actor, Perm.PROFILE_EDIT):
+        raise HTTPException(status_code=403, detail="总部员工无代录权限")
     sid = _store_owner_id(actor)
-    if sid is not None:
-        if target_profile is not None and target_profile.home_store_id != sid:
-            raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
-        return
-    raise HTTPException(status_code=403, detail="总部员工无代录权限")
+    if (
+        sid is not None
+        and target_profile is not None
+        and target_profile.home_store_id != sid
+    ):
+        raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
 
 
 class VerifyResponse(SQLModel):
@@ -786,7 +778,7 @@ class HomeStoreUpdate(SQLModel):
 @router.put(
     "/profiles/{user_id}/home-store",
     response_model=AdminProfileItem,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STORE_MANAGE))],
 )
 def admin_set_home_store(
     session: SessionDep,
@@ -862,7 +854,7 @@ def admin_list_stores(
 @router.post(
     "/stores",
     response_model=StorePublic,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STORE_MANAGE))],
 )
 def admin_create_store(
     session: SessionDep,
@@ -878,7 +870,7 @@ def admin_create_store(
 @router.put(
     "/stores/{store_id}",
     response_model=StorePublic,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STORE_MANAGE))],
 )
 def admin_update_store(
     session: SessionDep,
@@ -901,7 +893,7 @@ def admin_update_store(
 @router.delete(
     "/stores/{store_id}",
     response_model=Message,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STORE_MANAGE))],
 )
 def admin_delete_store(
     session: SessionDep,
@@ -972,7 +964,7 @@ def admin_list_feedback(
 @router.post(
     "/users/{user_id}/grant-balance",
     response_model=AdminUserBrief,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.GRANT_BALANCE))],
 )
 def grant_unlock_balance(
     session: SessionDep,
@@ -980,10 +972,11 @@ def grant_unlock_balance(
     actor: CurrentActor,
     body: GrantBalanceRequest = Body(),
 ) -> AdminUserBrief:
-    """运营手动加/减 解锁次数 - 仅 superuser"""
+    """运营手动加/减 解锁次数 (系统管理员; 门店管理员限本店会员)"""
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+    _check_member_scope(actor, session, user_id)
     new_balance = max(0, user.unlock_balance + body.delta)
     actual_delta = new_balance - user.unlock_balance
     user.unlock_balance = new_balance
@@ -1027,17 +1020,18 @@ def grant_unlock_balance(
 @router.post(
     "/users/{user_id}/block",
     response_model=AdminUserBrief,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.BLOCK_USER))],
 )
 def block_user(
     session: SessionDep,
     user_id: uuid.UUID,
     actor: CurrentActor,
 ) -> AdminUserBrief:
-    """封禁用户 - 仅 superuser"""
+    """封禁用户 (系统管理员; 门店管理员限本店会员)"""
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+    _check_member_scope(actor, session, user_id)
     user.status = "blocked"
     user.is_active = False  # 同步禁用 token, 让 get_current_user 立即拦住
     user.updated_at = datetime.utcnow()
@@ -1061,17 +1055,18 @@ def block_user(
 @router.post(
     "/users/{user_id}/unblock",
     response_model=AdminUserBrief,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.BLOCK_USER))],
 )
 def unblock_user(
     session: SessionDep,
     user_id: uuid.UUID,
     actor: CurrentActor,
 ) -> AdminUserBrief:
-    """解封用户 - 仅 superuser"""
+    """解封用户 (系统管理员; 门店管理员限本店会员)"""
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+    _check_member_scope(actor, session, user_id)
     user.status = "active"
     user.is_active = True  # 解封同时恢复 token 有效性
     user.updated_at = datetime.utcnow()
@@ -1273,7 +1268,7 @@ def list_admin_users(
 @router.get(
     "/staff",
     response_model=StaffsPublic,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STAFF_MANAGE))],
 )
 def list_staff(
     session: SessionDep,
@@ -1293,7 +1288,7 @@ def list_staff(
 @router.post(
     "/staff",
     response_model=StaffPublic,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STAFF_MANAGE))],
 )
 def create_staff_endpoint(
     session: SessionDep,
@@ -1301,6 +1296,14 @@ def create_staff_endpoint(
 ) -> StaffPublic:
     if crud.get_staff_by_email(session=session, email=body.email):
         raise HTTPException(status_code=400, detail="邮箱已存在")
+    # 三层模型: 员工账号即门店管理员, 必须指定门店; role 固定 store_admin
+    if body.role != "store_admin":
+        raise HTTPException(status_code=400, detail="员工角色只能是门店管理员")
+    if body.store_id is None:
+        raise HTTPException(status_code=400, detail="门店管理员必须指定所属门店")
+    store = session.get(Store, body.store_id)
+    if not store or store.status != "active":
+        raise HTTPException(status_code=400, detail="门店不存在或已停用")
     s = crud.create_staff(session=session, staff_create=body)
     return StaffPublic.model_validate(s, from_attributes=True)
 
@@ -1308,7 +1311,7 @@ def create_staff_endpoint(
 @router.patch(
     "/staff/{staff_id}",
     response_model=StaffPublic,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STAFF_MANAGE))],
 )
 def update_staff_endpoint(
     session: SessionDep,
@@ -1318,6 +1321,17 @@ def update_staff_endpoint(
     s = session.get(Staff, staff_id)
     if not s:
         raise HTTPException(status_code=404, detail="员工不存在")
+    # 合并后的最终状态必须仍是: store_admin + 有门店
+    final_role = body.role or s.role
+    final_store = body.store_id if body.store_id is not None else s.store_id
+    if final_role != "store_admin":
+        raise HTTPException(status_code=400, detail="员工角色只能是门店管理员")
+    if final_store is None:
+        raise HTTPException(status_code=400, detail="门店管理员必须指定所属门店")
+    if body.store_id is not None:
+        store = session.get(Store, body.store_id)
+        if not store or store.status != "active":
+            raise HTTPException(status_code=400, detail="门店不存在或已停用")
     s = crud.update_staff(session=session, db_staff=s, staff_in=body)
     return StaffPublic.model_validate(s, from_attributes=True)
 
@@ -1325,7 +1339,7 @@ def update_staff_endpoint(
 @router.delete(
     "/staff/{staff_id}",
     response_model=Message,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.STAFF_MANAGE))],
 )
 def delete_staff_endpoint(
     session: SessionDep,
@@ -1548,7 +1562,7 @@ class AssignRequestBody(SQLModel):
 @router.post(
     "/contact-requests/{request_id}/assign",
     response_model=AdminContactRequestItem,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.ASSIGN_REQUEST))],
 )
 def assign_contact_request(
     session: SessionDep,
@@ -1945,7 +1959,7 @@ def list_member_requests(
 @router.get(
     "/members/{user_id}/audit-logs",
     response_model=AuditLogList,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.AUDIT_LOG_VIEW))],
 )
 def list_member_audit_logs(
     session: SessionDep,
@@ -1970,7 +1984,7 @@ def list_member_audit_logs(
 @router.get(
     "/audit-logs",
     response_model=AuditLogList,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_perm(Perm.AUDIT_LOG_VIEW))],
 )
 def list_audit_logs(
     session: SessionDep,

@@ -16,7 +16,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function AddStaff() {
+interface AddStaffProps {
+  /** 门店详情页传入: 创建的管理员自动绑定该门店 */
+  storeId: string
+  storeName?: string | null
+}
+
+export function AddStaff({ storeId, storeName }: AddStaffProps) {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
@@ -27,11 +33,17 @@ export function AddStaff() {
   const m = useMutation({
     mutationFn: () =>
       AdminService.createStaffEndpoint({
-        requestBody: { email, name, password },
+        requestBody: {
+          email,
+          name,
+          password,
+          role: "store_admin",
+          store_id: storeId,
+        },
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-staff"] })
-      toast.success("员工已添加")
+      toast.success(`已为「${storeName || "门店"}」添加管理员`)
       setOpen(false)
       setEmail("")
       setName("")
@@ -44,12 +56,12 @@ export function AddStaff() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus /> 添加员工
+          <Plus /> 添加门店管理员
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>添加员工 (只读账号)</DialogTitle>
+          <DialogTitle>为「{storeName || "本店"}」添加管理员</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
@@ -59,7 +71,7 @@ export function AddStaff() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="staff@qianyuan.cn"
+              placeholder="manager@qianyuan.cn"
             />
           </div>
           <div>
@@ -68,7 +80,7 @@ export function AddStaff() {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="客服小王"
+              placeholder="李店长"
             />
           </div>
           <div>
@@ -81,6 +93,15 @@ export function AddStaff() {
               placeholder="至少 8 位"
               minLength={8}
             />
+          </div>
+          <div>
+            <Label>所属门店</Label>
+            <div className="rounded border bg-muted px-3 py-2 text-sm">
+              {storeName || "当前门店"}（自动绑定）
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              该账号登录后只能查看和管理本店会员
+            </p>
           </div>
         </div>
         <DialogFooter>

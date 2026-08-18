@@ -103,6 +103,40 @@ class UsersPublic(SQLModel):
 
 
 # ------------------------------------------------------------
+# AdminAccount · 管理员账号管理 (User.is_superuser=true 的子集)
+# ------------------------------------------------------------
+
+
+class AdminAccountItem(SQLModel):
+    id: uuid.UUID
+    email: EmailStr | None = None
+    full_name: str | None = None
+    is_active: bool = True
+    created_at: datetime | None = None
+    last_active_at: datetime | None = None
+
+
+class AdminAccountList(SQLModel):
+    items: list[AdminAccountItem] = []
+    total: int = 0
+
+
+class AdminAccountCreate(SQLModel):
+    email: EmailStr = Field(max_length=255)
+    password: str = Field(min_length=8, max_length=64)
+    full_name: str | None = Field(default=None, max_length=64)
+
+
+class AdminAccountUpdate(SQLModel):
+    full_name: str | None = Field(default=None, max_length=64)
+    is_active: bool | None = None
+
+
+class AdminAccountPasswordReset(SQLModel):
+    new_password: str = Field(min_length=8, max_length=64)
+
+
+# ------------------------------------------------------------
 # Profile · 我的资料
 # ------------------------------------------------------------
 
@@ -447,8 +481,8 @@ class StaffBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     name: str = Field(max_length=64)
     is_active: bool = True
-    role: str = Field(default="hq_staff", max_length=16)  # 'hq_staff' / 'matchmaker'
-    store_id: uuid.UUID | None = None  # 仅 matchmaker 必填
+    role: str = Field(default="store_admin", max_length=16)  # 'store_admin' 门店管理员
+    store_id: uuid.UUID | None = None  # store_admin 必填 (缺失则无任何后台权限)
 
 
 class StaffCreate(StaffBase):
@@ -464,8 +498,8 @@ class StaffUpdate(SQLModel):
 
 
 class Staff(StaffBase, table=True):
-    """后台员工: 'hq_staff' 总部员工 (全局读 + 审核/工单),
-    'matchmaker' 门店红娘 (仅本店用户: 认证/代录/工单)."""
+    """后台员工账号: 'store_admin' 门店管理员 (本店全权, store_id 必填).
+    历史角色 hq_staff/matchmaker 已废弃, 未迁移值 fail-closed 无后台权限."""
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
