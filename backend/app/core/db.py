@@ -90,23 +90,24 @@ def _ensure_favorite_unique(session: Session) -> None:
 
 
 def _migrate_staff_roles(session: Session) -> None:
-    """角色值规范化: staff → hq_staff, store_owner → matchmaker (docs/10)."""
+    """角色值规范化 (三层模型): 历史值统一迁到 store_admin.
+
+    'staff'/'store_owner'/'matchmaker' → 'store_admin' (门店管理员);
+    'hq_staff' 保留原值: 三层模型中已废弃, 未知角色 fail-closed 无后台权限.
+    """
     inspector = inspect(engine)
     if "staff" not in inspector.get_table_names():
         return
     result = session.execute(
         text(
-            "UPDATE staff SET role = CASE role"
-            " WHEN 'staff' THEN 'hq_staff'"
-            " WHEN 'store_owner' THEN 'matchmaker'"
-            " ELSE role END"
-            " WHERE role IN ('staff', 'store_owner')"
+            "UPDATE staff SET role = 'store_admin'"
+            " WHERE role IN ('staff', 'store_owner', 'matchmaker')"
         )
     )
     session.commit()
     migrated = result.rowcount  # type: ignore[attr-defined]
     if migrated:
-        logger.info(f"Migrated {migrated} staff role values")
+        logger.info(f"Migrated {migrated} staff role values to store_admin")
 
 
 def init_db(session: Session) -> None:

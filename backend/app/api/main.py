@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     admin,
+    admin_accounts,
     affinity,
     contacts,
     favorites,
@@ -31,4 +32,5 @@ api_router.include_router(stores.router)
 api_router.include_router(feedback.router)
 api_router.include_router(site.router)
 api_router.include_router(admin.router)
+api_router.include_router(admin_accounts.router)
 api_router.include_router(uploads.router)

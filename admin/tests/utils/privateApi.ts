@@ -1,6 +1,5 @@
-// Note: the `PrivateService` is only available when generating the client
-// for local environments
-import { OpenAPI, PrivateService } from "../../src/client"
+// E2E 造测试用户: 用超管身份调 /users (后端已无 /private/users, 模板遗留已迁移)
+import { OpenAPI, UsersService } from "../../src/client"
 
 OpenAPI.BASE = `${process.env.VITE_API_URL}`
 
@@ -11,11 +10,10 @@ export const createUser = async ({
   email: string
   password: string
 }) => {
-  return await PrivateService.createUser({
+  return await UsersService.createUser({
     requestBody: {
       email,
       password,
-      is_verified: true,
       full_name: "Test User",
     },
   })

@@ -48,9 +48,9 @@ class WhoAmI(SQLModel):
     is_superuser: bool = False
     can_read_admin: bool = False
     can_write_admin: bool = False
-    # staff 专属 (user 时为 None): 前端据此区分 hq_staff / matchmaker 及门店范围
-    role: str | None = None  # "hq_staff" / "matchmaker"
-    store_id: uuid.UUID | None = None  # matchmaker 所在门店
+    # staff 专属 (user 时为 None): 'store_admin' 门店管理员及其门店范围
+    role: str | None = None  # "store_admin"
+    store_id: uuid.UUID | None = None  # 门店管理员所在门店
 
 
 router = APIRouter(tags=["login"])

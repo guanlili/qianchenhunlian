@@ -71,6 +71,167 @@ export const ActivityListSchema = {
     title: 'ActivityList'
 } as const;
 
+export const AdminAccountCreateSchema = {
+    properties: {
+        email: {
+            type: 'string',
+            maxLength: 255,
+            format: 'email',
+            title: 'Email'
+        },
+        password: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 8,
+            title: 'Password'
+        },
+        full_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Full Name'
+        }
+    },
+    type: 'object',
+    required: ['email', 'password'],
+    title: 'AdminAccountCreate'
+} as const;
+
+export const AdminAccountItemSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        email: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'email'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Email'
+        },
+        full_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Full Name'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        last_active_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Active At'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'AdminAccountItem'
+} as const;
+
+export const AdminAccountListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/AdminAccountItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'AdminAccountList'
+} as const;
+
+export const AdminAccountPasswordResetSchema = {
+    properties: {
+        new_password: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 8,
+            title: 'New Password'
+        }
+    },
+    type: 'object',
+    required: ['new_password'],
+    title: 'AdminAccountPasswordReset'
+} as const;
+
+export const AdminAccountUpdateSchema = {
+    properties: {
+        full_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Full Name'
+        },
+        is_active: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Active'
+        }
+    },
+    type: 'object',
+    title: 'AdminAccountUpdate'
+} as const;
+
 export const AdminContactRequestItemSchema = {
     properties: {
         id: {
@@ -4000,31 +4161,6 @@ export const PhotoCommitSchema = {
     title: 'PhotoCommit'
 } as const;
 
-export const PrivateUserCreateSchema = {
-    properties: {
-        email: {
-            type: 'string',
-            title: 'Email'
-        },
-        password: {
-            type: 'string',
-            title: 'Password'
-        },
-        full_name: {
-            type: 'string',
-            title: 'Full Name'
-        },
-        is_verified: {
-            type: 'boolean',
-            title: 'Is Verified',
-            default: false
-        }
-    },
-    type: 'object',
-    required: ['email', 'password', 'full_name'],
-    title: 'PrivateUserCreate'
-} as const;
-
 export const ProfileMeResponseSchema = {
     properties: {
         profile: {
@@ -5292,6 +5428,18 @@ export const QualificationListSchema = {
     title: 'QualificationList'
 } as const;
 
+export const RefreshTokenBodySchema = {
+    properties: {
+        refresh_token: {
+            type: 'string',
+            title: 'Refresh Token'
+        }
+    },
+    type: 'object',
+    required: ['refresh_token'],
+    title: 'RefreshTokenBody'
+} as const;
+
 export const StaffCreateSchema = {
     properties: {
         email: {
@@ -5314,7 +5462,7 @@ export const StaffCreateSchema = {
             type: 'string',
             maxLength: 16,
             title: 'Role',
-            default: 'hq_staff'
+            default: 'store_admin'
         },
         store_id: {
             anyOf: [
@@ -5362,7 +5510,7 @@ export const StaffPublicSchema = {
             type: 'string',
             maxLength: 16,
             title: 'Role',
-            default: 'hq_staff'
+            default: 'store_admin'
         },
         store_id: {
             anyOf: [
@@ -5929,6 +6077,17 @@ export const TokenSchema = {
         access_token: {
             type: 'string',
             title: 'Access Token'
+        },
+        refresh_token: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Refresh Token'
         },
         token_type: {
             type: 'string',
