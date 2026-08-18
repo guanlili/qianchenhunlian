@@ -24,14 +24,14 @@ describe("cn (className 合并)", () => {
 describe("resolveFileUrl (文件路径拼接)", () => {
   it("相对路径 /files/... 拼上 API origin", () => {
     expect(resolveFileUrl("/files/abc/def.jpg")).toBe(
-      `${TEST_API_ORIGIN}/files/abc/def.jpg`
+      `${TEST_API_ORIGIN}/files/abc/def.jpg`,
     )
   })
 
   it("老数据里的绝对 URL 剥掉 host 重拼当前 origin", () => {
-    expect(
-      resolveFileUrl("http://10.129.209.249:8000/files/abc/old.jpg")
-    ).toBe(`${TEST_API_ORIGIN}/files/abc/old.jpg`)
+    expect(resolveFileUrl("http://10.129.209.249:8000/files/abc/old.jpg")).toBe(
+      `${TEST_API_ORIGIN}/files/abc/old.jpg`,
+    )
   })
 
   it("已是当前 origin 的绝对 URL 原样返回", () => {
@@ -41,7 +41,7 @@ describe("resolveFileUrl (文件路径拼接)", () => {
 
   it("外部图床等不认识的 URL 原样返回", () => {
     expect(resolveFileUrl("https://cdn.example.com/a.jpg")).toBe(
-      "https://cdn.example.com/a.jpg"
+      "https://cdn.example.com/a.jpg",
     )
   })
 
