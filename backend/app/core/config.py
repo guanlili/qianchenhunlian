@@ -112,6 +112,19 @@ class Settings(BaseSettings):
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""
 
+    # --- 阿里云 OSS (二期图片存储) ---
+    # 三项 (AK/SK/Bucket) 任一为空即视为未启用, 自动退回本地磁盘 (一期行为),
+    # 本地开发零依赖. AK 用 RAM 子账号, 只授本 Bucket 的 Put/Get/Delete 权限.
+    OSS_ACCESS_KEY_ID: str = ""
+    OSS_ACCESS_KEY_SECRET: str = ""
+    OSS_BUCKET: str = ""
+    # 上传走内网 endpoint (ECS 同地域免流量费/低延迟), 签名 URL 用公网 endpoint.
+    # 公网 endpoint 带 https:// 前缀: 签名 URL 会继承该协议, 小程序/https 页面要求图片链接为 https.
+    OSS_INTERNAL_ENDPOINT: str = "oss-cn-beijing-internal.aliyuncs.com"
+    OSS_PUBLIC_ENDPOINT: str = "https://oss-cn-beijing.aliyuncs.com"
+    # 私有读签名 URL 有效期 (秒), 默认 1 小时.
+    OSS_SIGNED_URL_EXPIRE_SECONDS: int = 3600
+
     # 常见弱默认值 (含模板占位符与运维图省事的口令). 命中即视为"未真正配置".
     _WEAK_SECRETS = frozenset(
         {
