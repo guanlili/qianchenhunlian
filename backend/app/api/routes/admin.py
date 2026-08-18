@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlmodel import SQLModel, func, select
+from sqlmodel import Field, SQLModel, func, select
 
 from app import crud
 from app.api.audit import write_audit as _audit
@@ -920,12 +920,20 @@ class AdminFeedbackItem(SQLModel):
     content: str
     contact: str | None = None
     status: str
+    admin_note: str | None = None
+    handled_by: uuid.UUID | None = None
+    handled_at: datetime | None = None
     created_at: datetime
 
 
 class AdminFeedbackList(SQLModel):
     items: list[AdminFeedbackItem] = []
     total: int = 0
+
+
+class FeedbackHandleBody(SQLModel):
+    note: str | None = Field(default=None, max_length=255)
+    reopen: bool = False  # True = 重新打开 (handled → open)
 
 
 @router.get(
@@ -935,14 +943,22 @@ class AdminFeedbackList(SQLModel):
 )
 def admin_list_feedback(
     session: SessionDep,
+    status_filter: Literal["all", "open", "handled"] = Query("all", alias="status"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminFeedbackList:
-    total = session.exec(select(func.count()).select_from(Feedback)).one()
+    count_stmt = select(func.count()).select_from(Feedback)
+    stmt = select(Feedback, User).join(
+        User,
+        Feedback.user_id == User.id,  # type: ignore[arg-type]
+        isouter=True,
+    )
+    if status_filter != "all":
+        count_stmt = count_stmt.where(Feedback.status == status_filter)
+        stmt = stmt.where(Feedback.status == status_filter)
+    total = session.exec(count_stmt).one()
     rows = session.exec(
-        select(Feedback, User)
-        .join(User, Feedback.user_id == User.id, isouter=True)  # type: ignore
-        .order_by(Feedback.created_at.desc())  # type: ignore
+        stmt.order_by(Feedback.created_at.desc())  # type: ignore[attr-defined]
         .offset(skip)
         .limit(limit)
     ).all()
@@ -954,11 +970,67 @@ def admin_list_feedback(
             content=fb.content,
             contact=fb.contact,
             status=fb.status,
+            admin_note=fb.admin_note,
+            handled_by=fb.handled_by,
+            handled_at=fb.handled_at,
             created_at=fb.created_at,
         )
         for fb, u in rows
     ]
     return AdminFeedbackList(items=items, total=total)
+
+
+@router.post(
+    "/feedback/{feedback_id}/handle",
+    response_model=AdminFeedbackItem,
+    dependencies=[Depends(require_perm(Perm.FEEDBACK_HANDLE))],
+)
+def handle_feedback(
+    session: SessionDep,
+    actor: CurrentActor,
+    feedback_id: uuid.UUID,
+    body: FeedbackHandleBody,
+) -> AdminFeedbackItem:
+    """处理反馈 (handled + 备注) 或重新打开 (reopen). 仅系统管理员."""
+    fb = session.get(Feedback, feedback_id)
+    if not fb:
+        raise HTTPException(status_code=404, detail="反馈不存在")
+    if body.reopen:
+        fb.status = "open"
+        fb.admin_note = None
+        fb.handled_by = None
+        fb.handled_at = None
+    else:
+        fb.status = "handled"
+        fb.admin_note = (body.note or "").strip()[:255] or None
+        try:
+            fb.handled_by = uuid.UUID(actor.id)
+        except (ValueError, TypeError):
+            pass
+        fb.handled_at = datetime.utcnow()
+    _audit(
+        session,
+        actor,
+        "handle_feedback" if not body.reopen else "reopen_feedback",
+        target_user_id=fb.user_id,
+        detail={"feedback_id": str(fb.id), "note": fb.admin_note},
+    )
+    session.add(fb)
+    session.commit()
+    session.refresh(fb)
+    u = session.get(User, fb.user_id)
+    return AdminFeedbackItem(
+        id=fb.id,
+        user_id=fb.user_id,
+        user_xy_code=u.xy_code if u else None,
+        content=fb.content,
+        contact=fb.contact,
+        status=fb.status,
+        admin_note=fb.admin_note,
+        handled_by=fb.handled_by,
+        handled_at=fb.handled_at,
+        created_at=fb.created_at,
+    )
 
 
 @router.post(
@@ -1104,18 +1176,42 @@ class StatsResponse(SQLModel):
 
 
 @router.get("/stats", response_model=StatsResponse)
-def admin_stats(session: SessionDep) -> StatsResponse:
+def admin_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
+    """工作台指标 — 门店管理员自动限本店口径 (会员/实名/注册/工单)."""
+    return _compute_stats(session, actor)
+
+
+def _member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
+    """会员类计数; 门店口径时 join Profile 限本店. extra 为追加的 User 列条件."""
+    stmt = (
+        select(func.count())
+        .select_from(User)
+        .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+    )
+    if sid is not None:
+        stmt = stmt.where(Profile.home_store_id == sid)
+    for cond in extra:
+        stmt = stmt.where(cond)
+    return session.exec(stmt).one() or 0
+
+
+def _compute_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
     """简易看板数据 — 含工单 / 好感 / 认证比例 / 门店"""
     from app.models import Affinity, ContactRequest, Store
 
+    sid = _store_owner_id(actor)
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    total_users = session.exec(select(func.count()).select_from(User)).one() or 0
-    verified_users = (
-        session.exec(
-            select(func.count()).select_from(User).where(User.verified == "passed")
-        ).one()
-        or 0
+    total_users = _member_count(session, sid)
+    verified_users = _member_count(session, sid, User.verified == "passed")
+
+    ticket_stmt = (
+        select(func.count())
+        .select_from(ContactRequest)
+        .where(ContactRequest.status == "pending")
     )
+    if sid is not None:
+        ticket_stmt = ticket_stmt.where(ContactRequest.store_id == sid)
+    pending_tickets = session.exec(ticket_stmt).one() or 0
 
     # 互相好感对子数: 同时存在 (A→B) 和 (B→A), 每个对子只算一次 → /2
     # 这里偷懒用 join 自连接, 然后 //2 (推荐场景下数据量小, 性能 OK)
@@ -1144,16 +1240,8 @@ def admin_stats(session: SessionDep) -> StatsResponse:
             .where(Profile.audit_status == "pending")
         ).one()
         or 0,
-        today_signups=session.exec(
-            select(func.count()).select_from(User).where(User.created_at >= today_start)
-        ).one()
-        or 0,
-        pending_tickets=session.exec(
-            select(func.count())
-            .select_from(ContactRequest)
-            .where(ContactRequest.status == "pending")
-        ).one()
-        or 0,
+        today_signups=_member_count(session, sid, User.created_at >= today_start),
+        pending_tickets=pending_tickets,
         mutual_affinity_pairs=mutual_pairs,
         verified_users=verified_users,
         verified_ratio=int(verified_users / total_users * 100) if total_users else 0,
@@ -1161,10 +1249,7 @@ def admin_stats(session: SessionDep) -> StatsResponse:
             select(func.count()).select_from(Store).where(Store.status == "active")
         ).one()
         or 0,
-        pending_verifies=session.exec(
-            select(func.count()).select_from(User).where(User.verified == "pending")
-        ).one()
-        or 0,
+        pending_verifies=_member_count(session, sid, User.verified == "pending"),
         open_feedback=session.exec(
             select(func.count()).select_from(Feedback).where(Feedback.status == "open")
         ).one()
@@ -2034,4 +2119,90 @@ def list_verify_queue(
     return AdminMemberList(
         items=[_to_member_item(u, p) for u, p in rows],
         total=total,
+    )
+
+
+class DashboardResponse(SQLModel):
+    """工作台聚合: 待办指标 + 最近动态 (docs/11 §3.1). 门店口径由后端按 actor 强制."""
+
+    stats: StatsResponse
+    recent_signups: list[AdminMemberItem] = []
+    recent_pending_audits: list[AdminMemberItem] = []  # 仅总部视角返回
+    recent_requests: list[AdminContactRequestItem] = []
+    overdue_pending_tickets: int = 0  # pending 超 48h
+
+
+@router.get(
+    "/dashboard",
+    response_model=DashboardResponse,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def admin_dashboard(session: SessionDep, actor: CurrentActor) -> DashboardResponse:
+    """工作台聚合数据: 待办数字 + 最近注册/提审/工单各 5 条 + 逾期工单数."""
+    from app.models import ContactRequest
+
+    sid = _store_owner_id(actor)
+    stats = _compute_stats(session, actor)
+
+    # 最近注册 (门店口径限本店)
+    signup_stmt = (
+        select(User, Profile)
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore
+        .where(User.openid.is_not(None))  # type: ignore[union-attr]
+    )
+    if sid is not None:
+        signup_stmt = signup_stmt.where(Profile.home_store_id == sid)
+    recent_signups = [
+        _to_member_item(u, p)
+        for u, p in session.exec(
+            signup_stmt.order_by(User.created_at.desc()).limit(5)  # type: ignore[attr-defined]
+        ).all()
+    ]
+
+    # 最近提审 (资料审核仅总部, 门店视角不返回)
+    recent_audits: list[AdminMemberItem] = []
+    if sid is None:
+        audit_stmt = (
+            select(User, Profile)
+            .join(Profile, Profile.user_id == User.id)  # type: ignore
+            .where(Profile.audit_status == "pending")
+        )
+        recent_audits = [
+            _to_member_item(u, p)
+            for u, p in session.exec(
+                audit_stmt.order_by(Profile.updated_at.desc()).limit(5)  # type: ignore[attr-defined]
+            ).all()
+        ]
+
+    # 最近工单 (门店口径限本店)
+    req_stmt = select(ContactRequest)
+    if sid is not None:
+        req_stmt = req_stmt.where(ContactRequest.store_id == sid)
+    reqs = list(
+        session.exec(
+            req_stmt.order_by(ContactRequest.created_at.desc()).limit(5)  # type: ignore[attr-defined]
+        ).all()
+    )
+    users_by_id, profiles_by_uid = _prefetch_request_parties(session, reqs)
+    recent_requests = [
+        _build_request_item(r, actor, users_by_id, profiles_by_uid) for r in reqs
+    ]
+
+    # 逾期: pending 超 48h
+    overdue_stmt = (
+        select(func.count())
+        .select_from(ContactRequest)
+        .where(ContactRequest.status == "pending")
+        .where(ContactRequest.created_at < datetime.utcnow() - timedelta(hours=48))
+    )
+    if sid is not None:
+        overdue_stmt = overdue_stmt.where(ContactRequest.store_id == sid)
+    overdue = session.exec(overdue_stmt).one() or 0
+
+    return DashboardResponse(
+        stats=stats,
+        recent_signups=recent_signups,
+        recent_pending_audits=recent_audits,
+        recent_requests=recent_requests,
+        overdue_pending_tickets=overdue,
     )

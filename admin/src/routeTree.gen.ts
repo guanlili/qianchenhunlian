@@ -20,13 +20,11 @@ import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
 import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
-import { Route as LayoutProfilesRouteImport } from './routes/_layout/profiles'
 import { Route as LayoutMembersRouteImport } from './routes/_layout/members'
 import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAuditLogsRouteImport } from './routes/_layout/audit-logs'
 import { Route as LayoutAdminsRouteImport } from './routes/_layout/admins'
-import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutStoresStoreIdRouteImport } from './routes/_layout/stores.$storeId'
 import { Route as LayoutMembersUserIdRouteImport } from './routes/_layout/members.$userId'
 
@@ -84,11 +82,6 @@ const LayoutQualificationsRoute = LayoutQualificationsRouteImport.update({
   path: '/qualifications',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutProfilesRoute = LayoutProfilesRouteImport.update({
-  id: '/profiles',
-  path: '/profiles',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutMembersRoute = LayoutMembersRouteImport.update({
   id: '/members',
   path: '/members',
@@ -114,11 +107,6 @@ const LayoutAdminsRoute = LayoutAdminsRouteImport.update({
   path: '/admins',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAdminRoute = LayoutAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutStoresStoreIdRoute = LayoutStoresStoreIdRouteImport.update({
   id: '/$storeId',
   path: '/$storeId',
@@ -136,13 +124,11 @@ export interface FileRoutesByFullPath {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
   '/admins': typeof LayoutAdminsRoute
   '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
   '/members': typeof LayoutMembersRouteWithChildren
-  '/profiles': typeof LayoutProfilesRoute
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
   '/review': typeof LayoutReviewRoute
@@ -157,13 +143,11 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
   '/admins': typeof LayoutAdminsRoute
   '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
   '/members': typeof LayoutMembersRouteWithChildren
-  '/profiles': typeof LayoutProfilesRoute
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
   '/review': typeof LayoutReviewRoute
@@ -180,13 +164,11 @@ export interface FileRoutesById {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/admins': typeof LayoutAdminsRoute
   '/_layout/audit-logs': typeof LayoutAuditLogsRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/feedback': typeof LayoutFeedbackRoute
   '/_layout/members': typeof LayoutMembersRouteWithChildren
-  '/_layout/profiles': typeof LayoutProfilesRoute
   '/_layout/qualifications': typeof LayoutQualificationsRoute
   '/_layout/requests': typeof LayoutRequestsRoute
   '/_layout/review': typeof LayoutReviewRoute
@@ -203,13 +185,11 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
-    | '/admin'
     | '/admins'
     | '/audit-logs'
     | '/dashboard'
     | '/feedback'
     | '/members'
-    | '/profiles'
     | '/qualifications'
     | '/requests'
     | '/review'
@@ -224,13 +204,11 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
-    | '/admin'
     | '/admins'
     | '/audit-logs'
     | '/dashboard'
     | '/feedback'
     | '/members'
-    | '/profiles'
     | '/qualifications'
     | '/requests'
     | '/review'
@@ -246,13 +224,11 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
-    | '/_layout/admin'
     | '/_layout/admins'
     | '/_layout/audit-logs'
     | '/_layout/dashboard'
     | '/_layout/feedback'
     | '/_layout/members'
-    | '/_layout/profiles'
     | '/_layout/qualifications'
     | '/_layout/requests'
     | '/_layout/review'
@@ -350,13 +326,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutQualificationsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/profiles': {
-      id: '/_layout/profiles'
-      path: '/profiles'
-      fullPath: '/profiles'
-      preLoaderRoute: typeof LayoutProfilesRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/members': {
       id: '/_layout/members'
       path: '/members'
@@ -390,13 +359,6 @@ declare module '@tanstack/react-router' {
       path: '/admins'
       fullPath: '/admins'
       preLoaderRoute: typeof LayoutAdminsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/admin': {
-      id: '/_layout/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/stores/$storeId': {
@@ -441,13 +403,11 @@ const LayoutStoresRouteWithChildren = LayoutStoresRoute._addFileChildren(
 )
 
 interface LayoutRouteChildren {
-  LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutAdminsRoute: typeof LayoutAdminsRoute
   LayoutAuditLogsRoute: typeof LayoutAuditLogsRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
   LayoutFeedbackRoute: typeof LayoutFeedbackRoute
   LayoutMembersRoute: typeof LayoutMembersRouteWithChildren
-  LayoutProfilesRoute: typeof LayoutProfilesRoute
   LayoutQualificationsRoute: typeof LayoutQualificationsRoute
   LayoutRequestsRoute: typeof LayoutRequestsRoute
   LayoutReviewRoute: typeof LayoutReviewRoute
@@ -456,13 +416,11 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutAdminRoute: LayoutAdminRoute,
   LayoutAdminsRoute: LayoutAdminsRoute,
   LayoutAuditLogsRoute: LayoutAuditLogsRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
   LayoutFeedbackRoute: LayoutFeedbackRoute,
   LayoutMembersRoute: LayoutMembersRouteWithChildren,
-  LayoutProfilesRoute: LayoutProfilesRoute,
   LayoutQualificationsRoute: LayoutQualificationsRoute,
   LayoutRequestsRoute: LayoutRequestsRoute,
   LayoutReviewRoute: LayoutReviewRoute,
