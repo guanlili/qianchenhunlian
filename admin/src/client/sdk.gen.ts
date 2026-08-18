@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminVerifyProfileData, AdminVerifyProfileResponse, AdminUnverifyProfileData, AdminUnverifyProfileResponse, AdminAdminSetHomeStoreData, AdminAdminSetHomeStoreResponse, AdminAdminListStoresData, AdminAdminListStoresResponse, AdminAdminCreateStoreData, AdminAdminCreateStoreResponse, AdminAdminUpdateStoreData, AdminAdminUpdateStoreResponse, AdminAdminDeleteStoreData, AdminAdminDeleteStoreResponse, AdminAdminListFeedbackData, AdminAdminListFeedbackResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, AdminAssignContactRequestData, AdminAssignContactRequestResponse, AdminListMembersData, AdminListMembersResponse, AdminGetMemberFullData, AdminGetMemberFullResponse, AdminViewMemberContactData, AdminViewMemberContactResponse, AdminListMemberTransactionsData, AdminListMemberTransactionsResponse, AdminListMemberActivitiesData, AdminListMemberActivitiesResponse, AdminListMemberRequestsData, AdminListMemberRequestsResponse, AdminListMemberAuditLogsData, AdminListMemberAuditLogsResponse, AdminListAuditLogsData, AdminListAuditLogsResponse, AdminListVerifyQueueData, AdminListVerifyQueueResponse, AffinityToggleAffinityData, AffinityToggleAffinityResponse, AffinityListMineData, AffinityListMineResponse, AffinityListMutualData, AffinityListMutualResponse, AffinityCheckAffinityData, AffinityCheckAffinityResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, FavoritesListSeenByMeData, FavoritesListSeenByMeResponse, FeedbackSubmitFeedbackData, FeedbackSubmitFeedbackResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, PrivateCreateUserData, PrivateCreateUserResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesSetHomeStoreData, ProfilesSetHomeStoreResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, ProfilesDeactivateMeResponse, ProfilesReactivateMeResponse, ProfilesCancelAccountRequestResponse, SiteGetQualificationsResponse, SitePutQualificationsData, SitePutQualificationsResponse, StoresListCitiesResponse, StoresListStoresData, StoresListStoresResponse, StoresGetStoreData, StoresGetStoreResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse } from './types.gen';
+import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminVerifyProfileData, AdminVerifyProfileResponse, AdminUnverifyProfileData, AdminUnverifyProfileResponse, AdminAdminSetHomeStoreData, AdminAdminSetHomeStoreResponse, AdminAdminListStoresData, AdminAdminListStoresResponse, AdminAdminCreateStoreData, AdminAdminCreateStoreResponse, AdminAdminUpdateStoreData, AdminAdminUpdateStoreResponse, AdminAdminDeleteStoreData, AdminAdminDeleteStoreResponse, AdminAdminListFeedbackData, AdminAdminListFeedbackResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, AdminAssignContactRequestData, AdminAssignContactRequestResponse, AdminListMembersData, AdminListMembersResponse, AdminGetMemberFullData, AdminGetMemberFullResponse, AdminViewMemberContactData, AdminViewMemberContactResponse, AdminListMemberTransactionsData, AdminListMemberTransactionsResponse, AdminListMemberActivitiesData, AdminListMemberActivitiesResponse, AdminListMemberRequestsData, AdminListMemberRequestsResponse, AdminListMemberAuditLogsData, AdminListMemberAuditLogsResponse, AdminListAuditLogsData, AdminListAuditLogsResponse, AdminListVerifyQueueData, AdminListVerifyQueueResponse, AdminListAdminAccountsData, AdminListAdminAccountsResponse, AdminCreateAdminAccountData, AdminCreateAdminAccountResponse, AdminUpdateAdminAccountData, AdminUpdateAdminAccountResponse, AdminResetAdminPasswordData, AdminResetAdminPasswordResponse, AffinityToggleAffinityData, AffinityToggleAffinityResponse, AffinityListMineData, AffinityListMineResponse, AffinityListMutualData, AffinityListMutualResponse, AffinityCheckAffinityData, AffinityCheckAffinityResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, FavoritesListSeenByMeData, FavoritesListSeenByMeResponse, FeedbackSubmitFeedbackData, FeedbackSubmitFeedbackResponse, FilesGetFileData, FilesGetFileResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginRefreshAccessTokenData, LoginRefreshAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesSetHomeStoreData, ProfilesSetHomeStoreResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, ProfilesDeactivateMeResponse, ProfilesReactivateMeResponse, ProfilesCancelAccountRequestResponse, SiteGetQualificationsResponse, SitePutQualificationsData, SitePutQualificationsResponse, StoresListCitiesResponse, StoresListStoresData, StoresListStoresResponse, StoresGetStoreData, StoresGetStoreResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse } from './types.gen';
 
 export class AdminService {
     /**
@@ -332,7 +332,7 @@ export class AdminService {
     
     /**
      * Grant Unlock Balance
-     * 运营手动加/减 解锁次数 - 仅 superuser
+     * 运营手动加/减 解锁次数 (系统管理员; 门店管理员限本店会员)
      * @param data The data for the request.
      * @param data.userId
      * @param data.requestBody
@@ -356,7 +356,7 @@ export class AdminService {
     
     /**
      * Block User
-     * 封禁用户 - 仅 superuser
+     * 封禁用户 (系统管理员; 门店管理员限本店会员)
      * @param data The data for the request.
      * @param data.userId
      * @returns AdminUserBrief Successful Response
@@ -377,7 +377,7 @@ export class AdminService {
     
     /**
      * Unblock User
-     * 解封用户 - 仅 superuser
+     * 解封用户 (系统管理员; 门店管理员限本店会员)
      * @param data The data for the request.
      * @param data.userId
      * @returns AdminUserBrief Successful Response
@@ -837,6 +837,99 @@ export class AdminService {
             }
         });
     }
+    
+    /**
+     * List Admin Accounts
+     * 管理员账号列表 (关键字搜索 + 分页).
+     * @param data The data for the request.
+     * @param data.q 按邮箱/姓名模糊搜索
+     * @param data.skip
+     * @param data.limit
+     * @returns AdminAccountList Successful Response
+     * @throws ApiError
+     */
+    public static listAdminAccounts(data: AdminListAdminAccountsData = {}): CancelablePromise<AdminListAdminAccountsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/admin-accounts',
+            query: {
+                q: data.q,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Admin Account
+     * 创建管理员账号 (email + 初始密码).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AdminAccountItem Successful Response
+     * @throws ApiError
+     */
+    public static createAdminAccount(data: AdminCreateAdminAccountData): CancelablePromise<AdminCreateAdminAccountResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/admin-accounts',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Admin Account
+     * 编辑管理员 (姓名 / 启用停用). 停用即软删, 保护见模块注释.
+     * @param data The data for the request.
+     * @param data.userId
+     * @param data.requestBody
+     * @returns AdminAccountItem Successful Response
+     * @throws ApiError
+     */
+    public static updateAdminAccount(data: AdminUpdateAdminAccountData): CancelablePromise<AdminUpdateAdminAccountResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/admin/admin-accounts/{user_id}',
+            path: {
+                user_id: data.userId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Reset Admin Password
+     * 重置管理员密码 (不校验旧密码, 由管理员权限保证).
+     * @param data The data for the request.
+     * @param data.userId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static resetAdminPassword(data: AdminResetAdminPasswordData): CancelablePromise<AdminResetAdminPasswordResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/admin-accounts/{user_id}/reset-password',
+            path: {
+                user_id: data.userId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
 }
 
 export class AffinityService {
@@ -991,8 +1084,8 @@ export class ContactsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/contacts/{target_id}/unlock',
-            path: {
-                target_id: data.targetId
+            query: {
+                _target_id: data.targetId
             },
             errors: {
                 422: 'Validation Error'
@@ -1114,6 +1207,28 @@ export class FeedbackService {
     }
 }
 
+export class FilesService {
+    /**
+     * Get File
+     * @param data The data for the request.
+     * @param data.key
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getFile(data: FilesGetFileData): CancelablePromise<FilesGetFileResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/files/{key}',
+            path: {
+                key: data.key
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
 export class LoginService {
     /**
      * Login Access Token
@@ -1132,6 +1247,29 @@ export class LoginService {
             url: '/api/v1/login/access-token',
             formData: data.formData,
             mediaType: 'application/x-www-form-urlencoded',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Refresh Access Token
+     * 用 refresh token 换新的 access token。
+     *
+     * refresh 自身不轮换 (7 天到期后重登); 本期不做服务端黑名单, 撤销靠重登。
+     * IP 维度限流: 防 refresh_token 泄露后被无限刷 access。
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns Token Successful Response
+     * @throws ApiError
+     */
+    public static refreshAccessToken(data: LoginRefreshAccessTokenData): CancelablePromise<LoginRefreshAccessTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/login/refresh',
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -1324,28 +1462,6 @@ export class MatchesService {
             query: {
                 direction: data.direction
             },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
-
-export class PrivateService {
-    /**
-     * Create User
-     * Create a new user.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns UserPublic Successful Response
-     * @throws ApiError
-     */
-    public static createUser(data: PrivateCreateUserData): CancelablePromise<PrivateCreateUserResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/private/users/',
-            body: data.requestBody,
-            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
