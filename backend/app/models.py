@@ -594,7 +594,11 @@ class Feedback(SQLModel, table=True):
     content: str = Field(max_length=1000)
     contact: str | None = Field(default=None, max_length=64)  # 可填邮箱/微信
     status: str = Field(default="open", max_length=16, index=True)  # open / handled
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    # 处理记录 (总部处理时填写)
+    admin_note: str | None = Field(default=None, max_length=255)
+    handled_by: uuid.UUID | None = Field(default=None, index=True)  # actor id
+    handled_at: datetime | None = None
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 # ------------------------------------------------------------

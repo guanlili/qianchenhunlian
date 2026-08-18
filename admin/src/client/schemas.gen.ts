@@ -903,6 +903,41 @@ export const AdminFeedbackItemSchema = {
             type: 'string',
             title: 'Status'
         },
+        admin_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Admin Note'
+        },
+        handled_by: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Handled By'
+        },
+        handled_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Handled At'
+        },
         created_at: {
             type: 'string',
             format: 'date-time',
@@ -3389,6 +3424,47 @@ export const CriteriaUpdateSchema = {
     title: 'CriteriaUpdate'
 } as const;
 
+export const DashboardResponseSchema = {
+    properties: {
+        stats: {
+            '$ref': '#/components/schemas/StatsResponse'
+        },
+        recent_signups: {
+            items: {
+                '$ref': '#/components/schemas/AdminMemberItem'
+            },
+            type: 'array',
+            title: 'Recent Signups',
+            default: []
+        },
+        recent_pending_audits: {
+            items: {
+                '$ref': '#/components/schemas/AdminMemberItem'
+            },
+            type: 'array',
+            title: 'Recent Pending Audits',
+            default: []
+        },
+        recent_requests: {
+            items: {
+                '$ref': '#/components/schemas/AdminContactRequestItem'
+            },
+            type: 'array',
+            title: 'Recent Requests',
+            default: []
+        },
+        overdue_pending_tickets: {
+            type: 'integer',
+            title: 'Overdue Pending Tickets',
+            default: 0
+        }
+    },
+    type: 'object',
+    required: ['stats'],
+    title: 'DashboardResponse',
+    description: '工作台聚合: 待办指标 + 最近动态 (docs/11 §3.1). 门店口径由后端按 actor 强制.'
+} as const;
+
 export const FavoriteBriefSchema = {
     properties: {
         user_id: {
@@ -3511,6 +3587,30 @@ export const FeedbackBodySchema = {
     type: 'object',
     required: ['content'],
     title: 'FeedbackBody'
+} as const;
+
+export const FeedbackHandleBodySchema = {
+    properties: {
+        note: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        },
+        reopen: {
+            type: 'boolean',
+            title: 'Reopen',
+            default: false
+        }
+    },
+    type: 'object',
+    title: 'FeedbackHandleBody'
 } as const;
 
 export const FeedbackResponseSchema = {
@@ -5438,6 +5538,49 @@ export const RefreshTokenBodySchema = {
     type: 'object',
     required: ['refresh_token'],
     title: 'RefreshTokenBody'
+} as const;
+
+export const SiteContentSchema = {
+    properties: {
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        paragraphs: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Paragraphs',
+            default: []
+        }
+    },
+    type: 'object',
+    title: 'SiteContent'
+} as const;
+
+export const SiteContentMapSchema = {
+    properties: {
+        contents: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/SiteContent'
+            },
+            type: 'object',
+            title: 'Contents',
+            default: {}
+        }
+    },
+    type: 'object',
+    title: 'SiteContentMap',
+    description: '全部文案 (公开); 未配置的 key 不返回, 客户端回退内置文案.'
 } as const;
 
 export const StaffCreateSchema = {

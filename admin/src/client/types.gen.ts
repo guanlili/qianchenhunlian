@@ -121,6 +121,9 @@ export type AdminFeedbackItem = {
     content: string;
     contact?: (string | null);
     status: string;
+    admin_note?: (string | null);
+    handled_by?: (string | null);
+    handled_at?: (string | null);
     created_at: string;
 };
 
@@ -490,6 +493,17 @@ export type CriteriaUpdate = {
     locations?: (Array<(string)> | null);
 };
 
+/**
+ * 工作台聚合: 待办指标 + 最近动态 (docs/11 §3.1). 门店口径由后端按 actor 强制.
+ */
+export type DashboardResponse = {
+    stats: StatsResponse;
+    recent_signups?: Array<AdminMemberItem>;
+    recent_pending_audits?: Array<AdminMemberItem>;
+    recent_requests?: Array<AdminContactRequestItem>;
+    overdue_pending_tickets?: number;
+};
+
 export type FavoriteBrief = {
     user_id: string;
     xy_code?: (string | null);
@@ -509,6 +523,11 @@ export type FavoriteList = {
 export type FeedbackBody = {
     content: string;
     contact?: (string | null);
+};
+
+export type FeedbackHandleBody = {
+    note?: (string | null);
+    reopen?: boolean;
 };
 
 export type FeedbackResponse = {
@@ -766,6 +785,20 @@ export type QualificationList = {
 
 export type RefreshTokenBody = {
     refresh_token: string;
+};
+
+export type SiteContent = {
+    title?: (string | null);
+    paragraphs?: Array<(string)>;
+};
+
+/**
+ * 全部文案 (公开); 未配置的 key 不返回, 客户端回退内置文案.
+ */
+export type SiteContentMap = {
+    contents?: {
+        [key: string]: SiteContent;
+    };
 };
 
 export type StaffCreate = {
@@ -1088,9 +1121,17 @@ export type AdminAdminDeleteStoreResponse = (Message);
 export type AdminAdminListFeedbackData = {
     limit?: number;
     skip?: number;
+    status?: 'all' | 'open' | 'handled';
 };
 
 export type AdminAdminListFeedbackResponse = (AdminFeedbackList);
+
+export type AdminHandleFeedbackData = {
+    feedbackId: string;
+    requestBody: FeedbackHandleBody;
+};
+
+export type AdminHandleFeedbackResponse = (AdminFeedbackItem);
 
 export type AdminGrantUnlockBalanceData = {
     requestBody: GrantBalanceRequest;
@@ -1248,6 +1289,8 @@ export type AdminListVerifyQueueData = {
 };
 
 export type AdminListVerifyQueueResponse = (AdminMemberList);
+
+export type AdminAdminDashboardResponse = (DashboardResponse);
 
 export type AdminListAdminAccountsData = {
     limit?: number;
@@ -1484,6 +1527,21 @@ export type SitePutQualificationsData = {
 };
 
 export type SitePutQualificationsResponse = (QualificationList);
+
+export type SiteListContentsResponse = (SiteContentMap);
+
+export type SiteGetContentData = {
+    key: string;
+};
+
+export type SiteGetContentResponse = (SiteContent);
+
+export type SitePutContentData = {
+    key: string;
+    requestBody: SiteContent;
+};
+
+export type SitePutContentResponse = (SiteContent);
 
 export type StoresListCitiesResponse = (CityList);
 
