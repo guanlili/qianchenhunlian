@@ -93,7 +93,9 @@ function FeedbackPage() {
                       {new Date(fb.created_at).toLocaleDateString("zh-CN")}
                     </TableCell>
                     <TableCell>{fb.user_xy_code || "—"}</TableCell>
-                    <TableCell className="max-w-md">{fb.content}</TableCell>
+                    <TableCell className="max-w-md whitespace-normal break-words align-top">
+                      {fb.content}
+                    </TableCell>
                     <TableCell>{fb.contact || "—"}</TableCell>
                     <TableCell>
                       {fb.status === "open" ? (
@@ -102,7 +104,7 @@ function FeedbackPage() {
                         <Badge variant="secondary">已处理</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-xs text-muted-foreground">
+                    <TableCell className="max-w-xs whitespace-normal break-words align-top text-muted-foreground">
                       {fb.admin_note || "—"}
                     </TableCell>
                     {isSuperuser && (
