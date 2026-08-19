@@ -10,9 +10,15 @@ function listCities() {
   return get('/stores/cities');
 }
 
-function listStores({ city, skip = 0, limit = 50 } = {}) {
+/** 某城市有门店的区/县列表（含门店数，筛选条用） */
+function listDistricts(city) {
+  return get(`/stores/districts?city=${encodeURIComponent(city)}`);
+}
+
+function listStores({ city, district, skip = 0, limit = 50 } = {}) {
   const q = [`skip=${skip}`, `limit=${limit}`];
   if (city) q.push(`city=${encodeURIComponent(city)}`);
+  if (district) q.push(`district=${encodeURIComponent(district)}`);
   return get(`/stores?${q.join('&')}`);
 }
 
@@ -27,6 +33,7 @@ function setHomeStore(storeId) {
 
 module.exports = {
   listCities,
+  listDistricts,
   listStores,
   getStore,
   setHomeStore,
