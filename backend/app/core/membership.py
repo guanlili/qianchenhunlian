@@ -32,6 +32,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "free_daily_quota": 5,
     "member_daily_quota": 20,
     "trial_once_per_user": True,
+    # 线上支付开关 (docs/13 §10 P3): 未接入微信支付前恒 false。
+    # 接入后置 true, 小程序据此展示在线购买入口; 线下后台开通不受此开关影响。
+    "pay_enabled": False,
     "plans": [
         {"code": "trial_7d", "name": "7天体验卡", "days": 7, "price": None},
         {"code": "monthly_30d", "name": "月卡", "days": 30, "price": 99},
@@ -44,7 +47,16 @@ DEFAULT_CONFIG: dict[str, Any] = {
 SOURCE_RECHARGE = "admin_recharge"  # 线下收款开通/续费
 SOURCE_TRIAL = "admin_trial"  # 体验发放
 SOURCE_COMPENSATE = "admin_compensate"  # 补偿
-VALID_SOURCES = {SOURCE_RECHARGE, SOURCE_TRIAL, SOURCE_COMPENSATE}
+# 线上微信支付 (docs/13 P3): 支付回调验签通过后由系统写入, 与线下开通共用
+# 同一张 MembershipGrant 表和同一个发放引擎, 体系一致。
+# 注意: admin 手动发放端点的 source 枚举不含此项 (管理员不能伪造线上支付记录)。
+SOURCE_ONLINE = "wx_pay"
+VALID_SOURCES = {
+    SOURCE_RECHARGE,
+    SOURCE_TRIAL,
+    SOURCE_COMPENSATE,
+    SOURCE_ONLINE,
+}
 
 # trial 类套餐: 受 trial_once_per_user 约束
 TRIAL_PLANS = {"trial_7d"}
