@@ -5,11 +5,12 @@
 """
 
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlmodel import Field, SQLModel, func, select
+from sqlalchemy.orm import aliased
+from sqlmodel import Field, SQLModel, and_, func, or_, select
 
 from app import crud
 from app.api.audit import write_audit as _audit
@@ -1177,6 +1178,8 @@ class StatsResponse(SQLModel):
     # — 工作台待办 (docs/10) —
     pending_verifies: int = 0  # 待实名核验 (User.verified='pending')
     open_feedback: int = 0  # 未处理反馈 (Feedback.status='open')
+    # — 门店对账 (2026-08-19) —
+    last_month_signups: int = 0  # 上个北京自然月新增会员 (对账口径)
 
 
 @router.get("/stats", response_model=StatsResponse)
@@ -1207,6 +1210,17 @@ def _compute_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     total_users = _member_count(session, sid)
     verified_users = _member_count(session, sid, User.verified == "passed")
+
+    # 上个北京自然月区间 (对账口径: 门店结算按自然月, 用北京时间切边界)
+    now_cn = datetime.now(membership.CN_TZ)
+    this_month_start = now_cn.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_start = (
+        this_month_start.replace(year=now_cn.year - 1, month=12)
+        if now_cn.month == 1
+        else this_month_start.replace(month=now_cn.month - 1)
+    )
+    lm_start_utc = last_month_start.astimezone(timezone.utc).replace(tzinfo=None)
+    lm_end_utc = this_month_start.astimezone(timezone.utc).replace(tzinfo=None)
 
     ticket_stmt = (
         select(func.count())
@@ -1258,6 +1272,12 @@ def _compute_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
             select(func.count()).select_from(Feedback).where(Feedback.status == "open")
         ).one()
         or 0,
+        last_month_signups=_member_count(
+            session,
+            sid,
+            User.created_at >= lm_start_utc,
+            User.created_at < lm_end_utc,
+        ),
     )
 
 
@@ -2219,10 +2239,119 @@ def list_member_activities(
                 xy_code=cu.xy_code if cu else None,
                 nickname=((cp.nickname or cp.real_name) if cp else None),
                 avatar_url=cp.avatar_url if cp else None,
-                created_at=r.created_at,  # type: ignore[attr-defined]
+                created_at=r.created_at,  # type: ignore
             )
         )
     return ActivityList(items=items, total=total)
+
+
+# ============================================================
+# 行为动态流 (行为可观测): 谁对谁 心动/收藏/浏览
+# ============================================================
+
+_FEED_KINDS = {
+    "affinity": (Affinity, "from_user_id", "to_user_id"),
+    "favorite": (Favorite, "user_id", "target_user_id"),
+    "view": (View, "user_id", "target_user_id"),
+}
+
+
+class ActivityFeedItem(SQLModel):
+    id: uuid.UUID
+    kind: str  # affinity / favorite / view
+    from_user_id: uuid.UUID
+    from_nickname: str | None = None
+    from_xy_code: str | None = None
+    from_avatar_url: str | None = None
+    to_user_id: uuid.UUID
+    to_nickname: str | None = None
+    to_xy_code: str | None = None
+    to_avatar_url: str | None = None
+    mutual: bool = False  # 仅心动: 双向互为心动 (撮合黄金线索)
+    created_at: datetime
+
+
+class ActivityFeedList(SQLModel):
+    items: list[ActivityFeedItem] = []
+    total: int = 0
+
+
+@router.get("/activity-feed", response_model=ActivityFeedList)
+def list_activity_feed(
+    session: SessionDep,
+    actor: CurrentActor,
+    kind: Literal["affinity", "favorite", "view"] = Query("affinity"),
+    store_id: uuid.UUID | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> ActivityFeedList:
+    """行为动态流: 谁对谁 心动/收藏/浏览, 时间倒序.
+
+    门店管理员强制本店口径 (任一方属于本店); superuser 可用 store_id 筛选.
+    """
+    model, from_col, to_col = _FEED_KINDS[kind]
+    from_attr = getattr(model, from_col)
+    to_attr = getattr(model, to_col)
+    fu = aliased(User)
+    fp = aliased(Profile)
+    tu = aliased(User)
+    tp = aliased(Profile)
+    base = (
+        select(model, fu, fp, tu, tp)  # type: ignore
+        .join(fu, fu.id == from_attr, isouter=True)
+        .join(fp, fp.user_id == from_attr, isouter=True)
+        .join(tu, tu.id == to_attr, isouter=True)
+        .join(tp, tp.user_id == to_attr, isouter=True)
+    )
+    # 门店管理员强制本店; superuser 可选 store_id
+    scope = _store_owner_id(actor) or store_id
+    if scope is not None:
+        base = base.where(or_(fp.home_store_id == scope, tp.home_store_id == scope))
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
+    rows = session.exec(
+        base.order_by(model.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+    ).all()
+
+    # 互心动标记 (仅心动流有意义): 批量查反向记录是否存在.
+    # 不用 tuple_.in_ (SQLite 方言 row-value 兼容性差), 直接 OR 展开 (≤limit 行).
+    mutual_pairs: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    if kind == "affinity" and rows:
+        pairs = [(getattr(r, from_col), getattr(r, to_col)) for r, *_ in rows]
+        rev_rows = session.exec(
+            select(Affinity.from_user_id, Affinity.to_user_id).where(
+                or_(
+                    *[
+                        and_(Affinity.from_user_id == b, Affinity.to_user_id == a)
+                        for a, b in pairs
+                    ]
+                )
+            )
+        ).all()
+        # 反向记录 (from=b→to=a) 存在 ⇒ 原方向 (a,b) 互心动;
+        # 键转换成行方向 (to, from), 反向记录不在当前页也能命中
+        mutual_pairs = {(t, f) for f, t in rev_rows}
+
+    items = []
+    for r, f_u, f_p, t_u, t_p in rows:
+        f_uid = getattr(r, from_col)
+        t_uid = getattr(r, to_col)
+        items.append(
+            ActivityFeedItem(
+                id=r.id,
+                kind=kind,
+                from_user_id=f_uid,
+                from_nickname=(f_p.nickname or f_p.real_name) if f_p else None,
+                from_xy_code=f_u.xy_code if f_u else None,
+                from_avatar_url=f_p.avatar_url if f_p else None,
+                to_user_id=t_uid,
+                to_nickname=(t_p.nickname or t_p.real_name) if t_p else None,
+                to_xy_code=t_u.xy_code if t_u else None,
+                to_avatar_url=t_p.avatar_url if t_p else None,
+                mutual=(f_uid, t_uid) in mutual_pairs,
+                created_at=r.created_at,
+            )
+        )
+    return ActivityFeedList(items=items, total=total)
 
 
 @router.get("/members/{user_id}/requests", response_model=AdminContactRequestList)
