@@ -44,6 +44,9 @@ _PENDING_ADD_COLUMNS: list[tuple[str, str, str]] = [
     ("staff", "store_id", "UUID"),
     # — Phase 2: 撮合工单门店归属 (任务 A) —
     ("contactrequest", "store_id", "UUID"),
+    # — 会员体系 (docs/13): 冗余列由 membership_grants 事务内同步 —
+    ("user", "membership_expires_at", "TIMESTAMP"),
+    ("user", "membership_plan_code", "VARCHAR(32)"),
 ]
 
 
@@ -59,7 +62,8 @@ def _ensure_columns(session: Session) -> None:
         if col in existing_by_table[table]:
             continue
         logger.info(f"Adding column {col} to {table}")
-        session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}"))
+        # 引号包裹: user 是 PG 保留字, 裸写会语法错误
+        session.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col} {ddl}'))
         existing_by_table[table].add(col)
     session.commit()
 

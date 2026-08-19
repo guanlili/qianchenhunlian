@@ -1,0 +1,444 @@
+"""会员体系 (docs/13) 测试: 三桶额度引擎 / 发放撤销 / 权限与门店作用域 / 接口."""
+
+from datetime import datetime, timedelta
+
+from fastapi.testclient import TestClient
+from sqlmodel import Session, select
+
+from app import crud
+from app.core import membership
+from app.core.config import settings
+from app.models import (
+    AuditLog,
+    BalanceTransaction,
+    DailyQuotaUsage,
+    MembershipGrant,
+    Profile,
+    SiteSetting,
+    StaffCreate,
+    Store,
+    User,
+    UserCreate,
+)
+from tests.utils.user import authentication_token_from_email
+from tests.utils.utils import random_email, random_lower_string
+
+API = settings.API_V1_STR
+
+
+# ---------------- helpers ----------------
+
+
+def _make_user(db: Session, *, unlock_balance: int = 0, home_store_id=None) -> User:
+    user = crud.create_user(
+        session=db,
+        user_create=UserCreate(email=random_email(), password=random_lower_string() + "Aa1!"),
+    )
+    user.unlock_balance = unlock_balance
+    db.add(Profile(user_id=user.id, home_store_id=home_store_id, progress=100))
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def _set_cfg(db: Session, **overrides) -> None:
+    """覆盖 membership.plans 配置 (如调小日额度方便测耗尽)."""
+    cfg = dict(membership.DEFAULT_CONFIG)
+    cfg.update(overrides)
+    row = db.get(SiteSetting, membership.CONFIG_KEY)
+    if row:
+        row.value = cfg
+    else:
+        row = SiteSetting(key=membership.CONFIG_KEY, value=cfg)
+    db.add(row)
+    db.commit()
+
+
+def _grant(db: Session, user: User, *, days: int, plan_code: str = "monthly_30d") -> MembershipGrant:
+    grant = membership.grant_membership(
+        session=db,
+        user=user,
+        plan_code=plan_code,
+        days=days,
+        source=membership.SOURCE_RECHARGE,
+        granted_by_type="user",
+        granted_by_id=user.id,
+    )
+    db.commit()
+    db.refresh(user)
+    return grant
+
+
+def _setup_store_admin(client: TestClient, db: Session) -> tuple[dict[str, str], Store]:
+    store = Store(name="会员测试门店", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+
+    email = random_email()
+    pwd = random_lower_string() + "Aa1!"
+    crud.create_staff(
+        session=db,
+        staff_create=StaffCreate(
+            email=email, name="店长", password=pwd, role="store_admin", store_id=store.id
+        ),
+    )
+    r = client.post(
+        f"{API}/login/access-token", data={"username": email, "password": pwd}
+    )
+    assert r.status_code == 200, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}, store
+
+
+# ---------------- 引擎: 三桶消耗顺序 ----------------
+
+
+def test_consume_free_daily_then_balance_then_none(db: Session) -> None:
+    """非会员: 免费日额度用完 → 永久余额 → 全空返回 None (调用方 402)."""
+    _set_cfg(db, free_daily_quota=2, member_daily_quota=20)
+    user = _make_user(db, unlock_balance=1)
+
+    assert membership.consume(session=db, user=user) == "free_daily"
+    assert membership.consume(session=db, user=user) == "free_daily"
+    assert membership.consume(session=db, user=user) == "balance"
+    assert membership.consume(session=db, user=user) is None
+
+    db.refresh(user)
+    assert user.unlock_balance == 0
+
+    row = db.get(DailyQuotaUsage, (user.id, membership.today_cn()))
+    assert row is not None and row.bucket == "free" and row.used == 2
+
+    sources = [
+        (t.source, t.amount)
+        for t in db.exec(
+            select(BalanceTransaction).where(BalanceTransaction.user_id == user.id)
+        ).all()
+    ]
+    # 日额度消耗 amount=0 仅留痕; 余额消耗 -1
+    assert sorted(sources) == [("contact_request_cost", -1), ("daily_free_cost", 0), ("daily_free_cost", 0)]
+
+    status = membership.quota_status(db, user)
+    assert status["used"] == 2 and status["remaining"] == 0 and status["balance"] == 0
+
+
+def test_member_daily_before_balance_preserved(db: Session) -> None:
+    """会员: 优先消耗会员日额度, 期内不动永久余额 (余额保值)."""
+    _set_cfg(db, member_daily_quota=3)
+    user = _make_user(db, unlock_balance=5)
+    _grant(db, user, days=30)
+
+    for _ in range(3):
+        assert membership.consume(session=db, user=user) == "member_daily"
+    db.refresh(user)
+    assert user.unlock_balance == 5  # 日额度内从未扣余额
+
+    assert membership.consume(session=db, user=user) == "balance"
+    db.refresh(user)
+    assert user.unlock_balance == 4
+
+    row = db.get(DailyQuotaUsage, (user.id, membership.today_cn()))
+    assert row is not None and row.bucket == "member" and row.used == 3
+
+
+def test_identity_switch_resets_daily_counter(db: Session) -> None:
+    """当天开通会员: 日额度计数按会员身份从 0 重开 (free 用满 2 → member 可继续)."""
+    _set_cfg(db, free_daily_quota=2, member_daily_quota=20)
+    user = _make_user(db)
+    assert membership.consume(session=db, user=user) == "free_daily"
+    assert membership.consume(session=db, user=user) == "free_daily"
+
+    _grant(db, user, days=7, plan_code="trial_7d")
+    assert membership.consume(session=db, user=user) == "member_daily"
+
+    row = db.get(DailyQuotaUsage, (user.id, membership.today_cn()))
+    assert row is not None and row.bucket == "member" and row.used == 1
+
+
+def test_expired_membership_downgrades(db: Session) -> None:
+    """到期即降级为非会员: 走免费日额度桶."""
+    user = _make_user(db)
+    user.membership_expires_at = datetime.utcnow() - timedelta(days=1)
+    db.add(user)
+    db.commit()
+
+    assert membership.is_member(user) is False
+    assert membership.quota_status(db, user)["bucket"] == "free"
+    assert membership.consume(session=db, user=user) == "free_daily"
+
+
+# ---------------- 引擎: 发放 / 叠加 / 撤销 ----------------
+
+
+def test_grant_stacks_and_syncs_user_columns(db: Session) -> None:
+    """叠加续费: 第二次起算点 = 当前到期时间, 冗余列同步为最大到期."""
+    user = _make_user(db)
+    g1 = _grant(db, user, days=30)
+    assert user.membership_expires_at == g1.expires_at
+    assert user.membership_plan_code == "monthly_30d"
+
+    before = user.membership_expires_at
+    g2 = _grant(db, user, days=30)
+    assert g2.start_from == before
+    assert user.membership_expires_at == g2.expires_at
+    assert g2.expires_at > g1.expires_at
+
+
+def test_revoke_recomputes_expiry(db: Session) -> None:
+    """撤销最后一条 → 回退到前一条到期; 全撤销 → 非会员."""
+    user = _make_user(db)
+    g1 = _grant(db, user, days=30)
+    g2 = _grant(db, user, days=30)
+
+    membership.revoke_membership(session=db, user=user, grant=g2)
+    db.commit()
+    db.refresh(user)
+    assert user.membership_expires_at == g1.expires_at
+
+    membership.revoke_membership(session=db, user=user, grant=g1)
+    db.commit()
+    db.refresh(user)
+    assert user.membership_expires_at is None
+    assert membership.is_member(user) is False
+
+    assert membership.has_active_trial(db, user.id) is False
+
+
+# ---------------- 小程序 /membership/me ----------------
+
+
+def test_membership_me_endpoint(client: TestClient, db: Session) -> None:
+    user = _make_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+
+    r = client.get(f"{API}/membership/me", headers=headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["is_member"] is False
+    assert body["expires_at"] is None
+    assert body["quota"]["bucket"] == "free"
+    assert body["quota"]["limit"] == 5  # 默认配置
+
+    _grant(db, user, days=30)
+    r = client.get(f"{API}/membership/me", headers=headers)
+    body = r.json()
+    assert body["is_member"] is True
+    assert body["plan_code"] == "monthly_30d"
+    assert body["quota"]["limit"] == 20
+
+
+# ---------------- 后台: 套餐 / 发放 / 撤销 / 记录 ----------------
+
+
+def test_plans_endpoint(client: TestClient, superuser_token_headers: dict) -> None:
+    r = client.get(f"{API}/admin/membership/plans", headers=superuser_token_headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    codes = {p["code"] for p in body["plans"]}
+    assert codes == {"trial_7d", "monthly_30d", "yearly_365d"}
+    assert body["trial_once_per_user"] is True
+
+
+def test_grant_flow_superuser(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+    user = _make_user(db)
+    r = client.post(
+        f"{API}/admin/members/{user.id}/grant-membership",
+        headers=superuser_token_headers,
+        json={"plan_code": "monthly_30d", "source": "admin_recharge", "note": "线下收款"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["is_member"] is True
+    assert body["membership"]["bucket"] == "member"
+
+    db.refresh(user)
+    assert user.membership_plan_code == "monthly_30d"
+    assert user.membership_expires_at is not None
+
+    grants = client.get(
+        f"{API}/admin/members/{user.id}/membership-grants", headers=superuser_token_headers
+    )
+    assert grants.status_code == 200
+    assert grants.json()["total"] == 1
+    assert grants.json()["items"][0]["granted_by_type"] == "user"
+
+    logs = db.exec(select(AuditLog).where(AuditLog.action == "grant_membership")).all()
+    assert len(logs) == 1 and str(logs[0].target_user_id) == str(user.id)
+
+
+def test_revoke_endpoint(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+    user = _make_user(db)
+    grant = _grant(db, user, days=30)
+
+    r = client.post(
+        f"{API}/admin/membership-grants/{grant.id}/revoke",
+        headers=superuser_token_headers,
+        json={"reason": "发错人了"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["is_member"] is False
+    db.refresh(user)
+    assert user.membership_expires_at is None
+
+
+def test_trial_once_enforced(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+    """体验卡每人限一次 (docs/13 决策)."""
+    user = _make_user(db)
+    r1 = client.post(
+        f"{API}/admin/members/{user.id}/grant-membership",
+        headers=superuser_token_headers,
+        json={"plan_code": "trial_7d", "source": "admin_trial"},
+    )
+    assert r1.status_code == 200, r1.text
+
+    r2 = client.post(
+        f"{API}/admin/members/{user.id}/grant-membership",
+        headers=superuser_token_headers,
+        json={"plan_code": "trial_7d", "source": "admin_trial"},
+    )
+    assert r2.status_code == 400
+    assert "体验卡" in r2.json()["detail"]
+
+
+def test_custom_plan_requires_days(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+    user = _make_user(db)
+    r = client.post(
+        f"{API}/admin/members/{user.id}/grant-membership",
+        headers=superuser_token_headers,
+        json={"plan_code": "custom"},
+    )
+    assert r.status_code == 400
+
+    r = client.post(
+        f"{API}/admin/members/{user.id}/grant-membership",
+        headers=superuser_token_headers,
+        json={"plan_code": "custom", "days": 45, "source": "admin_recharge"},
+    )
+    assert r.status_code == 200, r.text
+    db.refresh(user)
+    assert user.membership_plan_code == "custom"
+
+
+def test_grant_rejects_superuser_target(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+    su = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).one()
+    r = client.post(
+        f"{API}/admin/members/{su.id}/grant-membership",
+        headers=superuser_token_headers,
+        json={"plan_code": "monthly_30d"},
+    )
+    assert r.status_code == 400
+
+
+def test_unknown_plan_rejected(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+    user = _make_user(db)
+    r = client.post(
+        f"{API}/admin/members/{user.id}/grant-membership",
+        headers=superuser_token_headers,
+        json={"plan_code": "forever"},
+    )
+    assert r.status_code == 400
+
+
+# ---------------- 门店管理员作用域 ----------------
+
+
+def test_store_admin_grant_scope(client: TestClient, db: Session) -> None:
+    """门店管理员: 可给本店会员发放, 不能碰别店会员."""
+    headers, store = _setup_store_admin(client, db)
+    own = _make_user(db, home_store_id=store.id)
+
+    other_store = Store(name="别家门店", city="青岛")
+    db.add(other_store)
+    db.commit()
+    db.refresh(other_store)
+    other = _make_user(db, home_store_id=other_store.id)
+
+    r = client.post(
+        f"{API}/admin/members/{own.id}/grant-membership",
+        headers=headers,
+        json={"plan_code": "monthly_30d"},
+    )
+    assert r.status_code == 200, r.text
+    db.refresh(own)
+    assert own.membership_expires_at is not None
+    # 发放记录挂在门店名下
+    grant = db.exec(select(MembershipGrant).where(MembershipGrant.user_id == own.id)).one()
+    assert grant.store_id == store.id
+
+    r = client.post(
+        f"{API}/admin/members/{other.id}/grant-membership",
+        headers=headers,
+        json={"plan_code": "monthly_30d"},
+    )
+    assert r.status_code == 403
+
+    r = client.get(f"{API}/admin/members/{other.id}/membership-grants", headers=headers)
+    assert r.status_code == 403
+
+
+def test_normal_user_cannot_grant(client: TestClient, db: Session) -> None:
+    """普通用户无 MEMBER_GRANT 权限 (fail-closed)."""
+    user = _make_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    target = _make_user(db)
+    r = client.post(
+        f"{API}/admin/members/{target.id}/grant-membership",
+        headers=headers,
+        json={"plan_code": "monthly_30d"},
+    )
+    assert r.status_code == 403
+
+
+# ---------------- 申请联系 × 三桶额度 (端到端) ----------------
+
+
+def _approved_target(db: Session) -> User:
+    user = _make_user(db)
+    profile = db.exec(select(Profile).where(Profile.user_id == user.id)).one()
+    profile.audit_status = "approved"
+    db.add(profile)
+    db.commit()
+    return user
+
+
+def test_contact_submit_quota_flow(client: TestClient, db: Session) -> None:
+    """申请联系走三桶: 免费额度耗尽 402 → 开会员后走会员日额度."""
+    _set_cfg(db, free_daily_quota=1, member_daily_quota=2)
+    me = _make_user(db, unlock_balance=0)
+    t1, t2, t3 = _approved_target(db), _approved_target(db), _approved_target(db)
+    headers = authentication_token_from_email(client=client, email=me.email, db=db)
+
+    r1 = client.post(
+        f"{API}/contacts/requests", headers=headers, json={"target_user_id": str(t1.id)}
+    )
+    assert r1.status_code == 200, r1.text
+    assert r1.json()["bucket"] == "free_daily"
+    assert r1.json()["quota_used"] == 1
+
+    # 免费额度 1 已用完且无余额 → 402
+    r2 = client.post(
+        f"{API}/contacts/requests", headers=headers, json={"target_user_id": str(t2.id)}
+    )
+    assert r2.status_code == 402
+    assert r2.json()["detail"].startswith("QUOTA_EXHAUSTED")
+    # 生产里请求结束 get_db 会回滚未提交的工单; 测试共享 session 需手动还原,
+    # 否则脏 ContactRequest 会被下个 commit 带出去, 撞 24h 重复防护
+    db.rollback()
+
+    # 开会员后继续申请走会员日额度
+    _grant(db, me, days=30)
+    r2b = client.post(
+        f"{API}/contacts/requests", headers=headers, json={"target_user_id": str(t2.id)}
+    )
+    assert r2b.status_code == 200, r2b.text
+    assert r2b.json()["bucket"] == "member_daily"
+
+    r3 = client.post(
+        f"{API}/contacts/requests", headers=headers, json={"target_user_id": str(t3.id)}
+    )
+    assert r3.status_code == 200, r3.text
+    assert r3.json()["bucket"] == "member_daily"
+    assert r3.json()["quota_used"] == 2
+
+    db.refresh(me)
+    assert me.unlock_balance == 0  # 会员日额度内从未动余额

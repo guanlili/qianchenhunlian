@@ -15,6 +15,7 @@ from app import crud
 from app.api.audit import write_audit as _audit
 from app.api.deps import CurrentActor, SessionDep, require_admin_or_staff
 from app.api.permissions import Perm, has_perm, require_perm
+from app.core import membership
 from app.models import (
     Affinity,
     AuditLog,
@@ -27,6 +28,9 @@ from app.models import (
     Criteria,
     Favorite,
     Feedback,
+    MembershipGrant,
+    MembershipGrantList,
+    MembershipGrantPublic,
     Message,
     ParentsInfo,
     Profile,
@@ -1704,6 +1708,8 @@ class AdminMemberItem(SQLModel):
     progress: int = 0
     verified: str = "none"
     unlock_balance: int = 0
+    is_member: bool = False
+    membership_expires_at: datetime | None = None
     user_status: str = "active"
     last_active_at: datetime | None = None
     created_at: datetime
@@ -1737,6 +1743,9 @@ class AdminMemberFull(SQLModel):
     verified_at: datetime | None = None
     counts: MemberCounts = MemberCounts()
     can_view_contact: bool = False  # 当前操作者是否有权查看联系方式
+    membership: dict[
+        str, Any
+    ] = {}  # docs/13 三桶额度快照 (is_member/expires/limit/used/balance)
 
 
 class ContactViewResponse(SQLModel):
@@ -1774,6 +1783,8 @@ def _to_member_item(u: User, p: Profile | None) -> AdminMemberItem:
         progress=p.progress if p else 0,
         verified=u.verified,
         unlock_balance=u.unlock_balance,
+        is_member=membership.is_member(u),
+        membership_expires_at=u.membership_expires_at,
         user_status=u.status,
         last_active_at=u.last_active_at,
         created_at=u.created_at,
@@ -1789,6 +1800,7 @@ def list_members(
     ),
     verified: Literal["all", "none", "pending", "passed", "rejected"] = Query("all"),
     user_status: Literal["all", "active", "blocked"] = Query("all"),
+    membership: Literal["all", "member", "normal", "expiring"] = Query("all"),
     store_id: uuid.UUID | None = Query(None),
     gender: str | None = Query(None),
     keyword: str | None = Query(None, description="寻缘号 / 姓名 / 昵称 / 手机号"),
@@ -1817,6 +1829,23 @@ def list_members(
         base = base.where(User.verified == verified)
     if user_status != "all":
         base = base.where(User.status == user_status)
+    if membership != "all":
+        soon = datetime.utcnow() + timedelta(days=7)
+        if membership == "member":
+            base = base.where(
+                User.membership_expires_at.is_not(None),  # type: ignore
+                User.membership_expires_at > datetime.utcnow(),  # type: ignore
+            )
+        elif membership == "normal":
+            base = base.where(
+                (User.membership_expires_at.is_(None))  # type: ignore
+                | (User.membership_expires_at <= datetime.utcnow())  # type: ignore
+            )
+        else:  # expiring: 7 天内到期
+            base = base.where(
+                User.membership_expires_at > datetime.utcnow(),  # type: ignore
+                User.membership_expires_at <= soon,  # type: ignore
+            )
     if store_id is not None:
         base = base.where(Profile.home_store_id == store_id)
     if gender:
@@ -1906,6 +1935,194 @@ def get_member_full(
         verified_at=profile.verified_at if profile else None,
         counts=_member_counts(session, user_id),
         can_view_contact=_can_see_contact(actor, profile),
+        membership=membership.quota_status(session, user),
+    )
+
+
+# ============================================================
+# 会员发放 (docs/13) · MEMBER_GRANT 权限, 门店管理员限本店
+# ============================================================
+
+
+class MembershipPlansResponse(SQLModel):
+    free_daily_quota: int
+    member_daily_quota: int
+    trial_once_per_user: bool
+    plans: list[dict[str, Any]] = []
+
+
+class MembershipGrantRequest(SQLModel):
+    plan_code: str = Field(max_length=32)
+    days: int | None = Field(default=None, ge=1, le=3650)  # custom 必填, 其余缺省取套餐
+    source: Literal["admin_recharge", "admin_trial", "admin_compensate"] = (
+        "admin_recharge"
+    )
+    note: str | None = Field(default=None, max_length=255)
+
+
+class RevokeRequest(SQLModel):
+    reason: str | None = Field(default=None, max_length=255)
+
+
+class MembershipGrantResponse(SQLModel):
+    grant: MembershipGrantPublic
+    is_member: bool
+    membership_expires_at: datetime | None = None
+    membership: dict[str, Any] = {}  # 发放后的额度快照
+
+
+@router.get("/membership/plans", response_model=MembershipPlansResponse)
+def get_membership_plans(session: SessionDep) -> MembershipPlansResponse:
+    """套餐配置 (发放对话框 + 小程序展示用). 登录后台即可读."""
+    cfg = membership.get_config(session)
+    return MembershipPlansResponse(
+        free_daily_quota=int(cfg.get("free_daily_quota", 5)),
+        member_daily_quota=int(cfg.get("member_daily_quota", 20)),
+        trial_once_per_user=bool(cfg.get("trial_once_per_user", True)),
+        plans=list(cfg.get("plans", [])),
+    )
+
+
+@router.post(
+    "/members/{user_id}/grant-membership",
+    response_model=MembershipGrantResponse,
+    dependencies=[Depends(require_perm(Perm.MEMBER_GRANT))],
+)
+def grant_membership_endpoint(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+    body: MembershipGrantRequest = Body(),
+) -> MembershipGrantResponse:
+    """开通/续费会员 (叠加顺延). 门店管理员限本店会员; 每次发放一条记录 + 审计."""
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.is_superuser:
+        raise HTTPException(status_code=400, detail="不能给后台账号发放会员")
+    _check_member_scope(actor, session, user_id)
+
+    cfg = membership.get_config(session)
+    days: int
+    if body.plan_code == "custom":
+        # custom 是虚拟套餐码 (灵活充值), 不在配置列表里, 天数必填
+        if body.days is None:
+            raise HTTPException(status_code=400, detail="自定义套餐必须填天数")
+        days = body.days
+    else:
+        plan = membership.get_plan(cfg, body.plan_code)
+        if not plan:
+            raise HTTPException(status_code=400, detail=f"套餐不存在: {body.plan_code}")
+        days = body.days if body.days is not None else int(plan.get("days", 0))
+    if days < 1:
+        raise HTTPException(status_code=400, detail="天数必须 >= 1")
+
+    # 体验卡限一次 (docs/13 §12 决策: 防反复薅)
+    if (
+        body.plan_code in membership.TRIAL_PLANS
+        and bool(cfg.get("trial_once_per_user", True))
+        and membership.has_active_trial(session, user_id)
+    ):
+        raise HTTPException(status_code=400, detail="该用户已发放过体验卡 (每人限一次)")
+
+    grant = membership.grant_membership(
+        session,
+        user=user,
+        plan_code=body.plan_code,
+        days=days,
+        source=body.source,
+        granted_by_type=actor.actor_type,
+        granted_by_id=uuid.UUID(str(actor.id)),
+        granted_by_email=actor.email,
+        store_id=_store_owner_id(actor),
+        note=body.note,
+    )
+    _audit(
+        session,
+        actor,
+        "grant_membership",
+        target_user_id=user_id,
+        detail={
+            "plan_code": body.plan_code,
+            "days": days,
+            "source": body.source,
+            "expires_at": grant.expires_at.isoformat(),
+            "note": body.note,
+        },
+    )
+    session.commit()
+    session.refresh(user)
+    return MembershipGrantResponse(
+        grant=MembershipGrantPublic.model_validate(grant, from_attributes=True),
+        is_member=membership.is_member(user),
+        membership_expires_at=user.membership_expires_at,
+        membership=membership.quota_status(session, user),
+    )
+
+
+@router.post(
+    "/membership-grants/{grant_id}/revoke",
+    response_model=MembershipGrantResponse,
+    dependencies=[Depends(require_perm(Perm.MEMBER_GRANT))],
+)
+def revoke_membership_endpoint(
+    session: SessionDep,
+    grant_id: uuid.UUID,
+    actor: CurrentActor,
+    body: RevokeRequest = Body(),
+) -> MembershipGrantResponse:
+    """撤销误发的会员 (重算到期时间). 门店管理员限本店会员."""
+    grant = session.get(MembershipGrant, grant_id)
+    if not grant or grant.revoked_at is not None:
+        raise HTTPException(status_code=404, detail="发放记录不存在或已撤销")
+    user = session.get(User, grant.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    _check_member_scope(actor, session, grant.user_id)
+    membership.revoke_membership(session, user=user, grant=grant)
+    _audit(
+        session,
+        actor,
+        "revoke_membership",
+        target_user_id=grant.user_id,
+        detail={"grant_id": str(grant_id), "reason": body.reason},
+    )
+    session.commit()
+    session.refresh(user)
+    return MembershipGrantResponse(
+        grant=MembershipGrantPublic.model_validate(grant, from_attributes=True),
+        is_member=membership.is_member(user),
+        membership_expires_at=user.membership_expires_at,
+        membership=membership.quota_status(session, user),
+    )
+
+
+@router.get("/members/{user_id}/membership-grants", response_model=MembershipGrantList)
+def list_membership_grants(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+    limit: int = Query(100, ge=1, le=200),
+) -> MembershipGrantList:
+    """会员发放记录 (时间倒序). 详情页"会员记录"Tab 用."""
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.profile:
+        _check_store_scope(actor, user.profile)
+    elif _store_owner_id(actor) is not None:
+        raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
+    rows = session.exec(
+        select(MembershipGrant)
+        .where(MembershipGrant.user_id == user_id)
+        .order_by(MembershipGrant.created_at.desc())  # type: ignore[attr-defined]
+        .limit(limit)
+    ).all()
+    return MembershipGrantList(
+        items=[
+            MembershipGrantPublic.model_validate(g, from_attributes=True) for g in rows
+        ],
+        total=len(rows),
     )
 
 

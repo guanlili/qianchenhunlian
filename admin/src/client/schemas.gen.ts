@@ -1056,6 +1056,12 @@ export const AdminMemberFullSchema = {
             type: 'boolean',
             title: 'Can View Contact',
             default: false
+        },
+        membership: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Membership',
+            default: {}
         }
     },
     type: 'object',
@@ -1208,6 +1214,23 @@ export const AdminMemberItemSchema = {
             type: 'integer',
             title: 'Unlock Balance',
             default: 0
+        },
+        is_member: {
+            type: 'boolean',
+            title: 'Is Member',
+            default: false
+        },
+        membership_expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Membership Expires At'
         },
         user_status: {
             type: 'string',
@@ -2990,6 +3013,50 @@ export const ContactRequestResultSchema = {
             type: 'string',
             format: 'date-time',
             title: 'Created At'
+        },
+        bucket: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Bucket'
+        },
+        quota_date: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Quota Date'
+        },
+        quota_limit: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Quota Limit'
+        },
+        quota_used: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Quota Used'
         }
     },
     type: 'object',
@@ -4137,6 +4204,272 @@ export const MemberCountsSchema = {
     },
     type: 'object',
     title: 'MemberCounts'
+} as const;
+
+export const MembershipGrantListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/MembershipGrantPublic'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'MembershipGrantList'
+} as const;
+
+export const MembershipGrantPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        plan_code: {
+            type: 'string',
+            title: 'Plan Code'
+        },
+        days: {
+            type: 'integer',
+            title: 'Days'
+        },
+        source: {
+            type: 'string',
+            title: 'Source'
+        },
+        start_from: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Start From'
+        },
+        expires_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Expires At'
+        },
+        granted_by_type: {
+            type: 'string',
+            title: 'Granted By Type'
+        },
+        granted_by_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Granted By Id'
+        },
+        granted_by_email: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Granted By Email'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        },
+        revoked_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revoked At'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'user_id', 'plan_code', 'days', 'source', 'start_from', 'expires_at', 'granted_by_type', 'granted_by_id', 'created_at'],
+    title: 'MembershipGrantPublic'
+} as const;
+
+export const MembershipGrantRequestSchema = {
+    properties: {
+        plan_code: {
+            type: 'string',
+            maxLength: 32,
+            title: 'Plan Code'
+        },
+        days: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 3650,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Days'
+        },
+        source: {
+            type: 'string',
+            enum: ['admin_recharge', 'admin_trial', 'admin_compensate'],
+            title: 'Source',
+            default: 'admin_recharge'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        }
+    },
+    type: 'object',
+    required: ['plan_code'],
+    title: 'MembershipGrantRequest'
+} as const;
+
+export const MembershipGrantResponseSchema = {
+    properties: {
+        grant: {
+            '$ref': '#/components/schemas/MembershipGrantPublic'
+        },
+        is_member: {
+            type: 'boolean',
+            title: 'Is Member'
+        },
+        membership_expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Membership Expires At'
+        },
+        membership: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Membership',
+            default: {}
+        }
+    },
+    type: 'object',
+    required: ['grant', 'is_member'],
+    title: 'MembershipGrantResponse'
+} as const;
+
+export const MembershipPlansResponseSchema = {
+    properties: {
+        free_daily_quota: {
+            type: 'integer',
+            title: 'Free Daily Quota'
+        },
+        member_daily_quota: {
+            type: 'integer',
+            title: 'Member Daily Quota'
+        },
+        trial_once_per_user: {
+            type: 'boolean',
+            title: 'Trial Once Per User'
+        },
+        plans: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Plans',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['free_daily_quota', 'member_daily_quota', 'trial_once_per_user'],
+    title: 'MembershipPlansResponse'
+} as const;
+
+export const MembershipStatusSchema = {
+    properties: {
+        is_member: {
+            type: 'boolean',
+            title: 'Is Member'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
+        plan_code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plan Code'
+        },
+        quota: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Quota',
+            default: {}
+        }
+    },
+    type: 'object',
+    required: ['is_member'],
+    title: 'MembershipStatus'
 } as const;
 
 export const MessageSchema = {
@@ -5538,6 +5871,25 @@ export const RefreshTokenBodySchema = {
     type: 'object',
     required: ['refresh_token'],
     title: 'RefreshTokenBody'
+} as const;
+
+export const RevokeRequestSchema = {
+    properties: {
+        reason: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        }
+    },
+    type: 'object',
+    title: 'RevokeRequest'
 } as const;
 
 export const SiteContentSchema = {
