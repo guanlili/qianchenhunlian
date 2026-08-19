@@ -18,6 +18,7 @@ const favoriteSvc = require('../../services/favorite');
 const contactSvc = require('../../services/contact');
 const affinitySvc = require('../../services/affinity');
 const storeSvc = require('../../services/store');
+const membershipSvc = require('../../services/membership');
 const { resolveFileUrl } = require('../../utils/config');
 
 const _resolveList = (arr) =>
@@ -607,6 +608,11 @@ Page({
     }
     this.loadHome();
 
+    // 会员到期 → 弹续费窗口 (每天最多提示一次, 防打扰)
+    if (this.data.apiReady) {
+      this.checkMembershipRenewal().catch(() => {});
+    }
+
     // 分享深链: 登录完成后自动打开 target 详情
     if (this._pendingTargetId && this.data.apiReady) {
       this.openDetail({
@@ -614,6 +620,26 @@ Page({
       });
     }
     this._pendingTargetId = null;
+  },
+
+  async checkMembershipRenewal() {
+    const m = await membershipSvc.getMyMembership();
+    if (!m || !m.expired_at) return; // 未到期 / 从未开通都不弹
+    const today = new Date().toISOString().slice(0, 10);
+    if (wx.getStorageSync('qy_renewal_notice_date') === today) return;
+    wx.setStorageSync('qy_renewal_notice_date', today);
+    const expiredDate = String(m.expired_at).slice(0, 10);
+    wx.showModal({
+      title: '会员已到期',
+      content: `你的会员已于 ${expiredDate} 到期。乾缘婚恋会员费 100元/年，续费后继续享受全年资料展示与智能匹配服务，可前往附近门店或联系红娘办理。`,
+      confirmText: '去门店',
+      cancelText: '稍后',
+      success: (res) => {
+        if (res.confirm) {
+          wx.navigateTo({ url: '/pages/store-cities/store-cities' });
+        }
+      },
+    });
   },
 
   async loadHome() {
