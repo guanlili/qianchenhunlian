@@ -1,0 +1,112 @@
+# 多模型 PR review 配置。全部走火山方舟 (ark provider)，三家 vendor 混搭最大化多样性。
+#
+# ============================================================================
+# 部署前 checklist
+# ============================================================================
+# 1) 仓库 Secrets 里配 ARK_API_KEY (火山方舟 API Key, ark-xxx 格式)
+#    https://github.com/guanlili/qianchenhunlian/settings/secrets/actions
+# 2) 火山方舟"接入模型"控制台确认下面 4 个 model 都已接入 (未接入会 404)
+#    https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint
+# 3) 模型 ID 会随版本迭代变化, 一年半载后可能需要更新, 用 `arkcli models search`
+#    查最新可用版本 (返回的 primary_version 拼到 name 后面即完整 ID)
+# ============================================================================
+
+reviewers:
+  # Reviewer A — 字节跳动 code 专精, 抓代码 bug 最灵敏
+  - name: Doubao Code
+    provider: ark
+    model: doubao-seed-2-0-code-preview-260215
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    temperature: 0.2
+    max_tokens: 4096
+
+  # Reviewer B — DeepSeek V4 Pro, 第二家 vendor, 1M 上下文能吃大 diff
+  - name: DeepSeek V4 Pro
+    provider: ark
+    model: deepseek-v4-pro-260425
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    temperature: 0.2
+    max_tokens: 4096
+
+  # Reviewer C — DeepSeek V4 Flash, 速度快 + 1M 上下文, 与 Pro 互补
+  - name: DeepSeek V4 Flash
+    provider: ark
+    model: deepseek-v4-flash-260425
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    temperature: 0.2
+    max_tokens: 4096
+
+  # ---- 可选扩展位: 想加第 4 个 reviewer 就取消注释, 再挑一个不同 family ----
+  # - name: Doubao Seed 2.1 Turbo
+  #   provider: ark
+  #   model: doubao-seed-2-1-turbo-260628
+  #   base_url: https://ark.cn-beijing.volces.com/api/v3
+  #   temperature: 0.2
+  #   max_tokens: 4096
+
+# Judge — Seed-Evolving: 字节持续升级的最强 Coding & Agent 模型, 融合判断力最猛
+judge:
+  name: Doubao Seed Evolving
+  provider: ark
+  model: doubao-seed-evolving-latest-version
+  base_url: https://ark.cn-beijing.volces.com/api/v3
+  temperature: 0.1     # judge 温度更低, 减少幻觉
+  max_tokens: 6144     # judge 输出 markdown 通常比单 reviewer 长
+
+# ============================================================================
+# 融合规则 — 决定什么样的 finding 会被最终发出
+# ============================================================================
+consensus:
+  # ≥N 个 reviewer 都提到 → high-confidence, 一定发
+  high_confidence_threshold: 2
+
+  # 单个 reviewer 提到但 title/description 命中以下关键词 → 强制保留
+  security_keywords:
+    - sql injection
+    - xss
+    - csrf
+    - auth
+    - authorization
+    - password
+    - secret
+    - token
+    - jwt
+    - cve
+    - injection
+    - race condition
+    - deadlock
+    - data loss
+    - 越权
+    - 注入
+    - 密钥
+    - 权限
+    - 数据丢失
+    - 竞态
+    - 泄露
+
+  # nit / style 类只有 ≥N 个 reviewer 都提到才发, 减少噪音
+  nit_min_reviewers: 2
+
+# ============================================================================
+# 触发 / 输出策略
+# ============================================================================
+policy:
+  # PR diff 超过这个行数就切分处理; 0 = 不切分
+  max_diff_lines: 2000
+
+  # PR 上有这些 label 则跳过 review (避免烧 API 额度)
+  skip_labels:
+    - skip-review
+    - wip
+
+  # 只审这些路径 (glob), 空数组 = 全审
+  include_paths: []
+
+  # 排除这些路径
+  exclude_paths:
+    - "**/*.lock"
+    - "**/package-lock.json"
+    - "**/uv.lock"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "docs/**"
