@@ -1,11 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 
 import {
   type Body_login_login_access_token as AccessToken,
   LoginService,
-  type UserRegister,
-  UsersService,
   type WhoAmI,
 } from "@/client"
 import { handleError } from "@/utils"
@@ -18,7 +16,6 @@ const isLoggedIn = () => {
 
 const useAuth = () => {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
 
   // 用 /login/whoami: 同时兼容 superuser 和 staff
@@ -26,18 +23,6 @@ const useAuth = () => {
     queryKey: ["currentUser"],
     queryFn: LoginService.whoami,
     enabled: isLoggedIn(),
-  })
-
-  const signUpMutation = useMutation({
-    mutationFn: (data: UserRegister) =>
-      UsersService.registerUser({ requestBody: data }),
-    onSuccess: () => {
-      navigate({ to: "/login" })
-    },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
-    },
   })
 
   const login = async (data: AccessToken) => {
@@ -66,7 +51,6 @@ const useAuth = () => {
   }
 
   return {
-    signUpMutation,
     loginMutation,
     logout,
     user,

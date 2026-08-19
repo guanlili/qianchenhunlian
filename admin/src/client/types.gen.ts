@@ -938,15 +938,6 @@ export type UserPublic = {
     verified?: string;
 };
 
-/**
- * 邮箱自助注册
- */
-export type UserRegister = {
-    email: string;
-    password: string;
-    full_name?: (string | null);
-};
-
 export type UsersPublic = {
     data: Array<UserPublic>;
     count: number;
@@ -1593,12 +1584,6 @@ export type UsersUpdatePasswordMeData = {
 };
 
 export type UsersUpdatePasswordMeResponse = (Message);
-
-export type UsersRegisterUserData = {
-    requestBody: UserRegister;
-};
-
-export type UsersRegisterUserResponse = (UserPublic);
 
 export type UsersReadUserByIdData = {
     userId: string;
