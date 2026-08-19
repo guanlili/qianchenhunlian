@@ -7,7 +7,8 @@
 """
 
 import uuid
-from datetime import date, datetime
+from datetime import date as sa_date
+from datetime import datetime
 from typing import Any
 
 from pydantic import EmailStr
@@ -66,6 +67,9 @@ class User(UserBase, table=True):
     verified: str = Field(default="none", max_length=16)  # none/pending/passed/rejected
     status: str = Field(default="active", max_length=16)  # active/blocked
     last_active_at: datetime | None = None
+    # 会员 (docs/13): 两列由 membership_grants 事务内同步, 判定只看 expires_at
+    membership_expires_at: datetime | None = Field(default=None, index=True)
+    membership_plan_code: str | None = Field(default=None, max_length=32)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -145,7 +149,7 @@ class ProfileBase(SQLModel):
     year: int | None = Field(
         default=None, ge=1950, le=2015
     )  # 兼容老数据, 推荐用 birth_date
-    birth_date: date | None = None  # 出生年月 (新, 精确到日)
+    birth_date: sa_date | None = None  # 出生年月 (新, 精确到日)
     height: int | None = Field(default=None, ge=100, le=220)
     weight: int | None = Field(default=None, ge=20, le=200)  # 体重 kg
     health_status: str | None = Field(default=None, max_length=64)  # 身体状况
@@ -664,6 +668,83 @@ class BalanceTransactionPublic(SQLModel):
 class BalanceTransactionList(SQLModel):
     items: list[BalanceTransactionPublic] = []
     total: int = 0
+
+
+# ------------------------------------------------------------
+# MembershipGrant · 会员发放记录 (docs/13 会员体系)
+# ------------------------------------------------------------
+
+
+class MembershipGrant(SQLModel, table=True):
+    """每次开通/续费/体验一条记录, 是会员状态的事实来源.
+
+    User.membership_expires_at 由本表事务内冗余同步 (取未撤销记录的最大 expires_at).
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
+    )
+    plan_code: str = Field(
+        max_length=32
+    )  # trial_7d / monthly_30d / yearly_365d / custom
+    days: int
+    # admin_recharge 线下收款开通 / admin_trial 体验发放 / admin_compensate 补偿
+    source: str = Field(max_length=32, index=True)
+    start_from: datetime  # 起算点 = max(now, 发放时到期时间), 支持叠加续费
+    expires_at: datetime  # 本条到期时间
+    granted_by_type: str = Field(max_length=16)  # user(总部超管) / staff(门店管理员)
+    granted_by_id: uuid.UUID
+    granted_by_email: str | None = Field(default=None, max_length=255)  # 展示用
+    store_id: uuid.UUID | None = Field(
+        default=None, foreign_key="store.id", index=True
+    )  # 归属发放门店 (总部发放为空)
+    note: str | None = Field(default=None, max_length=255)
+    revoked_at: datetime | None = None  # 非空 = 已撤销
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class MembershipGrantPublic(SQLModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    plan_code: str
+    days: int
+    source: str
+    start_from: datetime
+    expires_at: datetime
+    granted_by_type: str
+    granted_by_id: uuid.UUID
+    granted_by_email: str | None = None
+    store_id: uuid.UUID | None = None
+    note: str | None = None
+    revoked_at: datetime | None = None
+    created_at: datetime
+
+
+class MembershipGrantList(SQLModel):
+    items: list[MembershipGrantPublic] = []
+    total: int = 0
+
+
+# ------------------------------------------------------------
+# DailyQuotaUsage · 日额度计数 (docs/13 三桶额度引擎)
+# ------------------------------------------------------------
+
+
+class DailyQuotaUsage(SQLModel, table=True):
+    """每个 (用户, 北京时间自然日) 一行; 只计走"日额度桶"的消耗.
+
+    bucket 记录当天当前身份 (member/free); 身份当天切换时计数从 0 重开
+    (会员期跨天/当天到期都按"动作发生时刻"判定身份, 见 docs/13 §9).
+    """
+
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", primary_key=True
+    )
+    # 字段名与 datetime.date 同名会撞 pydantic 注解解析, 故别名导入
+    date: sa_date = Field(primary_key=True)  # 北京时间自然日
+    bucket: str = Field(default="free", max_length=8)  # member / free
+    used: int = Field(default=0)
 
 
 # ------------------------------------------------------------

@@ -46,6 +46,7 @@ EXPECTED: dict[str, set[Perm]] = {
         Perm.HANDLE_REQUEST,
         Perm.GRANT_BALANCE,
         Perm.BLOCK_USER,
+        Perm.MEMBER_GRANT,
     },
 }
 
