@@ -40,7 +40,8 @@ miniprogram/miniprogram_npm/
 miniprogram/project.private.config.json
 *.sketch.json
 
-# --- IDE / OS ---
+# --- IDE / 工具 / OS ---
+.zcode/
 .vscode/
 .idea/
 *.swp
