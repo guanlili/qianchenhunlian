@@ -216,6 +216,7 @@ def test_membership_me_endpoint(client: TestClient, db: Session) -> None:
     body = r.json()
     assert body["is_member"] is False
     assert body["expires_at"] is None
+    assert body["expired_at"] is None  # 从未开通 → 无到期时间
     assert body["quota"]["bucket"] == "free"
     assert body["quota"]["limit"] == 5  # 默认配置
 
@@ -225,6 +226,29 @@ def test_membership_me_endpoint(client: TestClient, db: Session) -> None:
     assert body["is_member"] is True
     assert body["plan_code"] == "monthly_30d"
     assert body["quota"]["limit"] == 20
+
+
+def test_membership_me_expired(client: TestClient, db: Session) -> None:
+    """曾开通已到期: is_member=false 且 expired_at 带最近到期时间 (续费弹窗依据)."""
+    user = _make_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+
+    grant = _grant(db, user, days=30)
+    # 把到期时间改到过去, 模拟一年服务期结束
+    past = datetime.utcnow() - timedelta(days=1)
+    user.membership_expires_at = past
+    grant.expires_at = past
+    db.add(user)
+    db.add(grant)
+    db.commit()
+
+    r = client.get(f"{API}/membership/me", headers=headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["is_member"] is False
+    assert body["expires_at"] is None
+    assert body["expired_at"] is not None
+    assert body["quota"]["bucket"] == "free"  # 已降级回免费额度
 
 
 # ---------------- 后台: 套餐 / 发放 / 撤销 / 记录 ----------------

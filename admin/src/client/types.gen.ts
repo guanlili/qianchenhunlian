@@ -711,6 +711,7 @@ export type MembershipStatus = {
     is_member: boolean;
     expires_at?: (string | null);
     plan_code?: (string | null);
+    expired_at?: (string | null);
     quota?: {
         [key: string]: unknown;
     };
