@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import { ChevronRight, Crown } from "lucide-react"
+import { BadgeCheck, ChevronRight, Crown, ShieldX } from "lucide-react"
 
 import type { AdminMemberItem } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,12 +35,43 @@ export function VerifiedBadge({
 }: {
   verified: string | null | undefined
 }) {
+  // 彩色 = 已实名, 黑白灰阶 = 未实名各态, 图标徽章一眼区分 (绿色避开通用主题色, 与会员金色皇冠区分)
   if (verified === "passed")
-    return <Badge className="bg-amber-500 hover:bg-amber-500/80">已实名</Badge>
-  if (verified === "pending") return <Badge variant="outline">待核验</Badge>
+    return (
+      <Badge className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+        <BadgeCheck className="size-3.5" />
+        已实名
+      </Badge>
+    )
+  if (verified === "pending")
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 text-muted-foreground grayscale hover:bg-transparent"
+      >
+        <BadgeCheck className="size-3.5" />
+        待核验
+      </Badge>
+    )
   if (verified === "rejected")
-    return <Badge variant="destructive">核验拒绝</Badge>
-  return <span className="text-muted-foreground text-xs">—</span>
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 text-muted-foreground grayscale hover:bg-transparent"
+      >
+        <ShieldX className="size-3.5" />
+        核验拒绝
+      </Badge>
+    )
+  return (
+    <Badge
+      variant="outline"
+      className="gap-1 text-muted-foreground grayscale hover:bg-transparent"
+    >
+      <BadgeCheck className="size-3.5" />
+      未实名
+    </Badge>
+  )
 }
 
 export function memberDisplayName(m: {
