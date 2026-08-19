@@ -14,6 +14,8 @@ export type Item = {
   icon: LucideIcon
   title: string
   path: string
+  /** 带路径参数的路由 (如本店工作台 /stores/$storeId) */
+  params?: Record<string, string>
 }
 
 interface MainProps {
@@ -36,7 +38,13 @@ export function Main({ items }: MainProps) {
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => {
-            const isActive = currentPath === item.path
+            const activePath = item.params
+              ? item.path.replace(
+                  /\$(\w+)/g,
+                  (_, k: string) => item.params?.[k] ?? "",
+                )
+              : item.path
+            const isActive = currentPath === activePath
 
             return (
               <SidebarMenuItem key={item.title}>
@@ -45,7 +53,11 @@ export function Main({ items }: MainProps) {
                   isActive={isActive}
                   asChild
                 >
-                  <RouterLink to={item.path} onClick={handleMenuClick}>
+                  <RouterLink
+                    to={item.path}
+                    params={item.params}
+                    onClick={handleMenuClick}
+                  >
                     <item.icon />
                     <span>{item.title}</span>
                   </RouterLink>
