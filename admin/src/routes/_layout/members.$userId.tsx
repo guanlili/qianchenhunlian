@@ -762,6 +762,8 @@ const GRANT_SOURCE_LABEL: Record<string, string> = {
   admin_recharge: "线下收款",
   admin_trial: "体验发放",
   admin_compensate: "补偿",
+  // 线上支付回调自动写入 (docs/13 P3), 管理员不可手动选
+  wx_pay: "线上支付",
 }
 
 function MembershipTab({

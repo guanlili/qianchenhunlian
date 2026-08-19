@@ -261,6 +261,25 @@ def test_plans_endpoint(client: TestClient, superuser_token_headers: dict) -> No
     codes = {p["code"] for p in body["plans"]}
     assert codes == {"trial_7d", "monthly_30d", "yearly_365d"}
     assert body["trial_once_per_user"] is True
+    assert body["pay_enabled"] is False  # 线上支付未接入 (docs/13 P3)
+
+
+def test_online_pay_source_reserved(db: Session) -> None:
+    """线上支付口子: 引擎接受 source=wx_pay (未来支付回调写入路径), 与线下同一体系."""
+    user = _make_user(db)
+    grant = membership.grant_membership(
+        session=db,
+        user=user,
+        plan_code="yearly_365d",
+        days=365,
+        source=membership.SOURCE_ONLINE,
+        granted_by_type="user",
+        granted_by_id=user.id,
+    )
+    db.commit()
+    db.refresh(user)
+    assert grant.source == "wx_pay"
+    assert membership.is_member(user) is True  # 线上/线下开通效果一致
 
 
 def test_grant_flow_superuser(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
