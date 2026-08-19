@@ -94,6 +94,16 @@ page {
   color: #1f1a17;
 }
 
+.fee-notice {
+  margin-top: 26rpx;
+  padding: 18rpx 24rpx;
+  background: #fdf0ee;
+  border-radius: 16rpx;
+  color: #c93434;
+  font-size: 28rpx;
+  font-weight: 800;
+  text-align: center;
+}
 .agreement-row {
   display: flex;
   align-items: center;

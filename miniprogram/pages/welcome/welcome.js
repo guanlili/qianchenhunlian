@@ -89,6 +89,10 @@ Page({
     wx.navigateTo({ url: '/pages/privacy/privacy' });
   },
 
+  openRefund() {
+    wx.navigateTo({ url: '/pages/refund-protocol/refund-protocol' });
+  },
+
   async onSubmit() {
     if (this.data.submitting) return;
     if (!this.data.agreed) {
