@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/qualifications")({
   component: QualificationsPage,
@@ -114,9 +115,8 @@ function QualificationsPage() {
                       className="rounded border p-3"
                     >
                       <div className="aspect-video overflow-hidden rounded bg-slate-50">
-                        {/* 资源路径相对; admin host 跟 backend 同源, 浏览器会自动拼 */}
                         <img
-                          src={it.image_url}
+                          src={resolveFileUrl(it.image_url)}
                           alt={it.title || ""}
                           className="h-full w-full object-cover"
                         />

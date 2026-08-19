@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 920" role="img" aria-labelledby="title desc">
+  <title id="title">乾缘标识</title>
+  <desc id="desc">红色圆形乾缘印章标识</desc>
+  <defs>
+    <clipPath id="mark-clip">
+      <circle cx="460" cy="460" r="450" />
+    </clipPath>
+  </defs>
+  <image
+    href="./qianyuan-mark-source.jpg"
+    width="920"
+    height="920"
+    preserveAspectRatio="none"
+    clip-path="url(#mark-clip)"
+  />
+</svg>
