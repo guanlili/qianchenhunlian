@@ -32,6 +32,7 @@ class Perm(str, Enum):
     HANDLE_REQUEST = "handle_request"  # 处理撮合工单 (门店管理员仅本店工单)
     ASSIGN_REQUEST = "assign_request"  # 改派撮合工单归属门店
     GRANT_BALANCE = "grant_balance"  # 赠送解锁次数 (门店管理员仅本店会员)
+    MEMBER_GRANT = "member_grant"  # 会员发放/续费/回收 (门店管理员仅本店会员, docs/13)
     BLOCK_USER = "block_user"  # 封禁/解封会员 (门店管理员仅本店会员)
     STORE_MANAGE = "store_manage"  # 门店 CRUD / 指定主属门店
     SETTINGS_MANAGE = "settings_manage"  # 平台设置 (资质/公告/协议文案)
@@ -51,6 +52,8 @@ _STORE_ADMIN: frozenset[Perm] = frozenset(
         Perm.HANDLE_REQUEST,
         # 店长权限: 本店会员的封禁与赠送额度 (数据范围由 _check_member_scope 限本店)
         Perm.GRANT_BALANCE,
+        # 店长权限: 本店会员的会员开通/续费/回收 (docs/13)
+        Perm.MEMBER_GRANT,
         Perm.BLOCK_USER,
     }
 )

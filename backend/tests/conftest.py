@@ -2,6 +2,7 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -24,6 +25,22 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+
+# pysqlite 旧版隔离模式会隐式 BEGIN, 导致 db fixture 里 Session 的最外层
+# SAVEPOINT 成了事务起点 → session.commit() 的 RELEASE 直接提交到库,
+# teardown 的 rollback 变空操作 → 测试间数据泄漏 (曾真实发生过).
+# 官方配方: 关驱动隐式事务, 由 SQLAlchemy 显式 BEGIN, savepoint 才真正嵌套.
+@event.listens_for(engine, "connect")
+def _disable_pysqlite_autobegin(dbapi_connection, _record) -> None:
+    dbapi_connection.isolation_level = None
+
+
+@event.listens_for(engine, "begin")
+def _emit_explicit_begin(dbapi_connection) -> None:
+    dbapi_connection.exec_driver_sql("BEGIN")
+
+
 SQLModel.metadata.create_all(engine)
 
 
