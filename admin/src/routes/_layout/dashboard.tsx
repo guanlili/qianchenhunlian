@@ -78,6 +78,7 @@ function Dashboard() {
 
   const metricCards = [
     { label: "今日新增", value: stats?.today_signups ?? 0 },
+    { label: "上月新增", value: stats?.last_month_signups ?? 0 },
     { label: "会员总数", value: stats?.total_users ?? 0 },
     { label: "已实名", value: stats?.verified_users ?? 0 },
     {
@@ -133,7 +134,7 @@ function Dashboard() {
       </div>
 
       {/* 核心指标 */}
-      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {metricCards.map((m) => (
           <Card key={m.label}>
             <CardContent className="py-4">
