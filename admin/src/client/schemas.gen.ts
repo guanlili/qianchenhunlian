@@ -4571,6 +4571,11 @@ export const MembershipPlansResponseSchema = {
             type: 'boolean',
             title: 'Trial Once Per User'
         },
+        pay_enabled: {
+            type: 'boolean',
+            title: 'Pay Enabled',
+            default: false
+        },
         plans: {
             items: {
                 additionalProperties: true,

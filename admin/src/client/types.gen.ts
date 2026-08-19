@@ -702,6 +702,7 @@ export type MembershipPlansResponse = {
     free_daily_quota: number;
     member_daily_quota: number;
     trial_once_per_user: boolean;
+    pay_enabled?: boolean;
     plans?: Array<{
         [key: string]: unknown;
     }>;

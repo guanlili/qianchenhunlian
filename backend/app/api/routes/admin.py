@@ -1968,6 +1968,7 @@ class MembershipPlansResponse(SQLModel):
     free_daily_quota: int
     member_daily_quota: int
     trial_once_per_user: bool
+    pay_enabled: bool = False  # 线上支付开关 (docs/13 P3), 接入微信支付后置 true
     plans: list[dict[str, Any]] = []
 
 
@@ -1999,6 +2000,7 @@ def get_membership_plans(session: SessionDep) -> MembershipPlansResponse:
         free_daily_quota=int(cfg.get("free_daily_quota", 5)),
         member_daily_quota=int(cfg.get("member_daily_quota", 20)),
         trial_once_per_user=bool(cfg.get("trial_once_per_user", True)),
+        pay_enabled=bool(cfg.get("pay_enabled", False)),
         plans=list(cfg.get("plans", [])),
     )
 
