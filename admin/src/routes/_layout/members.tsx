@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 type AuditFilter = "all" | "none" | "pending" | "approved" | "rejected"
 type VerifiedFilter = "all" | "none" | "pending" | "passed" | "rejected"
 type StatusFilter = "all" | "active" | "blocked"
+type MembershipFilter = "all" | "member" | "normal" | "expiring"
 
 export const Route = createFileRoute("/_layout/members")({
   component: MembersLayout,
@@ -39,6 +40,7 @@ function MembersList() {
   const [auditStatus, setAuditStatus] = useState<AuditFilter>("all")
   const [verified, setVerified] = useState<VerifiedFilter>("all")
   const [userStatus, setUserStatus] = useState<StatusFilter>("all")
+  const [membership, setMembership] = useState<MembershipFilter>("all")
   const [keyword, setKeyword] = useState("")
 
   const { data, isLoading } = useQuery({
@@ -47,11 +49,19 @@ function MembersList() {
         auditStatus,
         verified,
         userStatus,
+        membership,
         keyword: keyword || undefined,
         skip: 0,
         limit: 200,
       }),
-    queryKey: ["admin-members", auditStatus, verified, userStatus, keyword],
+    queryKey: [
+      "admin-members",
+      auditStatus,
+      verified,
+      userStatus,
+      membership,
+      keyword,
+    ],
   })
 
   const { data: stores } = useQuery({
@@ -115,6 +125,20 @@ function MembersList() {
             <SelectItem value="all">状态: 全部</SelectItem>
             <SelectItem value="active">正常</SelectItem>
             <SelectItem value="blocked">已封禁</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={membership}
+          onValueChange={(v) => setMembership(v as MembershipFilter)}
+        >
+          <SelectTrigger className="w-[130px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">会员: 全部</SelectItem>
+            <SelectItem value="member">会员中</SelectItem>
+            <SelectItem value="expiring">7天内到期</SelectItem>
+            <SelectItem value="normal">非会员</SelectItem>
           </SelectContent>
         </Select>
         <Input

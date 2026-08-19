@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Crown } from "lucide-react"
 
 import type { AdminMemberItem } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -49,6 +49,29 @@ export function memberDisplayName(m: {
   xy_code?: string | null
 }) {
   return m.real_name || m.nickname || m.xy_code || "—"
+}
+
+/** 会员徽标 (docs/13): 会员期内金色皇冠, 7 天内到期加"即将到期" */
+export function MemberBadge({
+  isMember,
+  expiresAt,
+}: {
+  isMember?: boolean | null
+  expiresAt?: string | null
+}) {
+  if (!isMember) return <span className="text-muted-foreground text-xs">—</span>
+  if (!expiresAt) return null
+  const daysLeft = Math.ceil(
+    (new Date(expiresAt).getTime() - Date.now()) / 86400000,
+  )
+  return (
+    <span className="flex items-center gap-1">
+      <Badge className="bg-amber-500 hover:bg-amber-500/80">
+        <Crown className="mr-0.5 size-3" /> 会员
+      </Badge>
+      {daysLeft <= 7 && <Badge variant="outline">即将到期</Badge>}
+    </span>
+  )
 }
 
 function ageFromYear(year: number | null | undefined) {
@@ -120,6 +143,16 @@ export const memberColumns: ColumnDef<AdminMemberItem>[] = [
         )
       )
     },
+  },
+  {
+    id: "membership",
+    header: "会员",
+    cell: ({ row }) => (
+      <MemberBadge
+        isMember={row.original.is_member}
+        expiresAt={row.original.membership_expires_at}
+      />
+    ),
   },
   {
     accessorKey: "audit_status",

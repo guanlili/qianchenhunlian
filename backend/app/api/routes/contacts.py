@@ -11,11 +11,10 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import update as sa_update
 from sqlmodel import Field, SQLModel, and_, func, select
 
-from app import crud
 from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
+from app.core import membership
 from app.core.wechat import assert_text_safe
 from app.models import ContactRequest, Profile, User
 
@@ -49,6 +48,11 @@ class ContactRequestResult(SQLModel):
     balance: int
     status: str
     created_at: datetime
+    # docs/13 三桶额度: 本次消耗的桶 + 当前日额度快照 (旧客户端可忽略)
+    bucket: str | None = None  # member_daily / free_daily / balance
+    quota_date: str | None = None
+    quota_limit: int | None = None
+    quota_used: int | None = None
 
 
 class ContactRequestList(SQLModel):
@@ -68,9 +72,9 @@ def submit_contact_request(
     """提交"想联系 X"工单. 红娘后台看到后人工撮合.
 
     - 必须自己资料完善度 >= 60% (CompleteProfileUser)
-    - 消耗 1 次申请额度 (User.unlock_balance)
+    - 消耗 1 次申请额度 (docs/13 三桶: 会员日额度/每日免费/永久余额)
     - 同一目标 24h 内不允许重复申请 (避免骚扰红娘)
-    - 余额不足 → 402
+    - 三桶全空 → 402
     - 目标已封禁 / 未审核 → 404
     """
     target_id = body.target_user_id
@@ -112,22 +116,6 @@ def submit_contact_request(
             detail="DUPLICATE|24 小时内已申请过, 请耐心等待红娘处理",
         )
 
-    # 原子扣额度 (与 unlock_balance 共用字段, 含义改为"申请额度")
-    result = session.execute(
-        sa_update(User)
-        .where(User.id == current_user.id)  # type: ignore[arg-type]
-        .where(User.unlock_balance >= 1)  # type: ignore[arg-type]
-        .values(
-            unlock_balance=User.unlock_balance - 1,
-            updated_at=datetime.utcnow(),
-        )
-    )
-    if result.rowcount == 0:  # type: ignore[attr-defined]
-        raise HTTPException(
-            status_code=402,
-            detail="申请额度不足, 可联系运营充值",
-        )
-
     from_profile = session.exec(
         select(Profile).where(Profile.user_id == current_user.id)
     ).first()
@@ -140,28 +128,33 @@ def submit_contact_request(
         store_id=from_profile.home_store_id if from_profile else None,
     )
     session.add(req)
-    # 扣减流水 (与扣减同事务提交)
-    balance_after = session.exec(
-        select(User.unlock_balance).where(User.id == current_user.id)
-    ).one()
-    crud.add_balance_txn(
-        session=session,
-        user_id=current_user.id,
-        amount=-1,
-        balance_after=balance_after,
-        source="contact_request_cost",
+
+    # 三桶额度扣减 (docs/13): 会员日额度 → 每日免费 → 永久余额; 同事务提交
+    bucket = membership.consume(
+        session,
+        current_user,
         ref_id=req.id,
-        note=f"申请联系 {target_user.xy_code or ''}".strip(),
+        note=f"申请联系 {target_user.xy_code or ''}".strip() or None,
     )
+    if bucket is None:
+        raise HTTPException(
+            status_code=402,
+            detail="QUOTA_EXHAUSTED|今日免费额度与余额均已用完, 可联系红娘开通会员",
+        )
     session.commit()
     session.refresh(req)
     session.refresh(current_user)
 
+    quota = membership.quota_status(session, current_user)
     return ContactRequestResult(
         request_id=req.id,
         balance=current_user.unlock_balance,
         status=req.status,
         created_at=req.created_at,
+        bucket=bucket,
+        quota_date=quota["date"],
+        quota_limit=quota["limit"],
+        quota_used=quota["used"],
     )
 
 

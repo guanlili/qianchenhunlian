@@ -6,6 +6,7 @@ import {
   BadgeMinus,
   Ban,
   Check,
+  Crown,
   MapPin,
   Pencil,
   ShieldCheck,
@@ -20,10 +21,12 @@ import { AssignStoreDialog } from "@/components/Members/AssignStoreDialog"
 import { ContactCard } from "@/components/Members/ContactCard"
 import {
   AuditBadge,
+  MemberBadge,
   memberDisplayName,
   VerifiedBadge,
 } from "@/components/Members/columns"
 import { GrantDialog } from "@/components/Members/GrantDialog"
+import { MembershipGrantDialog } from "@/components/Members/MembershipGrantDialog"
 import { AuditDialog } from "@/components/Profiles/AuditDialog"
 import { EditCriteriaDialog } from "@/components/Profiles/EditCriteriaDialog"
 import { EditParentsDialog } from "@/components/Profiles/EditParentsDialog"
@@ -70,12 +73,25 @@ function rangeLabel(
   return `${min || max}${suffix}`
 }
 
+/** full.membership (dict) → 三桶额度快照 */
+function quotaSnapshot(m?: { [key: string]: unknown } | null) {
+  return {
+    bucket: (m?.bucket as string) || "free",
+    limit: Number(m?.limit ?? 0),
+    used: Number(m?.used ?? 0),
+    remaining: Number(m?.remaining ?? 0),
+    balance: Number(m?.balance ?? 0),
+  }
+}
+
 const TXN_SOURCE_LABEL: Record<string, string> = {
   register_gift: "注册赠送",
   admin_grant: "后台赠送",
   unlock_cost: "解锁消耗",
   contact_request_cost: "申请联系消耗",
   refund: "退还",
+  daily_free_cost: "每日免费额度",
+  member_daily_cost: "会员日额度",
 }
 
 const ACTION_LABEL: Record<string, string> = {
@@ -89,6 +105,8 @@ const ACTION_LABEL: Record<string, string> = {
   view_contact: "查看联系方式",
   update_profile: "代录资料",
   assign_store: "指定门店",
+  grant_membership: "开通/续费会员",
+  revoke_membership: "撤销会员",
 }
 
 const REQ_STATUS_LABEL: Record<string, string> = {
@@ -161,8 +179,8 @@ function MemberDetail() {
   const m = full.member
   const p = full.profile
   const blocked = m.user_status === "blocked"
-  // 实名/代录: superuser 或 本店红娘 (后端 can_view_contact 与认证/代录权限同一判定)
-  const canOperateMember = canWrite || full.can_view_contact
+  // 实名/代录/会员发放: superuser 或 本店门店管理员 (后端 can_view_contact 与认证/代录权限同一判定)
+  const canOperateMember = !!(canWrite || full.can_view_contact)
 
   return (
     <div className="flex flex-col gap-6">
@@ -187,6 +205,10 @@ function MemberDetail() {
               </h1>
               <AuditBadge status={m.audit_status} />
               <VerifiedBadge verified={m.verified} />
+              <MemberBadge
+                isMember={m.is_member}
+                expiresAt={m.membership_expires_at}
+              />
               {blocked && <Badge variant="destructive">已封禁</Badge>}
             </div>
             <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 text-sm">
@@ -195,7 +217,22 @@ function MemberDetail() {
                 <MapPin className="mr-0.5 inline size-3.5" />
                 {full.home_store_name || "未分配门店"}
               </span>
-              <span>余额 {m.unlock_balance} 次</span>
+              <span>
+                {m.is_member ? (
+                  <>
+                    <Crown className="mr-0.5 inline size-3.5 text-amber-500" />
+                    会员至{" "}
+                    {m.membership_expires_at
+                      ? new Date(m.membership_expires_at).toLocaleDateString(
+                          "zh-CN",
+                        )
+                      : "—"}
+                  </>
+                ) : (
+                  "非会员"
+                )}
+              </span>
+              <span>永久余额 {m.unlock_balance} 次</span>
               <span>
                 注册于 {new Date(m.created_at).toLocaleDateString("zh-CN")}
               </span>
@@ -254,6 +291,17 @@ function MemberDetail() {
               ))}
             {canOperateMember && (
               <>
+                <MembershipGrantDialog
+                  userId={userId}
+                  xyCode={m.xy_code}
+                  isMember={!!m.is_member}
+                  expiresAt={m.membership_expires_at}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <Crown /> {m.is_member ? "续费会员" : "开通会员"}
+                    </Button>
+                  }
+                />
                 <EditProfileDialog
                   item={p}
                   trigger={
@@ -352,6 +400,7 @@ function MemberDetail() {
           <TabsTrigger value="profile">资料</TabsTrigger>
           <TabsTrigger value="criteria">择偶 · 父母</TabsTrigger>
           <TabsTrigger value="contact">联系方式</TabsTrigger>
+          <TabsTrigger value="membership">会员</TabsTrigger>
           <TabsTrigger value="balance">权益</TabsTrigger>
           <TabsTrigger value="activity">行为记录</TabsTrigger>
           <TabsTrigger value="requests">工单</TabsTrigger>
@@ -367,8 +416,16 @@ function MemberDetail() {
         <TabsContent value="contact" className="mt-4">
           <ContactCard userId={userId} canView={!!full.can_view_contact} />
         </TabsContent>
+        <TabsContent value="membership" className="mt-4">
+          <MembershipTab userId={userId} canOperate={canOperateMember} />
+        </TabsContent>
         <TabsContent value="balance" className="mt-4">
-          <BalanceTab userId={userId} balance={m.unlock_balance ?? 0} />
+          <BalanceTab
+            userId={userId}
+            membership={full.membership}
+            isMember={!!m.is_member}
+            expiresAt={m.membership_expires_at}
+          />
         </TabsContent>
         <TabsContent value="activity" className="mt-4">
           <ActivityTab userId={userId} />
@@ -586,55 +643,215 @@ function CriteriaTab({ full }: { full: AdminMemberFull }) {
   )
 }
 
-function BalanceTab({ userId, balance }: { userId: string; balance: number }) {
+function BalanceTab({
+  userId,
+  membership,
+  isMember,
+  expiresAt,
+}: {
+  userId: string
+  membership?: { [key: string]: unknown } | null
+  isMember: boolean
+  expiresAt?: string | null
+}) {
   const { data, isLoading } = useQuery({
     queryFn: () => AdminService.listMemberTransactions({ userId, limit: 100 }),
     queryKey: ["member-transactions", userId],
   })
+  const quota = quotaSnapshot(membership)
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-muted-foreground text-xs">会员状态</div>
+            <div className="mt-1 flex items-center gap-2 text-xl font-semibold">
+              {isMember ? (
+                <>
+                  <Crown className="size-5 text-amber-500" />
+                  {expiresAt
+                    ? `至 ${new Date(expiresAt).toLocaleDateString("zh-CN")}`
+                    : "生效中"}
+                </>
+              ) : (
+                "非会员"
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-muted-foreground text-xs">
+              今日申请额度 ({quota.bucket === "member" ? "会员" : "免费"})
+            </div>
+            <div className="mt-1 text-xl font-semibold">
+              {quota.remaining} / {quota.limit} 次
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-muted-foreground text-xs">永久余额</div>
+            <div className="mt-1 text-xl font-semibold">{quota.balance} 次</div>
+          </CardContent>
+        </Card>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            申请额度流水 · 会员期内不动永久余额
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : !data?.items?.length ? (
+            <div className="text-muted-foreground py-6 text-center text-sm">
+              暂无流水记录 (历史数据早于流水表上线)
+            </div>
+          ) : (
+            <div className="divide-y">
+              {data.items.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between py-2 text-sm"
+                >
+                  <div>
+                    <span className="font-medium">
+                      {TXN_SOURCE_LABEL[t.source] || t.source}
+                    </span>
+                    {t.note && (
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        {t.note}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={
+                        t.amount > 0 ? "text-emerald-600" : "text-rose-600"
+                      }
+                    >
+                      {t.amount > 0 ? `+${t.amount}` : t.amount}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      余 {t.balance_after}
+                    </span>
+                    <span className="text-muted-foreground w-36 text-right text-xs">
+                      {new Date(t.created_at).toLocaleString("zh-CN")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+const GRANT_PLAN_LABEL: Record<string, string> = {
+  trial_7d: "7天体验卡",
+  monthly_30d: "月卡",
+  yearly_365d: "年卡",
+  custom: "自定义",
+}
+
+const GRANT_SOURCE_LABEL: Record<string, string> = {
+  admin_recharge: "线下收款",
+  admin_trial: "体验发放",
+  admin_compensate: "补偿",
+}
+
+function MembershipTab({
+  userId,
+  canOperate,
+}: {
+  userId: string
+  canOperate: boolean
+}) {
+  const qc = useQueryClient()
+  const { data, isLoading } = useQuery({
+    queryFn: () => AdminService.listMembershipGrants({ userId, limit: 100 }),
+    queryKey: ["member-grants", userId],
+  })
+
+  const revoke = useMutation({
+    mutationFn: (grantId: string) =>
+      AdminService.revokeMembershipEndpoint({
+        grantId,
+        requestBody: { reason: null },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["member-grants", userId] })
+      qc.invalidateQueries({ queryKey: ["member-full", userId] })
+      qc.invalidateQueries({ queryKey: ["admin-members"] })
+      toast.success("已撤销, 会员到期时间已重算")
+    },
+    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+  })
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">
-          解锁次数流水 · 当前余额 {balance} 次
-        </CardTitle>
+        <CardTitle className="text-base">会员发放记录</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : !data?.items?.length ? (
           <div className="text-muted-foreground py-6 text-center text-sm">
-            暂无流水记录 (历史数据早于流水表上线)
+            暂无发放记录
           </div>
         ) : (
           <div className="divide-y">
-            {data.items.map((t) => (
+            {data.items.map((g) => (
               <div
-                key={t.id}
+                key={g.id}
                 className="flex items-center justify-between py-2 text-sm"
               >
-                <div>
-                  <span className="font-medium">
-                    {TXN_SOURCE_LABEL[t.source] || t.source}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={g.revoked_at ? "outline" : "default"}>
+                    {GRANT_PLAN_LABEL[g.plan_code] || g.plan_code} {g.days}天
+                  </Badge>
+                  <Badge variant="secondary">
+                    {GRANT_SOURCE_LABEL[g.source] || g.source}
+                  </Badge>
+                  <span className="font-mono text-xs">
+                    {new Date(g.start_from).toLocaleDateString("zh-CN")} →{" "}
+                    {new Date(g.expires_at).toLocaleDateString("zh-CN")}
                   </span>
-                  {t.note && (
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      {t.note}
+                  <span className="text-muted-foreground text-xs">
+                    {g.granted_by_email || g.granted_by_type}
+                  </span>
+                  {g.note && (
+                    <span className="text-muted-foreground text-xs">
+                      "{g.note}"
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-4">
-                  <span
-                    className={
-                      t.amount > 0 ? "text-emerald-600" : "text-rose-600"
-                    }
-                  >
-                    {t.amount > 0 ? `+${t.amount}` : t.amount}
-                  </span>
+                <div className="flex items-center gap-3">
+                  {g.revoked_at ? (
+                    <Badge variant="destructive">已撤销</Badge>
+                  ) : (
+                    canOperate && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground"
+                        disabled={revoke.isPending}
+                        onClick={() => {
+                          if (window.confirm("确认撤销该次会员发放?"))
+                            revoke.mutate(g.id)
+                        }}
+                      >
+                        撤销
+                      </Button>
+                    )
+                  )}
                   <span className="text-muted-foreground text-xs">
-                    余 {t.balance_after}
-                  </span>
-                  <span className="text-muted-foreground w-36 text-right text-xs">
-                    {new Date(t.created_at).toLocaleString("zh-CN")}
+                    {new Date(g.created_at).toLocaleString("zh-CN")}
                   </span>
                 </div>
               </div>

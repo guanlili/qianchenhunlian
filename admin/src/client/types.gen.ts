@@ -145,6 +145,9 @@ export type AdminMemberFull = {
     verified_at?: (string | null);
     counts?: MemberCounts;
     can_view_contact?: boolean;
+    membership?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -166,6 +169,8 @@ export type AdminMemberItem = {
     progress?: number;
     verified?: string;
     unlock_balance?: number;
+    is_member?: boolean;
+    membership_expires_at?: (string | null);
     user_status?: string;
     last_active_at?: (string | null);
     created_at: string;
@@ -445,6 +450,10 @@ export type ContactRequestResult = {
     balance: number;
     status: string;
     created_at: string;
+    bucket?: (string | null);
+    quota_date?: (string | null);
+    quota_limit?: (number | null);
+    quota_used?: (number | null);
 };
 
 export type ContactViewResponse = {
@@ -620,6 +629,64 @@ export type MemberCounts = {
     requests_received?: number;
 };
 
+export type MembershipGrantList = {
+    items?: Array<MembershipGrantPublic>;
+    total?: number;
+};
+
+export type MembershipGrantPublic = {
+    id: string;
+    user_id: string;
+    plan_code: string;
+    days: number;
+    source: string;
+    start_from: string;
+    expires_at: string;
+    granted_by_type: string;
+    granted_by_id: string;
+    granted_by_email?: (string | null);
+    store_id?: (string | null);
+    note?: (string | null);
+    revoked_at?: (string | null);
+    created_at: string;
+};
+
+export type MembershipGrantRequest = {
+    plan_code: string;
+    days?: (number | null);
+    source?: 'admin_recharge' | 'admin_trial' | 'admin_compensate';
+    note?: (string | null);
+};
+
+export type source = 'admin_recharge' | 'admin_trial' | 'admin_compensate';
+
+export type MembershipGrantResponse = {
+    grant: MembershipGrantPublic;
+    is_member: boolean;
+    membership_expires_at?: (string | null);
+    membership?: {
+        [key: string]: unknown;
+    };
+};
+
+export type MembershipPlansResponse = {
+    free_daily_quota: number;
+    member_daily_quota: number;
+    trial_once_per_user: boolean;
+    plans?: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type MembershipStatus = {
+    is_member: boolean;
+    expires_at?: (string | null);
+    plan_code?: (string | null);
+    quota?: {
+        [key: string]: unknown;
+    };
+};
+
 export type Message = {
     message: string;
 };
@@ -785,6 +852,10 @@ export type QualificationList = {
 
 export type RefreshTokenBody = {
     refresh_token: string;
+};
+
+export type RevokeRequest = {
+    reason?: (string | null);
 };
 
 export type SiteContent = {
@@ -1212,6 +1283,7 @@ export type AdminListMembersData = {
      */
     keyword?: (string | null);
     limit?: number;
+    membership?: 'all' | 'member' | 'normal' | 'expiring';
     skip?: number;
     storeId?: (string | null);
     userStatus?: 'all' | 'active' | 'blocked';
@@ -1225,6 +1297,29 @@ export type AdminGetMemberFullData = {
 };
 
 export type AdminGetMemberFullResponse = (AdminMemberFull);
+
+export type AdminGetMembershipPlansResponse = (MembershipPlansResponse);
+
+export type AdminGrantMembershipEndpointData = {
+    requestBody: MembershipGrantRequest;
+    userId: string;
+};
+
+export type AdminGrantMembershipEndpointResponse = (MembershipGrantResponse);
+
+export type AdminRevokeMembershipEndpointData = {
+    grantId: string;
+    requestBody: RevokeRequest;
+};
+
+export type AdminRevokeMembershipEndpointResponse = (MembershipGrantResponse);
+
+export type AdminListMembershipGrantsData = {
+    limit?: number;
+    userId: string;
+};
+
+export type AdminListMembershipGrantsResponse = (MembershipGrantList);
 
 export type AdminViewMemberContactData = {
     userId: string;
@@ -1458,6 +1553,8 @@ export type MatchesGetNeighborData = {
 };
 
 export type MatchesGetNeighborResponse = (NeighborResponse);
+
+export type MembershipGetMyMembershipResponse = (MembershipStatus);
 
 export type ProfilesReadMyProfileResponse = (ProfileMeResponse);
 
