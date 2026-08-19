@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table"
 import useAuth from "@/hooks/useAuth"
 import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
+import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/stores")({
   component: StoresPage,
@@ -353,7 +354,7 @@ function PhotoField({
       </div>
       {value && (
         <img
-          src={value}
+          src={resolveFileUrl(value)}
           alt="店招"
           className="max-h-40 w-auto rounded border"
         />

@@ -42,6 +42,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/members/$userId")({
   component: MemberDetail,
@@ -174,7 +175,7 @@ function MemberDetail() {
         </Button>
         <div className="flex flex-wrap items-center gap-4">
           <Avatar className="size-16">
-            <AvatarImage src={m.avatar_url || undefined} />
+            <AvatarImage src={resolveFileUrl(m.avatar_url) || undefined} />
             <AvatarFallback className="text-xl">
               {(memberDisplayName(m) || "?").slice(0, 1)}
             </AvatarFallback>
@@ -483,9 +484,14 @@ function ProfileTab({ full }: { full: AdminMemberFull }) {
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 {p.photos.map((url) => (
-                  <a key={url} href={url} target="_blank" rel="noreferrer">
+                  <a
+                    key={url}
+                    href={resolveFileUrl(url)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     <img
-                      src={url}
+                      src={resolveFileUrl(url)}
                       alt="照片"
                       className="h-32 w-full rounded border object-cover"
                     />
@@ -699,7 +705,9 @@ function ActivityTab({ userId }: { userId: string }) {
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="size-7">
-                    <AvatarImage src={a.avatar_url || undefined} />
+                    <AvatarImage
+                      src={resolveFileUrl(a.avatar_url) || undefined}
+                    />
                     <AvatarFallback>
                       {(a.nickname || a.xy_code || "?").slice(0, 1)}
                     </AvatarFallback>

@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { resolveFileUrl } from "@/lib/utils"
 
 interface Props {
   item: AdminProfileItem
@@ -162,7 +163,7 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
                   {data.profile.photos.map((url) => (
                     <img
                       key={url}
-                      src={url}
+                      src={resolveFileUrl(url)}
                       alt="照片"
                       className="w-full h-32 object-cover rounded border"
                     />

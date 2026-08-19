@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/review")({
   component: ReviewCenter,
@@ -108,9 +109,14 @@ function AuditQueue() {
               <div className="flex gap-2 overflow-x-auto lg:w-96 lg:flex-shrink-0">
                 {p.photos?.length ? (
                   p.photos.slice(0, 4).map((url) => (
-                    <a key={url} href={url} target="_blank" rel="noreferrer">
+                    <a
+                      key={url}
+                      href={resolveFileUrl(url)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       <img
-                        src={url}
+                        src={resolveFileUrl(url)}
                         alt="照片"
                         className="h-36 w-28 flex-shrink-0 rounded border object-cover"
                       />
@@ -229,7 +235,9 @@ function VerifyQueue() {
                 className="flex items-center gap-2 hover:underline"
               >
                 <Avatar className="size-9">
-                  <AvatarImage src={m.avatar_url || undefined} />
+                  <AvatarImage
+                    src={resolveFileUrl(m.avatar_url) || undefined}
+                  />
                   <AvatarFallback>
                     {(memberDisplayName(m) || "?").slice(0, 1)}
                   </AvatarFallback>
