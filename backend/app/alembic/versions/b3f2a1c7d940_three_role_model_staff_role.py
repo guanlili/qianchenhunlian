@@ -18,11 +18,14 @@ depends_on = None
 
 
 def upgrade():
-    from sqlalchemy import text
+    from sqlalchemy import inspect as sa_inspect, text
 
     from app.core.db import engine
     from sqlmodel import Session
 
+    # 全新库: 表由 init_db 的 create_all 创建 (role 默认值已是 store_admin), 跳过
+    if "staff" not in sa_inspect(engine).get_table_names():
+        return
     with Session(engine) as session:
         session.execute(
             text(
@@ -34,11 +37,13 @@ def upgrade():
 
 
 def downgrade():
-    from sqlalchemy import text
+    from sqlalchemy import inspect as sa_inspect, text
 
     from app.core.db import engine
     from sqlmodel import Session
 
+    if "staff" not in sa_inspect(engine).get_table_names():
+        return
     with Session(engine) as session:
         session.execute(
             text("UPDATE staff SET role = 'matchmaker' WHERE role = 'store_admin'")
