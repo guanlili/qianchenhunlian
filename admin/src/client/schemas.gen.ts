@@ -3655,6 +3655,37 @@ export const DashboardResponseSchema = {
     description: '工作台聚合: 待办指标 + 最近动态 (docs/11 §3.1). 门店口径由后端按 actor 强制.'
 } as const;
 
+export const DistrictItemSchema = {
+    properties: {
+        district: {
+            type: 'string',
+            title: 'District'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['district', 'count'],
+    title: 'DistrictItem'
+} as const;
+
+export const DistrictListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/DistrictItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        }
+    },
+    type: 'object',
+    title: 'DistrictList'
+} as const;
+
 export const FavoriteBriefSchema = {
     properties: {
         user_id: {

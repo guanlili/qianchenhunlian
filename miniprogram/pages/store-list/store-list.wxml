@@ -3,8 +3,18 @@
     <view class="title">{{city}}</view>
     <view class="sub">共 {{stores.length}} 家门店</view>
   </view>
+  <scroll-view wx:if="{{districts.length > 0}}" class="district-bar" scroll-x enable-flex>
+    <view class="chip {{activeDistrict === '' ? 'chip-on' : ''}}" bindtap="pickDistrict" data-district="">全部</view>
+    <view
+      wx:for="{{districts}}"
+      wx:key="district"
+      class="chip {{activeDistrict === item.district ? 'chip-on' : ''}}"
+      bindtap="pickDistrict"
+      data-district="{{item.district}}"
+    >{{item.district}} {{item.count}}</view>
+  </scroll-view>
   <view class="empty" wx:if="{{!loading && stores.length === 0}}">
-    <text>该城市暂无门店</text>
+    <text>该区域暂无门店</text>
   </view>
   <view class="store-list">
     <view wx:for="{{stores}}" wx:key="id" class="store-row" bindtap="pickStore" data-id="{{item.id}}">
