@@ -25,6 +25,9 @@ def upgrade():
     from app.core.db import engine
 
     inspector = sa.inspect(engine)
+    if "feedback" not in inspector.get_table_names():
+        # 全新库: 表由 init_db 的 create_all 创建 (自带新列), 跳过
+        return
     existing = {c["name"] for c in inspector.get_columns("feedback")}
     with engine.connect() as conn:
         for name, ddl in _NEW_COLUMNS:
@@ -38,6 +41,8 @@ def downgrade():
 
     from app.core.db import engine
 
+    if "feedback" not in sa.inspect(engine).get_table_names():
+        return
     with engine.connect() as conn:
         for name, _ in reversed(_NEW_COLUMNS):
             conn.execute(sa.text(f"ALTER TABLE feedback DROP COLUMN {name}"))
