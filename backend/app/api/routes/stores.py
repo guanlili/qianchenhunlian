@@ -25,6 +25,15 @@ class CityList(SQLModel):
     items: list[CityItem] = []
 
 
+class DistrictItem(SQLModel):
+    district: str
+    count: int
+
+
+class DistrictList(SQLModel):
+    items: list[DistrictItem] = []
+
+
 class StoreList(SQLModel):
     items: list[StorePublic] = []
     total: int = 0
@@ -42,17 +51,39 @@ def list_cities(session: SessionDep) -> CityList:
     return CityList(items=[CityItem(city=r[0], count=r[1]) for r in rows])
 
 
+@router.get("/districts", response_model=DistrictList)
+def list_districts(
+    session: SessionDep, city: str = Query(min_length=1)
+) -> DistrictList:
+    """某城市有门店的区/县 distinct 列表 (active 口径, 小程序筛选条用)."""
+    rows = session.exec(
+        select(Store.district, func.count(Store.id))  # type: ignore
+        .where(Store.status == "active")
+        .where(Store.city == city)
+        .where(Store.district.is_not(None))  # type: ignore
+        .group_by(Store.district)
+        .order_by(Store.district)
+    ).all()
+    # district 为空字符串的脏数据不进筛选项
+    return DistrictList(
+        items=[DistrictItem(district=r[0], count=r[1]) for r in rows if r[0]]
+    )
+
+
 @router.get("", response_model=StoreList)
 def list_stores(
     session: SessionDep,
     city: str | None = Query(default=None),
+    district: str | None = Query(default=None, max_length=32),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> StoreList:
-    """门店列表 (按城市筛选, 默认仅 active)"""
+    """门店列表 (按城市/区县筛选, 默认仅 active)"""
     base = select(Store).where(Store.status == "active")
     if city:
         base = base.where(Store.city == city)
+    if district:
+        base = base.where(Store.district == district)
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
     items = session.exec(
         base.order_by(Store.city, Store.name).offset(skip).limit(limit)

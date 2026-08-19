@@ -533,6 +533,15 @@ export type DashboardResponse = {
     overdue_pending_tickets?: number;
 };
 
+export type DistrictItem = {
+    district: string;
+    count: number;
+};
+
+export type DistrictList = {
+    items?: Array<DistrictItem>;
+};
+
 export type FavoriteBrief = {
     user_id: string;
     xy_code?: (string | null);
@@ -1663,8 +1672,15 @@ export type SitePutContentResponse = (SiteContent);
 
 export type StoresListCitiesResponse = (CityList);
 
+export type StoresListDistrictsData = {
+    city: string;
+};
+
+export type StoresListDistrictsResponse = (DistrictList);
+
 export type StoresListStoresData = {
     city?: (string | null);
+    district?: (string | null);
     limit?: number;
     skip?: number;
 };
