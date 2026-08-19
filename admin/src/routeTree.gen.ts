@@ -20,6 +20,7 @@ import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
 import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
 import { Route as LayoutMembersRouteImport } from './routes/_layout/members'
+import { Route as LayoutGuideRouteImport } from './routes/_layout/guide'
 import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAuditLogsRouteImport } from './routes/_layout/audit-logs'
@@ -82,6 +83,11 @@ const LayoutMembersRoute = LayoutMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutGuideRoute = LayoutGuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutFeedbackRoute = LayoutFeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
+  '/guide': typeof LayoutGuideRoute
   '/members': typeof LayoutMembersRouteWithChildren
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/feedback': typeof LayoutFeedbackRoute
+  '/guide': typeof LayoutGuideRoute
   '/members': typeof LayoutMembersRouteWithChildren
   '/qualifications': typeof LayoutQualificationsRoute
   '/requests': typeof LayoutRequestsRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/_layout/audit-logs': typeof LayoutAuditLogsRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/feedback': typeof LayoutFeedbackRoute
+  '/_layout/guide': typeof LayoutGuideRoute
   '/_layout/members': typeof LayoutMembersRouteWithChildren
   '/_layout/qualifications': typeof LayoutQualificationsRoute
   '/_layout/requests': typeof LayoutRequestsRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/audit-logs'
     | '/dashboard'
     | '/feedback'
+    | '/guide'
     | '/members'
     | '/qualifications'
     | '/requests'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/audit-logs'
     | '/dashboard'
     | '/feedback'
+    | '/guide'
     | '/members'
     | '/qualifications'
     | '/requests'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/_layout/audit-logs'
     | '/_layout/dashboard'
     | '/_layout/feedback'
+    | '/_layout/guide'
     | '/_layout/members'
     | '/_layout/qualifications'
     | '/_layout/requests'
@@ -325,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutMembersRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/guide': {
+      id: '/_layout/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof LayoutGuideRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/feedback': {
       id: '/_layout/feedback'
       path: '/feedback'
@@ -407,6 +426,7 @@ interface LayoutRouteChildren {
   LayoutAuditLogsRoute: typeof LayoutAuditLogsRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
   LayoutFeedbackRoute: typeof LayoutFeedbackRoute
+  LayoutGuideRoute: typeof LayoutGuideRoute
   LayoutMembersRoute: typeof LayoutMembersRouteWithChildren
   LayoutQualificationsRoute: typeof LayoutQualificationsRoute
   LayoutRequestsRoute: typeof LayoutRequestsRoute
@@ -421,6 +441,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAuditLogsRoute: LayoutAuditLogsRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
   LayoutFeedbackRoute: LayoutFeedbackRoute,
+  LayoutGuideRoute: LayoutGuideRoute,
   LayoutMembersRoute: LayoutMembersRouteWithChildren,
   LayoutQualificationsRoute: LayoutQualificationsRoute,
   LayoutRequestsRoute: LayoutRequestsRoute,

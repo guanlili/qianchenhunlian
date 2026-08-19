@@ -1,6 +1,7 @@
 import {
   Activity,
   Award,
+  BookOpen,
   ClipboardCheck,
   Heart,
   Home,
@@ -52,6 +53,11 @@ const adminItems: Item[] = [
   { icon: ScrollText, title: "操作日志", path: "/audit-logs" },
 ]
 
+// 所有角色可见的帮助入口 (docs/14 的用户可见版)
+const helpItems: Item[] = [
+  { icon: BookOpen, title: "使用指引", path: "/guide" },
+]
+
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
   const isSuperuser = !!currentUser?.is_superuser
@@ -78,6 +84,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <Main items={items} />
+        <Main items={helpItems} />
       </SidebarContent>
       <SidebarFooter>
         <SidebarAppearance />
