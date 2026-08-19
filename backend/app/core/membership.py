@@ -35,7 +35,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "plans": [
         {"code": "trial_7d", "name": "7天体验卡", "days": 7, "price": None},
         {"code": "monthly_30d", "name": "月卡", "days": 30, "price": 99},
-        {"code": "yearly_365d", "name": "年卡", "days": 365, "price": 499},
+        # 年卡定价与《线上报名费退费规则协议》口径一致 (100 元 / 年)
+        {"code": "yearly_365d", "name": "年卡", "days": 365, "price": 100},
     ],
 }
 

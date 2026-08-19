@@ -4614,6 +4614,17 @@ export const MembershipStatusSchema = {
             ],
             title: 'Plan Code'
         },
+        expired_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expired At'
+        },
         quota: {
             additionalProperties: true,
             type: 'object',
