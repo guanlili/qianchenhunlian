@@ -24,6 +24,7 @@ import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAuditLogsRouteImport } from './routes/_layout/audit-logs'
 import { Route as LayoutAdminsRouteImport } from './routes/_layout/admins'
+import { Route as LayoutActivitiesRouteImport } from './routes/_layout/activities'
 import { Route as LayoutStoresStoreIdRouteImport } from './routes/_layout/stores.$storeId'
 import { Route as LayoutMembersUserIdRouteImport } from './routes/_layout/members.$userId'
 
@@ -101,6 +102,11 @@ const LayoutAdminsRoute = LayoutAdminsRouteImport.update({
   path: '/admins',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutActivitiesRoute = LayoutActivitiesRouteImport.update({
+  id: '/activities',
+  path: '/activities',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutStoresStoreIdRoute = LayoutStoresStoreIdRouteImport.update({
   id: '/$storeId',
   path: '/$storeId',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/activities': typeof LayoutActivitiesRoute
   '/admins': typeof LayoutAdminsRoute
   '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/activities': typeof LayoutActivitiesRoute
   '/admins': typeof LayoutAdminsRoute
   '/audit-logs': typeof LayoutAuditLogsRoute
   '/dashboard': typeof LayoutDashboardRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_layout/activities': typeof LayoutActivitiesRoute
   '/_layout/admins': typeof LayoutAdminsRoute
   '/_layout/audit-logs': typeof LayoutAuditLogsRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recover-password'
     | '/reset-password'
+    | '/activities'
     | '/admins'
     | '/audit-logs'
     | '/dashboard'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recover-password'
     | '/reset-password'
+    | '/activities'
     | '/admins'
     | '/audit-logs'
     | '/dashboard'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recover-password'
     | '/reset-password'
+    | '/_layout/activities'
     | '/_layout/admins'
     | '/_layout/audit-logs'
     | '/_layout/dashboard'
@@ -341,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/activities': {
+      id: '/_layout/activities'
+      path: '/activities'
+      fullPath: '/activities'
+      preLoaderRoute: typeof LayoutActivitiesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/stores/$storeId': {
       id: '/_layout/stores/$storeId'
       path: '/$storeId'
@@ -383,6 +402,7 @@ const LayoutStoresRouteWithChildren = LayoutStoresRoute._addFileChildren(
 )
 
 interface LayoutRouteChildren {
+  LayoutActivitiesRoute: typeof LayoutActivitiesRoute
   LayoutAdminsRoute: typeof LayoutAdminsRoute
   LayoutAuditLogsRoute: typeof LayoutAuditLogsRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
@@ -396,6 +416,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutActivitiesRoute: LayoutActivitiesRoute,
   LayoutAdminsRoute: LayoutAdminsRoute,
   LayoutAuditLogsRoute: LayoutAuditLogsRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
