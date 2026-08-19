@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Outlet,
+  useMatches,
+  useNavigate,
+} from "@tanstack/react-router"
 import { Search } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -42,6 +47,7 @@ function MembersList() {
   const [userStatus, setUserStatus] = useState<StatusFilter>("all")
   const [membership, setMembership] = useState<MembershipFilter>("all")
   const [keyword, setKeyword] = useState("")
+  const navigate = useNavigate()
 
   const { data, isLoading } = useQuery({
     queryFn: () =>
@@ -172,6 +178,12 @@ function MembersList() {
             columns={memberColumns}
             data={data.items}
             meta={{ storeMap }}
+            onRowClick={(m) =>
+              navigate({
+                to: "/members/$userId",
+                params: { userId: m.user_id },
+              })
+            }
           />
         </div>
       )}

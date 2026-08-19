@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Inbox } from "lucide-react"
 
 import { AdminService, StoresService } from "@/client"
@@ -92,6 +92,7 @@ function StoreWorkspacePage() {
 }
 
 function StoreMembersTab({ storeId }: { storeId: string }) {
+  const navigate = useNavigate()
   const { data, isPending } = useQuery({
     queryFn: () => AdminService.listMembers({ storeId, skip: 0, limit: 200 }),
     queryKey: ["admin-members", "store", storeId],
@@ -112,7 +113,16 @@ function StoreMembersTab({ storeId }: { storeId: string }) {
         {items.length === 0 ? (
           <EmptyHint text="本店还没有会员, 会员在「会员管理」里指定所属门店后出现在这里" />
         ) : (
-          <DataTable columns={memberColumns} data={items} />
+          <DataTable
+            columns={memberColumns}
+            data={items}
+            onRowClick={(m) =>
+              navigate({
+                to: "/members/$userId",
+                params: { userId: m.user_id },
+              })
+            }
+          />
         )}
       </CardContent>
     </Card>
