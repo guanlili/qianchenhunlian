@@ -38,15 +38,38 @@ function QualificationsPage() {
     )
   }
 
+  // 上传即落库: 文件传 OSS 后立刻把新列表 PUT 到服务端,
+  // 避免「已上传」但没点保存导致刷新后丢失
   const upload = useMutation({
-    mutationFn: (file: File) =>
-      UploadsService.uploadImage({ formData: { file } as any }),
-    onSuccess: (res) => {
-      setItems((s) => [...s, { image_url: res.url, title: null }])
-      setDirty(true)
-      toast.success("已上传")
+    mutationFn: async (file: File) => {
+      const res = await UploadsService.uploadImage({
+        formData: { file } as any,
+      })
+      const next = [...items, { image_url: res.url, title: null }]
+      await SiteService.putQualifications({ requestBody: { items: next } })
+      return next
+    },
+    onSuccess: (next) => {
+      setItems(next)
+      qc.invalidateQueries({ queryKey: ["site-qualifications"] })
+      toast.success("已上传并保存")
     },
     onError: (e) => toast.error(`上传失败: ${(e as Error).message}`),
+  })
+
+  // 移除同样即时落库
+  const remove = useMutation({
+    mutationFn: async (idx: number) => {
+      const next = items.filter((_, i) => i !== idx)
+      await SiteService.putQualifications({ requestBody: { items: next } })
+      return next
+    },
+    onSuccess: (next) => {
+      setItems(next)
+      qc.invalidateQueries({ queryKey: ["site-qualifications"] })
+      toast.success("已移除并保存")
+    },
+    onError: (e) => toast.error(`移除失败: ${(e as Error).message}`),
   })
 
   const save = useMutation({
@@ -100,8 +123,8 @@ function QualificationsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4 text-sm">
-                上传后请记得点 "保存" 让用户端可见. 用户端在 "我的 → 设置 →
-                资质证明" 看到这些图片.
+                上传 / 移除会自动保存；修改说明文字后需点「保存」。用户端在
+                「我的 → 设置 → 资质证明」看到这些图片.
               </p>
               {items.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
@@ -135,17 +158,16 @@ function QualificationsPage() {
                           setDirty(true)
                         }}
                       />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 w-full"
-                        onClick={() => {
-                          setItems((s) => s.filter((_, i) => i !== idx))
-                          setDirty(true)
-                        }}
-                      >
-                        <Trash2 className="text-rose-500" /> 移除
-                      </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 w-full"
+                    disabled={remove.isPending}
+                    onClick={() => remove.mutate(idx)}
+                  >
+                    <Trash2 className="text-rose-500" />{" "}
+                    {remove.isPending ? "移除中..." : "移除"}
+                  </Button>
                     </div>
                   ))}
                 </div>
