@@ -6,7 +6,9 @@ import {
   LineChart,
   Monitor,
   Search,
+  Shield,
   Smartphone,
+  Users,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +19,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 export const Route = createFileRoute("/_layout/guide")({
   component: GuidePage,
@@ -82,6 +92,143 @@ const faqs = [
   {
     q: "看不到某会员？",
     a: "门店管理员只能看本店会员 (资料归属门店决定), 跨店资料找总部。",
+  },
+]
+
+// 后台权限矩阵 (单一事实来源: backend/app/api/permissions.py 的 ROLE_PERMS,
+// 新增/调整权限点时两边同步更新). "scoped" = 有权限但仅限本店数据.
+type PermCell = boolean | "scoped"
+const permMatrix: {
+  name: string
+  superAdmin: PermCell
+  storeAdmin: PermCell
+  desc: string
+}[] = [
+  {
+    name: "资料审核（线上）",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "用户提交的资料审核",
+  },
+  {
+    name: "编辑/代录会员资料",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "新建/修改会员的基本资料、择偶要求等",
+  },
+  {
+    name: "实名认证",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "通过/驳回会员的实名认证申请",
+  },
+  {
+    name: "查看会员联系方式",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "查看手机号、微信等联系方式（记审计日志）",
+  },
+  {
+    name: "工单内联系方式",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "查看撮合工单内会员的联系方式（仅本单归属店）",
+  },
+  {
+    name: "撮合工单处理",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "处理用户提交的联系申请，完成撮合",
+  },
+  {
+    name: "撮合工单改派",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "修改工单归属的门店",
+  },
+  {
+    name: "赠送解锁次数",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "给会员赠送联系解锁额度",
+  },
+  {
+    name: "会员开通/续费/回收",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "管理会员的付费会员资格",
+  },
+  {
+    name: "封禁/解封会员",
+    superAdmin: true,
+    storeAdmin: "scoped",
+    desc: "禁用/恢复会员的账号使用权限",
+  },
+  {
+    name: "门店管理",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "门店的新增、编辑、删除，指定主属门店",
+  },
+  {
+    name: "平台设置",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "管理平台资质、公告、协议文案等配置",
+  },
+  {
+    name: "意见反馈处理",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "处理用户提交的意见反馈",
+  },
+  {
+    name: "员工账号管理",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "门店员工账号的新增、编辑、删除",
+  },
+  {
+    name: "管理员账号管理",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "系统管理员账号的管理",
+  },
+  {
+    name: "操作审计日志查看",
+    superAdmin: true,
+    storeAdmin: false,
+    desc: "查看所有管理员的操作记录",
+  },
+]
+
+function PermMark({ value }: { value: PermCell }) {
+  if (value === "scoped") {
+    return <span className="text-primary text-sm">✓ 仅本店</span>
+  }
+  return value ? (
+    <span className="text-primary text-sm">✓</span>
+  ) : (
+    <span className="text-muted-foreground text-sm">✗</span>
+  )
+}
+
+// 小程序用户身份与额度 (套餐参数来源: backend/app/core/membership.py, 后台可调)
+const userTiers = [
+  {
+    name: "游客（未登录）",
+    can: "浏览门店列表、平台资质、协议文案等公开内容",
+    quota: "无额度，需注册登录",
+  },
+  {
+    name: "注册用户（非会员）",
+    can: "浏览、搜索相亲资料，完善自己的资料",
+    quota: "每日 5 次免费额度，用完后扣余额",
+  },
+  {
+    name: "付费会员",
+    can: "同上，带会员身份标识，到期自动降回非会员",
+    quota: "每日 20 次会员额度，用完后扣余额",
   },
 ]
 
@@ -164,6 +311,82 @@ function GuidePage() {
               </span>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="size-5" /> 角色权限说明
+          </CardTitle>
+          <CardDescription>
+            各角色的权限范围，门店管理员仅能操作本店数据。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">权限点</TableHead>
+                  <TableHead className="text-center">系统管理员</TableHead>
+                  <TableHead className="text-center">门店管理员</TableHead>
+                  <TableHead className="w-[300px]">说明</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {permMatrix.map((row) => (
+                  <TableRow key={row.name}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="text-center">
+                      <PermMark value={row.superAdmin} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <PermMark value={row.storeAdmin} />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {row.desc}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="size-5" /> 小程序用户身份与额度
+          </CardTitle>
+          <CardDescription>
+            会员判定看有效期（membership_expires_at），额度用于发起联系申请。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[160px]">身份</TableHead>
+                  <TableHead>能做什么</TableHead>
+                  <TableHead className="w-[220px]">联系申请额度</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {userTiers.map((t) => (
+                  <TableRow key={t.name}>
+                    <TableCell className="font-medium">{t.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {t.can}
+                    </TableCell>
+                    <TableCell className="text-sm">{t.quota}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
