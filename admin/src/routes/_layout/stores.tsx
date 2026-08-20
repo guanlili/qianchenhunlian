@@ -320,7 +320,7 @@ function PhotoField({
       UploadsService.uploadImage({ formData: { file } as any }),
     onSuccess: (res) => {
       onChange(res.url)
-      toast.success("已上传")
+      toast.success("已上传，保存门店后生效")
     },
     onError: (e) => toast.error(`上传失败: ${(e as Error).message}`),
   })
