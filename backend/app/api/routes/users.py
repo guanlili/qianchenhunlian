@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -61,6 +62,8 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
         )
 
     user = crud.create_user(session=session, user_create=user_in)
+    session.commit()
+    session.refresh(user)
     if settings.emails_enabled and user_in.email:
         email_data = generate_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
@@ -128,15 +131,18 @@ def read_user_me(current_user: CurrentUser) -> Any:
 @router.delete("/me", response_model=Message)
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
-    Delete own user.
+    注销账号 (软删): status=deactivated + is_active=False, 保留审计/流水.
     """
     if current_user.is_superuser:
         raise HTTPException(
             status_code=403, detail="Super users are not allowed to delete themselves"
         )
-    session.delete(current_user)
+    current_user.status = "deactivated"
+    current_user.is_active = False
+    current_user.updated_at = datetime.utcnow()
+    session.add(current_user)
     session.commit()
-    return Message(message="User deleted successfully")
+    return Message(message="账号已注销")
 
 
 @router.get("/{user_id}", response_model=UserPublic)
@@ -186,6 +192,8 @@ def update_user(
             )
 
     db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
+    session.commit()
+    session.refresh(db_user)
     return db_user
 
 
@@ -194,7 +202,7 @@ def delete_user(
     session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
 ) -> Message:
     """
-    Delete a user.
+    删除用户 (软删): status=deleted + is_active=False, 保留审计/流水.
     """
     user = session.get(User, user_id)
     if not user:
@@ -203,8 +211,9 @@ def delete_user(
         raise HTTPException(
             status_code=403, detail="Super users are not allowed to delete themselves"
         )
-    # 关联的 Profile/Criteria/Favorite/Unlock/View/ContactIntent 等都通过
-    # ondelete="CASCADE" 自动清理, 这里直接删 User
-    session.delete(user)
+    user.status = "deleted"
+    user.is_active = False
+    user.updated_at = datetime.utcnow()
+    session.add(user)
     session.commit()
-    return Message(message="User deleted successfully")
+    return Message(message="用户已删除")

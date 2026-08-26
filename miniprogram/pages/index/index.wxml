@@ -219,7 +219,7 @@
   </block>
 
   <block wx:if="{{screen == 'my-profile'}}">
-    <scroll-view class="screen main-screen" scroll-y>
+    <view class="screen child-screen">
       <view class="solid-header profile-header">
         <view class="nav-row light">
           <button class="nav-link light" bindtap="backToMe">‹ 返回</button>
@@ -233,70 +233,105 @@
         </view>
       </view>
 
-      <view class="self-card">
-        <view class="self-head">
-          <view class="avatar big tone-ocean">乾</view>
-          <view class="self-main">
-            <view class="self-id">用户编号 {{myXyCode || '53652255'}}</view>
-            <view class="stat-row">
-              <view wx:for="{{stats}}" wx:key="label">
-                <view>{{item.value}}</view>
-                <text>{{item.label}}</text>
+      <scroll-view class="child-scroll" scroll-y>
+        <view class="self-card">
+          <view class="self-head">
+            <view class="avatar big tone-ocean">乾</view>
+            <view class="self-main">
+              <view class="self-id">用户编号 {{myXyCode || '53652255'}}</view>
+              <view class="stat-row">
+                <view wx:for="{{stats}}" wx:key="label">
+                  <view>{{item.value}}</view>
+                  <text>{{item.label}}</text>
+                </view>
               </view>
             </view>
           </view>
-        </view>
-        <view class="feature-row">
-          <view class="resource-flag">享更多资源</view>
-          <view><view class="round-icon {{meVerified ? 'on' : ''}}">✦</view><text>线下门店认证</text><text>{{meVerified ? '已认证' : '未认证'}}</text></view>
-          <view><view class="round-icon dot">⇡</view><text>优先推荐</text><text>未开启</text></view>
-          <view><view class="round-icon ring" style="background: conic-gradient(#c93434 0 {{profileProgress}}%, #f0e1d6 {{profileProgress}}% 100%);"><text class="ring-inner">{{profileProgress}}%</text></view><text>资料完善度</text><text>{{profileProgress}}%</text></view>
-        </view>
-      </view>
-
-      <view class="section-card list-card">
-        <view class="card-head">
-          <view><text class="head-icon">资</text>我的资料 <text class="status-tag">审核中</text></view>
-        </view>
-        <view class="detail-grid self-grid">
-          <view wx:for="{{myProfileRows}}" wx:key="label">
-            <text>{{item.label}}</text>
-            <text>{{item.value}}</text>
+          <view class="feature-row">
+            <view class="resource-flag">享更多资源</view>
+            <view><view class="round-icon {{meVerified ? 'on' : ''}}">✦</view><text>线下门店认证</text><text>{{meVerified ? '已认证' : '未认证'}}</text></view>
+            <view><view class="round-icon dot">⇡</view><text>优先推荐</text><text>未开启</text></view>
+            <view><view class="round-icon ring" style="background: conic-gradient(#c93434 0 {{profileProgress}}%, #f0e1d6 {{profileProgress}}% 100%);"><text class="ring-inner">{{profileProgress}}%</text></view><text>资料完善度</text><text>{{profileProgress}}%</text></view>
           </view>
         </view>
-        <view class="desc-box full warm-desc">{{profileDesc}}</view>
-      </view>
 
-      <view class="section-card list-card" wx:if="{{myParentsRows.length > 0}}">
-        <view class="card-head">
-          <view><text class="head-icon">家</text>家庭成员情况</view>
-        </view>
-        <view class="detail-grid self-grid">
-          <view wx:for="{{myParentsRows}}" wx:key="label">
-            <text>{{item.label}}</text>
-            <text>{{item.value}}</text>
+        <view class="section-card list-card">
+          <view class="card-head">
+            <view><text class="head-icon">资</text>我的资料 <text class="status-tag">审核中</text></view>
+          </view>
+          <view class="detail-grid self-grid">
+            <view wx:for="{{myProfileRows}}" wx:key="label">
+              <text>{{item.label}}</text>
+              <text>{{item.value}}</text>
+            </view>
           </view>
         </view>
-      </view>
 
-      <view class="section-card list-card">
-        <view class="card-head">
-          <view><text class="head-icon">择</text>择偶要求</view>
+        <view class="section-card list-card">
+          <view class="card-head">
+            <view><text class="head-icon">介</text>更多介绍</view>
+            <button class="gold-btn mini" bindtap="openIntroEdit">编辑</button>
+          </view>
+          <view class="desc-box full warm-desc">{{profileDesc || '点右上角「编辑」补充自我介绍，让大家更了解你'}}</view>
         </view>
-        <view class="pref-row"><text>年份</text><text>{{criteriaValues.year}}</text></view>
-        <view class="pref-row"><text>身高</text><text>{{criteriaValues.height}}</text></view>
-        <view class="pref-row"><text>年收入</text><text>{{criteriaValues.income}}</text></view>
-        <view class="pref-row"><text>是否有房</text><text>{{criteriaValues.house}}</text></view>
-        <view class="pref-row"><text>学历要求</text><text>{{criteriaValues.edu}}</text></view>
-        <view class="pref-row"><text>婚姻要求</text><text>{{criteriaValues.marriage}}</text></view>
-        <view class="pref-row"><text>户籍地要求</text><text>{{criteriaValues.origin}}</text></view>
+
+        <view class="section-card list-card" wx:if="{{myParentsRows.length > 0}}">
+          <view class="card-head">
+            <view><text class="head-icon">家</text>家庭成员情况</view>
+          </view>
+          <view class="detail-grid self-grid">
+            <view wx:for="{{myParentsRows}}" wx:key="label">
+              <text>{{item.label}}</text>
+              <text>{{item.value}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="section-card list-card">
+          <view class="card-head">
+            <view><text class="head-icon">择</text>择偶要求</view>
+          </view>
+          <view class="pref-row"><text>年份</text><text>{{criteriaValues.year}}</text></view>
+          <view class="pref-row"><text>身高</text><text>{{criteriaValues.height}}</text></view>
+          <view class="pref-row"><text>年收入</text><text>{{criteriaValues.income}}</text></view>
+          <view class="pref-row"><text>是否有房</text><text>{{criteriaValues.house}}</text></view>
+          <view class="pref-row"><text>学历要求</text><text>{{criteriaValues.edu}}</text></view>
+          <view class="pref-row"><text>婚姻要求</text><text>{{criteriaValues.marriage}}</text></view>
+          <view class="pref-row"><text>户籍地要求</text><text>{{criteriaValues.origin}}</text></view>
+          <view class="pref-row"><text>居住的要求</text><text>{{criteriaValues.location}}</text></view>
+        </view>
+
+        <view class="share-actions">
+          <button class="btn outline" bindtap="onAskModifyProfile">修改资料</button>
+          <button class="btn primary" bindtap="shareProfile">分享到群或好友 ›</button>
+        </view>
+      </scroll-view>
+    </view>
+  </block>
+
+  <block wx:if="{{screen == 'intro-edit'}}">
+    <view class="screen child-screen">
+      <view class="hero-header compact">
+        <view class="nav-row light">
+          <button class="nav-link light" bindtap="closeIntroEdit">‹ 返回</button>
+          <view class="nav-title">更多介绍</view>
+          <view class="nav-placeholder"></view>
+        </view>
+        <view class="edit-title">手动编辑</view>
       </view>
 
-      <view class="share-actions">
-        <button class="btn outline" bindtap="onAskModifyProfile">修改资料</button>
-        <button class="btn primary" bindtap="shareProfile">分享到群或好友 ›</button>
+      <scroll-view class="child-scroll with-bottom" scroll-y>
+        <view class="form-card padded">
+          <view class="form-title">更多介绍</view>
+          <textarea value="{{introDraft}}" bindinput="onIntroDraftInput" maxlength="240" placeholder="补充你的介绍：例如性格、爱好、家庭情况、生活习惯等。注意：此处不要留联系方式。"></textarea>
+        </view>
+      </scroll-view>
+
+      <view class="bottom-actions">
+        <button class="btn muted" bindtap="closeIntroEdit">取消</button>
+        <button class="btn primary wide" bindtap="saveIntro">保存</button>
       </view>
-    </scroll-view>
+    </view>
   </block>
 
   <block wx:if="{{screen == 'me'}}">

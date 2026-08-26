@@ -439,6 +439,8 @@ def _approved_target(db: Session) -> User:
     user = _make_user(db)
     profile = db.exec(select(Profile).where(Profile.user_id == user.id)).one()
     profile.audit_status = "approved"
+    # 地域限制: 对外资料只收山东, 目标用户需带山东 location 才能被申请联系
+    profile.location = "山东省济南市"
     db.add(profile)
     db.commit()
     return user

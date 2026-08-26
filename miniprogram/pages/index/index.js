@@ -164,7 +164,6 @@ function adaptMyProfileRows(p) {
     ? `${String(p.birth_date).slice(0, 4)}年${Number(String(p.birth_date).slice(5, 7))}月`
     : (p.year ? `${p.year}年` : '未填写');
   return [
-    { label: '姓名', value: p.real_name || '未填写' },
     { label: '性别', value: p.gender || '未填写' },
     { label: '民族', value: p.ethnicity || '未填写' },
     { label: '出生', value: birthLabel },
@@ -172,11 +171,9 @@ function adaptMyProfileRows(p) {
     { label: '体重', value: p.weight ? `${p.weight}kg` : '未填写' },
     { label: '身体状况', value: p.health_status || '未填写' },
     { label: '学历', value: p.edu || '未填写' },
-    { label: '专业', value: p.major || '未填写' },
     { label: '兴趣爱好', value: p.hobbies || '未填写' },
     { label: '户籍地', value: p.origin || '未填写' },
     { label: '居住地', value: p.location || '未填写' },
-    { label: '家乡', value: p.hometown || '未填写' },
     { label: '婚姻状况', value: p.marriage || '未填写' },
     { label: '月收入', value: p.income || '未填写' },
     { label: '职业', value: p.job || '未填写' },
@@ -184,11 +181,6 @@ function adaptMyProfileRows(p) {
     { label: '是否有社保', value: p.has_social_insurance || '未填写' },
     { label: '是否有房', value: p.has_house || '未填写' },
     { label: '是否有车', value: p.has_car || '未填写' },
-    { label: '房贷车贷', value: p.house_car_loan || '未填写' },
-    { label: '体型', value: p.body_type || '未填写' },
-    { label: '性格类型', value: p.personality_type || '未填写' },
-    { label: '手机号', value: p.contact_phone || '未填写' },
-    { label: '微信号', value: p.contact_wechat || '未填写' },
   ];
 }
 
@@ -290,14 +282,10 @@ const buildMyProfileRows = (form) => [
   { label: '学历', value: '大专' },
   { label: '户籍地', value: '淄博桓台县' },
   { label: '居住地', value: '北京东城区' },
-  { label: '家乡', value: '未填写' },
   { label: '婚姻', value: form.marriage },
   { label: '年收入', value: form.income },
   { label: '是否有房', value: form.house },
   { label: '是否有车', value: '未填写' },
-  { label: '体型', value: '未填写' },
-  { label: '手机号', value: '未填写' },
-  { label: '微信号', value: '未填写' },
 ];
 
 const buildCriteriaFields = (values) => [
@@ -447,6 +435,7 @@ Page({
     myPhotos: [],              // 我的资料展示页用 (只列已上传的非空 URL)
     myParentsRows: [],         // 父母 / 兄弟姐妹信息 rows
     myHomeStore: null,         // 我的主属门店 (Store 对象)
+    introDraft: '',            // 更多介绍编辑草稿 (手动编辑)
 
     // ===== 详情页 好感按钮状态 =====
     detailLiked: false,        // 我对当前 selectedProfile 是否点过好感
@@ -1571,6 +1560,50 @@ Page({
     const url = e.currentTarget.dataset.url;
     if (!url) return;
     wx.previewImage({ current: url, urls: this.data.myPhotos });
+  },
+
+  /** 更多介绍 (手动编辑): 打开编辑屏, 用当前介绍初始化草稿 */
+  openIntroEdit() {
+    this.setData({
+      screen: 'intro-edit',
+      introDraft: this.data.profileDesc || '',
+      optionSheet: null,
+    });
+  },
+
+  closeIntroEdit() {
+    this.setData({ screen: 'my-profile', optionSheet: null });
+  },
+
+  /** 更多介绍 textarea 双向绑定 */
+  onIntroDraftInput(e) {
+    this.setData({ introDraft: e.detail.value });
+  },
+
+  /** 保存更多介绍 (存 profile desc 字段, 后端落库前有内容审核) */
+  async saveIntro() {
+    if (this._introSaving) return; // 防双击
+    const desc = (this.data.introDraft || '').trim();
+    if (!this.data.apiReady) {
+      this.setData({ profileDesc: desc });
+      wx.showToast({ title: '已保存', icon: 'success' });
+      this.closeIntroEdit();
+      return;
+    }
+    this._introSaving = true;
+    try {
+      const updated = await profileSvc.saveProfile({ desc: desc || null });
+      this.setData({
+        profileDesc: updated.desc || desc,
+        profileProgress: updated.progress || this.data.profileProgress,
+      });
+      wx.showToast({ title: '介绍已保存', icon: 'success' });
+      this.closeIntroEdit();
+    } catch (e) {
+      console.warn('[index] saveIntro', e);
+    } finally {
+      this._introSaving = false;
+    }
   },
 
   onContactPhoneInput(e) {

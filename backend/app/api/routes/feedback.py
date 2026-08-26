@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Body, HTTPException
 from sqlmodel import SQLModel
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ApiWriteLimited, CurrentUser, SessionDep
 from app.core.wechat import assert_text_safe
 from app.models import Feedback
 
@@ -27,6 +27,7 @@ class FeedbackResponse(SQLModel):
 def submit_feedback(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: FeedbackBody = Body(),
 ) -> FeedbackResponse:
     content = (body.content or "").strip()

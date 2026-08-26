@@ -187,7 +187,8 @@ function StoreFormDialog({
     onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
   })
 
-  const update = (k: string) => (v: string) => setForm({ ...form, [k]: v })
+  const update = (k: string) => (v: string) =>
+    setForm((prev) => ({ ...prev, [k]: v }))
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -211,7 +212,11 @@ function StoreFormDialog({
               className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
               value={form.city}
               onChange={(e) =>
-                setForm({ ...form, city: e.target.value, district: "" })
+                setForm((prev) => ({
+                  ...prev,
+                  city: e.target.value,
+                  district: "",
+                }))
               }
             >
               {SHANDONG_CITIES.map((c) => (

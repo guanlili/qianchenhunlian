@@ -1037,7 +1037,7 @@ page {
 }
 
 .self-card {
-  margin-top: -28rpx;
+  margin-top: 24rpx; /* 头部固定后 self-card 在滚动区内, 不能再用负 margin 叠到红头部上 */
   padding: 30rpx;
   position: relative;
   z-index: 2;

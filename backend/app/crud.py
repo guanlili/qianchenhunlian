@@ -59,8 +59,7 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
         update={"hashed_password": get_password_hash(user_create.password)},
     )
     session.add(db_obj)
-    session.commit()
-    session.refresh(db_obj)
+    session.flush()
     return db_obj
 
 
@@ -73,8 +72,7 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     db_user.sqlmodel_update(user_data, update=extra_data)
     db_user.updated_at = datetime.utcnow()
     session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
+    session.flush()
     return db_user
 
 
@@ -124,8 +122,7 @@ def create_staff(*, session: Session, staff_create: StaffCreate) -> Staff:
         update={"hashed_password": get_password_hash(staff_create.password)},
     )
     session.add(db_obj)
-    session.commit()
-    session.refresh(db_obj)
+    session.flush()
     return db_obj
 
 
@@ -137,8 +134,7 @@ def update_staff(*, session: Session, db_staff: Staff, staff_in: StaffUpdate) ->
     db_staff.sqlmodel_update(data, update=extra)
     db_staff.updated_at = datetime.utcnow()
     session.add(db_staff)
-    session.commit()
-    session.refresh(db_staff)
+    session.flush()
     return db_staff
 
 

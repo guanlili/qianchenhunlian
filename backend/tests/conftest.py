@@ -41,6 +41,20 @@ def _emit_explicit_begin(dbapi_connection) -> None:
     dbapi_connection.exec_driver_sql("BEGIN")
 
 
+def _sqlite_regexp(pattern: str, value: str | None) -> int | None:
+    """SQLite regexp(pattern, value) 模拟, 供 shandong_clause 在单测跑 PG 正则."""
+    if value is None:
+        return None
+    import re
+
+    return 1 if re.search(pattern, value) else 0
+
+
+@event.listens_for(engine, "connect")
+def _register_sqlite_regexp(dbapi_connection, _record) -> None:
+    dbapi_connection.create_function("regexp", 2, _sqlite_regexp)
+
+
 SQLModel.metadata.create_all(engine)
 
 
