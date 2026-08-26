@@ -146,6 +146,7 @@ function request(options, _retry = false) {
             const retryRes = await request(options, true);
             resolve(retryRes);
           } catch (e) {
+            if (loading) wx.hideLoading()
             if (!silent) wx.showToast({ title: '请重新登录', icon: 'none' });
             reject(e);
           }

@@ -26,8 +26,8 @@ const formSchema = z.object({
   username: z.email(),
   password: z
     .string()
-    .min(1, { message: "Password is required" })
-    .min(8, { message: "Password must be at least 8 characters" }),
+    .min(1, { message: "请输入密码" })
+    .min(8, { message: "密码至少需要 8 个字符" }),
 }) satisfies z.ZodType<AccessToken>
 
 type FormData = z.infer<typeof formSchema>
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       {
-        title: "Log In - FastAPI Cloud",
+        title: "登录 - 乾缘婚恋后台",
       },
     ],
   }),
@@ -75,7 +75,7 @@ function Login() {
           className="flex flex-col gap-6"
         >
           <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Login to your account</h1>
+            <h1 className="text-2xl font-bold">登录你的账号</h1>
           </div>
 
           <div className="grid gap-4">
@@ -109,7 +109,7 @@ function Login() {
                       to="/recover-password"
                       className="ml-auto text-sm underline-offset-4 hover:underline"
                     >
-                      Forgot your password?
+                      忘记密码？
                     </RouterLink>
                   </div>
                   <FormControl>
@@ -125,7 +125,7 @@ function Login() {
             />
 
             <LoadingButton type="submit" loading={loginMutation.isPending}>
-              Log In
+              登录
             </LoadingButton>
           </div>
         </form>

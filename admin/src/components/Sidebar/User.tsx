@@ -93,7 +93,7 @@ export function User({ user }: { user: any }) {
             </RouterLink>
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
-              Log Out
+              退出登录
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

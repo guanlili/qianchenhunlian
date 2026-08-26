@@ -35,6 +35,14 @@ services:
       # admin-auth middleware with HTTP Basic auth
       # Using the environment variables USERNAME and HASHED_PASSWORD
       - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
+      # 安全响应头 (HSTS / X-Frame-Options / X-Content-Type-Options 等)
+      - traefik.http.middlewares.security-headers.headers.stsSeconds=63072000
+      - traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.security-headers.headers.stsPreload=true
+      - traefik.http.middlewares.security-headers.headers.forceSTSHeader=true
+      - traefik.http.middlewares.security-headers.headers.frameDeny=true
+      - traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin
       # Enable HTTP Basic auth, using the middleware created above
       - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
     volumes:

@@ -8,7 +8,8 @@ from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel, and_, func, select
 
-from app.api.deps import ApiReadLimited, CurrentUser, SessionDep
+from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
+from app.api.shandong import shandong_clause
 from app.models import Favorite, Profile, User, View
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
@@ -59,6 +60,7 @@ class VisitorList(SQLModel):
 def toggle_favorite(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     target_id: uuid.UUID,
 ) -> ToggleResponse:
     """收藏 / 取消收藏 (幂等)"""
@@ -78,10 +80,18 @@ def toggle_favorite(
         )
     ).first()
 
-    # 新加收藏时检查目标可见性 (已封禁/admin 不可被收藏);
+    # 新加收藏时检查目标可见性 (已封禁/admin/非山东 不可被收藏);
     # 已收藏的允许取消, 让用户能清理失效收藏
     if not existing:
         if target.status != "active" or target.is_superuser:
+            raise HTTPException(status_code=404, detail="对方资料不可见")
+        # 非山东资料对外 404, 与推荐池契约一致
+        target_profile = session.exec(
+            select(Profile)
+            .where(Profile.user_id == target_id)
+            .where(shandong_clause())
+        ).first()
+        if not target_profile:
             raise HTTPException(status_code=404, detail="对方资料不可见")
 
     if existing:
@@ -132,15 +142,19 @@ def list_my_favorites(
     total = session.exec(
         select(func.count())
         .select_from(Favorite)
+        .join(User, Favorite.target_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(Favorite.user_id == current_user.id)
+        .where(shandong_clause())
     ).one()
 
     rows = session.exec(
         select(Favorite, Profile, User)
-        .join(User, Favorite.target_user_id == User.id)  # type: ignore
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]  # type: ignore
+        .join(User, Favorite.target_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(Favorite.user_id == current_user.id)
-        .order_by(Favorite.created_at.desc())  # type: ignore
+        .where(shandong_clause())
+        .order_by(Favorite.created_at.desc())  # type: ignore[attr-defined]
         .offset(skip)
         .limit(limit)
     ).all()
@@ -182,12 +196,19 @@ def list_visitors(
         .subquery()
     )
 
-    total = session.exec(select(func.count()).select_from(sub)).one()
+    total = session.exec(
+        select(func.count())
+        .select_from(sub)
+        .join(User, User.id == sub.c.user_id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(shandong_clause())
+    ).one()
 
     rows = session.exec(
         select(sub.c.user_id, sub.c.last_viewed_at, User, Profile)
         .join(User, User.id == sub.c.user_id)  # type: ignore[arg-type]
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(shandong_clause())
         .order_by(sub.c.last_viewed_at.desc())
         .offset(skip)
         .limit(limit)
@@ -227,12 +248,19 @@ def list_seen_by_me(
         .subquery()
     )
 
-    total = session.exec(select(func.count()).select_from(sub)).one()
+    total = session.exec(
+        select(func.count())
+        .select_from(sub)
+        .join(User, User.id == sub.c.target_user_id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(shandong_clause())
+    ).one()
 
     rows = session.exec(
         select(sub.c.target_user_id, sub.c.last_viewed_at, User, Profile)
         .join(User, User.id == sub.c.target_user_id)  # type: ignore[arg-type]
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(shandong_clause())
         .order_by(sub.c.last_viewed_at.desc())
         .offset(skip)
         .limit(limit)

@@ -17,6 +17,8 @@ from app.core.ratelimit import (
     API_DETAIL_WINDOW,
     API_READ_MAX,
     API_READ_WINDOW,
+    API_WRITE_MAX,
+    API_WRITE_WINDOW,
     api_limiter,
 )
 from app.models import Profile, Staff, TokenPayload, User
@@ -126,6 +128,20 @@ def _enforce_api_detail_limit(current_user: CurrentUser) -> None:
 
 
 ApiDetailLimited = Annotated[None, Depends(_enforce_api_detail_limit)]
+
+
+def _enforce_api_write_limit(current_user: CurrentUser) -> None:
+    """业务写接口按用户限流: 好感/收藏/反馈/上传/资料修改等, 防机器刷量."""
+    key = f"api:write:{current_user.id}"
+    if api_limiter.record(key, API_WRITE_WINDOW) > API_WRITE_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail="操作过于频繁, 请稍后再试",
+            headers={"Retry-After": str(api_limiter.retry_after(key, API_WRITE_WINDOW))},
+        )
+
+
+ApiWriteLimited = Annotated[None, Depends(_enforce_api_write_limit)]
 
 
 def get_current_actor(session: SessionDep, token: TokenDep) -> Actor:

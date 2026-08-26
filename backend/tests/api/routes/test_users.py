@@ -366,13 +366,16 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
     )
     assert r.status_code == 200
     deleted_user = r.json()
-    assert deleted_user["message"] == "User deleted successfully"
+    assert deleted_user["message"] == "账号已注销"
+    # 软删: 数据库里仍有记录, 但 status=deactivated + is_active=False
     result = db.exec(select(User).where(User.id == user_id)).first()
-    assert result is None
+    assert result is not None
+    assert result.status == "deactivated"
+    assert result.is_active is False
 
-    user_query = select(User).where(User.id == user_id)
-    user_db = db.execute(user_query).first()
-    assert user_db is None
+    # 注销后 token 应失效 (get_current_user 会返回 400 Inactive user)
+    r2 = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
+    assert r2.status_code == 400
 
 
 def test_delete_user_me_as_superuser(
@@ -401,9 +404,12 @@ def test_delete_user_super_user(
     )
     assert r.status_code == 200
     deleted_user = r.json()
-    assert deleted_user["message"] == "User deleted successfully"
+    assert deleted_user["message"] == "用户已删除"
+    # 软删: 数据库里仍有记录, 但 status=deleted + is_active=False
     result = db.exec(select(User).where(User.id == user_id)).first()
-    assert result is None
+    assert result is not None
+    assert result.status == "deleted"
+    assert result.is_active is False
 
 
 def test_delete_user_not_found(

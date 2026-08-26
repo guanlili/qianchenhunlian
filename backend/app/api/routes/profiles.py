@@ -10,8 +10,8 @@ from typing import Annotated
 from fastapi import APIRouter, Body, HTTPException
 from sqlmodel import SQLModel, select
 
-from app.api.deps import CurrentUser, SessionDep
-from app.core.wechat import assert_text_safe
+from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
+from app.core.wechat import assert_text_safe, assert_text_safe_fields
 from app.models import (
     Criteria,
     CriteriaPublic,
@@ -95,7 +95,7 @@ def _calc_criteria_progress(criteria: Criteria) -> int:
 
 
 # UGC 自由文本字段: PUT /me 提交时过微信 msg_sec_check (合规要求)
-_FREE_TEXT_FIELDS = ("nickname", "desc", "real_name", "hobbies", "job")
+# 现改为遍历 body 中所有字符串/字符串列表字段, 新增字段自动纳入审核
 
 
 # ---------------- Response DTOs ----------------
@@ -214,6 +214,7 @@ def submit_welcome(
 def upsert_my_profile(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: Annotated[ProfileUpdate, Body()],
 ) -> ProfileWithContact:
     """新建或更新我的资料.
@@ -226,9 +227,7 @@ def upsert_my_profile(
     ).first()
 
     data = body.model_dump(exclude_unset=True)
-    for _f in _FREE_TEXT_FIELDS:
-        if _f in data:
-            assert_text_safe(data.get(_f), current_user.openid)
+    assert_text_safe_fields(data, current_user.openid)
     if profile is None:
         profile = Profile(user_id=current_user.id, **data)
     else:
@@ -249,6 +248,7 @@ def upsert_my_profile(
 def update_my_contact(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     wechat: Annotated[str | None, Body(embed=True)] = None,
     phone: Annotated[str | None, Body(embed=True)] = None,
 ) -> ProfileWithContact:
@@ -260,9 +260,14 @@ def update_my_contact(
         raise HTTPException(status_code=404, detail="请先创建资料")
 
     if wechat is not None:
+        if len(wechat) > 64:
+            raise HTTPException(status_code=400, detail="微信号过长")
         profile.contact_wechat = wechat or None
     if phone is not None:
+        if len(phone) > 32:
+            raise HTTPException(status_code=400, detail="手机号过长")
         profile.contact_phone = phone or None
+    assert_text_safe_fields({"wechat": wechat, "phone": phone}, current_user.openid)
     profile.progress = _calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
@@ -302,6 +307,7 @@ def set_home_store(
 def upsert_my_criteria(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: Annotated[CriteriaUpdate, Body()],
 ) -> CriteriaPublic:
     """新建或更新我的择偶要求"""
@@ -310,6 +316,7 @@ def upsert_my_criteria(
     ).first()
 
     data = body.model_dump(exclude_unset=True)
+    assert_text_safe_fields(data, current_user.openid)
     if criteria is None:
         criteria = Criteria(user_id=current_user.id, **data)
     else:
@@ -328,6 +335,7 @@ def upsert_my_criteria(
 def add_my_photo(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: PhotoCommit,
 ) -> ProfileWithContact:
     """追加一张照片到我的资料.
@@ -385,6 +393,7 @@ def deactivate_me(
 ) -> Message:
     """相亲下线: user.status='inactive', 推荐不再展示我; 我可以再 reactivate."""
     current_user.status = "inactive"
+    current_user.is_active = False  # 同步禁用 token, 与 admin 封禁逻辑一致
     current_user.updated_at = datetime.utcnow()
     session.add(current_user)
     session.commit()
@@ -400,6 +409,7 @@ def reactivate_me(
     if current_user.status == "blocked":
         raise HTTPException(status_code=403, detail="账号已封禁, 无法自助上线")
     current_user.status = "active"
+    current_user.is_active = True  # 恢复 token 有效性
     current_user.updated_at = datetime.utcnow()
     session.add(current_user)
     session.commit()
