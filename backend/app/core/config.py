@@ -120,7 +120,7 @@ class Settings(BaseSettings):
     OSS_BUCKET: str = ""
     # 上传走内网 endpoint (ECS 同地域免流量费/低延迟), 签名 URL 用公网 endpoint.
     # 公网 endpoint 带 https:// 前缀: 签名 URL 会继承该协议, 小程序/https 页面要求图片链接为 https.
-    OSS_INTERNAL_ENDPOINT: str = "oss-cn-beijing-internal.aliyuncs.com"
+    OSS_INTERNAL_ENDPOINT: str = "https://oss-cn-beijing-internal.aliyuncs.com"
     OSS_PUBLIC_ENDPOINT: str = "https://oss-cn-beijing.aliyuncs.com"
     # 私有读签名 URL 有效期 (秒), 默认 1 小时.
     OSS_SIGNED_URL_EXPIRE_SECONDS: int = 3600

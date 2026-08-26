@@ -27,16 +27,24 @@ function QualificationsPage() {
   const [items, setItems] = useState<Item[]>([])
   const [dirty, setDirty] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const itemsRef = useRef<Item[]>([])
 
-  // 拉到数据后 sync local state (只在第一次)
-  if (data && !dirty && items.length === 0 && (data.items?.length || 0) > 0) {
-    setItems(
-      (data.items || []).map((it) => ({
-        image_url: it.image_url,
-        title: it.title ?? null,
-      })),
-    )
-  }
+  // 保持 ref 与 items 同步, 供 mutationFn 内取最新值 (避免并发操作时闭包过期)
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
+
+  // 拉到数据后同步到本地 state (只在首次数据到达时, 未被用户编辑过)
+  useEffect(() => {
+    if (data && !dirty && items.length === 0 && (data.items?.length || 0) > 0) {
+      setItems(
+        (data.items || []).map((it) => ({
+          image_url: it.image_url,
+          title: it.title ?? null,
+        })),
+      )
+    }
+  }, [data, dirty, items.length])
 
   // 上传即落库: 文件传 OSS 后立刻把新列表 PUT 到服务端,
   // 避免「已上传」但没点保存导致刷新后丢失
@@ -45,7 +53,7 @@ function QualificationsPage() {
       const res = await UploadsService.uploadImage({
         formData: { file } as any,
       })
-      const next = [...items, { image_url: res.url, title: null }]
+      const next = [...itemsRef.current, { image_url: res.url, title: null }]
       await SiteService.putQualifications({ requestBody: { items: next } })
       return next
     },
@@ -60,7 +68,7 @@ function QualificationsPage() {
   // 移除同样即时落库
   const remove = useMutation({
     mutationFn: async (idx: number) => {
-      const next = items.filter((_, i) => i !== idx)
+      const next = itemsRef.current.filter((_, i) => i !== idx)
       await SiteService.putQualifications({ requestBody: { items: next } })
       return next
     },
@@ -73,7 +81,10 @@ function QualificationsPage() {
   })
 
   const save = useMutation({
-    mutationFn: () => SiteService.putQualifications({ requestBody: { items } }),
+    mutationFn: () =>
+      SiteService.putQualifications({
+        requestBody: { items: itemsRef.current },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["site-qualifications"] })
       setDirty(false)
@@ -158,16 +169,16 @@ function QualificationsPage() {
                           setDirty(true)
                         }}
                       />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 w-full"
-                    disabled={remove.isPending}
-                    onClick={() => remove.mutate(idx)}
-                  >
-                    <Trash2 className="text-rose-500" />{" "}
-                    {remove.isPending ? "移除中..." : "移除"}
-                  </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 w-full"
+                        disabled={remove.isPending}
+                        onClick={() => remove.mutate(idx)}
+                      >
+                        <Trash2 className="text-rose-500" />{" "}
+                        {remove.isPending ? "移除中..." : "移除"}
+                      </Button>
                     </div>
                   ))}
                 </div>

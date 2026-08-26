@@ -10,7 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, HTTPException
 from sqlmodel import SQLModel, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
 from app.core.wechat import assert_text_safe, assert_text_safe_fields
 from app.models import (
     Criteria,
@@ -214,6 +214,7 @@ def submit_welcome(
 def upsert_my_profile(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: Annotated[ProfileUpdate, Body()],
 ) -> ProfileWithContact:
     """新建或更新我的资料.
@@ -247,6 +248,7 @@ def upsert_my_profile(
 def update_my_contact(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     wechat: Annotated[str | None, Body(embed=True)] = None,
     phone: Annotated[str | None, Body(embed=True)] = None,
 ) -> ProfileWithContact:
@@ -305,6 +307,7 @@ def set_home_store(
 def upsert_my_criteria(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: Annotated[CriteriaUpdate, Body()],
 ) -> CriteriaPublic:
     """新建或更新我的择偶要求"""
@@ -332,6 +335,7 @@ def upsert_my_criteria(
 def add_my_photo(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: PhotoCommit,
 ) -> ProfileWithContact:
     """追加一张照片到我的资料.

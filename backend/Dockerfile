@@ -1,44 +1,39 @@
-FROM python:3.10
+# ---- 构建阶段: 安装全部依赖 (含 dev) ----
+FROM python:3.10-slim AS builder
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
 WORKDIR /app/
 
-# Install uv
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
 
-# Place executables in the environment at the front of the path
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#using-the-environment
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Compile bytecode
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#compiling-bytecode
-ENV UV_COMPILE_BYTECODE=1
-
-# uv Cache
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#caching
-ENV UV_LINK_MODE=copy
-
-# Install dependencies
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project
 
-ENV PYTHONPATH=/app
+# ---- 运行阶段: 只装生产依赖, 不含 tests / dev 包 ----
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app/
+
+COPY --from=builder /app/.venv /app/.venv
 
 COPY ./scripts /app/scripts
-
 COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
-
 COPY ./app /app/app
-COPY ./tests /app/tests
 
-# Sync the project
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync
+    uv sync --frozen --no-dev --no-install-project
+
+# 非 root 用户运行 (上传目录需可写)
+RUN mkdir -p /app/uploads && chown -R 1000:1000 /app
+USER 1000
 
 CMD ["fastapi", "run", "--workers", "4", "app/main.py"]

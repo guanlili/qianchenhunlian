@@ -8,7 +8,7 @@ from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel, and_, func, select
 
-from app.api.deps import ApiReadLimited, CurrentUser, SessionDep
+from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
 from app.api.shandong import shandong_clause
 from app.models import Favorite, Profile, User, View
 
@@ -60,6 +60,7 @@ class VisitorList(SQLModel):
 def toggle_favorite(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     target_id: uuid.UUID,
 ) -> ToggleResponse:
     """收藏 / 取消收藏 (幂等)"""

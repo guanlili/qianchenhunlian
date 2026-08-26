@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 
 import httpx
 from fastapi import HTTPException, status
@@ -150,7 +151,7 @@ def assert_text_safe(text: object, openid: str | None, *, scene: int = 1) -> Non
         raise HTTPException(status_code=400, detail="内容安全检测失败，请稍后重试")
 
 
-def assert_text_safe_fields(data: dict, openid: str | None, *, scene: int = 1) -> None:
+def assert_text_safe_fields(data: dict[str, Any], openid: str | None, *, scene: int = 1) -> None:
     """批量审核数据字典里所有自由文本: 字符串值 + 字符串列表元素, fail-closed。
 
     用于资料/择偶/联系方式等含多个用户输入字段的写入接口,

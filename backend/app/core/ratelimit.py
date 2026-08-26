@@ -41,6 +41,11 @@ API_READ_MAX = 60
 API_DETAIL_WINDOW = 60
 API_DETAIL_MAX = 30
 
+# ---- 业务写接口限流策略常量 (按用户维度, 防刷好感/收藏/上传/反馈) ----
+# 每分钟 30 次: 正常单次操作足够, 机器刷量会被压住
+API_WRITE_WINDOW = 60
+API_WRITE_MAX = 30
+
 
 class SlidingWindowLimiter:
     """线程安全的滑动窗口计数器."""

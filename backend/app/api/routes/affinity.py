@@ -12,7 +12,13 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import and_
 from sqlmodel import SQLModel, func, select
 
-from app.api.deps import ApiReadLimited, CompleteProfileUser, CurrentUser, SessionDep
+from app.api.deps import (
+    ApiReadLimited,
+    ApiWriteLimited,
+    CompleteProfileUser,
+    CurrentUser,
+    SessionDep,
+)
 from app.api.shandong import shandong_clause
 from app.models import Affinity, Profile, User
 
@@ -47,6 +53,7 @@ class AffinityList(SQLModel):
 def toggle_affinity(
     session: SessionDep,
     current_user: CompleteProfileUser,
+    _write: ApiWriteLimited,
     target_user_id: uuid.UUID,
 ) -> AffinityToggleResponse:
     """点好感 / 取消好感 (toggle, 幂等). 已存在则取消, 不存在则创建."""

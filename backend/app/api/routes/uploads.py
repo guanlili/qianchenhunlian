@@ -14,7 +14,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from sqlmodel import SQLModel
 
-from app.api.deps import CurrentUser
+from app.api.deps import ApiWriteLimited, CurrentUser
 from app.core import oss
 from app.core.wechat import img_sec_check
 
@@ -24,12 +24,6 @@ router = APIRouter(prefix="/uploads", tags=["uploads"])
 # (容器外跑脚本/生成 openapi 时可用 UPLOAD_DIR 环境变量覆盖)
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/app/uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-# 公开访问的 URL 前缀 (从环境变量取, 默认走 dev IP)
-PUBLIC_BASE = os.environ.get(
-    "PUBLIC_FILE_BASE",
-    f"http://{os.environ.get('HOST_IP', '60.205.171.207')}:8000/files",
-)
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}  # 去掉 .gif 减少滥用面
 MAX_SIZE = 5 * 1024 * 1024  # 5 MB
@@ -60,6 +54,7 @@ class UploadResponse(SQLModel):
 @router.post("/image", response_model=UploadResponse)
 def upload_image(
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     file: UploadFile = File(...),
 ) -> UploadResponse:
     """上传一张图片. 返回 URL 给客户端, 客户端再调 /profiles/me/photos 落库."""

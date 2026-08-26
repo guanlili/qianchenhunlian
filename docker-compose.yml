@@ -82,6 +82,11 @@ services:
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
     networks:
       - traefik-public
       - default
@@ -134,13 +139,19 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.entrypoints=https
       - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.tls=true
       - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.tls.certresolver=le
+      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.middlewares=security-headers
 
       # Enable redirection for HTTP and HTTPS
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.middlewares=https-redirect
+      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.middlewares=https-redirect,security-headers
 
   admin:
     image: '${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}'
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
     networks:
       - traefik-public
       - default
@@ -163,9 +174,10 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.entrypoints=https
       - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.tls=true
       - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.tls.certresolver=le
+      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.middlewares=security-headers
 
       # Enable redirection for HTTP and HTTPS
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-http.middlewares=https-redirect
+      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-http.middlewares=https-redirect,security-headers
 
 networks:
   traefik-public:
