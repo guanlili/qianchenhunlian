@@ -17,6 +17,7 @@ from app.api.audit import write_audit as _audit
 from app.api.deps import CurrentActor, SessionDep, require_admin_or_staff
 from app.api.permissions import Perm, has_perm, require_perm
 from app.core import membership
+from app.core.wechat import assert_text_safe_fields
 from app.models import (
     Affinity,
     AuditLog,
@@ -521,6 +522,8 @@ def admin_update_profile(
     _check_edit_permission(actor, profile)
 
     data = body.model_dump(exclude_unset=True)
+    # 代录内容同样过微信审核 (fail-closed), 用目标用户 openid 溯源
+    assert_text_safe_fields(data, user.openid)
     for k, v in data.items():
         setattr(profile, k, v if v != "" else None)
 
@@ -565,6 +568,8 @@ def admin_update_criteria(
 
     criteria = session.exec(select(Criteria).where(Criteria.user_id == user_id)).first()
     data = body.model_dump(exclude_unset=True)
+    # 代录内容同样过微信审核 (fail-closed)
+    assert_text_safe_fields(data, user.openid)
     if criteria is None:
         criteria = Criteria(user_id=user_id, **data)
     else:
@@ -601,6 +606,8 @@ def admin_update_parents_info(
         select(ParentsInfo).where(ParentsInfo.user_id == user_id)
     ).first()
     data = body.model_dump(exclude_unset=True)
+    # 代录内容同样过微信审核 (fail-closed)
+    assert_text_safe_fields(data, user.openid)
     if parents is None:
         parents = ParentsInfo(user_id=user_id, **data)
     else:
@@ -1233,19 +1240,15 @@ def _compute_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
 
     # 互相好感对子数: 同时存在 (A→B) 和 (B→A), 每个对子只算一次 → /2
     # 这里偷懒用 join 自连接, 然后 //2 (推荐场景下数据量小, 性能 OK)
-    mutual_rows = session.exec(
+    mutual_total = session.exec(
         select(func.count())
         .select_from(Affinity)
         .join(
-            Affinity.__table__.alias("rev"),  # type: ignore
-            (Affinity.from_user_id == Affinity.__table__.alias("rev").c.to_user_id)  # type: ignore
+            Affinity.__table__.alias("rev"),  # type: ignore[attr-defined]
+            (Affinity.from_user_id == Affinity.__table__.alias("rev").c.to_user_id)  # type: ignore[attr-defined]
             & (Affinity.to_user_id == Affinity.__table__.alias("rev").c.from_user_id),  # type: ignore[attr-defined]
         )
-    )
-    try:
-        mutual_total = session.exec(mutual_rows).one() or 0  # type: ignore[call-overload]
-    except Exception:
-        mutual_total = 0
+    ).one() or 0
     mutual_pairs = int(mutual_total) // 2
 
     return StatsResponse(

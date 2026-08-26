@@ -42,6 +42,8 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.entrypoints=https
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls=true
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls.certresolver=le
+      # 强制 Basic Auth, 与 traefik 看板同一组凭据 (USERNAME/HASHED_PASSWORD)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.middlewares=admin-auth
       - traefik.http.services.${STACK_NAME?Variable not set}-adminer.loadbalancer.server.port=8080
 
   prestart:

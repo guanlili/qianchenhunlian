@@ -5,12 +5,15 @@
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Literal
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, and_, or_, select
 
 from app.api.deps import ApiDetailLimited, ApiReadLimited, CurrentUser, SessionDep
+
+# 山东省限制: 只推荐山东省下的用户, 子句实现见 app.api.shandong
+from app.api.shandong import shandong_clause as _shandong_clause
 from app.models import (
     Favorite,
     Profile,
@@ -157,22 +160,6 @@ def _is_starred(session: Session, viewer_id: uuid.UUID, target_id: uuid.UUID) ->
             )
         ).first()
         is not None
-    )
-
-
-# 山东省限制: 只推荐山东省下的用户.
-# origin / location 是自由文本, 写法从 "山东济南" 到 "武城县向阳路" 都有,
-# 关键词表 (省/市/区县三级) 维护在 app.core.shandong.
-
-
-def _shandong_clause() -> Any:
-    from sqlalchemy import or_
-
-    from app.core.shandong import SHANDONG_PREFIX_RE
-
-    return or_(
-        Profile.origin.op("~")(SHANDONG_PREFIX_RE),  # type: ignore
-        Profile.location.op("~")(SHANDONG_PREFIX_RE),  # type: ignore
     )
 
 

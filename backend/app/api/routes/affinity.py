@@ -13,6 +13,7 @@ from sqlalchemy import and_
 from sqlmodel import SQLModel, func, select
 
 from app.api.deps import ApiReadLimited, CompleteProfileUser, CurrentUser, SessionDep
+from app.api.shandong import shandong_clause
 from app.models import Affinity, Profile, User
 
 _AFFINITY_DAILY_LIMIT = 20
@@ -56,7 +57,9 @@ def toggle_affinity(
     if not target or target.status != "active" or target.is_superuser:
         raise HTTPException(status_code=404, detail="对方不存在")
     target_profile = session.exec(
-        select(Profile).where(Profile.user_id == target_user_id)
+        select(Profile)
+        .where(Profile.user_id == target_user_id)
+        .where(shandong_clause())
     ).first()
     if not target_profile or target_profile.audit_status != "approved":
         raise HTTPException(status_code=404, detail="对方资料不可见")
@@ -122,15 +125,19 @@ def list_mine(
     total = session.exec(
         select(func.count())
         .select_from(Affinity)
+        .join(User, Affinity.to_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(Affinity.from_user_id == current_user.id)
+        .where(shandong_clause())
     ).one()
 
     rows = session.exec(
         select(Affinity, Profile, User)
-        .join(User, Affinity.to_user_id == User.id)  # type: ignore
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore
+        .join(User, Affinity.to_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(Affinity.from_user_id == current_user.id)
-        .order_by(Affinity.created_at.desc())  # type: ignore
+        .where(shandong_clause())
+        .order_by(Affinity.created_at.desc())  # type: ignore[attr-defined]
         .offset(skip)
         .limit(limit)
     ).all()
@@ -170,10 +177,11 @@ def list_mutual(
 
     base = (
         select(Affinity, Profile, User)
-        .join(User, Affinity.to_user_id == User.id)  # type: ignore
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore
+        .join(User, Affinity.to_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(Affinity.from_user_id == current_user.id)
-        .where(Affinity.to_user_id.in_(select(likes_me.c.from_user_id)))  # type: ignore
+        .where(shandong_clause())
+        .where(Affinity.to_user_id.in_(select(likes_me.c.from_user_id)))  # type: ignore[attr-defined]
     )
 
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
@@ -206,6 +214,14 @@ def check_affinity(
     target_user_id: uuid.UUID,
 ) -> AffinityToggleResponse:
     """查我对 target 是否点过好感 (用于详情页渲染按钮状态)"""
+    # 非山东资料对外 404, 与对外资料契约一致
+    target_profile = session.exec(
+        select(Profile)
+        .where(Profile.user_id == target_user_id)
+        .where(shandong_clause())
+    ).first()
+    if not target_profile:
+        raise HTTPException(status_code=404, detail="对方资料不可见")
     mine = session.exec(
         select(Affinity).where(
             and_(

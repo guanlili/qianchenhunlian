@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import Field, SQLModel, and_, func, select
 
 from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
+from app.api.shandong import shandong_clause
 from app.core import membership
 from app.core.wechat import assert_text_safe
 from app.models import ContactRequest, Profile, User
@@ -83,7 +84,9 @@ def submit_contact_request(
 
     target_user = session.get(User, target_id)
     target_profile = session.exec(
-        select(Profile).where(Profile.user_id == target_id)
+        select(Profile)
+        .where(Profile.user_id == target_id)
+        .where(shandong_clause())
     ).first()
     if not target_user or not target_profile:
         raise HTTPException(status_code=404, detail="对方资料不存在")
@@ -166,17 +169,23 @@ def list_my_contact_requests(
     limit: int = 20,
 ) -> ContactRequestList:
     """我提交过的所有申请 (含 pending / accepted / rejected / contacted)"""
+    # 目标非山东资料不入列表, 与对外资料契约一致
     total = session.exec(
         select(func.count())
         .select_from(ContactRequest)
+        .join(User, ContactRequest.to_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(ContactRequest.from_user_id == current_user.id)
+        .where(shandong_clause())
     ).one()
 
     rows = session.exec(
         select(ContactRequest, User)
-        .join(User, ContactRequest.to_user_id == User.id)  # type: ignore
+        .join(User, ContactRequest.to_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(ContactRequest.from_user_id == current_user.id)
-        .order_by(ContactRequest.created_at.desc())  # type: ignore
+        .where(shandong_clause())
+        .order_by(ContactRequest.created_at.desc())  # type: ignore[attr-defined]
         .offset(skip)
         .limit(min(limit, 100))
     ).all()
