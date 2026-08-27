@@ -112,6 +112,18 @@ class Settings(BaseSettings):
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""
 
+    # --- 微信支付 v3 · 小程序 JSAPI (docs/13 P3 线上缴费) ---
+    # 七项全配 + SiteSetting membership.plans 的 pay_enabled=true 才真正开启线上购买
+    # (见 core/membership.is_pay_online); 任一缺失时小程序只展示线下门店缴费引导,
+    # 下单接口 503。密钥/证书均为敏感信息, 只允许走环境变量注入, 严禁入库。
+    WECHAT_PAY_MCH_ID: str = ""  # 商户号
+    WECHAT_PAY_CERT_SERIAL_NO: str = ""  # 商户 API 证书序列号 (请求签名用)
+    WECHAT_PAY_PRIVATE_KEY: str = ""  # 商户私钥 PEM 文本 (\n 转义亦可)
+    WECHAT_PAY_APIV3_KEY: str = ""  # APIv3 密钥 (32 位, 回调 AES-GCM 解密用)
+    WECHAT_PAY_PUBLIC_KEY_ID: str = ""  # 微信支付公钥 ID (公钥模式, 回调验签比对 serial)
+    WECHAT_PAY_PUBLIC_KEY: str = ""  # 微信支付公钥 PEM 文本 (回调验签用)
+    WECHAT_PAY_NOTIFY_URL: str = ""  # 回调地址, 须 https 公网可达
+
     # --- 阿里云 OSS (二期图片存储) ---
     # 三项 (AK/SK/Bucket) 任一为空即视为未启用, 自动退回本地磁盘 (一期行为),
     # 本地开发零依赖. AK 用 RAM 子账号, 只授本 Bucket 的 Put/Get/Delete 权限.
