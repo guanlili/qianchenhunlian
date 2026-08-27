@@ -40,16 +40,23 @@ function ActivitiesPage() {
   const { user } = useAuth()
   const isSuperuser = !!user?.is_superuser
   const [kind, setKind] = useState<FeedKind>("affinity")
+  const [storeFilter, setStoreFilter] = useState<string>("__all__")
   const [page, setPage] = useState(0)
+
+  const { data: stores } = useQuery({
+    queryFn: () => AdminService.adminListStores({ limit: 500 }),
+    queryKey: ["admin-stores"],
+  })
 
   const { data, isLoading } = useQuery({
     queryFn: () =>
       AdminService.listActivityFeed({
         kind,
+        storeId: storeFilter === "__all__" ? undefined : storeFilter,
         skip: page * PAGE_SIZE,
         limit: PAGE_SIZE,
       }),
-    queryKey: ["activity-feed", kind, page],
+    queryKey: ["activity-feed", kind, storeFilter, page],
   })
 
   const total = data?.total ?? 0
@@ -71,24 +78,47 @@ function ActivitiesPage() {
           <CardTitle className="text-base">
             {KIND_OPTION[kind].label}动态 (共 {total} 条)
           </CardTitle>
-          <Select
-            value={kind}
-            onValueChange={(v) => {
-              setKind(v as FeedKind)
-              setPage(0)
-            }}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(KIND_OPTION) as FeedKind[]).map((k) => (
-                <SelectItem key={k} value={k}>
-                  {KIND_OPTION[k].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            {isSuperuser && (
+              <Select
+                value={storeFilter}
+                onValueChange={(v) => {
+                  setStoreFilter(v)
+                  setPage(0)
+                }}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">门店: 全部</SelectItem>
+                  {(stores?.items || []).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.city}·{s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select
+              value={kind}
+              onValueChange={(v) => {
+                setKind(v as FeedKind)
+                setPage(0)
+              }}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(KIND_OPTION) as FeedKind[]).map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {KIND_OPTION[k].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
