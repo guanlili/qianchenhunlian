@@ -24,7 +24,7 @@ from app.api.deps import Actor, CurrentActor
 class Perm(str, Enum):
     """后台功能权限点. 新增后台功能时在此登记, 并在 ROLE_PERMS 里放行对应角色."""
 
-    PROFILE_AUDIT = "profile_audit"  # 资料审核 (线上)
+    PROFILE_AUDIT = "profile_audit"  # 资料审核 (线上; 门店管理员仅本店)
     PROFILE_EDIT = "profile_edit"  # 编辑/代录会员资料 (门店管理员仅本店)
     PROFILE_VERIFY = "profile_verify"  # 实名认证 (门店管理员仅本店)
     VIEW_CONTACT = "view_contact"  # 查看会员联系方式 (记审计; 门店管理员仅本店)
@@ -45,6 +45,9 @@ class Perm(str, Enum):
 _SUPERUSER: frozenset[Perm] = frozenset(Perm)
 _STORE_ADMIN: frozenset[Perm] = frozenset(
     {
+        # 店长权限: 本店会员的资料审核 (以门店为主体的工作流, 数据范围由
+        # _check_member_scope 限本店; 总部保留全局审核, 审计记录可追溯)
+        Perm.PROFILE_AUDIT,
         Perm.PROFILE_EDIT,
         Perm.PROFILE_VERIFY,
         Perm.VIEW_CONTACT,

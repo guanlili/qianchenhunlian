@@ -107,8 +107,8 @@ const permMatrix: {
   {
     name: "资料审核（线上）",
     superAdmin: true,
-    storeAdmin: false,
-    desc: "用户提交的资料审核",
+    storeAdmin: "scoped",
+    desc: "用户提交的资料审核（门店管理员仅本店会员）",
   },
   {
     name: "编辑/代录会员资料",

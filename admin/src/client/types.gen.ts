@@ -315,6 +315,29 @@ export type AdminProfileUpdate = {
     contact_phone?: (string | null);
 };
 
+/**
+ * 后台门店列表项: 附每店会员数 (门店为主体入口, 列表页直接看体量).
+ */
+export type AdminStoreItem = {
+    name: string;
+    city: string;
+    district?: (string | null);
+    address?: (string | null);
+    lng?: (number | null);
+    lat?: (number | null);
+    phone?: (string | null);
+    photo?: (string | null);
+    fees_desc?: (string | null);
+    status?: string;
+    id: string;
+    member_count?: number;
+};
+
+export type AdminStoreList = {
+    items?: Array<AdminStoreItem>;
+    total?: number;
+};
+
 export type AdminUserBrief = {
     id: string;
     openid?: (string | null);
@@ -658,6 +681,14 @@ export type MemberCounts = {
     requests_received?: number;
 };
 
+/**
+ * 只放开支付相关开关; 套餐/额度调整后续按需扩展.
+ */
+export type MembershipConfigUpdate = {
+    pay_enabled?: (boolean | null);
+    pay_mock?: (boolean | null);
+};
+
 export type MembershipGrantList = {
     items?: Array<MembershipGrantPublic>;
     total?: number;
@@ -698,11 +729,18 @@ export type MembershipGrantResponse = {
     };
 };
 
+export type MembershipPlansOut = {
+    pay_mode: string;
+    plans?: Array<PlanItem>;
+};
+
 export type MembershipPlansResponse = {
     free_daily_quota: number;
     member_daily_quota: number;
     trial_once_per_user: boolean;
     pay_enabled?: boolean;
+    pay_mock?: boolean;
+    pay_mode?: string;
     plans?: Array<{
         [key: string]: unknown;
     }>;
@@ -731,6 +769,22 @@ export type NewPassword = {
     new_password: string;
 };
 
+export type OrderCreatedOut = {
+    order_id: string;
+    out_trade_no: string;
+    plan_code: string;
+    amount_fen: number;
+    pay_params?: ({
+    [key: string]: (string);
+} | null);
+    pay_mode?: string;
+    status?: string;
+};
+
+export type OrderCreateIn = {
+    plan_code: string;
+};
+
 export type ParentsInfoPublic = {
     parents_health?: (string | null);
     parents_job?: (string | null);
@@ -741,6 +795,13 @@ export type ParentsInfoPublic = {
 
 export type PhotoCommit = {
     file_url: string;
+};
+
+export type PlanItem = {
+    code: string;
+    name: string;
+    days: number;
+    price: number;
 };
 
 export type ProfileMeResponse = {
@@ -1128,6 +1189,10 @@ export type AdminListProfilesData = {
     keyword?: (string | null);
     limit?: number;
     skip?: number;
+    /**
+     * 按门店过滤 (总部可用)
+     */
+    storeId?: (string | null);
 };
 
 export type AdminListProfilesResponse = (AdminProfileList);
@@ -1191,7 +1256,7 @@ export type AdminAdminListStoresData = {
     skip?: number;
 };
 
-export type AdminAdminListStoresResponse = (StoreList);
+export type AdminAdminListStoresResponse = (AdminStoreList);
 
 export type AdminAdminCreateStoreData = {
     requestBody: StoreCreate;
@@ -1246,6 +1311,13 @@ export type AdminUnblockUserData = {
 
 export type AdminUnblockUserResponse = (AdminUserBrief);
 
+export type AdminAdminStatsData = {
+    /**
+     * 指定门店口径 (总部可用)
+     */
+    storeId?: (string | null);
+};
+
 export type AdminAdminStatsResponse = (StatsResponse);
 
 export type AdminListAdminUsersData = {
@@ -1261,6 +1333,10 @@ export type AdminListAdminUsersResponse = (AdminUserList);
 export type AdminListStaffData = {
     limit?: number;
     skip?: number;
+    /**
+     * 按门店过滤 (门店详情页用)
+     */
+    storeId?: (string | null);
 };
 
 export type AdminListStaffResponse = (StaffsPublic);
@@ -1331,6 +1407,12 @@ export type AdminGetMemberFullData = {
 export type AdminGetMemberFullResponse = (AdminMemberFull);
 
 export type AdminGetMembershipPlansResponse = (MembershipPlansResponse);
+
+export type AdminUpdateMembershipConfigData = {
+    requestBody: MembershipConfigUpdate;
+};
+
+export type AdminUpdateMembershipConfigResponse = (MembershipPlansResponse);
 
 export type AdminGrantMembershipEndpointData = {
     requestBody: MembershipGrantRequest;
@@ -1413,9 +1495,20 @@ export type AdminListAuditLogsResponse = (AuditLogList);
 export type AdminListVerifyQueueData = {
     limit?: number;
     skip?: number;
+    /**
+     * 按门店过滤 (总部可用)
+     */
+    storeId?: (string | null);
 };
 
 export type AdminListVerifyQueueResponse = (AdminMemberList);
+
+export type AdminAdminDashboardData = {
+    /**
+     * 指定门店口径 (总部可用)
+     */
+    storeId?: (string | null);
+};
 
 export type AdminAdminDashboardResponse = (DashboardResponse);
 
@@ -1596,6 +1689,26 @@ export type MatchesGetNeighborData = {
 export type MatchesGetNeighborResponse = (NeighborResponse);
 
 export type MembershipGetMyMembershipResponse = (MembershipStatus);
+
+export type MembershipListPlansResponse = (MembershipPlansOut);
+
+export type MembershipCreateOrderData = {
+    requestBody: OrderCreateIn;
+};
+
+export type MembershipCreateOrderResponse = (OrderCreatedOut);
+
+export type MembershipLatestOrderResponse = (OrderCreatedOut);
+
+export type MembershipMockPayData = {
+    orderId: string;
+};
+
+export type MembershipMockPayResponse = (OrderCreatedOut);
+
+export type MembershipPayNotifyResponse = ({
+    [key: string]: (string);
+});
 
 export type ProfilesReadMyProfileResponse = (ProfileMeResponse);
 

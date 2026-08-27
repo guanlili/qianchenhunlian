@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2, Upload, UsersRound } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
 import { AdminService, type StorePublic, UploadsService } from "@/client"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_layout/stores")({
 
 function StoresPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const isSuperuser = !!user?.is_superuser
   const { data } = useQuery({
@@ -55,14 +57,21 @@ function StoresPage() {
     <div className="space-y-6 p-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>门店管理 (共 {data?.total ?? 0} 家)</CardTitle>
-          <StoreFormDialog
-            trigger={
-              <Button>
-                <Plus /> 新建门店
-              </Button>
-            }
-          />
+          <div>
+            <CardTitle>门店 (共 {data?.total ?? 0} 家)</CardTitle>
+            <p className="text-muted-foreground mt-1 text-sm">
+              点击门店行进入门店工作台: 会员 / 审核 / 核验 / 工单都在店里处理
+            </p>
+          </div>
+          {isSuperuser && (
+            <StoreFormDialog
+              trigger={
+                <Button>
+                  <Plus /> 新建门店
+                </Button>
+              }
+            />
+          )}
         </CardHeader>
         <CardContent>
           <Table>
@@ -70,6 +79,7 @@ function StoresPage() {
               <TableRow>
                 <TableHead>城市</TableHead>
                 <TableHead>名称</TableHead>
+                <TableHead>会员数</TableHead>
                 <TableHead>区/县</TableHead>
                 <TableHead>地址</TableHead>
                 <TableHead>电话</TableHead>
@@ -79,9 +89,21 @@ function StoresPage() {
             </TableHeader>
             <TableBody>
               {(data?.items || []).map((s) => (
-                <TableRow key={s.id}>
+                <TableRow
+                  key={s.id}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    navigate({
+                      to: "/stores/$storeId",
+                      params: { storeId: s.id },
+                    })
+                  }
+                >
                   <TableCell>{s.city}</TableCell>
                   <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{s.member_count ?? 0}</Badge>
+                  </TableCell>
                   <TableCell>{s.district || "—"}</TableCell>
                   <TableCell className="max-w-xs truncate">
                     {s.address || "—"}
@@ -98,7 +120,10 @@ function StoresPage() {
                       {s.status === "active" ? "营业中" : "已关闭"}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell
+                    className="text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {isSuperuser && (
                       <Button variant="ghost" size="sm" asChild>
                         <Link to="/stores/$storeId" params={{ storeId: s.id }}>
@@ -106,24 +131,28 @@ function StoresPage() {
                         </Link>
                       </Button>
                     )}
-                    <StoreFormDialog
-                      store={s}
-                      trigger={
-                        <Button variant="ghost" size="sm">
-                          <Pencil />
-                        </Button>
-                      }
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm(`确定关闭门店 "${s.name}" 吗?`))
-                          del.mutate(s.id)
-                      }}
-                    >
-                      <Trash2 className="text-rose-500" />
-                    </Button>
+                    {isSuperuser && (
+                      <StoreFormDialog
+                        store={s}
+                        trigger={
+                          <Button variant="ghost" size="sm">
+                            <Pencil />
+                          </Button>
+                        }
+                      />
+                    )}
+                    {isSuperuser && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`确定关闭门店 "${s.name}" 吗?`))
+                            del.mutate(s.id)
+                        }}
+                      >
+                        <Trash2 className="text-rose-500" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

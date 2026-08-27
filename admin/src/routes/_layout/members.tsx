@@ -46,6 +46,7 @@ function MembersList() {
   const [verified, setVerified] = useState<VerifiedFilter>("all")
   const [userStatus, setUserStatus] = useState<StatusFilter>("all")
   const [membership, setMembership] = useState<MembershipFilter>("all")
+  const [storeFilter, setStoreFilter] = useState<string>("__all__")
   const [keyword, setKeyword] = useState("")
   const navigate = useNavigate()
 
@@ -56,6 +57,7 @@ function MembersList() {
         verified,
         userStatus,
         membership,
+        storeId: storeFilter === "__all__" ? undefined : storeFilter,
         keyword: keyword || undefined,
         skip: 0,
         limit: 200,
@@ -66,6 +68,7 @@ function MembersList() {
       verified,
       userStatus,
       membership,
+      storeFilter,
       keyword,
     ],
   })
@@ -145,6 +148,19 @@ function MembersList() {
             <SelectItem value="member">会员中</SelectItem>
             <SelectItem value="expiring">7天内到期</SelectItem>
             <SelectItem value="normal">非会员</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={storeFilter} onValueChange={setStoreFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">门店: 全部</SelectItem>
+            {(stores?.items || []).map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.city}·{s.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Input
