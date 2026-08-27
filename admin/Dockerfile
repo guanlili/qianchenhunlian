@@ -5,7 +5,8 @@ WORKDIR /app
 
 COPY package*.json /app/
 
-RUN npm install
+# 国内服务器直连 npm registry 慢, 走 npmmirror (镜像内容与 npmjs 一致)
+RUN npm install --registry=https://registry.npmmirror.com
 
 COPY ./ /app/
 
