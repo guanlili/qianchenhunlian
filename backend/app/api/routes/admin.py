@@ -328,19 +328,26 @@ def list_profiles(
     actor: CurrentActor,
     audit_status: Literal["all", "pending", "approved", "rejected"] = Query("all"),
     keyword: str | None = Query(None, description="搜寻缘号 / 居住地 / desc"),
+    store_id: uuid.UUID | None = Query(None, description="按门店过滤 (总部可用)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminProfileList:
-    """资料列表 (管理员视角, 含联系方式). store_owner 仅看本店用户."""
+    """资料列表 (管理员视角, 含联系方式). store_owner 仅看本店用户.
+
+    store_id 参数给总部「门店工作台」用: 按主属门店过滤; 门店管理员传入也会
+    被强制覆盖为本店 (与 members 列表同款双轨)。
+    """
     base = select(Profile, User).join(User, Profile.user_id == User.id)  # type: ignore
 
     if audit_status != "all":
         base = base.where(Profile.audit_status == audit_status)
 
-    # store_owner: 限本店
+    # store_owner: 限本店; 总部可用 store_id 参数筛选指定门店
     sid = _store_owner_id(actor)
     if sid is not None:
         base = base.where(Profile.home_store_id == sid)
+    elif store_id is not None:
+        base = base.where(Profile.home_store_id == store_id)
 
     if keyword:
         kw = f"%{keyword}%"
@@ -405,24 +412,29 @@ def audit_profile(
     actor: CurrentActor,
     body: AuditRequest = Body(),
 ) -> AdminProfileItem:
-    """审核某人的资料 (通过 / 驳回) - 仅 superuser"""
+    """审核某人的资料 (通过 / 驳回). 门店管理员限本店会员 (以门店为主体工作流)."""
     profile = session.exec(select(Profile).where(Profile.user_id == user_id)).first()
     if not profile:
         raise HTTPException(status_code=404, detail="资料不存在")
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+    _check_store_scope(actor, profile)
 
     profile.audit_status = "approved" if body.approve else "rejected"
     profile.audit_reason = (body.reason or None) if not body.approve else None
     profile.updated_at = datetime.utcnow()
     session.add(profile)
+    audit_detail: dict[str, Any] = {"reason": body.reason} if body.reason else {}
+    owner_sid = _store_owner_id(actor)
+    if owner_sid is not None:
+        audit_detail["store_id"] = str(owner_sid)  # 门店审核留归属, 总部可追溯
     _audit(
         session,
         actor,
         "audit_pass" if body.approve else "audit_reject",
         target_user_id=user_id,
-        detail={"reason": body.reason} if body.reason else {},
+        detail=audit_detail,
     )
     session.commit()
     session.refresh(profile)
@@ -626,12 +638,22 @@ def admin_update_parents_info(
 
 def _store_owner_id(actor: CurrentActor) -> uuid.UUID | None:
     """如果当前 actor 是门店管理员 (store_admin), 返回其 store_id; 否则 None.
-    系统管理员返回 None (= 不受 store 限制)."""
+
+    系统管理员返回 None (= 不受 store 限制)。
+    fail-closed: role=store_admin 但 store_id 缺失的残缺账号直接 403 ——
+    否则返回 None 会让它变成「无限制全平台可见」, 与 permissions.actor_role
+    的口径 (残缺配置视为普通用户, 无后台权限) 不一致。
+    """
     if (
         actor.actor_type == "staff"
         and actor.staff
         and actor.staff.role == "store_admin"
     ):
+        if actor.staff.store_id is None:
+            raise HTTPException(
+                status_code=403,
+                detail="门店账号未分配门店, 请联系总部修正后使用",
+            )
         return actor.staff.store_id
     return None
 
@@ -835,9 +857,20 @@ class StoreList(SQLModel):
     total: int = 0
 
 
+class AdminStoreItem(StorePublic):
+    """后台门店列表项: 附每店会员数 (门店为主体入口, 列表页直接看体量)."""
+
+    member_count: int = 0
+
+
+class AdminStoreList(SQLModel):
+    items: list[AdminStoreItem] = []
+    total: int = 0
+
+
 @router.get(
     "/stores",
-    response_model=StoreList,
+    response_model=AdminStoreList,
     dependencies=[Depends(require_admin_or_staff)],
 )
 def admin_list_stores(
@@ -846,7 +879,7 @@ def admin_list_stores(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     city: str | None = Query(default=None),
-) -> StoreList:
+) -> AdminStoreList:
     base = select(Store)
     # store_owner 只看自己门店
     sid = _store_owner_id(actor)
@@ -858,10 +891,20 @@ def admin_list_stores(
     rows = session.exec(
         base.order_by(Store.city, Store.name).offset(skip).limit(limit)
     ).all()
-    return StoreList(
-        items=[StorePublic.model_validate(s, from_attributes=True) for s in rows],
-        total=total,
+    # 每店会员数: 一条 group-by, 避免逐店 count (N+1)
+    member_counts: dict[Any, int] = dict(
+        session.exec(
+            select(Profile.home_store_id, func.count())
+            .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+            .group_by(Profile.home_store_id)  # type: ignore[arg-type]
+        ).all()
     )
+    items = []
+    for s in rows:
+        item = AdminStoreItem.model_validate(s, from_attributes=True)
+        item.member_count = int(member_counts.get(s.id, 0) or 0)
+        items.append(item)
+    return AdminStoreList(items=items, total=total)
 
 
 @router.post(
@@ -956,16 +999,32 @@ class FeedbackHandleBody(SQLModel):
 )
 def admin_list_feedback(
     session: SessionDep,
+    actor: CurrentActor,
     status_filter: Literal["all", "open", "handled"] = Query("all", alias="status"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminFeedbackList:
-    count_stmt = select(func.count()).select_from(Feedback)
-    stmt = select(Feedback, User).join(
-        User,
-        Feedback.user_id == User.id,  # type: ignore[arg-type]
-        isouter=True,
+    """意见反馈列表. 处理是总部职责, 但列表对门店管理员按主属门店作用域
+    (只可见本店会员提交的反馈), 消除跨店可见."""
+    count_stmt = (
+        select(func.count())
+        .select_from(Feedback)
+        .join(User, Feedback.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
     )
+    stmt = (
+        select(Feedback, User)
+        .join(
+            User,
+            Feedback.user_id == User.id,  # type: ignore[arg-type]
+            isouter=True,
+        )
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+    )
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        count_stmt = count_stmt.where(Profile.home_store_id == sid)
+        stmt = stmt.where(Profile.home_store_id == sid)
     if status_filter != "all":
         count_stmt = count_stmt.where(Feedback.status == status_filter)
         stmt = stmt.where(Feedback.status == status_filter)
@@ -1206,9 +1265,13 @@ class StatsResponse(SQLModel):
 
 
 @router.get("/stats", response_model=StatsResponse)
-def admin_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
-    """工作台指标 — 门店管理员自动限本店口径 (会员/实名/注册/工单)."""
-    return _compute_stats(session, actor)
+def admin_stats(
+    session: SessionDep,
+    actor: CurrentActor,
+    store_id: uuid.UUID | None = Query(None, description="指定门店口径 (总部可用)"),
+) -> StatsResponse:
+    """工作台指标 — 门店管理员自动限本店口径; 总部可用 store_id 查看单店."""
+    return _compute_stats(session, actor, store_id=store_id)
 
 
 def _member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
@@ -1225,11 +1288,19 @@ def _member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> in
     return session.exec(stmt).one() or 0
 
 
-def _compute_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
-    """简易看板数据 — 含工单 / 好感 / 认证比例 / 门店"""
+def _compute_stats(
+    session: SessionDep, actor: CurrentActor, store_id: uuid.UUID | None = None
+) -> StatsResponse:
+    """简易看板数据 — 含工单 / 好感 / 认证比例 / 门店.
+
+    口径: 门店管理员强制本店; 总部可用 store_id 查看单店 (门店工作台「概览」)。
+    互相好感/营业门店/未处理反馈是平台级计数, 不随门店口径变化。
+    """
     from app.models import Affinity, ContactRequest, Store
 
     sid = _store_owner_id(actor)
+    if sid is None:
+        sid = store_id
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     total_users = _member_count(session, sid)
     verified_users = _member_count(session, sid, User.verified == "passed")
@@ -1271,16 +1342,21 @@ def _compute_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
     )
     mutual_pairs = int(mutual_total) // 2
 
+    # 资料数/待审数: 门店口径时按主属门店收窄 (审核已下放门店, 概览需店口径)
+    profile_stmt = select(func.count()).select_from(Profile)
+    audit_stmt = (
+        select(func.count())
+        .select_from(Profile)
+        .where(Profile.audit_status == "pending")
+    )
+    if sid is not None:
+        profile_stmt = profile_stmt.where(Profile.home_store_id == sid)
+        audit_stmt = audit_stmt.where(Profile.home_store_id == sid)
+
     return StatsResponse(
         total_users=total_users,
-        total_profiles=session.exec(select(func.count()).select_from(Profile)).one()
-        or 0,
-        pending_audits=session.exec(
-            select(func.count())
-            .select_from(Profile)
-            .where(Profile.audit_status == "pending")
-        ).one()
-        or 0,
+        total_profiles=session.exec(profile_stmt).one() or 0,
+        pending_audits=session.exec(audit_stmt).one() or 0,
         today_signups=_member_count(session, sid, User.created_at >= today_start),
         pending_tickets=pending_tickets,
         mutual_affinity_pairs=mutual_pairs,
@@ -1404,12 +1480,16 @@ def list_admin_users(
 )
 def list_staff(
     session: SessionDep,
+    store_id: uuid.UUID | None = Query(None, description="按门店过滤 (门店详情页用)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> StaffsPublic:
-    total = session.exec(select(func.count()).select_from(Staff)).one() or 0
+    base = select(Staff)
+    if store_id is not None:
+        base = base.where(Staff.store_id == store_id)
+    total = session.exec(select(func.count()).select_from(base.subquery())).one()
     rows = session.exec(
-        select(Staff).order_by(Staff.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+        base.order_by(Staff.created_at.desc()).offset(skip).limit(limit)  # type: ignore
     ).all()
     return StaffsPublic(
         items=[StaffPublic.model_validate(s, from_attributes=True) for s in rows],
@@ -2246,11 +2326,13 @@ def view_member_contact(
 @router.get("/members/{user_id}/transactions", response_model=BalanceTransactionList)
 def list_member_transactions(
     session: SessionDep,
+    actor: CurrentActor,
     user_id: uuid.UUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> BalanceTransactionList:
-    """会员解锁次数流水 (赠送/消耗全程可查)."""
+    """会员解锁次数流水 (赠送/消耗全程可查). 门店管理员限本店会员."""
+    _check_member_scope(actor, session, user_id)
     base = select(BalanceTransaction).where(BalanceTransaction.user_id == user_id)
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
     rows = session.exec(
@@ -2280,6 +2362,7 @@ _ACTIVITY_KINDS = {
 @router.get("/members/{user_id}/activities", response_model=ActivityList)
 def list_member_activities(
     session: SessionDep,
+    actor: CurrentActor,
     user_id: uuid.UUID,
     kind: Literal[
         "favorite_given",
@@ -2292,7 +2375,8 @@ def list_member_activities(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> ActivityList:
-    """会员行为记录: 收藏/浏览/好感 的双向流水."""
+    """会员行为记录: 收藏/浏览/好感 的双向流水. 门店管理员限本店会员."""
+    _check_member_scope(actor, session, user_id)
     model, self_col, other_col = _ACTIVITY_KINDS[kind]
     other_attr = getattr(model, other_col)
     # 一次 join 取出对方 User + Profile, 消除逐行 session.get/select (N+1).
@@ -2439,7 +2523,8 @@ def list_member_requests(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> AdminContactRequestList:
-    """会员发起 / 收到的撮合工单历史."""
+    """会员发起 / 收到的撮合工单历史. 门店管理员限本店会员."""
+    _check_member_scope(actor, session, user_id)
     base = select(ContactRequest).where(
         (ContactRequest.from_user_id == user_id)
         | (ContactRequest.to_user_id == user_id)
@@ -2523,10 +2608,13 @@ def list_audit_logs(
 def list_verify_queue(
     session: SessionDep,
     actor: CurrentActor,
+    store_id: uuid.UUID | None = Query(None, description="按门店过滤 (总部可用)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminMemberList:
-    """实名认证队列: verified='pending' 的会员. 红娘只看本店."""
+    """实名认证队列: verified='pending' 的会员. 红娘只看本店.
+
+    store_id 给总部「门店工作台」用; 门店管理员传入会被强制覆盖为本店."""
     base = (
         select(User, Profile)
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore
@@ -2535,6 +2623,8 @@ def list_verify_queue(
     sid = _store_owner_id(actor)
     if sid is not None:
         base = base.where(Profile.home_store_id == sid)
+    elif store_id is not None:
+        base = base.where(Profile.home_store_id == store_id)
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
     rows = session.exec(
         base.order_by(User.updated_at.desc()).offset(skip).limit(limit)  # type: ignore
@@ -2550,7 +2640,9 @@ class DashboardResponse(SQLModel):
 
     stats: StatsResponse
     recent_signups: list[AdminMemberItem] = []
-    recent_pending_audits: list[AdminMemberItem] = []  # 仅总部视角返回
+    recent_pending_audits: list[
+        AdminMemberItem
+    ] = []  # 门店口径 = 本店待审, 全局 = 全平台
     recent_requests: list[AdminContactRequestItem] = []
     overdue_pending_tickets: int = 0  # pending 超 48h
 
@@ -2560,12 +2652,20 @@ class DashboardResponse(SQLModel):
     response_model=DashboardResponse,
     dependencies=[Depends(require_admin_or_staff)],
 )
-def admin_dashboard(session: SessionDep, actor: CurrentActor) -> DashboardResponse:
-    """工作台聚合数据: 待办数字 + 最近注册/提审/工单各 5 条 + 逾期工单数."""
+def admin_dashboard(
+    session: SessionDep,
+    actor: CurrentActor,
+    store_id: uuid.UUID | None = Query(None, description="指定门店口径 (总部可用)"),
+) -> DashboardResponse:
+    """工作台聚合数据: 待办数字 + 最近注册/提审/工单各 5 条 + 逾期工单数.
+
+    门店管理员自动限本店; 总部可用 store_id 查看单店 (门店工作台「概览」)。"""
     from app.models import ContactRequest
 
     sid = _store_owner_id(actor)
-    stats = _compute_stats(session, actor)
+    if sid is None:
+        sid = store_id
+    stats = _compute_stats(session, actor, store_id=sid)
 
     # 最近注册 (门店口径限本店)
     signup_stmt = (
@@ -2582,20 +2682,20 @@ def admin_dashboard(session: SessionDep, actor: CurrentActor) -> DashboardRespon
         ).all()
     ]
 
-    # 最近提审 (资料审核仅总部, 门店视角不返回)
-    recent_audits: list[AdminMemberItem] = []
-    if sid is None:
-        audit_stmt = (
-            select(User, Profile)
-            .join(Profile, Profile.user_id == User.id)  # type: ignore
-            .where(Profile.audit_status == "pending")
-        )
-        recent_audits = [
-            _to_member_item(u, p)
-            for u, p in session.exec(
-                audit_stmt.order_by(Profile.updated_at.desc()).limit(5)  # type: ignore[attr-defined]
-            ).all()
-        ]
+    # 最近提审 (审核已下放门店: 门店口径返回本店待审, 总部无 store_id 时返回全局)
+    audit_stmt = (
+        select(User, Profile)
+        .join(Profile, Profile.user_id == User.id)  # type: ignore
+        .where(Profile.audit_status == "pending")
+    )
+    if sid is not None:
+        audit_stmt = audit_stmt.where(Profile.home_store_id == sid)
+    recent_audits = [
+        _to_member_item(u, p)
+        for u, p in session.exec(
+            audit_stmt.order_by(Profile.updated_at.desc()).limit(5)  # type: ignore[attr-defined]
+        ).all()
+    ]
 
     # 最近工单 (门店口径限本店)
     req_stmt = select(ContactRequest)

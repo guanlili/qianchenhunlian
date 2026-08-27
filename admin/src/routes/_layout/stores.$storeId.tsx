@@ -5,11 +5,15 @@ import { ArrowLeft, Inbox } from "lucide-react"
 import { AdminService, StoresService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import { memberColumns } from "@/components/Members/columns"
+import { RequestBoard } from "@/components/Requests/RequestBoard"
+import { AuditQueue } from "@/components/Review/AuditQueue"
+import { VerifyQueue } from "@/components/Review/VerifyQueue"
 import { AddStaff } from "@/components/Staff/AddStaff"
 import { StaffActionsMenu } from "@/components/Staff/StaffActionsMenu"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -21,23 +25,34 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 
+const VALID_TABS = [
+  "overview",
+  "members",
+  "audit",
+  "verify",
+  "requests",
+  "activities",
+  "managers",
+] as const
+
 export const Route = createFileRoute("/_layout/stores/$storeId")({
+  // Tab 进 URL (?tab=), 门店工作台任意页签可直接分享/收藏
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   component: StoreWorkspacePage,
   head: () => ({ meta: [{ title: "门店工作台 - 乾缘后台" }] }),
 })
 
-const REQUEST_STATUS: Record<string, string> = {
-  pending: "待处理",
-  accepted: "对方已同意",
-  rejected: "对方已拒绝",
-  contacted: "已建群",
-  closed: "已关闭",
-}
-
 function StoreWorkspacePage() {
   const { storeId } = Route.useParams()
+  const { tab } = Route.useSearch()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const isSuperuser = !!user?.is_superuser
+
+  const activeTab =
+    tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : "overview"
 
   const { data: store } = useQuery({
     queryFn: () => StoresService.getStore({ storeId }),
@@ -65,29 +80,169 @@ function StoreWorkspacePage() {
           )}
         </h1>
         <p className="text-muted-foreground">
-          门店工作台: 以下数据均限定本店范围
+          门店工作台: 会员 / 审核 / 核验 / 工单均限定本店范围, 进店即干活
         </p>
       </div>
 
-      <Tabs defaultValue="members">
-        <TabsList>
-          <TabsTrigger value="members">本店会员</TabsTrigger>
-          <TabsTrigger value="requests">本店工单</TabsTrigger>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => navigate({ to: ".", search: { tab: v } })}
+      >
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="overview">概览</TabsTrigger>
+          <TabsTrigger value="members">会员</TabsTrigger>
+          <TabsTrigger value="audit">资料审核</TabsTrigger>
+          <TabsTrigger value="verify">实名核验</TabsTrigger>
+          <TabsTrigger value="requests">撮合工单</TabsTrigger>
+          <TabsTrigger value="activities">行为动态</TabsTrigger>
           {isSuperuser && <TabsTrigger value="managers">管理员</TabsTrigger>}
         </TabsList>
-        <TabsContent value="members">
+        <TabsContent value="overview" className="mt-4">
+          <StoreOverviewTab storeId={storeId} />
+        </TabsContent>
+        <TabsContent value="members" className="mt-4">
           <StoreMembersTab storeId={storeId} />
         </TabsContent>
-        <TabsContent value="requests">
-          <StoreRequestsTab storeId={storeId} />
+        <TabsContent value="audit" className="mt-4">
+          <AuditQueue storeId={storeId} />
+        </TabsContent>
+        <TabsContent value="verify" className="mt-4">
+          <VerifyQueue storeId={storeId} />
+        </TabsContent>
+        <TabsContent value="requests" className="mt-4">
+          <RequestBoard storeId={storeId} />
+        </TabsContent>
+        <TabsContent value="activities" className="mt-4">
+          <StoreActivitiesTab storeId={storeId} />
         </TabsContent>
         {isSuperuser && (
-          <TabsContent value="managers">
+          <TabsContent value="managers" className="mt-4">
             <StoreManagersTab storeId={storeId} storeName={store?.name} />
           </TabsContent>
         )}
       </Tabs>
     </div>
+  )
+}
+
+/** 门店概览: 单店口径的待办指标 + 最近注册/提审/工单. */
+function StoreOverviewTab({ storeId }: { storeId: string }) {
+  const { data, isPending } = useQuery({
+    queryFn: () => AdminService.adminDashboard({ storeId }),
+    queryKey: ["admin-dashboard", "store", storeId],
+  })
+
+  if (isPending) return <Skeleton className="h-64 w-full" />
+  const stats = data?.stats
+
+  const cards = [
+    { label: "本店会员", value: stats?.total_users ?? 0 },
+    { label: "今日新增", value: stats?.today_signups ?? 0 },
+    { label: "待审资料", value: stats?.pending_audits ?? 0 },
+    { label: "待实名核验", value: stats?.pending_verifies ?? 0 },
+    { label: "待处理工单", value: stats?.pending_tickets ?? 0 },
+    { label: "已实名会员", value: stats?.verified_users ?? 0 },
+  ]
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {cards.map((c) => (
+          <Card key={c.label}>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{c.value}</div>
+              <div className="text-muted-foreground text-xs">{c.label}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <RecentMemberList title="最近注册" items={data?.recent_signups || []} />
+        <RecentMemberList
+          title="最近提审"
+          items={data?.recent_pending_audits || []}
+        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">最近工单</CardTitle>
+            {!!data?.overdue_pending_tickets && (
+              <Badge variant="destructive">
+                逾期 {data.overdue_pending_tickets} 条
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            {(data?.recent_requests || []).length === 0 ? (
+              <div className="py-6 text-center text-muted-foreground text-sm">
+                暂无工单
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(data?.recent_requests || []).map((r) => (
+                  <div key={r.id} className="flex justify-between text-sm">
+                    <span className="font-mono">
+                      {r.from_xy_code} → {r.to_xy_code}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {new Date(r.created_at).toLocaleDateString("zh-CN")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function RecentMemberList({
+  title,
+  items,
+}: {
+  title: string
+  items: Array<{
+    user_id: string
+    nickname?: string | null
+    real_name?: string | null
+    xy_code?: string | null
+  }>
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {items.length === 0 ? (
+          <div className="py-6 text-center text-muted-foreground text-sm">
+            暂无数据
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((m) => (
+              <div key={m.user_id} className="flex justify-between text-sm">
+                <Link
+                  to="/members/$userId"
+                  params={{ userId: m.user_id }}
+                  className="hover:underline"
+                >
+                  {m.real_name ||
+                    m.nickname ||
+                    m.xy_code ||
+                    m.user_id.slice(0, 8)}
+                </Link>
+                <span className="font-mono text-muted-foreground text-xs">
+                  {m.xy_code}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -129,11 +284,11 @@ function StoreMembersTab({ storeId }: { storeId: string }) {
   )
 }
 
-function StoreRequestsTab({ storeId }: { storeId: string }) {
+/** 本店行为动态: 会员相关的收藏/浏览/好感流水 (任一方属于本店即命中). */
+function StoreActivitiesTab({ storeId }: { storeId: string }) {
   const { data, isPending } = useQuery({
-    queryFn: () =>
-      AdminService.listContactRequests({ skip: 0, limit: 200, storeId }),
-    queryKey: ["admin-requests", "store", storeId],
+    queryFn: () => AdminService.listActivityFeed({ storeId, limit: 50 }),
+    queryKey: ["admin-activity-feed", "store", storeId],
   })
 
   if (isPending) {
@@ -144,39 +299,34 @@ function StoreRequestsTab({ storeId }: { storeId: string }) {
   const items = data?.items ?? []
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>本店撮合工单 (共 {data?.total ?? 0} 条)</CardTitle>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/requests">去撮合工单处理</Link>
-        </Button>
+      <CardHeader>
+        <CardTitle>本店相关动态 (最近 {items.length} 条)</CardTitle>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <EmptyHint text="本店暂无工单" />
+          <EmptyHint text="本店暂无会员动态" />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>发起方</TableHead>
-                <TableHead>意向对象</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>创建时间</TableHead>
+                <TableHead>类型</TableHead>
+                <TableHead>动作方</TableHead>
+                <TableHead>对象</TableHead>
+                <TableHead>时间</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((it) => (
-                <TableRow key={it.id}>
-                  <TableCell>
-                    {it.from_xy_code || it.from_user_id.slice(0, 8)}
-                  </TableCell>
-                  <TableCell>
-                    {it.to_xy_code || it.to_user_id.slice(0, 8)}
-                  </TableCell>
+                <TableRow
+                  key={`${it.kind}-${it.from_user_id}-${it.to_user_id}-${it.created_at}`}
+                >
                   <TableCell>
                     <Badge variant="outline">
-                      {REQUEST_STATUS[it.status] ?? it.status}
+                      {ACTIVITY_KIND[it.kind] ?? it.kind}
                     </Badge>
                   </TableCell>
+                  <TableCell>{it.from_xy_code || "—"}</TableCell>
+                  <TableCell>{it.to_xy_code || "—"}</TableCell>
                   <TableCell>
                     {it.created_at
                       ? new Date(it.created_at).toLocaleString("zh-CN")
@@ -192,6 +342,12 @@ function StoreRequestsTab({ storeId }: { storeId: string }) {
   )
 }
 
+const ACTIVITY_KIND: Record<string, string> = {
+  affinity: "好感",
+  favorite: "收藏",
+  view: "浏览",
+}
+
 function StoreManagersTab({
   storeId,
   storeName,
@@ -200,11 +356,10 @@ function StoreManagersTab({
   storeName?: string | null
 }) {
   const { data: staff } = useQuery({
-    queryFn: () => AdminService.listStaff({ skip: 0, limit: 500 }),
-    queryKey: ["admin-staff"],
+    queryFn: () => AdminService.listStaff({ storeId, skip: 0, limit: 500 }),
+    queryKey: ["admin-staff", "store", storeId],
   })
-  // 员工接口无按店过滤参数, 客户端筛 (量级小)
-  const managers = (staff?.items || []).filter((s) => s.store_id === storeId)
+  const managers = staff?.items || []
 
   return (
     <Card>

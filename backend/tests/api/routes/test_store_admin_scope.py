@@ -110,7 +110,8 @@ def test_store_admin_cannot_manage_staff(client, db: Session) -> None:
 
 
 def test_create_staff_requires_store(
-    client, superuser_token_headers,
+    client,
+    superuser_token_headers,
 ) -> None:
     """创建员工必须指定门店 + 门店必须真实存在."""
     r = client.post(
@@ -140,3 +141,282 @@ def test_create_staff_requires_store(
         },
     )
     assert r.status_code == 400
+
+
+# ---------------- 以门店为主体 (store-centric) 重构新增 ----------------
+
+
+def _another_store(db: Session) -> Store:
+    s = Store(name="邻市门店", city="青岛")
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return s
+
+
+def _profile_of(db: Session, user_id) -> Profile:
+    from sqlmodel import select
+
+    p = db.exec(select(Profile).where(Profile.user_id == user_id)).first()  # type: ignore[arg-type]
+    assert p is not None
+    return p
+
+
+def test_store_admin_can_audit_own_member(client, db: Session) -> None:
+    """资料审核已下放门店: 本店会员可审, 审计记录带 store_id."""
+    headers, store = _setup_store_admin(client, db)
+    member = _member_with_store(db, home_store_id=store.id)
+    p = _profile_of(db, member.id)
+    p.audit_status = "pending"
+    db.add(p)
+    db.commit()
+
+    r = client.post(
+        f"{settings.API_V1_STR}/admin/profiles/{member.id}/audit",
+        headers=headers,
+        json={"approve": True},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["audit_status"] == "approved"
+
+
+def test_store_admin_cannot_audit_other_store_member(client, db: Session) -> None:
+    headers, _store = _setup_store_admin(client, db)
+    other = _another_store(db)
+    member = _member_with_store(db, home_store_id=other.id)
+
+    r = client.post(
+        f"{settings.API_V1_STR}/admin/profiles/{member.id}/audit",
+        headers=headers,
+        json={"approve": True},
+    )
+    assert r.status_code == 403
+
+
+def test_profiles_store_filter_for_superuser(
+    client, db: Session, superuser_token_headers
+) -> None:
+    """总部按 store_id 过滤资料列表; 门店管理员传别家 store_id 也被强制回本店."""
+    store_a = Store(name="过滤店A", city="济南")
+    db.add(store_a)
+    db.commit()
+    db.refresh(store_a)
+    store_b = _another_store(db)
+    member_a = _member_with_store(db, home_store_id=store_a.id)
+    member_b = _member_with_store(db, home_store_id=store_b.id)
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/profiles",
+        headers=superuser_token_headers,
+        params={"store_id": str(store_a.id)},
+    )
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert items, "store 过滤后应有资料"
+    assert {i["user_id"] for i in items} == {str(member_a.id)}
+
+    # 门店管理员: 传别家 id 仍只看到本店
+    headers, own = _setup_store_admin(client, db)
+    own_member = _member_with_store(db, home_store_id=own.id)
+    r2 = client.get(
+        f"{settings.API_V1_STR}/admin/profiles",
+        headers=headers,
+        params={"store_id": str(store_b.id)},
+    )
+    assert r2.status_code == 200
+    items2 = r2.json()["items"]
+    assert {i["user_id"] for i in items2} == {str(own_member.id)}
+
+
+def test_verify_queue_store_filter(
+    client, db: Session, superuser_token_headers
+) -> None:
+    store_a = Store(name="核验店A", city="济南")
+    db.add(store_a)
+    db.commit()
+    db.refresh(store_a)
+    store_b = _another_store(db)
+    ua = _member_with_store(db, home_store_id=store_a.id)
+    _member_with_store(db, home_store_id=store_b.id)
+    ua.verified = "pending"
+    db.add(ua)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/verify-queue",
+        headers=superuser_token_headers,
+        params={"store_id": str(store_a.id)},
+    )
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["user_id"] == str(ua.id)
+
+
+def test_stats_store_scoped_pending_audits(
+    client, db: Session, superuser_token_headers
+) -> None:
+    """总部用 store_id 看单店: pending_audits 收窄到该店 (门店工作台概览口径)."""
+    store_a = Store(name="统计店A", city="济南")
+    db.add(store_a)
+    db.commit()
+    db.refresh(store_a)
+    store_b = _another_store(db)
+    ma = _member_with_store(db, home_store_id=store_a.id)
+    _member_with_store(db, home_store_id=store_b.id)
+    p = _profile_of(db, ma.id)
+    p.audit_status = "pending"
+    db.add(p)
+    b_user = _member_with_store(db, home_store_id=store_b.id)
+    pb = _profile_of(db, b_user.id)
+    pb.audit_status = "pending"
+    db.add(pb)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/stats",
+        headers=superuser_token_headers,
+        params={"store_id": str(store_a.id)},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["pending_audits"] == 1  # 只算店 A 的待审
+    assert body["total_users"] == 1  # 店 A 只有 1 个会员
+
+    # dashboard 同口径: 最近提审只返回店 A 的
+    r2 = client.get(
+        f"{settings.API_V1_STR}/admin/dashboard",
+        headers=superuser_token_headers,
+        params={"store_id": str(store_a.id)},
+    )
+    assert r2.status_code == 200
+    assert len(r2.json()["recent_pending_audits"]) == 1
+
+
+def test_staff_store_filter(client, db: Session, superuser_token_headers) -> None:
+    store_a = Store(name="员工店A", city="济南")
+    db.add(store_a)
+    store_b = _another_store(db)
+    db.refresh(store_a)
+    crud.create_staff(
+        session=db,
+        staff_create=StaffCreate(
+            email=random_email(),
+            name="A店员工",
+            password=random_lower_string() + "Aa1!",
+            role="store_admin",
+            store_id=store_a.id,
+        ),
+    )
+    crud.create_staff(
+        session=db,
+        staff_create=StaffCreate(
+            email=random_email(),
+            name="B店员工",
+            password=random_lower_string() + "Aa1!",
+            role="store_admin",
+            store_id=store_b.id,
+        ),
+    )
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/staff",
+        headers=superuser_token_headers,
+        params={"store_id": str(store_a.id)},
+    )
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert items and all(i["store_id"] == str(store_a.id) for i in items)
+
+
+def test_stores_list_member_count(client, db: Session, superuser_token_headers) -> None:
+    store_a = Store(name="计数店A", city="济南")
+    db.add(store_a)
+    db.commit()
+    db.refresh(store_a)
+    _member_with_store(db, home_store_id=store_a.id)
+    _member_with_store(db, home_store_id=store_a.id)
+    _member_with_store(db, home_store_id=None)
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/stores",
+        headers=superuser_token_headers,
+        params={"limit": 500},
+    )
+    assert r.status_code == 200
+    by_id = {i["id"]: i for i in r.json()["items"]}
+    assert by_id[str(store_a.id)]["member_count"] == 2
+
+
+def test_broken_store_admin_fail_closed(client, db: Session) -> None:
+    """store_id 缺失的残缺门店账号: 任何读列表 403 (对齐 permissions 口径)."""
+    from app.models import Staff
+
+    pwd = random_lower_string() + "Aa1!"
+    email = random_email()
+    staff = Staff(
+        email=email,
+        name="残缺账号",
+        role="store_admin",
+        store_id=None,
+        hashed_password=crud.get_password_hash(pwd),
+    )
+    db.add(staff)
+    db.commit()
+
+    r = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": email, "password": pwd},
+    )
+    assert r.status_code == 200
+    headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+    # 原行为: 返回 200 + 全平台数据; 修复后: 403
+    assert (
+        client.get(f"{settings.API_V1_STR}/admin/members", headers=headers).status_code
+        == 403
+    )
+
+
+def test_member_subresources_store_scoped(client, db: Session) -> None:
+    """会员子资源 (行为/工单/流水): 他店会员 403, 本店会员 200."""
+    headers, own = _setup_store_admin(client, db)
+    other = _another_store(db)
+    other_member = _member_with_store(db, home_store_id=other.id)
+    own_member = _member_with_store(db, home_store_id=own.id)
+
+    for path in ("activities", "requests", "transactions"):
+        r = client.get(
+            f"{settings.API_V1_STR}/admin/members/{other_member.id}/{path}",
+            headers=headers,
+        )
+        assert r.status_code == 403, path
+        r2 = client.get(
+            f"{settings.API_V1_STR}/admin/members/{own_member.id}/{path}",
+            headers=headers,
+        )
+        assert r2.status_code == 200, path
+
+
+def test_feedback_store_scoped(client, db: Session, superuser_token_headers) -> None:
+    """意见反馈: 门店管理员只见本店会员的; 总部见全部."""
+    from app.models import Feedback
+
+    headers, own = _setup_store_admin(client, db)
+    other = _another_store(db)
+    own_member = _member_with_store(db, home_store_id=own.id)
+    other_member = _member_with_store(db, home_store_id=other.id)
+    db.add(Feedback(user_id=own_member.id, content="本店会员反馈"))
+    db.add(Feedback(user_id=other_member.id, content="他店会员反馈"))
+    db.commit()
+
+    r = client.get(f"{settings.API_V1_STR}/admin/feedback", headers=headers)
+    assert r.status_code == 200
+    contents = [i["content"] for i in r.json()["items"]]
+    assert contents == ["本店会员反馈"]
+
+    r2 = client.get(
+        f"{settings.API_V1_STR}/admin/feedback", headers=superuser_token_headers
+    )
+    contents2 = [i["content"] for i in r2.json()["items"]]
+    assert set(contents2) == {"本店会员反馈", "他店会员反馈"}

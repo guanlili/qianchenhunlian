@@ -3,15 +3,19 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminVerifyProfileData, AdminVerifyProfileResponse, AdminUnverifyProfileData, AdminUnverifyProfileResponse, AdminAdminSetHomeStoreData, AdminAdminSetHomeStoreResponse, AdminAdminListStoresData, AdminAdminListStoresResponse, AdminAdminCreateStoreData, AdminAdminCreateStoreResponse, AdminAdminUpdateStoreData, AdminAdminUpdateStoreResponse, AdminAdminDeleteStoreData, AdminAdminDeleteStoreResponse, AdminAdminListFeedbackData, AdminAdminListFeedbackResponse, AdminHandleFeedbackData, AdminHandleFeedbackResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, AdminAssignContactRequestData, AdminAssignContactRequestResponse, AdminListMembersData, AdminListMembersResponse, AdminGetMemberFullData, AdminGetMemberFullResponse, AdminGetMembershipPlansResponse, AdminGrantMembershipEndpointData, AdminGrantMembershipEndpointResponse, AdminRevokeMembershipEndpointData, AdminRevokeMembershipEndpointResponse, AdminListMembershipGrantsData, AdminListMembershipGrantsResponse, AdminViewMemberContactData, AdminViewMemberContactResponse, AdminListMemberTransactionsData, AdminListMemberTransactionsResponse, AdminListMemberActivitiesData, AdminListMemberActivitiesResponse, AdminListActivityFeedData, AdminListActivityFeedResponse, AdminListMemberRequestsData, AdminListMemberRequestsResponse, AdminListMemberAuditLogsData, AdminListMemberAuditLogsResponse, AdminListAuditLogsData, AdminListAuditLogsResponse, AdminListVerifyQueueData, AdminListVerifyQueueResponse, AdminAdminDashboardResponse, AdminListAdminAccountsData, AdminListAdminAccountsResponse, AdminCreateAdminAccountData, AdminCreateAdminAccountResponse, AdminUpdateAdminAccountData, AdminUpdateAdminAccountResponse, AdminResetAdminPasswordData, AdminResetAdminPasswordResponse, AffinityToggleAffinityData, AffinityToggleAffinityResponse, AffinityListMineData, AffinityListMineResponse, AffinityListMutualData, AffinityListMutualResponse, AffinityCheckAffinityData, AffinityCheckAffinityResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, FavoritesListSeenByMeData, FavoritesListSeenByMeResponse, FeedbackSubmitFeedbackData, FeedbackSubmitFeedbackResponse, FilesGetFileData, FilesGetFileResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginRefreshAccessTokenData, LoginRefreshAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, MembershipGetMyMembershipResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesSetHomeStoreData, ProfilesSetHomeStoreResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, ProfilesDeactivateMeResponse, ProfilesReactivateMeResponse, ProfilesCancelAccountRequestResponse, SiteGetQualificationsResponse, SitePutQualificationsData, SitePutQualificationsResponse, SiteListContentsResponse, SiteGetContentData, SiteGetContentResponse, SitePutContentData, SitePutContentResponse, StoresListCitiesResponse, StoresListDistrictsData, StoresListDistrictsResponse, StoresListStoresData, StoresListStoresResponse, StoresGetStoreData, StoresGetStoreResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse } from './types.gen';
+import type { AdminListProfilesData, AdminListProfilesResponse, AdminGetProfileDetailData, AdminGetProfileDetailResponse, AdminAuditProfileData, AdminAuditProfileResponse, AdminAdminUpdateProfileData, AdminAdminUpdateProfileResponse, AdminAdminUpdateCriteriaData, AdminAdminUpdateCriteriaResponse, AdminAdminUpdateParentsInfoData, AdminAdminUpdateParentsInfoResponse, AdminVerifyProfileData, AdminVerifyProfileResponse, AdminUnverifyProfileData, AdminUnverifyProfileResponse, AdminAdminSetHomeStoreData, AdminAdminSetHomeStoreResponse, AdminAdminListStoresData, AdminAdminListStoresResponse, AdminAdminCreateStoreData, AdminAdminCreateStoreResponse, AdminAdminUpdateStoreData, AdminAdminUpdateStoreResponse, AdminAdminDeleteStoreData, AdminAdminDeleteStoreResponse, AdminAdminListFeedbackData, AdminAdminListFeedbackResponse, AdminHandleFeedbackData, AdminHandleFeedbackResponse, AdminGrantUnlockBalanceData, AdminGrantUnlockBalanceResponse, AdminBlockUserData, AdminBlockUserResponse, AdminUnblockUserData, AdminUnblockUserResponse, AdminAdminStatsData, AdminAdminStatsResponse, AdminListAdminUsersData, AdminListAdminUsersResponse, AdminListStaffData, AdminListStaffResponse, AdminCreateStaffEndpointData, AdminCreateStaffEndpointResponse, AdminUpdateStaffEndpointData, AdminUpdateStaffEndpointResponse, AdminDeleteStaffEndpointData, AdminDeleteStaffEndpointResponse, AdminListContactRequestsData, AdminListContactRequestsResponse, AdminHandleContactRequestData, AdminHandleContactRequestResponse, AdminAssignContactRequestData, AdminAssignContactRequestResponse, AdminListMembersData, AdminListMembersResponse, AdminGetMemberFullData, AdminGetMemberFullResponse, AdminGetMembershipPlansResponse, AdminUpdateMembershipConfigData, AdminUpdateMembershipConfigResponse, AdminGrantMembershipEndpointData, AdminGrantMembershipEndpointResponse, AdminRevokeMembershipEndpointData, AdminRevokeMembershipEndpointResponse, AdminListMembershipGrantsData, AdminListMembershipGrantsResponse, AdminViewMemberContactData, AdminViewMemberContactResponse, AdminListMemberTransactionsData, AdminListMemberTransactionsResponse, AdminListMemberActivitiesData, AdminListMemberActivitiesResponse, AdminListActivityFeedData, AdminListActivityFeedResponse, AdminListMemberRequestsData, AdminListMemberRequestsResponse, AdminListMemberAuditLogsData, AdminListMemberAuditLogsResponse, AdminListAuditLogsData, AdminListAuditLogsResponse, AdminListVerifyQueueData, AdminListVerifyQueueResponse, AdminAdminDashboardData, AdminAdminDashboardResponse, AdminListAdminAccountsData, AdminListAdminAccountsResponse, AdminCreateAdminAccountData, AdminCreateAdminAccountResponse, AdminUpdateAdminAccountData, AdminUpdateAdminAccountResponse, AdminResetAdminPasswordData, AdminResetAdminPasswordResponse, AffinityToggleAffinityData, AffinityToggleAffinityResponse, AffinityListMineData, AffinityListMineResponse, AffinityListMutualData, AffinityListMutualResponse, AffinityCheckAffinityData, AffinityCheckAffinityResponse, ContactsSubmitContactRequestData, ContactsSubmitContactRequestResponse, ContactsListMyContactRequestsData, ContactsListMyContactRequestsResponse, ContactsUnlockContactDeprecatedData, ContactsUnlockContactDeprecatedResponse, FavoritesToggleFavoriteData, FavoritesToggleFavoriteResponse, FavoritesListMyFavoritesData, FavoritesListMyFavoritesResponse, FavoritesListVisitorsData, FavoritesListVisitorsResponse, FavoritesListSeenByMeData, FavoritesListSeenByMeResponse, FeedbackSubmitFeedbackData, FeedbackSubmitFeedbackResponse, FilesGetFileData, FilesGetFileResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginRefreshAccessTokenData, LoginRefreshAccessTokenResponse, LoginTestTokenResponse, LoginWhoamiResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MatchesGetDailyRecommendationsData, MatchesGetDailyRecommendationsResponse, MatchesApplyFilterData, MatchesApplyFilterResponse, MatchesGetProfileDetailData, MatchesGetProfileDetailResponse, MatchesGetNeighborData, MatchesGetNeighborResponse, MembershipGetMyMembershipResponse, MembershipListPlansResponse, MembershipCreateOrderData, MembershipCreateOrderResponse, MembershipLatestOrderResponse, MembershipMockPayData, MembershipMockPayResponse, MembershipPayNotifyResponse, ProfilesReadMyProfileResponse, ProfilesUpsertMyProfileData, ProfilesUpsertMyProfileResponse, ProfilesDeleteMyProfileResponse, ProfilesSubmitWelcomeData, ProfilesSubmitWelcomeResponse, ProfilesUpdateMyContactData, ProfilesUpdateMyContactResponse, ProfilesSetHomeStoreData, ProfilesSetHomeStoreResponse, ProfilesUpsertMyCriteriaData, ProfilesUpsertMyCriteriaResponse, ProfilesAddMyPhotoData, ProfilesAddMyPhotoResponse, ProfilesRemoveMyPhotoData, ProfilesRemoveMyPhotoResponse, ProfilesDeactivateMeResponse, ProfilesReactivateMeResponse, ProfilesCancelAccountRequestResponse, SiteGetQualificationsResponse, SitePutQualificationsData, SitePutQualificationsResponse, SiteListContentsResponse, SiteGetContentData, SiteGetContentResponse, SitePutContentData, SitePutContentResponse, StoresListCitiesResponse, StoresListDistrictsData, StoresListDistrictsResponse, StoresListStoresData, StoresListStoresResponse, StoresGetStoreData, StoresGetStoreResponse, UploadsUploadImageData, UploadsUploadImageResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WechatWechatLoginData, WechatWechatLoginResponse } from './types.gen';
 
 export class AdminService {
     /**
      * List Profiles
      * 资料列表 (管理员视角, 含联系方式). store_owner 仅看本店用户.
+     *
+     * store_id 参数给总部「门店工作台」用: 按主属门店过滤; 门店管理员传入也会
+     * 被强制覆盖为本店 (与 members 列表同款双轨)。
      * @param data The data for the request.
      * @param data.auditStatus
      * @param data.keyword 搜寻缘号 / 居住地 / desc
+     * @param data.storeId 按门店过滤 (总部可用)
      * @param data.skip
      * @param data.limit
      * @returns AdminProfileList Successful Response
@@ -24,6 +28,7 @@ export class AdminService {
             query: {
                 audit_status: data.auditStatus,
                 keyword: data.keyword,
+                store_id: data.storeId,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -56,7 +61,7 @@ export class AdminService {
     
     /**
      * Audit Profile
-     * 审核某人的资料 (通过 / 驳回) - 仅 superuser
+     * 审核某人的资料 (通过 / 驳回). 门店管理员限本店会员 (以门店为主体工作流).
      * @param data The data for the request.
      * @param data.userId
      * @param data.requestBody
@@ -227,7 +232,7 @@ export class AdminService {
      * @param data.skip
      * @param data.limit
      * @param data.city
-     * @returns StoreList Successful Response
+     * @returns AdminStoreList Successful Response
      * @throws ApiError
      */
     public static adminListStores(data: AdminAdminListStoresData = {}): CancelablePromise<AdminAdminListStoresResponse> {
@@ -310,6 +315,8 @@ export class AdminService {
     
     /**
      * Admin List Feedback
+     * 意见反馈列表. 处理是总部职责, 但列表对门店管理员按主属门店作用域
+     * (只可见本店会员提交的反馈), 消除跨店可见.
      * @param data The data for the request.
      * @param data.status
      * @param data.skip
@@ -424,14 +431,22 @@ export class AdminService {
     
     /**
      * Admin Stats
-     * 工作台指标 — 门店管理员自动限本店口径 (会员/实名/注册/工单).
+     * 工作台指标 — 门店管理员自动限本店口径; 总部可用 store_id 查看单店.
+     * @param data The data for the request.
+     * @param data.storeId 指定门店口径 (总部可用)
      * @returns StatsResponse Successful Response
      * @throws ApiError
      */
-    public static adminStats(): CancelablePromise<AdminAdminStatsResponse> {
+    public static adminStats(data: AdminAdminStatsData = {}): CancelablePromise<AdminAdminStatsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/admin/stats'
+            url: '/api/v1/admin/stats',
+            query: {
+                store_id: data.storeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -467,6 +482,7 @@ export class AdminService {
     /**
      * List Staff
      * @param data The data for the request.
+     * @param data.storeId 按门店过滤 (门店详情页用)
      * @param data.skip
      * @param data.limit
      * @returns StaffsPublic Successful Response
@@ -477,6 +493,7 @@ export class AdminService {
             method: 'GET',
             url: '/api/v1/admin/staff',
             query: {
+                store_id: data.storeId,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -699,6 +716,28 @@ export class AdminService {
     }
     
     /**
+     * Update Membership Config
+     * 支付开关管理: pay_enabled (真实支付) / pay_mock (模拟支付联调).
+     *
+     * 只覆盖这两个 key, 其余套餐/额度配置原样保留。返回更新后的完整配置。
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns MembershipPlansResponse Successful Response
+     * @throws ApiError
+     */
+    public static updateMembershipConfig(data: AdminUpdateMembershipConfigData): CancelablePromise<AdminUpdateMembershipConfigResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/admin/membership/config',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Grant Membership Endpoint
      * 开通/续费会员 (叠加顺延). 门店管理员限本店会员; 每次发放一条记录 + 审计.
      * @param data The data for the request.
@@ -794,7 +833,7 @@ export class AdminService {
     
     /**
      * List Member Transactions
-     * 会员解锁次数流水 (赠送/消耗全程可查).
+     * 会员解锁次数流水 (赠送/消耗全程可查). 门店管理员限本店会员.
      * @param data The data for the request.
      * @param data.userId
      * @param data.skip
@@ -821,7 +860,7 @@ export class AdminService {
     
     /**
      * List Member Activities
-     * 会员行为记录: 收藏/浏览/好感 的双向流水.
+     * 会员行为记录: 收藏/浏览/好感 的双向流水. 门店管理员限本店会员.
      * @param data The data for the request.
      * @param data.userId
      * @param data.kind
@@ -879,7 +918,7 @@ export class AdminService {
     
     /**
      * List Member Requests
-     * 会员发起 / 收到的撮合工单历史.
+     * 会员发起 / 收到的撮合工单历史. 门店管理员限本店会员.
      * @param data The data for the request.
      * @param data.userId
      * @param data.skip
@@ -961,7 +1000,10 @@ export class AdminService {
     /**
      * List Verify Queue
      * 实名认证队列: verified='pending' 的会员. 红娘只看本店.
+     *
+     * store_id 给总部「门店工作台」用; 门店管理员传入会被强制覆盖为本店.
      * @param data The data for the request.
+     * @param data.storeId 按门店过滤 (总部可用)
      * @param data.skip
      * @param data.limit
      * @returns AdminMemberList Successful Response
@@ -972,6 +1014,7 @@ export class AdminService {
             method: 'GET',
             url: '/api/v1/admin/verify-queue',
             query: {
+                store_id: data.storeId,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -984,13 +1027,23 @@ export class AdminService {
     /**
      * Admin Dashboard
      * 工作台聚合数据: 待办数字 + 最近注册/提审/工单各 5 条 + 逾期工单数.
+     *
+     * 门店管理员自动限本店; 总部可用 store_id 查看单店 (门店工作台「概览」)。
+     * @param data The data for the request.
+     * @param data.storeId 指定门店口径 (总部可用)
      * @returns DashboardResponse Successful Response
      * @throws ApiError
      */
-    public static adminDashboard(): CancelablePromise<AdminAdminDashboardResponse> {
+    public static adminDashboard(data: AdminAdminDashboardData = {}): CancelablePromise<AdminAdminDashboardResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/admin/dashboard'
+            url: '/api/v1/admin/dashboard',
+            query: {
+                store_id: data.storeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -1638,6 +1691,101 @@ export class MembershipService {
             url: '/api/v1/membership/me'
         });
     }
+    
+    /**
+     * List Plans
+     * 可购套餐 + 线上购买开关 (小程序会员页渲染依据).
+     *
+     * 体验卡 (price=None) 属线下/管理员发放, 不进购买列表。
+     * @returns MembershipPlansOut Successful Response
+     * @throws ApiError
+     */
+    public static listPlans(): CancelablePromise<MembershipListPlansResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/membership/plans'
+        });
+    }
+    
+    /**
+     * Create Order
+     * 线上下单: 服务端按套餐配置定价.
+     *
+     * - online 模式: 换取 wx.requestPayment 参数 (真实微信支付)
+     * - mock 模式: 只落 pending 订单不带支付参数, 小程序随后调 mock-pay 完成"支付"
+     * - off 模式: 503 (小程序据此引导去门店线下办理)
+     * - 金额以「下单时」配置为准 (分), 回调金额必须一致才发放
+     * - 同一用户 2 小时前的 pending 单懒关单, 防止堆积
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns OrderCreatedOut Successful Response
+     * @throws ApiError
+     */
+    public static createOrder(data: MembershipCreateOrderData): CancelablePromise<MembershipCreateOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/membership/orders',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Latest Order
+     * 最近一笔订单 (支付后轮询结果用). 无订单 → 404.
+     * @returns OrderCreatedOut Successful Response
+     * @throws ApiError
+     */
+    public static latestOrder(): CancelablePromise<MembershipLatestOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/membership/orders/latest'
+        });
+    }
+    
+    /**
+     * Mock Pay
+     * 模拟支付 (pay_mock 模式联调用): 把自己的 pending 单直接置为 paid 并发放.
+     *
+     * 仅在 mock 模式下可用 — 真实支付 (online) / 关闭 (off) 状态下一律 403,
+     * 不给任何绕过微信支付的口子。订单与发放都走真实链路, 只是"支付"这步被模拟。
+     * @param data The data for the request.
+     * @param data.orderId
+     * @returns OrderCreatedOut Successful Response
+     * @throws ApiError
+     */
+    public static mockPay(data: MembershipMockPayData): CancelablePromise<MembershipMockPayResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/membership/orders/{order_id}/mock-pay',
+            path: {
+                order_id: data.orderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Pay Notify
+     * 微信支付回调. 无 token 鉴权 — 以微信支付公钥验签代替 (签名覆盖原始请求体,
+     * serial 必须匹配配置), 这是微信支付 v3 回调的标准做法, 不违反鉴权链约定。
+     *
+     * 流程: 验签 → AES-GCM 解密 → 金额/状态校验 → 条件 UPDATE 幂等发放。
+     * 返回 200 {"code": "SUCCESS"} 微信才停止重推; 非成功一律以 4xx/5xx 让其重试。
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static payNotify(): CancelablePromise<MembershipPayNotifyResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/membership/pay/notify'
+        });
+    }
 }
 
 export class ProfilesService {
@@ -2112,7 +2260,7 @@ export class UsersService {
     
     /**
      * Delete User Me
-     * Delete own user.
+     * 注销账号 (软删): status=deactivated + is_active=False, 保留审计/流水.
      * @returns Message Successful Response
      * @throws ApiError
      */
@@ -2210,7 +2358,7 @@ export class UsersService {
     
     /**
      * Delete User
-     * Delete a user.
+     * 删除用户 (软删): status=deleted + is_active=False, 保留审计/流水.
      * @param data The data for the request.
      * @param data.userId
      * @returns Message Successful Response
