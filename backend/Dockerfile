@@ -5,7 +5,8 @@ FROM python:3.10-slim AS builder
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/
+    UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/ \
+    UV_HTTP_TIMEOUT=300
 
 WORKDIR /app/
 
@@ -22,7 +23,8 @@ FROM python:3.10-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PATH="/app/.venv/bin:$PATH" \
-    UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/
+    UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/ \
+    UV_HTTP_TIMEOUT=300
 
 WORKDIR /app/
 
