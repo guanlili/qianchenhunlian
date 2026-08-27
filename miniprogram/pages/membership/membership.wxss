@@ -1,0 +1,199 @@
+/* 我的会员页 · 与全局品牌一致 (红 #c93434 / 米白 #fbf6ee / 金 #f4a23a) */
+
+.mp-page {
+  min-height: 100vh;
+  background: #fbf6ee;
+  padding: 24rpx 28rpx 60rpx;
+  box-sizing: border-box;
+}
+
+/* 顶部状态卡 */
+.mp-hero {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #c93434 0%, #8f1f1f 54%, #5a0e0e 100%);
+  border-radius: 20rpx;
+  padding: 40rpx 32rpx;
+  color: #ffffff;
+}
+
+.mp-crown {
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.6);
+  margin-right: 26rpx;
+  flex-shrink: 0;
+}
+
+.mp-crown.on {
+  background: linear-gradient(135deg, #f6c66b, #ed7030);
+  border-color: rgba(255, 255, 255, 0.85);
+  color: #ffffff;
+}
+
+.mp-hero-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mp-hero-title {
+  font-size: 36rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+}
+
+.mp-hero-sub {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* 卡片 */
+.mp-card {
+  background: #ffffff;
+  border-radius: 18rpx;
+  margin-top: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 8rpx 24rpx rgba(98, 21, 21, 0.06);
+}
+
+.mp-card-title {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #1f1a17;
+  margin-bottom: 18rpx;
+}
+
+.mp-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 0;
+  font-size: 27rpx;
+  color: #8d8175;
+}
+
+.mp-kv text:last-child {
+  color: #1f1a17;
+  font-weight: 600;
+}
+
+.mp-kv text.ok {
+  color: #b8860b;
+}
+
+/* 权益 */
+.mp-benefit {
+  display: flex;
+  align-items: flex-start;
+  font-size: 26rpx;
+  color: #4a423b;
+  line-height: 1.7;
+}
+
+.mp-dot {
+  color: #c93434;
+  font-weight: 800;
+  margin-right: 12rpx;
+}
+
+/* 套餐行 */
+.mp-plan {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #f0e8dd;
+}
+
+.mp-plan:last-of-type {
+  border-bottom: none;
+}
+
+.mp-plan-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mp-plan-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f1a17;
+}
+
+.mp-plan-sub {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 23rpx;
+  color: #8d8175;
+}
+
+.mp-plan-price {
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #c93434;
+  margin-right: 20rpx;
+}
+
+.mp-plan-price .rmb {
+  font-size: 24rpx;
+  margin-right: 2rpx;
+}
+
+.mp-plan-btn {
+  min-height: 64rpx;
+  padding: 0 28rpx;
+  margin: 0;
+  border: none;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #c93434, #8f1f1f);
+  color: #ffffff;
+  font-size: 25rpx;
+  font-weight: 700;
+  line-height: 64rpx;
+}
+
+.mp-plan-btn[disabled] {
+  opacity: 0.55;
+  color: #ffffff;
+}
+
+/* 提示与按钮 */
+.mp-tip {
+  margin-top: 16rpx;
+  font-size: 23rpx;
+  color: #8d8175;
+  line-height: 1.7;
+}
+
+.mp-link {
+  color: #c93434;
+  font-weight: 600;
+}
+
+.mp-store-btn {
+  margin-top: 20rpx;
+  min-height: 76rpx;
+  border: none;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
+  font-size: 27rpx;
+  font-weight: 700;
+  line-height: 76rpx;
+}
+
+.mp-footer-tip {
+  margin-top: 36rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #b3a89a;
+}

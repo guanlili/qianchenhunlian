@@ -727,6 +727,49 @@ class MembershipGrantList(SQLModel):
 
 
 # ------------------------------------------------------------
+# MembershipOrder · 线上会员购买订单 (docs/13 P3 微信支付 JSAPI)
+# ------------------------------------------------------------
+
+
+class MembershipOrder(SQLModel, table=True):
+    """线上缴费订单: pending → paid (回调验签+金额一致, 事务内发放) / closed (关单).
+
+    - 金额单位为分; 以「下单时」套餐配置快照为准, 回调金额必须一致才发放。
+    - out_trade_no 商户单号, 微信回调凭此对账; 幂等靠 status 条件更新保证
+      (pending → paid 只能成功一次, 重复通知直接 ack)。
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
+    )
+    plan_code: str = Field(max_length=32)
+    days: int
+    amount_fen: int
+    status: str = Field(
+        default="pending", max_length=16, index=True
+    )  # pending/paid/closed
+    out_trade_no: str = Field(max_length=32, unique=True, index=True)
+    transaction_id: str | None = Field(default=None, max_length=64)  # 微信支付单号
+    paid_at: datetime | None = None
+    closed_at: datetime | None = None
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class MembershipOrderPublic(SQLModel):
+    """订单状态给小程序看: 不暴露 transaction_id 等对账细节."""
+
+    id: uuid.UUID
+    plan_code: str
+    days: int
+    amount_fen: int
+    status: str
+    out_trade_no: str
+    paid_at: datetime | None = None
+    created_at: datetime
+
+
+# ------------------------------------------------------------
 # DailyQuotaUsage · 日额度计数 (docs/13 三桶额度引擎)
 # ------------------------------------------------------------
 

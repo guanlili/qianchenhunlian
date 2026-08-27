@@ -84,6 +84,18 @@ def get_plan(cfg: dict[str, Any], plan_code: str) -> dict[str, Any] | None:
     return None
 
 
+def is_pay_online(session: Session) -> bool:
+    """线上购买是否可用: 后台 pay_enabled 开关打开 且 微信支付凭证配置齐全.
+
+    双开关设计: 运营可在后台随时关停线上入口 (不用改环境变量重启);
+    凭证缺失时即使开关误开也不会真的放出下单入口。
+    """
+    from app.core import wechat_pay
+
+    cfg = get_config(session)
+    return bool(cfg.get("pay_enabled")) and wechat_pay.credentials_ready()
+
+
 def is_member(user: User, *, now: datetime | None = None) -> bool:
     exp = user.membership_expires_at
     if not exp:

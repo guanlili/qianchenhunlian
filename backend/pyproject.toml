@@ -22,6 +22,8 @@ dependencies = [
     "sentry-sdk[fastapi]<2.0.0,>=1.40.6",
     "pyjwt<3.0.0,>=2.8.0",
     "oss2>=2.18.0,<3.0.0",
+    # 微信支付 v3 (docs/13 P3): RSA 请求签名/回调验签 + AES-GCM 回调解密
+    "cryptography>=42.0.0,<60.0.0",
 ]
 
 [tool.uv]
