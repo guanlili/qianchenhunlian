@@ -1,9 +1,11 @@
 # ---- 构建阶段: 安装全部依赖 (含 dev) ----
 FROM python:3.10-slim AS builder
 
+# 国内服务器直连 PyPI 极慢 (~30KB/s), 走阿里云镜像; 锁文件哈希校验不受镜像影响
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/
 
 WORKDIR /app/
 
@@ -19,7 +21,8 @@ FROM python:3.10-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/
 
 WORKDIR /app/
 
