@@ -12,7 +12,7 @@ Page({
     loading: true,
     status: null,      // /membership/me: is_member/expires_at/quota
     plans: [],         // 可购套餐
-    payOnline: false,  // 线上支付开关 (false = 只走门店线下办理)
+    payMode: 'off',    // online (真实微信支付) / mock (模拟支付联调) / off (仅门店线下)
     latestOrder: null,
     latestOrderStatusLabel: '',
     submitting: false, // 防双击
@@ -56,7 +56,7 @@ Page({
       this.setData({
         status,
         plans: plansRes.plans || [],
-        payOnline: !!plansRes.pay_online,
+        payMode: plansRes.pay_mode || 'off',
         latestOrder: latestOrder
           ? { ...latestOrder, plan_name: planName(latestOrder.plan_code) }
           : null,
@@ -71,17 +71,23 @@ Page({
     }
   },
 
-  /** 发起支付: 下单 → wx.requestPayment → 成功后刷新 */
+  /** 发起支付: 下单 → (online) wx.requestPayment / (mock) 确认后 mock-pay → 刷新 */
   async onBuy(e) {
     const code = e.currentTarget.dataset.code;
     if (this.data.submitting) return;
-    if (!this.data.payOnline) {
+    const mode = this.data.payMode;
+    if (mode === 'off') {
       this.goStore();
       return;
     }
     this.setData({ submitting: true });
     try {
       const order = await membershipSvc.createOrder(code);
+      if (mode === 'mock' || order.pay_mode === 'mock') {
+        this.setData({ submitting: false });
+        this._confirmMockPay(order);
+        return;
+      }
       const pay = order.pay_params || {};
       await new Promise((resolve, reject) => {
         wx.requestPayment({
@@ -113,6 +119,37 @@ Page({
     } finally {
       this.setData({ submitting: false });
     }
+  },
+
+  /** mock 模式: 弹确认框"模拟支付", 确认后调 mock-pay 完成开通 (不真实扣款) */
+  _confirmMockPay(order) {
+    const that = this;
+    const yuan = (order.amount_fen / 100).toFixed(0);
+    wx.showModal({
+      title: '模拟支付',
+      content: `确认支付 ¥${yuan} 开通会员? (当前为模拟支付模式, 不会真实扣款)`,
+      confirmText: '确认支付',
+      cancelText: '取消',
+      success: async (res) => {
+        if (!res.confirm) {
+          wx.showToast({ title: '已取消支付', icon: 'none' });
+          that.refresh({ quiet: true });
+          return;
+        }
+        try {
+          const paid = await membershipSvc.mockPay(order.order_id);
+          if (paid.status === 'paid') {
+            wx.showToast({ title: '开通成功', icon: 'success' });
+          } else {
+            wx.showToast({ title: '支付未完成, 请重试', icon: 'none' });
+          }
+          that.refresh({ quiet: true });
+        } catch (err) {
+          const detail = err && typeof err.detail === 'string' ? err.detail : '支付失败';
+          wx.showToast({ title: detail, icon: 'none' });
+        }
+      },
+    });
   },
 
   /** 线上不可用时的引导弹窗 (保持线下办理路径) */

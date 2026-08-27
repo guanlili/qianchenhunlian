@@ -1,9 +1,10 @@
-"""线上缴费 (docs/13 P3 微信支付 JSAPI) 测试: 下单鉴权/开关/金额, 回调验签/幂等发放."""
+"""线上缴费 (docs/13 P3 微信支付 JSAPI) 测试: 下单鉴权/开关/金额, 回调验签/幂等发放, 模拟支付."""
 
 import base64
 import json
 import secrets
 import time
+import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -350,3 +351,163 @@ def test_notify_wrong_serial_rejected(
     body, hdrs = _build_notify(pay_env, data)
     hdrs["Wechatpay-Serial"] = "PUB_KEY_ID_OTHER"
     assert client.post(NOTIFY_URL, content=body, headers=hdrs).status_code == 401
+
+
+# ---------------- 模拟支付 (pay_mock 模式, 无需支付凭证) ----------------
+
+
+def test_mock_mode_create_order_without_credentials(
+    client: TestClient, db: Session
+) -> None:
+    """零支付凭证 + pay_mock=True → 可下单, 无支付参数, plans 报 mock."""
+    _set_cfg(db, pay_mock=True)
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+
+    r = _create_order(client, headers)
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["pay_mode"] == "mock"
+    assert body["pay_params"] is None
+    assert body["status"] == "pending"
+
+    pr = client.get(f"{API}/membership/plans", headers=headers)
+    assert pr.status_code == 200
+    assert pr.json()["pay_mode"] == "mock"
+
+
+def test_mock_pay_grants_membership(client: TestClient, db: Session) -> None:
+    _set_cfg(db, pay_mock=True)
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    order_id = _create_order(client, headers).json()["order_id"]
+
+    r = client.post(f"{API}/membership/orders/{order_id}/mock-pay", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "paid"
+
+    db.expire_all()
+    order = db.get(MembershipOrder, uuid.UUID(order_id))
+    assert order is not None and order.status == "paid"
+    assert order.transaction_id and order.transaction_id.startswith("MOCK_")
+    db.refresh(user)
+    assert user.membership_expires_at is not None
+    grants = db.exec(
+        select(MembershipGrant).where(MembershipGrant.user_id == user.id)  # type: ignore[arg-type]
+    ).all()
+    assert len(grants) == 1
+    assert grants[0].source == membership.SOURCE_ONLINE
+
+
+def test_mock_pay_replay_single_grant(client: TestClient, db: Session) -> None:
+    _set_cfg(db, pay_mock=True)
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    order_id = _create_order(client, headers).json()["order_id"]
+
+    url = f"{API}/membership/orders/{order_id}/mock-pay"
+    assert client.post(url, headers=headers).json()["status"] == "paid"
+    assert client.post(url, headers=headers).json()["status"] == "paid"  # 幂等
+
+    grants = db.exec(
+        select(MembershipGrant).where(MembershipGrant.user_id == user.id)  # type: ignore[arg-type]
+    ).all()
+    assert len(grants) == 1
+
+
+def test_mock_pay_rejected_when_mock_off(client: TestClient, db: Session) -> None:
+    """mock 模式关掉后 (off), 已有 pending 单也不能再 mock-pay → 403."""
+    _set_cfg(db, pay_mock=True)
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    order_id = _create_order(client, headers).json()["order_id"]
+
+    _set_cfg(db, pay_mock=False)
+    r = client.post(f"{API}/membership/orders/{order_id}/mock-pay", headers=headers)
+    assert r.status_code == 403
+    db.expire_all()
+    order = db.exec(select(MembershipOrder)).first()
+    assert order is not None and order.status == "pending"
+
+
+def test_mock_pay_rejected_in_online_mode(
+    client: TestClient, db: Session, pay_env: dict[str, Any]
+) -> None:
+    """凭证齐全 + pay_enabled → online 优先, mock-pay 必须拒绝 (不许绕过真实支付)."""
+    _set_cfg(db, pay_enabled=True, pay_mock=True)
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    body = _create_order(client, headers).json()
+    assert body["pay_mode"] == "online"  # online 优先于 mock
+
+    r = client.post(
+        f"{API}/membership/orders/{body['order_id']}/mock-pay", headers=headers
+    )
+    assert r.status_code == 403
+    db.expire_all()
+    grants = db.exec(
+        select(MembershipGrant).where(MembershipGrant.user_id == user.id)  # type: ignore[arg-type]
+    ).all()
+    assert grants == []
+
+
+def test_mock_pay_other_users_order_404(client: TestClient, db: Session) -> None:
+    _set_cfg(db, pay_mock=True)
+    user_a = _make_wx_user(db)
+    user_b = _make_wx_user(db)
+    headers_a = authentication_token_from_email(
+        client=client, email=user_a.email, db=db
+    )
+    headers_b = authentication_token_from_email(
+        client=client, email=user_b.email, db=db
+    )
+    order_id = _create_order(client, headers_a).json()["order_id"]
+
+    r = client.post(f"{API}/membership/orders/{order_id}/mock-pay", headers=headers_b)
+    assert r.status_code == 404
+
+
+# ---------------- 后台支付开关管理 ----------------
+
+
+def test_admin_toggle_pay_mock(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """总部管理员 PUT /admin/membership/config 开 pay_mock → 小程序 plans 立即报 mock."""
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    before = client.get(f"{API}/membership/plans", headers=headers).json()
+    assert before["pay_mode"] == "off"
+
+    r = client.put(
+        f"{API}/admin/membership/config",
+        json={"pay_mock": True},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["pay_mock"] is True
+    assert r.json()["pay_mode"] == "mock"
+
+    after = client.get(f"{API}/membership/plans", headers=headers).json()
+    assert after["pay_mode"] == "mock"
+
+    # 关掉后回到 off
+    client.put(
+        f"{API}/admin/membership/config",
+        json={"pay_mock": False},
+        headers=superuser_token_headers,
+    )
+    final = client.get(f"{API}/membership/plans", headers=headers).json()
+    assert final["pay_mode"] == "off"
+
+
+def test_admin_membership_config_requires_permission(
+    client: TestClient, db: Session
+) -> None:
+    """普通小程序用户无 SETTINGS_MANAGE 权限 → 403."""
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    r = client.put(
+        f"{API}/admin/membership/config", json={"pay_mock": True}, headers=headers
+    )
+    assert r.status_code == 403

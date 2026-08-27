@@ -15,9 +15,14 @@ function getPlans() {
   return get('/membership/plans');
 }
 
-/** 线上下单: 返回 pay_params (wx.requestPayment 参数) */
+/** 线上下单: 返回 pay_params (wx.requestPayment 参数); mock 模式 pay_params 为 null */
 function createOrder(planCode) {
   return post('/membership/orders', { plan_code: planCode }, { silent: true });
+}
+
+/** 模拟支付 (pay_mock 联调模式): 把 pending 单直接置为已支付并自动开通 */
+function mockPay(orderId) {
+  return post(`/membership/orders/${orderId}/mock-pay`, {}, { silent: true });
 }
 
 /** 最近一笔订单 (支付后轮询结果): 无订单时 reject 404 */
@@ -29,5 +34,6 @@ module.exports = {
   getMyMembership,
   getPlans,
   createOrder,
+  mockPay,
   getLatestOrder,
 };
