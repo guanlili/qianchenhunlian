@@ -9,6 +9,7 @@
     "pages/store-detail/store-detail",
     "pages/feedback/feedback",
     "pages/settings/settings",
+    "pages/membership/membership",
     "pages/qualifications/qualifications",
     "pages/store-protocol/store-protocol",
     "pages/refund-protocol/refund-protocol"

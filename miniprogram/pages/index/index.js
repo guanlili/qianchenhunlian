@@ -497,6 +497,7 @@ Page({
     ],
     meItems: [
       { icon: '资', label: '我的资料', sub: '' },
+      { icon: '员', label: '我的会员', sub: '' },
       { icon: '店', label: '我的当地门店', sub: '未选择 ›' },
       { icon: '设', label: '设置', sub: '' },
       { icon: '反', label: '意见反馈', sub: '' },
@@ -620,12 +621,12 @@ Page({
     const expiredDate = String(m.expired_at).slice(0, 10);
     wx.showModal({
       title: '会员已到期',
-      content: `你的会员已于 ${expiredDate} 到期。乾缘婚恋会员费 100元/年，续费后继续享受全年资料展示与智能匹配服务，可前往附近门店或联系红娘办理。`,
-      confirmText: '去门店',
+      content: `你的会员已于 ${expiredDate} 到期。续费后继续享受全年资料展示与智能匹配服务，可在线续费或前往附近门店办理。`,
+      confirmText: '去续费',
       cancelText: '稍后',
       success: (res) => {
         if (res.confirm) {
-          wx.navigateTo({ url: '/pages/store-cities/store-cities' });
+          wx.navigateTo({ url: '/pages/membership/membership' });
         }
       },
     });
@@ -1304,6 +1305,10 @@ Page({
         wx.showToast({ title: '24 小时内已申请过', icon: 'none' });
         return;
       }
+      if (err && err.statusCode === 402) {
+        this._handleQuotaExhausted();
+        return;
+      }
       this._handleProfileGateError(err);
     }
   },
@@ -1433,6 +1438,11 @@ Page({
         this.setData({ contactOpen: false });
         return;
       }
+      if (e && e.statusCode === 402) {
+        this.setData({ contactOpen: false });
+        this._handleQuotaExhausted();
+        return;
+      }
       this._handleProfileGateError(e);
     }
   },
@@ -1471,6 +1481,21 @@ Page({
     if (typeof detail === 'string' && (detail.includes('NEED_PROFILE') || detail.includes('LOW_PROGRESS'))) {
       this._gateCompleteProfile();
     }
+  },
+
+  /** 后端返 402 QUOTA_EXHAUSTED 时, 引导去会员页 (在线缴费/门店线下开通) */
+  _handleQuotaExhausted() {
+    wx.showModal({
+      title: '今日额度已用完',
+      content: '开通会员后每日可申请 20 次, 可在线续费或前往附近门店办理。',
+      confirmText: '去开通',
+      cancelText: '稍后',
+      success: (res) => {
+        if (res.confirm) {
+          wx.navigateTo({ url: '/pages/membership/membership' });
+        }
+      },
+    });
   },
 
   openProfileEdit(e) {
@@ -2022,6 +2047,7 @@ Page({
     const label = e.currentTarget.dataset.label;
     this.setData({ childFrom: 'me' });
     if (label === '我的资料')        return this.setData({ screen: 'my-profile' });
+    if (label === '我的会员')        return wx.navigateTo({ url: '/pages/membership/membership' });
     if (label === '我的当地门店')   return this.openMyStore();
     if (label === '设置')            return wx.navigateTo({ url: '/pages/settings/settings' });
     if (label === '意见反馈')        return wx.navigateTo({ url: '/pages/feedback/feedback' });
