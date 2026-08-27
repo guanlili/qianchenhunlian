@@ -35,6 +35,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
     # 线上支付开关 (docs/13 §10 P3): 未接入微信支付前恒 false。
     # 接入后置 true, 小程序据此展示在线购买入口; 线下后台开通不受此开关影响。
     "pay_enabled": False,
+    # 模拟支付模式 (联调用): 微信支付凭证未配齐前, 打开它可全流程演练
+    # 下单→支付→自动开通 (不真扣款, 订单 transaction_id 带 MOCK 前缀)。
+    # 真实支付配置齐全时 online 优先, 本开关被忽略。
+    "pay_mock": False,
     "plans": [
         {"code": "trial_7d", "name": "7天体验卡", "days": 7, "price": None},
         {"code": "monthly_30d", "name": "月卡", "days": 30, "price": 99},
@@ -82,6 +86,24 @@ def get_plan(cfg: dict[str, Any], plan_code: str) -> dict[str, Any] | None:
         if isinstance(p, dict) and p.get("code") == plan_code:
             return dict(p)
     return None
+
+
+def purchase_mode(session: Session) -> str:
+    """线上购买模式: 'online' / 'mock' / 'off'.
+
+    - online: 后台 pay_enabled 打开 且 微信支付凭证配置齐全 (真实支付)
+    - mock:   凭证未配齐但 pay_mock 打开 (联调演练, 不真扣款)
+    - off:    都不满足, 小程序只展示门店线下引导
+    真实支付优先: 凭证齐 + pay_mock 也开着 → online。
+    """
+    from app.core import wechat_pay
+
+    cfg = get_config(session)
+    if cfg.get("pay_enabled") and wechat_pay.credentials_ready():
+        return "online"
+    if cfg.get("pay_mock"):
+        return "mock"
+    return "off"
 
 
 def is_member(user: User, *, now: datetime | None = None) -> bool:
