@@ -30,6 +30,10 @@ WORKDIR /app/
 
 COPY --from=builder /app/.venv /app/.venv
 
+# 运行阶段也要执行 uv sync (--no-dev), 必须带上 uv 二进制
+# (PR#35 拆两阶段时遗漏, 仅真实服务器构建会暴露)
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
+
 COPY ./scripts /app/scripts
 COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 COPY ./app /app/app
