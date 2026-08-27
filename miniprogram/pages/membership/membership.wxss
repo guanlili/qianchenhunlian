@@ -7,6 +7,18 @@
   box-sizing: border-box;
 }
 
+/* 模拟支付提示条 */
+.mp-mock-banner {
+  margin-top: 24rpx;
+  padding: 18rpx 24rpx;
+  border-radius: 14rpx;
+  background: #fdf3e0;
+  border: 1rpx solid #f0d9ae;
+  color: #a1651c;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
 /* 顶部状态卡 */
 .mp-hero {
   display: flex;

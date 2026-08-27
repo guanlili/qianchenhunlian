@@ -23,6 +23,9 @@
     <view class="mp-benefit"><text class="mp-dot">·</text>全年资料展示, 不限查阅次数</view>
   </view>
 
+  <!-- 模拟支付提示 (联调模式) -->
+  <view class="mp-mock-banner" wx:if="{{payMode === 'mock'}}">当前为模拟支付模式 (联调演练), 支付不会真实扣款</view>
+
   <!-- 套餐购买 -->
   <view class="mp-card" wx:if="{{plans.length > 0}}">
     <view class="mp-card-title">选择套餐</view>
@@ -33,9 +36,9 @@
       </view>
       <view class="mp-plan-price"><text class="rmb">¥</text>{{item.price}}</view>
       <button class="mp-plan-btn" data-code="{{item.code}}" bindtap="onBuy"
-        disabled="{{submitting}}">{{payOnline ? '立即支付' : '去门店办理'}}</button>
+        disabled="{{submitting}}">{{payMode === 'online' ? '立即支付' : payMode === 'mock' ? '模拟支付' : '去门店办理'}}</button>
     </view>
-    <view class="mp-tip" wx:if="{{payOnline}}">支付即表示同意
+    <view class="mp-tip" wx:if="{{payMode !== 'off'}}">支付即表示同意
       <text class="mp-link" bindtap="goRefund">《线上报名费退费规则协议》</text>
     </view>
   </view>

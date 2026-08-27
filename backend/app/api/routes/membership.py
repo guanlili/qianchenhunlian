@@ -37,8 +37,8 @@ class PlanItem(SQLModel):
 
 
 class MembershipPlansOut(SQLModel):
-    # 线上购买总开关: 后台 pay_enabled 且支付凭证齐全 (关闭时小程序只展示门店引导)
-    pay_online: bool
+    # 线上购买模式: online (真实微信支付) / mock (模拟支付, 联调演练) / off (仅门店线下)
+    pay_mode: str
     plans: list[PlanItem] = []
 
 
@@ -51,8 +51,9 @@ class OrderCreatedOut(SQLModel):
     out_trade_no: str
     plan_code: str
     amount_fen: int
-    # wx.requestPayment 所需参数; 过期关单后的查询接口不带
+    # wx.requestPayment 所需参数; mock 模式与状态查询接口不带
     pay_params: dict[str, str] | None = None
+    pay_mode: str = "online"
     status: str = "pending"
 
 
@@ -94,7 +95,7 @@ def list_plans(
         for p in cfg.get("plans", [])
         if isinstance(p, dict) and p.get("price") is not None
     ]
-    return MembershipPlansOut(pay_online=membership.is_pay_online(session), plans=plans)
+    return MembershipPlansOut(pay_mode=membership.purchase_mode(session), plans=plans)
 
 
 def _gen_out_trade_no() -> str:
@@ -109,13 +110,16 @@ async def create_order(
     current_user: CurrentUser,
     _lim: ApiReadLimited,
 ) -> OrderCreatedOut:
-    """线上下单: 服务端按套餐配置定价, 换取 wx.requestPayment 参数.
+    """线上下单: 服务端按套餐配置定价.
 
-    - 线上开关关闭 → 503 (小程序据此引导去门店线下办理)
+    - online 模式: 换取 wx.requestPayment 参数 (真实微信支付)
+    - mock 模式: 只落 pending 订单不带支付参数, 小程序随后调 mock-pay 完成"支付"
+    - off 模式: 503 (小程序据此引导去门店线下办理)
     - 金额以「下单时」配置为准 (分), 回调金额必须一致才发放
     - 同一用户 2 小时前的 pending 单懒关单, 防止堆积
     """
-    if not membership.is_pay_online(session):
+    mode = membership.purchase_mode(session)
+    if mode == "off":
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="PAY_NOT_ENABLED",
@@ -150,6 +154,17 @@ async def create_order(
     session.commit()
     session.refresh(order)
 
+    if mode == "mock":
+        return OrderCreatedOut(
+            order_id=order.id,
+            out_trade_no=order.out_trade_no,
+            plan_code=order.plan_code,
+            amount_fen=order.amount_fen,
+            pay_params=None,
+            pay_mode="mock",
+            status=order.status,
+        )
+
     try:
         pay_params = await wechat_pay.jsapi_prepay(
             openid=current_user.openid,
@@ -174,6 +189,7 @@ async def create_order(
         plan_code=order.plan_code,
         amount_fen=order.amount_fen,
         pay_params=pay_params,
+        pay_mode="online",
         status=order.status,
     )
 
@@ -195,6 +211,78 @@ def latest_order(
         out_trade_no=order.out_trade_no,
         plan_code=order.plan_code,
         amount_fen=order.amount_fen,
+        status=order.status,
+    )
+
+
+def _mark_paid_and_grant(
+    session: SessionDep, *, order: MembershipOrder, transaction_id: str
+) -> bool:
+    """幂等发放: pending → paid 条件更新成功才发放会员, 返 False 表示已处理过.
+
+    微信回调重推与 mock-pay 并发都汇聚到这里, rowcount 保证只发一次。
+    """
+    result = session.execute(
+        sa_update(MembershipOrder)
+        .where(MembershipOrder.id == order.id)  # type: ignore[arg-type]
+        .where(MembershipOrder.status == "pending")  # type: ignore[arg-type]
+        .values(
+            status="paid",
+            transaction_id=transaction_id,
+            paid_at=datetime.utcnow(),
+        )
+    )
+    if result.rowcount == 0:  # type: ignore[attr-defined]
+        return False
+    user = session.get(User, order.user_id)
+    assert user is not None  # 外键约束保证存在
+    membership.grant_membership(
+        session,
+        user=user,
+        plan_code=order.plan_code,
+        days=order.days,
+        source=membership.SOURCE_ONLINE,
+        granted_by_type="system",  # 线上支付自动发放, 非任何管理员操作
+        granted_by_id=user.id,
+        note=f"微信支付 {transaction_id}",
+    )
+    session.commit()
+    return True
+
+
+@router.post("/orders/{order_id}/mock-pay", response_model=OrderCreatedOut)
+def mock_pay(
+    session: SessionDep,
+    order_id: uuid.UUID,
+    current_user: CurrentUser,
+    _lim: ApiReadLimited,
+) -> OrderCreatedOut:
+    """模拟支付 (pay_mock 模式联调用): 把自己的 pending 单直接置为 paid 并发放.
+
+    仅在 mock 模式下可用 — 真实支付 (online) / 关闭 (off) 状态下一律 403,
+    不给任何绕过微信支付的口子。订单与发放都走真实链路, 只是"支付"这步被模拟。
+    """
+    if membership.purchase_mode(session) != "mock":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="模拟支付未开启"
+        )
+    order = session.get(MembershipOrder, order_id)
+    if not order or order.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="订单不存在")
+    if order.status == "pending":
+        _mark_paid_and_grant(
+            session,
+            order=order,
+            transaction_id=f"MOCK_{order.out_trade_no}",
+        )
+        session.refresh(order)
+    # 已 paid/closed 的单直接返回当前状态 (幂等)
+    return OrderCreatedOut(
+        order_id=order.id,
+        out_trade_no=order.out_trade_no,
+        plan_code=order.plan_code,
+        amount_fen=order.amount_fen,
+        pay_mode="mock",
         status=order.status,
     )
 
@@ -269,31 +357,12 @@ async def pay_notify(request: Request, session: SessionDep) -> dict[str, str]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="金额不一致")
 
     # 幂等发放: pending → paid 条件更新, rowcount=0 即已处理过 (重复通知直接 ack)
-    result = session.execute(
-        sa_update(MembershipOrder)
-        .where(MembershipOrder.id == order.id)  # type: ignore[arg-type]
-        .where(MembershipOrder.status == "pending")  # type: ignore[arg-type]
-        .values(
-            status="paid",
-            transaction_id=str(transaction_id) if transaction_id else None,
-            paid_at=datetime.utcnow(),
-        )
-    )
-    if result.rowcount == 0:  # type: ignore[attr-defined]
-        return {"code": "SUCCESS", "message": "重复通知已忽略"}
-
-    user = session.get(User, order.user_id)
-    assert user is not None  # 外键约束保证存在
-    membership.grant_membership(
+    granted = _mark_paid_and_grant(
         session,
-        user=user,
-        plan_code=order.plan_code,
-        days=order.days,
-        source=membership.SOURCE_ONLINE,
-        granted_by_type="system",  # 线上支付自动发放, 非任何管理员操作
-        granted_by_id=user.id,
-        note=f"微信支付 {transaction_id or ''}".strip(),
+        order=order,
+        transaction_id=str(transaction_id) if transaction_id else "",
     )
-    session.commit()
+    if not granted:
+        return {"code": "SUCCESS", "message": "重复通知已忽略"}
     logger.info("线上缴费发放成功: 订单 %s 用户 %s", out_trade_no, order.user_id)
     return {"code": "SUCCESS", "message": "成功"}

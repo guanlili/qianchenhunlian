@@ -45,6 +45,7 @@ from app.models import (
     StoreCreate,
     StorePublic,
     StoreUpdate,
+    SiteSetting,
     User,
     View,
 )
@@ -1255,15 +1256,19 @@ def _compute_stats(session: SessionDep, actor: CurrentActor) -> StatsResponse:
 
     # 互相好感对子数: 同时存在 (A→B) 和 (B→A), 每个对子只算一次 → /2
     # 这里偷懒用 join 自连接, 然后 //2 (推荐场景下数据量小, 性能 OK)
-    mutual_total = session.exec(
-        select(func.count())
-        .select_from(Affinity)
-        .join(
-            Affinity.__table__.alias("rev"),  # type: ignore[attr-defined]
-            (Affinity.from_user_id == Affinity.__table__.alias("rev").c.to_user_id)  # type: ignore[attr-defined]
-            & (Affinity.to_user_id == Affinity.__table__.alias("rev").c.from_user_id),  # type: ignore[attr-defined]
-        )
-    ).one() or 0
+    rev = Affinity.__table__.alias("rev")  # type: ignore[attr-defined]
+    mutual_total = (
+        session.exec(
+            select(func.count())
+            .select_from(Affinity)
+            .join(
+                rev,
+                (Affinity.from_user_id == rev.c.to_user_id)
+                & (Affinity.to_user_id == rev.c.from_user_id),
+            )
+        ).one()
+        or 0
+    )
     mutual_pairs = int(mutual_total) // 2
 
     return StatsResponse(
@@ -1994,7 +1999,17 @@ class MembershipPlansResponse(SQLModel):
     member_daily_quota: int
     trial_once_per_user: bool
     pay_enabled: bool = False  # 线上支付开关 (docs/13 P3), 接入微信支付后置 true
+    pay_mock: bool = False  # 模拟支付模式 (联调演练; 真实支付配置齐全时被忽略)
+    # 实际生效的购买模式: online / mock / off (凭证 + 开关共同决定)
+    pay_mode: str = "off"
     plans: list[dict[str, Any]] = []
+
+
+class MembershipConfigUpdate(SQLModel):
+    """只放开支付相关开关; 套餐/额度调整后续按需扩展."""
+
+    pay_enabled: bool | None = None
+    pay_mock: bool | None = None
 
 
 class MembershipGrantRequest(SQLModel):
@@ -2021,11 +2036,46 @@ class MembershipGrantResponse(SQLModel):
 def get_membership_plans(session: SessionDep) -> MembershipPlansResponse:
     """套餐配置 (发放对话框 + 小程序展示用). 登录后台即可读."""
     cfg = membership.get_config(session)
+    return _plans_response(session, cfg)
+
+
+@router.put(
+    "/membership/config",
+    response_model=MembershipPlansResponse,
+    dependencies=[Depends(require_perm(Perm.SETTINGS_MANAGE))],
+)
+def update_membership_config(
+    session: SessionDep, body: MembershipConfigUpdate
+) -> MembershipPlansResponse:
+    """支付开关管理: pay_enabled (真实支付) / pay_mock (模拟支付联调).
+
+    只覆盖这两个 key, 其余套餐/额度配置原样保留。返回更新后的完整配置。
+    """
+    cfg = membership.get_config(session)
+    if body.pay_enabled is not None:
+        cfg["pay_enabled"] = body.pay_enabled
+    if body.pay_mock is not None:
+        cfg["pay_mock"] = body.pay_mock
+    row = session.get(SiteSetting, membership.CONFIG_KEY)
+    if row:
+        row.value = cfg
+        session.add(row)
+    else:
+        session.add(SiteSetting(key=membership.CONFIG_KEY, value=cfg))
+    session.commit()
+    return _plans_response(session, membership.get_config(session))
+
+
+def _plans_response(
+    session: SessionDep, cfg: dict[str, Any]
+) -> MembershipPlansResponse:
     return MembershipPlansResponse(
         free_daily_quota=int(cfg.get("free_daily_quota", 5)),
         member_daily_quota=int(cfg.get("member_daily_quota", 20)),
         trial_once_per_user=bool(cfg.get("trial_once_per_user", True)),
         pay_enabled=bool(cfg.get("pay_enabled", False)),
+        pay_mock=bool(cfg.get("pay_mock", False)),
+        pay_mode=membership.purchase_mode(session),
         plans=list(cfg.get("plans", [])),
     )
 
