@@ -2349,6 +2349,143 @@ export const AdminProfileUpdateSchema = {
     description: '红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.'
 } as const;
 
+export const AdminStoreItemSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Name'
+        },
+        city: {
+            type: 'string',
+            maxLength: 32,
+            title: 'City'
+        },
+        district: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'District'
+        },
+        address: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Address'
+        },
+        lng: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lng'
+        },
+        lat: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Lat'
+        },
+        phone: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 32
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Phone'
+        },
+        photo: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo'
+        },
+        fees_desc: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fees Desc'
+        },
+        status: {
+            type: 'string',
+            maxLength: 16,
+            title: 'Status',
+            default: 'active'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        member_count: {
+            type: 'integer',
+            title: 'Member Count',
+            default: 0
+        }
+    },
+    type: 'object',
+    required: ['name', 'city', 'id'],
+    title: 'AdminStoreItem',
+    description: '后台门店列表项: 附每店会员数 (门店为主体入口, 列表页直接看体量).'
+} as const;
+
+export const AdminStoreListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/AdminStoreItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'AdminStoreList'
+} as const;
+
 export const AdminUserBriefSchema = {
     properties: {
         id: {
@@ -4360,6 +4497,36 @@ export const MemberCountsSchema = {
     title: 'MemberCounts'
 } as const;
 
+export const MembershipConfigUpdateSchema = {
+    properties: {
+        pay_enabled: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Pay Enabled'
+        },
+        pay_mock: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Pay Mock'
+        }
+    },
+    type: 'object',
+    title: 'MembershipConfigUpdate',
+    description: '只放开支付相关开关; 套餐/额度调整后续按需扩展.'
+} as const;
+
 export const MembershipGrantListSchema = {
     properties: {
         items: {
@@ -4557,6 +4724,26 @@ export const MembershipGrantResponseSchema = {
     title: 'MembershipGrantResponse'
 } as const;
 
+export const MembershipPlansOutSchema = {
+    properties: {
+        pay_mode: {
+            type: 'string',
+            title: 'Pay Mode'
+        },
+        plans: {
+            items: {
+                '$ref': '#/components/schemas/PlanItem'
+            },
+            type: 'array',
+            title: 'Plans',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['pay_mode'],
+    title: 'MembershipPlansOut'
+} as const;
+
 export const MembershipPlansResponseSchema = {
     properties: {
         free_daily_quota: {
@@ -4575,6 +4762,16 @@ export const MembershipPlansResponseSchema = {
             type: 'boolean',
             title: 'Pay Enabled',
             default: false
+        },
+        pay_mock: {
+            type: 'boolean',
+            title: 'Pay Mock',
+            default: false
+        },
+        pay_mode: {
+            type: 'string',
+            title: 'Pay Mode',
+            default: 'off'
         },
         plans: {
             items: {
@@ -4691,6 +4888,68 @@ export const NewPasswordSchema = {
     title: 'NewPassword'
 } as const;
 
+export const OrderCreateInSchema = {
+    properties: {
+        plan_code: {
+            type: 'string',
+            maxLength: 32,
+            title: 'Plan Code'
+        }
+    },
+    type: 'object',
+    required: ['plan_code'],
+    title: 'OrderCreateIn'
+} as const;
+
+export const OrderCreatedOutSchema = {
+    properties: {
+        order_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Order Id'
+        },
+        out_trade_no: {
+            type: 'string',
+            title: 'Out Trade No'
+        },
+        plan_code: {
+            type: 'string',
+            title: 'Plan Code'
+        },
+        amount_fen: {
+            type: 'integer',
+            title: 'Amount Fen'
+        },
+        pay_params: {
+            anyOf: [
+                {
+                    additionalProperties: {
+                        type: 'string'
+                    },
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Pay Params'
+        },
+        pay_mode: {
+            type: 'string',
+            title: 'Pay Mode',
+            default: 'online'
+        },
+        status: {
+            type: 'string',
+            title: 'Status',
+            default: 'pending'
+        }
+    },
+    type: 'object',
+    required: ['order_id', 'out_trade_no', 'plan_code', 'amount_fen'],
+    title: 'OrderCreatedOut'
+} as const;
+
 export const ParentsInfoPublicSchema = {
     properties: {
         parents_health: {
@@ -4762,6 +5021,30 @@ export const PhotoCommitSchema = {
     type: 'object',
     required: ['file_url'],
     title: 'PhotoCommit'
+} as const;
+
+export const PlanItemSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        days: {
+            type: 'integer',
+            title: 'Days'
+        },
+        price: {
+            type: 'integer',
+            title: 'Price'
+        }
+    },
+    type: 'object',
+    required: ['code', 'name', 'days', 'price'],
+    title: 'PlanItem'
 } as const;
 
 export const ProfileMeResponseSchema = {

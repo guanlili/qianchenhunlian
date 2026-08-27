@@ -11,7 +11,9 @@ from tests.utils.utils import random_email, random_lower_string
 def _make_feedback(db: Session) -> Feedback:
     user = crud.create_user(
         session=db,
-        user_create=UserCreate(email=random_email(), password=random_lower_string() + "Aa1!"),
+        user_create=UserCreate(
+            email=random_email(), password=random_lower_string() + "Aa1!"
+        ),
     )
     fb = Feedback(user_id=user.id, content="建议增加夜间模式", contact="wx_abc")
     db.add(fb)
@@ -77,8 +79,11 @@ def test_store_admin_cannot_handle_feedback(client, db: Session) -> None:
     crud.create_staff(
         session=db,
         staff_create=StaffCreate(
-            email=random_email(), name="店长", password=pwd,
-            role="store_admin", store_id=store.id,
+            email=random_email(),
+            name="店长",
+            password=pwd,
+            role="store_admin",
+            store_id=store.id,
         ),
     )
     from app.models import Staff
@@ -117,7 +122,7 @@ def test_dashboard_superuser(
 
 
 def test_dashboard_store_admin_scoped(client, db: Session) -> None:
-    """门店管理员视角: 不返回待审队列, 数据限本店口径."""
+    """门店管理员视角: 待审队列限本店 (审核已下放), 数据限本店口径."""
     from app.models import Staff
 
     store = Store(name="工作台测试店", city="济南")
@@ -127,15 +132,28 @@ def test_dashboard_store_admin_scoped(client, db: Session) -> None:
     # 本店造一个会员
     user = crud.create_user(
         session=db,
-        user_create=UserCreate(email=random_email(), password=random_lower_string() + "Aa1!"),
+        user_create=UserCreate(
+            email=random_email(), password=random_lower_string() + "Aa1!"
+        ),
     )
-    db.add(Profile(user_id=user.id, home_store_id=store.id, progress=80, nickname="本店会员"))
+    db.add(
+        Profile(
+            user_id=user.id,
+            home_store_id=store.id,
+            progress=80,
+            nickname="本店会员",
+            audit_status="pending",
+        )
+    )
     pwd = random_lower_string() + "Aa1!"
     crud.create_staff(
         session=db,
         staff_create=StaffCreate(
-            email=random_email(), name="店长", password=pwd,
-            role="store_admin", store_id=store.id,
+            email=random_email(),
+            name="店长",
+            password=pwd,
+            role="store_admin",
+            store_id=store.id,
         ),
     )
     staff = db.exec(select(Staff).order_by(Staff.created_at.desc())).first()  # type: ignore
@@ -149,7 +167,9 @@ def test_dashboard_store_admin_scoped(client, db: Session) -> None:
     r = client.get(f"{settings.API_V1_STR}/admin/dashboard", headers=headers)
     assert r.status_code == 200
     body = r.json()
-    assert body["recent_pending_audits"] == []
+    # 审核已下放门店: 本店待审出现在工作台 (且只含本店会员)
+    audit_ids = {i["user_id"] for i in body["recent_pending_audits"]}
+    assert audit_ids == {str(user.id)}
     # 本店至少 1 个会员
     assert body["stats"]["total_users"] >= 1
 
@@ -159,7 +179,10 @@ def _site_headers(client) -> dict[str, str]:
 
     r = client.post(
         f"{cfg.API_V1_STR}/login/access-token",
-        data={"username": cfg.FIRST_SUPERUSER, "password": cfg.FIRST_SUPERUSER_PASSWORD},
+        data={
+            "username": cfg.FIRST_SUPERUSER,
+            "password": cfg.FIRST_SUPERUSER_PASSWORD,
+        },
     )
     assert r.status_code == 200
     return {"Authorization": f"Bearer {r.json()['access_token']}"}

@@ -35,10 +35,11 @@ def _store_admin(store_id: uuid.UUID | None = uuid.uuid4()) -> Actor:
     )
 
 
-# 期望矩阵 (三层模型, 2026-08 与业务确认)
+# 期望矩阵 (三层模型, 2026-08 与业务确认; 以门店为主体重构: 审核下放门店)
 EXPECTED: dict[str, set[Perm]] = {
     "superuser": set(Perm),  # 系统管理员: 全部权限
     "store_admin": {  # 门店管理员: 本店全权 (数据范围由 store scope helper 限本店)
+        Perm.PROFILE_AUDIT,
         Perm.PROFILE_EDIT,
         Perm.PROFILE_VERIFY,
         Perm.VIEW_CONTACT,
@@ -92,7 +93,9 @@ def test_store_admin_without_store_fail_closed() -> None:
 
 
 def test_system_perms_are_superuser_only() -> None:
-    """系统级权限永远只有系统管理员: 员工/管理员账号/审计/设置/门店/审核/改派."""
+    """系统级权限永远只有系统管理员: 员工/管理员账号/审计/设置/门店/改派.
+
+    (资料审核 PROFILE_AUDIT 已下放门店, 不在此列.)"""
     sa = _store_admin()
     for perm in (
         Perm.STAFF_MANAGE,
@@ -101,6 +104,5 @@ def test_system_perms_are_superuser_only() -> None:
         Perm.SETTINGS_MANAGE,
         Perm.STORE_MANAGE,
         Perm.ASSIGN_REQUEST,
-        Perm.PROFILE_AUDIT,
     ):
         assert not has_perm(sa, perm), perm

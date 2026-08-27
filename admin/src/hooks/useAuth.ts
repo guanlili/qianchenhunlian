@@ -38,7 +38,17 @@ const useAuth = () => {
 
   const loginMutation = useMutation({
     mutationFn: login,
-    onSuccess: () => {
+    onSuccess: async () => {
+      // 以门店为主体: 门店管理员登录直达本店工作台, 总部落全局工作台
+      try {
+        const me = await LoginService.whoami()
+        if (me.actor_type === "staff" && me.store_id) {
+          navigate({ to: "/stores/$storeId", params: { storeId: me.store_id } })
+          return
+        }
+      } catch {
+        // whoami 失败不阻塞登录, 落默认工作台
+      }
       navigate({ to: "/dashboard" })
     },
     onError: handleError.bind(showErrorToast),
