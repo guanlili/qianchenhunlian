@@ -356,7 +356,8 @@ function StoreManagersTab({
   storeName?: string | null
 }) {
   const { data: staff } = useQuery({
-    queryFn: () => AdminService.listStaff({ storeId, skip: 0, limit: 500 }),
+    // limit 上限 200 (接口校验 le=200, 传 500 会 422 导致列表永远为空)
+    queryFn: () => AdminService.listStaff({ storeId, skip: 0, limit: 200 }),
     queryKey: ["admin-staff", "store", storeId],
   })
   const managers = staff?.items || []
