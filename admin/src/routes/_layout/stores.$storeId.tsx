@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Inbox } from "lucide-react"
+import { useEffect } from "react"
 
 import { AdminService, StoresService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
@@ -50,6 +51,28 @@ function StoreWorkspacePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isSuperuser = !!user?.is_superuser
+
+  // 门店管理员只能进本店: 手输/收藏别家店 URL 时弹回本店
+  // (数据层后端已强制作用域, 这里修的是「页面头显示别家店名」的误导)
+  const myStoreId =
+    !isSuperuser && user?.actor_type === "staff" ? user.store_id : null
+  const foreignStore = !!myStoreId && myStoreId !== storeId
+  useEffect(() => {
+    if (myStoreId && foreignStore) {
+      navigate({
+        to: "/stores/$storeId",
+        params: { storeId: myStoreId },
+        replace: true,
+      })
+    }
+  }, [myStoreId, foreignStore, navigate])
+  if (foreignStore) {
+    return (
+      <div className="p-10 text-center text-muted-foreground">
+        只能进入您的门店工作台, 正在跳转…
+      </div>
+    )
+  }
 
   const activeTab =
     tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : "overview"
