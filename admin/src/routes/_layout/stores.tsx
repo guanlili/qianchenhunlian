@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatches,
+  useNavigate,
+} from "@tanstack/react-router"
 import { ArrowRight, MapPin, Pencil, Plus, Trash2, Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
@@ -42,9 +48,19 @@ import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
 import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/stores")({
-  component: StoresPage,
+  component: StoresLayout,
   head: () => ({ meta: [{ title: "门店总览 - 乾缘后台" }] }),
 })
+
+// stores.$storeId 是本路由的子路由 (TanStack 文件路由的嵌套约定):
+// 命中子路由 (门店工作台) 时只渲染 <Outlet/>, 否则渲染门店总览卡片墙
+// (与 members.tsx 的 MembersLayout 同款模式)
+function StoresLayout() {
+  const matches = useMatches()
+  const hasChild = matches.some((m) => m.routeId === "/_layout/stores/$storeId")
+  if (hasChild) return <Outlet />
+  return <StoresPage />
+}
 
 function StoresPage() {
   const qc = useQueryClient()
