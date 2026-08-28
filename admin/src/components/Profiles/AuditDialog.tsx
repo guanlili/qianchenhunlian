@@ -23,6 +23,15 @@ interface AuditDialogProps {
   onClose?: () => void
 }
 
+// 常见驳回原因快捷模板 (点击填充输入框, 仍可手改; 口径对齐审核规范)
+const REJECT_TEMPLATES = [
+  "照片模糊或无法辨认",
+  "照片与资料明显不符",
+  "资料填写不完整",
+  "个人介绍包含联系方式",
+  "内容包含不当信息",
+]
+
 export function AuditDialog({
   item,
   approve,
@@ -71,11 +80,23 @@ export function AuditDialog({
         {!approve && (
           <div className="space-y-2 py-2">
             <Label htmlFor="reason">驳回原因 (选填)</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {REJECT_TEMPLATES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className="hover:bg-muted border rounded-full px-2.5 py-1 text-xs transition-colors"
+                  onClick={() => setReason(t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
             <Input
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="例如:照片不清晰 / 资料明显造假"
+              placeholder="点上方快捷理由或自行输入"
               maxLength={120}
             />
           </div>

@@ -3751,6 +3751,23 @@ export const CriteriaUpdateSchema = {
     title: 'CriteriaUpdate'
 } as const;
 
+export const DailyCountSchema = {
+    properties: {
+        date: {
+            type: 'string',
+            title: 'Date'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['date', 'count'],
+    title: 'DailyCount',
+    description: '趋势图单日计数 (MM-DD, 北京时间).'
+} as const;
+
 export const DashboardResponseSchema = {
     properties: {
         stats: {
@@ -3784,12 +3801,31 @@ export const DashboardResponseSchema = {
             type: 'integer',
             title: 'Overdue Pending Tickets',
             default: 0
+        },
+        signups_last_7d: {
+            items: {
+                '$ref': '#/components/schemas/DailyCount'
+            },
+            type: 'array',
+            title: 'Signups Last 7D',
+            default: []
+        },
+        avg_ticket_handle_hours: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Avg Ticket Handle Hours'
         }
     },
     type: 'object',
     required: ['stats'],
     title: 'DashboardResponse',
-    description: '工作台聚合: 待办指标 + 最近动态 (docs/11 §3.1). 门店口径由后端按 actor 强制.'
+    description: '工作台聚合: 待办指标 + 最近动态 + 趋势/效率 (docs/11 §3.1). 门店口径由后端按 actor 强制.'
 } as const;
 
 export const DistrictItemSchema = {
@@ -6956,6 +6992,11 @@ export const StoreOverviewItemSchema = {
         pending_tickets: {
             type: 'integer',
             title: 'Pending Tickets',
+            default: 0
+        },
+        overdue_tickets: {
+            type: 'integer',
+            title: 'Overdue Tickets',
             default: 0
         }
     },

@@ -243,6 +243,11 @@ function StoreCard({
       value: item.pending_tickets ?? 0,
       tone: "destructive" as const,
     },
+    {
+      label: "逾期工单",
+      value: item.overdue_tickets ?? 0,
+      tone: "destructive" as const,
+    },
   ]
   const hasTodo = pending.some((p) => p.value > 0)
   const isActive = item.status === "active"

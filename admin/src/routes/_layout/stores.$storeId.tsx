@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { AdminService, StoresService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
+import { TrendPanel } from "@/components/Common/TrendPanel"
 import { memberColumns } from "@/components/Members/columns"
 import { RequestBoard } from "@/components/Requests/RequestBoard"
 import { AuditQueue } from "@/components/Review/AuditQueue"
@@ -288,6 +289,13 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
           </Button>
         </div>
       </div>
+
+      <TrendPanel
+        signups={data?.signups_last_7d ?? []}
+        avgHours={data?.avg_ticket_handle_hours ?? null}
+        overdue={data?.overdue_pending_tickets ?? 0}
+      />
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
           <Card key={c.label}>
