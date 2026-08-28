@@ -39,7 +39,7 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: async () => {
-      // 以门店为主体: 门店管理员登录直达本店工作台, 总部落全局工作台
+      // 以门店为主体: 门店管理员直达本店工作台, 总部落门店总览卡片墙
       try {
         const me = await LoginService.whoami()
         if (me.actor_type === "staff" && me.store_id) {
@@ -47,9 +47,9 @@ const useAuth = () => {
           return
         }
       } catch {
-        // whoami 失败不阻塞登录, 落默认工作台
+        // whoami 失败不阻塞登录, 落默认入口
       }
-      navigate({ to: "/dashboard" })
+      navigate({ to: "/stores" })
     },
     onError: handleError.bind(showErrorToast),
   })

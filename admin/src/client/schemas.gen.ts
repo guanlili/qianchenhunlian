@@ -6773,6 +6773,106 @@ export const StoreListSchema = {
     title: 'StoreList'
 } as const;
 
+export const StoreOverviewItemSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        city: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'City'
+        },
+        district: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'District'
+        },
+        status: {
+            type: 'string',
+            title: 'Status',
+            default: 'active'
+        },
+        member_count: {
+            type: 'integer',
+            title: 'Member Count',
+            default: 0
+        },
+        pending_audits: {
+            type: 'integer',
+            title: 'Pending Audits',
+            default: 0
+        },
+        pending_verifies: {
+            type: 'integer',
+            title: 'Pending Verifies',
+            default: 0
+        },
+        pending_tickets: {
+            type: 'integer',
+            title: 'Pending Tickets',
+            default: 0
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'StoreOverviewItem',
+    description: '门店总览卡片: 每店待办徽标 (总部首页「哪家店有事一眼看到」).'
+} as const;
+
+export const StoreOverviewListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/StoreOverviewItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        },
+        unassigned_members: {
+            type: 'integer',
+            title: 'Unassigned Members',
+            default: 0
+        },
+        unassigned_tickets: {
+            type: 'integer',
+            title: 'Unassigned Tickets',
+            default: 0
+        },
+        open_feedback: {
+            type: 'integer',
+            title: 'Open Feedback',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'StoreOverviewList'
+} as const;
+
 export const StorePublicSchema = {
     properties: {
         name: {

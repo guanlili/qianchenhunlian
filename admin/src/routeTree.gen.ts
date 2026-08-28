@@ -14,6 +14,7 @@ import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LayoutUnassignedRouteImport } from './routes/_layout/unassigned'
 import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
@@ -52,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LayoutUnassignedRoute = LayoutUnassignedRouteImport.update({
+  id: '/unassigned',
+  path: '/unassigned',
+  getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutStoresRoute = LayoutStoresRouteImport.update({
   id: '/stores',
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
   '/stores': typeof LayoutStoresRouteWithChildren
+  '/unassigned': typeof LayoutUnassignedRoute
   '/members/$userId': typeof LayoutMembersUserIdRoute
   '/stores/$storeId': typeof LayoutStoresStoreIdRoute
 }
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
   '/stores': typeof LayoutStoresRouteWithChildren
+  '/unassigned': typeof LayoutUnassignedRoute
   '/members/$userId': typeof LayoutMembersUserIdRoute
   '/stores/$storeId': typeof LayoutStoresStoreIdRoute
 }
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/_layout/review': typeof LayoutReviewRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/stores': typeof LayoutStoresRouteWithChildren
+  '/_layout/unassigned': typeof LayoutUnassignedRoute
   '/_layout/members/$userId': typeof LayoutMembersUserIdRoute
   '/_layout/stores/$storeId': typeof LayoutStoresStoreIdRoute
 }
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/settings'
     | '/stores'
+    | '/unassigned'
     | '/members/$userId'
     | '/stores/$storeId'
   fileRoutesByTo: FileRoutesByTo
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/settings'
     | '/stores'
+    | '/unassigned'
     | '/members/$userId'
     | '/stores/$storeId'
   id:
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/_layout/review'
     | '/_layout/settings'
     | '/_layout/stores'
+    | '/_layout/unassigned'
     | '/_layout/members/$userId'
     | '/_layout/stores/$storeId'
   fileRoutesById: FileRoutesById
@@ -294,6 +306,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_layout/unassigned': {
+      id: '/_layout/unassigned'
+      path: '/unassigned'
+      fullPath: '/unassigned'
+      preLoaderRoute: typeof LayoutUnassignedRouteImport
+      parentRoute: typeof LayoutRoute
     }
     '/_layout/stores': {
       id: '/_layout/stores'
@@ -433,6 +452,7 @@ interface LayoutRouteChildren {
   LayoutReviewRoute: typeof LayoutReviewRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutStoresRoute: typeof LayoutStoresRouteWithChildren
+  LayoutUnassignedRoute: typeof LayoutUnassignedRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -448,6 +468,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutReviewRoute: LayoutReviewRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutStoresRoute: LayoutStoresRouteWithChildren,
+  LayoutUnassignedRoute: LayoutUnassignedRoute,
 }
 
 const LayoutRouteWithChildren =
