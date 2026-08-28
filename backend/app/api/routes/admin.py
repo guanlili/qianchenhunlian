@@ -907,6 +907,131 @@ def admin_list_stores(
     return AdminStoreList(items=items, total=total)
 
 
+class StoreOverviewItem(SQLModel):
+    """门店总览卡片: 每店待办徽标 (总部首页「哪家店有事一眼看到」)."""
+
+    id: uuid.UUID
+    name: str
+    city: str | None = None
+    district: str | None = None
+    status: str = "active"
+    member_count: int = 0
+    pending_audits: int = 0
+    pending_verifies: int = 0
+    pending_tickets: int = 0
+
+
+class StoreOverviewList(SQLModel):
+    items: list[StoreOverviewItem] = []
+    total: int = 0
+    # 全平台未归属 (总部兜底职责): 未分店会员 / 无主待处理工单 / 未处理反馈
+    unassigned_members: int = 0
+    unassigned_tickets: int = 0
+    open_feedback: int = 0
+
+
+@router.get(
+    "/stores/overview",
+    response_model=StoreOverviewList,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def stores_overview(
+    session: SessionDep,
+    actor: CurrentActor,
+    city: str | None = Query(default=None),
+) -> StoreOverviewList:
+    """门店总览 (总部首页卡片墙): 每店待办徽标 + 全平台未归属计数.
+
+    计数全部走 group-by 聚合 (4 条), 不逐店查询; 门店管理员只看本店卡片。
+    """
+    from app.models import ContactRequest
+
+    base = select(Store)
+    sid = _store_owner_id(actor)
+    if sid is not None:
+        base = base.where(Store.id == sid)
+    if city:
+        base = base.where(Store.city == city)
+    stores = session.exec(base.order_by(Store.city, Store.name)).all()
+
+    def _group_count(stmt: Any) -> dict[Any, int]:
+        return dict(session.exec(stmt).all())
+
+    member_counts = _group_count(
+        select(Profile.home_store_id, func.count())
+        .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+        .group_by(Profile.home_store_id)  # type: ignore[arg-type]
+    )
+    audit_counts = _group_count(
+        select(Profile.home_store_id, func.count())
+        .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+        .where(Profile.audit_status == "pending")
+        .group_by(Profile.home_store_id)  # type: ignore[arg-type]
+    )
+    verify_counts = _group_count(
+        select(Profile.home_store_id, func.count())
+        .select_from(User)
+        .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+        .where(User.verified == "pending")
+        .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+        .group_by(Profile.home_store_id)  # type: ignore[arg-type]
+    )
+    ticket_counts = _group_count(
+        select(ContactRequest.store_id, func.count())
+        .where(ContactRequest.status == "pending")
+        .where(ContactRequest.store_id.is_not(None))  # type: ignore[union-attr]
+        .group_by(ContactRequest.store_id)  # type: ignore[arg-type]
+    )
+
+    items = []
+    for s in stores:
+        items.append(
+            StoreOverviewItem(
+                id=s.id,
+                name=s.name,
+                city=s.city,
+                district=s.district,
+                status=s.status,
+                member_count=int(member_counts.get(s.id, 0) or 0),
+                pending_audits=int(audit_counts.get(s.id, 0) or 0),
+                pending_verifies=int(verify_counts.get(s.id, 0) or 0),
+                pending_tickets=int(ticket_counts.get(s.id, 0) or 0),
+            )
+        )
+
+    return StoreOverviewList(
+        items=items,
+        total=len(items),
+        unassigned_members=(
+            session.exec(
+                select(func.count())
+                .select_from(User)
+                .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+                .where(User.openid.is_not(None))  # type: ignore[union-attr]
+                .where(Profile.home_store_id.is_(None))  # type: ignore[union-attr]
+            ).one()
+            or 0
+        ),
+        unassigned_tickets=(
+            session.exec(
+                select(func.count())
+                .select_from(ContactRequest)
+                .where(ContactRequest.status == "pending")
+                .where(ContactRequest.store_id.is_(None))  # type: ignore[union-attr]
+            ).one()
+            or 0
+        ),
+        open_feedback=(
+            session.exec(
+                select(func.count())
+                .select_from(Feedback)
+                .where(Feedback.status == "open")
+            ).one()
+            or 0
+        ),
+    )
+
+
 @router.post(
     "/stores",
     response_model=StorePublic,
@@ -1698,10 +1823,13 @@ def list_contact_requests(
         "all", "pending", "accepted", "rejected", "contacted", "closed"
     ] = Query("all", alias="status"),
     store_id: uuid.UUID | None = Query(None),
+    unassigned: bool = Query(False, description="只看未归属任何门店的工单 (总部兜底)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminContactRequestList:
-    """工单列表. 红娘强制只看本店 (DB 层过滤, total/分页一致); 其余角色可按 store_id 过滤."""
+    """工单列表. 红娘强制只看本店 (DB 层过滤, total/分页一致); 其余角色可按 store_id 过滤.
+
+    unassigned=True 只返回 store_id 为空的历史无主单 (仅总部可用, 供「未归属处理中心」)."""
     base = select(ContactRequest)
     if status_filter != "all":
         base = base.where(ContactRequest.status == status_filter)
@@ -1710,6 +1838,8 @@ def list_contact_requests(
     owner_sid = _store_owner_id(actor)
     if owner_sid is not None:
         base = base.where(ContactRequest.store_id == owner_sid)
+    elif unassigned:
+        base = base.where(ContactRequest.store_id.is_(None))  # type: ignore[union-attr]
     elif store_id is not None:
         base = base.where(ContactRequest.store_id == store_id)
 
@@ -1932,6 +2062,7 @@ def list_members(
     user_status: Literal["all", "active", "blocked"] = Query("all"),
     membership: Literal["all", "member", "normal", "expiring"] = Query("all"),
     store_id: uuid.UUID | None = Query(None),
+    unassigned: bool = Query(False, description="只看未指定主属门店的会员 (总部兜底)"),
     gender: str | None = Query(None),
     keyword: str | None = Query(None, description="寻缘号 / 姓名 / 昵称 / 手机号"),
     skip: int = Query(0, ge=0),
@@ -1940,6 +2071,7 @@ def list_members(
     """会员统一列表 (User + Profile 合并). 替代旧 /users + /profiles 两个入口.
 
     仅小程序会员 (有 openid); 红娘只看本店.
+    unassigned=True 只返回 home_store_id 为空的会员 (供「未归属处理中心」分配门店).
     """
     base = (
         select(User, Profile)
@@ -1950,6 +2082,10 @@ def list_members(
     sid = _store_owner_id(actor)
     if sid is not None:
         base = base.where(Profile.home_store_id == sid)
+    elif unassigned:
+        base = base.where(Profile.home_store_id.is_(None))  # type: ignore[union-attr]
+    elif store_id is not None:
+        base = base.where(Profile.home_store_id == store_id)
 
     if audit_status == "none":
         base = base.where(Profile.id.is_(None))  # type: ignore
@@ -1973,11 +2109,9 @@ def list_members(
             )
         else:  # expiring: 7 天内到期
             base = base.where(
-                User.membership_expires_at > datetime.utcnow(),  # type: ignore
-                User.membership_expires_at <= soon,  # type: ignore
+                User.membership_expires_at > datetime.utcnow(),  # type: ignore[operator]
+                User.membership_expires_at <= soon,  # type: ignore[operator]
             )
-    if store_id is not None:
-        base = base.where(Profile.home_store_id == store_id)
     if gender:
         base = base.where(Profile.gender == gender)
     if keyword:
