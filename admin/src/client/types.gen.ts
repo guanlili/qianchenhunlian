@@ -1031,15 +1031,21 @@ export type StoreList = {
 };
 
 /**
- * 门店总览卡片: 每店待办徽标 (总部首页「哪家店有事一眼看到」).
+ * 门店总览卡片: 展示字段 (店招/地址/电话) + 指标 + 待办徽标.
  */
 export type StoreOverviewItem = {
     id: string;
     name: string;
     city?: (string | null);
     district?: (string | null);
+    address?: (string | null);
+    phone?: (string | null);
+    photo?: (string | null);
+    fees_desc?: (string | null);
     status?: string;
     member_count?: number;
+    today_signups?: number;
+    verified_members?: number;
     pending_audits?: number;
     pending_verifies?: number;
     pending_tickets?: number;

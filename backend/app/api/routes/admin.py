@@ -908,14 +908,20 @@ def admin_list_stores(
 
 
 class StoreOverviewItem(SQLModel):
-    """门店总览卡片: 每店待办徽标 (总部首页「哪家店有事一眼看到」)."""
+    """门店总览卡片: 展示字段 (店招/地址/电话) + 指标 + 待办徽标."""
 
     id: uuid.UUID
     name: str
     city: str | None = None
     district: str | None = None
+    address: str | None = None
+    phone: str | None = None
+    photo: str | None = None
+    fees_desc: str | None = None
     status: str = "active"
     member_count: int = 0
+    today_signups: int = 0
+    verified_members: int = 0
     pending_audits: int = 0
     pending_verifies: int = 0
     pending_tickets: int = 0
@@ -982,6 +988,25 @@ def stores_overview(
         .where(ContactRequest.store_id.is_not(None))  # type: ignore[union-attr]
         .group_by(ContactRequest.store_id)  # type: ignore[arg-type]
     )
+    # 今日新增 / 已实名 (卡片展示指标; 与上面同款 group-by)
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_counts = _group_count(
+        select(Profile.home_store_id, func.count())
+        .select_from(User)
+        .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+        .where(User.openid.is_not(None))  # type: ignore[union-attr]
+        .where(User.created_at >= today_start)
+        .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+        .group_by(Profile.home_store_id)  # type: ignore[arg-type]
+    )
+    verified_counts = _group_count(
+        select(Profile.home_store_id, func.count())
+        .select_from(User)
+        .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+        .where(User.verified == "passed")
+        .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+        .group_by(Profile.home_store_id)  # type: ignore[arg-type]
+    )
 
     items = []
     for s in stores:
@@ -991,8 +1016,14 @@ def stores_overview(
                 name=s.name,
                 city=s.city,
                 district=s.district,
+                address=s.address,
+                phone=s.phone,
+                photo=s.photo,
+                fees_desc=s.fees_desc,
                 status=s.status,
                 member_count=int(member_counts.get(s.id, 0) or 0),
+                today_signups=int(today_counts.get(s.id, 0) or 0),
+                verified_members=int(verified_counts.get(s.id, 0) or 0),
                 pending_audits=int(audit_counts.get(s.id, 0) or 0),
                 pending_verifies=int(verify_counts.get(s.id, 0) or 0),
                 pending_tickets=int(ticket_counts.get(s.id, 0) or 0),
