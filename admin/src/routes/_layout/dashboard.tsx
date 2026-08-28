@@ -12,6 +12,7 @@ import {
 
 import { AdminService } from "@/client"
 import { ActivityFeedList } from "@/components/Activities/ActivityFeedList"
+import { TrendPanel } from "@/components/Common/TrendPanel"
 import { memberDisplayName } from "@/components/Members/columns"
 import { MembersList } from "@/components/Members/MembersList"
 import { RequestBoard } from "@/components/Requests/RequestBoard"
@@ -192,6 +193,13 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
           </Link>
         )}
       </div>
+
+      {/* 趋势与效率 (业绩视图) */}
+      <TrendPanel
+        signups={data?.signups_last_7d ?? []}
+        avgHours={data?.avg_ticket_handle_hours ?? null}
+        overdue={data?.overdue_pending_tickets ?? 0}
+      />
 
       {/* 核心指标 */}
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">

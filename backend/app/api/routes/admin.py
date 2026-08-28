@@ -925,6 +925,7 @@ class StoreOverviewItem(SQLModel):
     pending_audits: int = 0
     pending_verifies: int = 0
     pending_tickets: int = 0
+    overdue_tickets: int = 0  # pending 超 48h (盯办: 卡片标红)
 
 
 class StoreOverviewList(SQLModel):
@@ -1007,6 +1008,14 @@ def stores_overview(
         .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
         .group_by(Profile.home_store_id)  # type: ignore[arg-type]
     )
+    # 逾期工单 (pending 超 48h): 卡片标红盯办
+    overdue_counts = _group_count(
+        select(ContactRequest.store_id, func.count())
+        .where(ContactRequest.status == "pending")
+        .where(ContactRequest.store_id.is_not(None))  # type: ignore[union-attr]
+        .where(ContactRequest.created_at < datetime.utcnow() - timedelta(hours=48))
+        .group_by(ContactRequest.store_id)  # type: ignore[arg-type]
+    )
 
     items = []
     for s in stores:
@@ -1027,6 +1036,7 @@ def stores_overview(
                 pending_audits=int(audit_counts.get(s.id, 0) or 0),
                 pending_verifies=int(verify_counts.get(s.id, 0) or 0),
                 pending_tickets=int(ticket_counts.get(s.id, 0) or 0),
+                overdue_tickets=int(overdue_counts.get(s.id, 0) or 0),
             )
         )
 
@@ -2982,8 +2992,15 @@ def list_verify_queue(
     )
 
 
+class DailyCount(SQLModel):
+    """趋势图单日计数 (MM-DD, 北京时间)."""
+
+    date: str
+    count: int
+
+
 class DashboardResponse(SQLModel):
-    """工作台聚合: 待办指标 + 最近动态 (docs/11 §3.1). 门店口径由后端按 actor 强制."""
+    """工作台聚合: 待办指标 + 最近动态 + 趋势/效率 (docs/11 §3.1). 门店口径由后端按 actor 强制."""
 
     stats: StatsResponse
     recent_signups: list[AdminMemberItem] = []
@@ -2992,6 +3009,9 @@ class DashboardResponse(SQLModel):
     ] = []  # 门店口径 = 本店待审, 全局 = 全平台
     recent_requests: list[AdminContactRequestItem] = []
     overdue_pending_tickets: int = 0  # pending 超 48h
+    # 业绩视图 (门店/全局口径一致): 近 7 天每日新增会员; 工单平均处理时长 (小时, 无样本为 None)
+    signups_last_7d: list[DailyCount] = []
+    avg_ticket_handle_hours: float | None = None
 
 
 @router.get(
@@ -3069,10 +3089,64 @@ def admin_dashboard(
         overdue_stmt = overdue_stmt.where(ContactRequest.store_id == sid)
     overdue = session.exec(overdue_stmt).one() or 0
 
+    # 近 7 天每日新增 (北京时间自然日分桶; 量小, Python 分桶避免跨库日期函数差异)
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    signup_base = (
+        select(User.created_at)
+        .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+        .where(User.openid.is_not(None))  # type: ignore[union-attr]
+        .where(User.created_at >= week_ago)
+    )
+    if sid is not None:
+        signup_base = signup_base.where(Profile.home_store_id == sid)
+    day_counts: dict[str, int] = {}
+    for created_at in session.exec(signup_base).all():
+        day_cn = (
+            created_at.replace(tzinfo=timezone.utc)
+            .astimezone(membership.CN_TZ)
+            .strftime("%m-%d")
+        )
+        day_counts[day_cn] = day_counts.get(day_cn, 0) + 1
+    signups_7d = [
+        DailyCount(
+            date=(datetime.now(membership.CN_TZ) - timedelta(days=6 - i)).strftime(
+                "%m-%d"
+            ),
+            count=day_counts.get(
+                (datetime.now(membership.CN_TZ) - timedelta(days=6 - i)).strftime(
+                    "%m-%d"
+                ),
+                0,
+            ),
+        )
+        for i in range(7)
+    ]
+
+    # 工单平均处理时长 (小时): 取最近 200 条已处理样本均值
+    handled_base = (
+        select(ContactRequest.created_at, ContactRequest.handled_at)
+        .where(ContactRequest.handled_at.is_not(None))  # type: ignore
+        .order_by(ContactRequest.handled_at.desc())  # type: ignore[union-attr]
+        .limit(200)
+    )
+    if sid is not None:
+        handled_base = handled_base.where(ContactRequest.store_id == sid)
+    handled_rows = session.exec(handled_base).all()
+    avg_hours: float | None = None
+    if handled_rows:
+        total_seconds = sum(
+            (h - c).total_seconds() for c, h in handled_rows if h and c and h >= c
+        )
+        n = sum(1 for c, h in handled_rows if h and c and h >= c)
+        if n:
+            avg_hours = round(total_seconds / n / 3600, 1)
+
     return DashboardResponse(
         stats=stats,
         recent_signups=recent_signups,
         recent_pending_audits=recent_audits,
         recent_requests=recent_requests,
         overdue_pending_tickets=overdue,
+        signups_last_7d=signups_7d,
+        avg_ticket_handle_hours=avg_hours,
     )

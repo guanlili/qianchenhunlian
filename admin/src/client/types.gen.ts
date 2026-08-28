@@ -546,7 +546,15 @@ export type CriteriaUpdate = {
 };
 
 /**
- * 工作台聚合: 待办指标 + 最近动态 (docs/11 §3.1). 门店口径由后端按 actor 强制.
+ * 趋势图单日计数 (MM-DD, 北京时间).
+ */
+export type DailyCount = {
+    date: string;
+    count: number;
+};
+
+/**
+ * 工作台聚合: 待办指标 + 最近动态 + 趋势/效率 (docs/11 §3.1). 门店口径由后端按 actor 强制.
  */
 export type DashboardResponse = {
     stats: StatsResponse;
@@ -554,6 +562,8 @@ export type DashboardResponse = {
     recent_pending_audits?: Array<AdminMemberItem>;
     recent_requests?: Array<AdminContactRequestItem>;
     overdue_pending_tickets?: number;
+    signups_last_7d?: Array<DailyCount>;
+    avg_ticket_handle_hours?: (number | null);
 };
 
 export type DistrictItem = {
@@ -1069,6 +1079,7 @@ export type StoreOverviewItem = {
     pending_audits?: number;
     pending_verifies?: number;
     pending_tickets?: number;
+    overdue_tickets?: number;
 };
 
 export type StoreOverviewList = {
