@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   ArrowRight,
   BadgeCheck,
@@ -11,15 +11,26 @@ import {
 } from "lucide-react"
 
 import { AdminService } from "@/client"
+import { ActivityFeedList } from "@/components/Activities/ActivityFeedList"
 import { memberDisplayName } from "@/components/Members/columns"
+import { MembersList } from "@/components/Members/MembersList"
+import { RequestBoard } from "@/components/Requests/RequestBoard"
+import { AuditQueue } from "@/components/Review/AuditQueue"
+import { VerifyQueue } from "@/components/Review/VerifyQueue"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 
+const VALID_TABS = ["overview", "members", "review", "tickets", "activities"]
+
 export const Route = createFileRoute("/_layout/dashboard")({
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   component: Dashboard,
   head: () => ({
-    meta: [{ title: "工作台 - 乾缘婚恋后台" }],
+    meta: [{ title: "跨店看板 - 乾缘婚恋后台" }],
   }),
 })
 
@@ -34,7 +45,63 @@ const REQUEST_STATUS: Record<string, string> = {
 function Dashboard() {
   const { user } = useAuth()
   const isSuperuser = !!user?.is_superuser
+  const { tab } = Route.useSearch()
+  const navigate = useNavigate()
+  const activeTab =
+    tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : "overview"
 
+  const goTab = (v: string) =>
+    navigate({ to: "/dashboard", search: { tab: v } })
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">跨店看板</h1>
+        <p className="text-muted-foreground">
+          {isSuperuser
+            ? "全平台跨店视角: 指标 + 会员 / 审核 / 工单 / 动态四张全局视图 (单店作业请进门店工作台)"
+            : "本店概览与待办 (单店作业请进门店工作台)"}
+        </p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={goTab}>
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="overview">总览</TabsTrigger>
+          <TabsTrigger value="members">会员</TabsTrigger>
+          <TabsTrigger value="review">审核</TabsTrigger>
+          <TabsTrigger value="tickets">工单</TabsTrigger>
+          <TabsTrigger value="activities">动态</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="mt-4">
+          <OverviewTab isSuperuser={isSuperuser} />
+        </TabsContent>
+        <TabsContent value="members" className="mt-4">
+          <MembersList />
+        </TabsContent>
+        <TabsContent value="review" className="mt-4">
+          <div className="space-y-6">
+            <section>
+              <h2 className="mb-3 text-base font-semibold">资料审核</h2>
+              <AuditQueue />
+            </section>
+            <section>
+              <h2 className="mb-3 text-base font-semibold">实名核验</h2>
+              <VerifyQueue />
+            </section>
+          </div>
+        </TabsContent>
+        <TabsContent value="tickets" className="mt-4">
+          <RequestBoard />
+        </TabsContent>
+        <TabsContent value="activities" className="mt-4">
+          <ActivityFeedList />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
   const { data } = useQuery({
     queryFn: () => AdminService.adminDashboard(),
     queryKey: ["admin-dashboard"],
@@ -45,7 +112,7 @@ function Dashboard() {
     {
       label: "待处理撮合工单",
       value: stats?.pending_tickets ?? 0,
-      to: "/requests",
+      to: "/dashboard?tab=tickets",
       icon: Heart,
       accent: "text-rose-600",
     },
@@ -54,7 +121,7 @@ function Dashboard() {
           {
             label: "待审资料",
             value: stats?.pending_audits ?? 0,
-            to: "/review",
+            to: "/dashboard?tab=review",
             icon: ClipboardCheck,
             accent: "text-amber-600",
           },
@@ -70,7 +137,7 @@ function Dashboard() {
     {
       label: "待实名核验",
       value: stats?.pending_verifies ?? 0,
-      to: "/members",
+      to: "/dashboard?tab=review",
       icon: BadgeCheck,
       accent: "text-emerald-600",
     },
@@ -89,14 +156,7 @@ function Dashboard() {
   ]
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">工作台</h1>
-        <p className="text-muted-foreground">
-          {isSuperuser ? "全局经营概览与今日待办" : "本店经营概览与今日待办"}
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* 待办卡: 登录第一眼知道要干什么 */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {todoCards.map((c) => (
@@ -115,7 +175,7 @@ function Dashboard() {
           </Link>
         ))}
         {(data?.overdue_pending_tickets ?? 0) > 0 && (
-          <Link to="/requests">
+          <Link to="/dashboard" search={{ tab: "tickets" }}>
             <Card className="border-rose-300 bg-rose-50 transition-shadow hover:shadow-md">
               <CardContent className="flex items-center justify-between py-5">
                 <div>
@@ -158,9 +218,9 @@ function Dashboard() {
               ? new Date(m.created_at).toLocaleDateString("zh-CN")
               : "",
           }))}
-          footer={{ label: "去会员管理", to: "/members" }}
+          footer={{ label: "去会员视图", to: "/dashboard?tab=members" }}
         />
-        {isSuperuser && (
+        {(data?.recent_pending_audits ?? []).length >= 0 && (
           <RecentCard
             title="待审资料"
             icon={ClipboardCheck}
@@ -170,7 +230,7 @@ function Dashboard() {
               main: memberDisplayName(m),
               sub: m.audit_status === "pending" ? "待审核" : "",
             }))}
-            footer={{ label: "去审核中心", to: "/review" }}
+            footer={{ label: "去审核队列", to: "/dashboard?tab=review" }}
           />
         )}
         <RecentCard
@@ -182,7 +242,7 @@ function Dashboard() {
             main: `${r.from_xy_code || "..."} → ${r.to_xy_code || "..."}`,
             sub: REQUEST_STATUS[r.status] ?? r.status,
           }))}
-          footer={{ label: "去撮合工单", to: "/requests" }}
+          footer={{ label: "去工单面板", to: "/dashboard?tab=tickets" }}
         />
       </div>
     </div>

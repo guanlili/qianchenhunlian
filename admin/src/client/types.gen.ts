@@ -1030,6 +1030,29 @@ export type StoreList = {
     total?: number;
 };
 
+/**
+ * 门店总览卡片: 每店待办徽标 (总部首页「哪家店有事一眼看到」).
+ */
+export type StoreOverviewItem = {
+    id: string;
+    name: string;
+    city?: (string | null);
+    district?: (string | null);
+    status?: string;
+    member_count?: number;
+    pending_audits?: number;
+    pending_verifies?: number;
+    pending_tickets?: number;
+};
+
+export type StoreOverviewList = {
+    items?: Array<StoreOverviewItem>;
+    total?: number;
+    unassigned_members?: number;
+    unassigned_tickets?: number;
+    open_feedback?: number;
+};
+
 export type StorePublic = {
     name: string;
     city: string;
@@ -1264,6 +1287,12 @@ export type AdminAdminCreateStoreData = {
 
 export type AdminAdminCreateStoreResponse = (StorePublic);
 
+export type AdminStoresOverviewData = {
+    city?: (string | null);
+};
+
+export type AdminStoresOverviewResponse = (StoreOverviewList);
+
 export type AdminAdminUpdateStoreData = {
     requestBody: StoreUpdate;
     storeId: string;
@@ -1365,6 +1394,10 @@ export type AdminListContactRequestsData = {
     skip?: number;
     status?: 'all' | 'pending' | 'accepted' | 'rejected' | 'contacted' | 'closed';
     storeId?: (string | null);
+    /**
+     * 只看未归属任何门店的工单 (总部兜底)
+     */
+    unassigned?: boolean;
 };
 
 export type AdminListContactRequestsResponse = (AdminContactRequestList);
@@ -1394,6 +1427,10 @@ export type AdminListMembersData = {
     membership?: 'all' | 'member' | 'normal' | 'expiring';
     skip?: number;
     storeId?: (string | null);
+    /**
+     * 只看未指定主属门店的会员 (总部兜底)
+     */
+    unassigned?: boolean;
     userStatus?: 'all' | 'active' | 'blocked';
     verified?: 'all' | 'none' | 'pending' | 'passed' | 'rejected';
 };

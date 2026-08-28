@@ -1,12 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { Pencil, Plus, Trash2, Upload, UsersRound } from "lucide-react"
+import { ArrowRight, MapPin, Pencil, Plus, Trash2, Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
-import { AdminService, type StorePublic, UploadsService } from "@/client"
+import {
+  AdminService,
+  type StoreOverviewItem,
+  type StorePublic,
+  UploadsService,
+} from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -19,20 +30,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
 import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
 import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/stores")({
   component: StoresPage,
-  head: () => ({ meta: [{ title: "门店管理 - 乾缘后台" }] }),
+  head: () => ({ meta: [{ title: "门店总览 - 乾缘后台" }] }),
 })
 
 function StoresPage() {
@@ -40,127 +51,245 @@ function StoresPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isSuperuser = !!user?.is_superuser
-  const { data } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 200 }),
+  const [city, setCity] = useState<string>("__all__")
+  const [keyword, setKeyword] = useState("")
+
+  // 卡片墙数据: 每店待办徽标 + 未归属计数 (门店管理员后端自动限本店)
+  const { data: overview, isLoading } = useQuery({
+    queryFn: () =>
+      AdminService.storesOverview({
+        city: city === "__all__" ? undefined : city,
+      }),
+    queryKey: ["stores-overview", city],
+  })
+  // 完整门店数据 (编辑对话框初始化需要全部字段, overview 只有摘要)
+  const { data: fullStores } = useQuery({
+    queryFn: () => AdminService.adminListStores({ limit: 500 }),
     queryKey: ["admin-stores"],
   })
+  const fullById = new Map((fullStores?.items || []).map((s) => [s.id, s]))
 
   const del = useMutation({
     mutationFn: (id: string) => AdminService.adminDeleteStore({ storeId: id }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-stores"] })
+      qc.invalidateQueries({ queryKey: ["stores-overview"] })
       toast.success("门店已关闭")
     },
   })
 
+  const cities = [
+    ...new Set((fullStores?.items || []).map((s) => s.city).filter(Boolean)),
+  ] as string[]
+  const items = (overview?.items || []).filter(
+    (s) =>
+      !keyword ||
+      s.name.includes(keyword) ||
+      (s.city || "").includes(keyword) ||
+      (s.district || "").includes(keyword),
+  )
+
+  const unassignedTotal =
+    (overview?.unassigned_members ?? 0) +
+    (overview?.unassigned_tickets ?? 0) +
+    (overview?.open_feedback ?? 0)
+
   return (
-    <div className="space-y-6 p-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>门店 (共 {data?.total ?? 0} 家)</CardTitle>
-            <p className="text-muted-foreground mt-1 text-sm">
-              点击门店行进入门店工作台: 会员 / 审核 / 核验 / 工单都在店里处理
-            </p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">门店总览</h1>
+          <p className="text-muted-foreground">
+            进店干活: 会员 / 审核 / 核验 / 工单都在门店工作台里处理
+          </p>
+        </div>
+        {isSuperuser && (
+          <StoreFormDialog
+            trigger={
+              <Button>
+                <Plus /> 新建门店
+              </Button>
+            }
+          />
+        )}
+      </div>
+
+      {/* 总部兜底: 未归属数据横幅 (门店管理员看不到平台未归属计数) */}
+      {isSuperuser && unassignedTotal > 0 && (
+        <Link
+          to="/unassigned"
+          className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100"
+        >
+          <span>
+            ⚠ 全平台未归属: 会员 {overview?.unassigned_members ?? 0} ·
+            待处理工单 {overview?.unassigned_tickets ?? 0} · 未处理反馈{" "}
+            {overview?.open_feedback ?? 0}
+          </span>
+          <span className="font-semibold">去处理 →</span>
+        </Link>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Select value={city} onValueChange={setCity}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">全部城市</SelectItem>
+            {cities.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          placeholder="搜索门店名 / 城市 / 区县"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-52 w-full" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <MapPin className="text-muted-foreground mb-3 size-10" />
+          <div className="text-muted-foreground">
+            没有符合条件的门店
+            {isSuperuser ? ", 点右上角「新建门店」创建第一家" : ""}
           </div>
-          {isSuperuser && (
-            <StoreFormDialog
-              trigger={
-                <Button>
-                  <Plus /> 新建门店
-                </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {items.map((s) => (
+            <StoreCard
+              key={s.id}
+              item={s}
+              full={fullById.get(s.id)}
+              isSuperuser={isSuperuser}
+              onEnter={() =>
+                navigate({
+                  to: "/stores/$storeId",
+                  params: { storeId: s.id },
+                })
               }
+              onDelete={() => {
+                if (confirm(`确定关闭门店 "${s.name}" 吗?`)) del.mutate(s.id)
+              }}
             />
-          )}
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>城市</TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead>会员数</TableHead>
-                <TableHead>区/县</TableHead>
-                <TableHead>地址</TableHead>
-                <TableHead>电话</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items || []).map((s) => (
-                <TableRow
-                  key={s.id}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    navigate({
-                      to: "/stores/$storeId",
-                      params: { storeId: s.id },
-                    })
-                  }
-                >
-                  <TableCell>{s.city}</TableCell>
-                  <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{s.member_count ?? 0}</Badge>
-                  </TableCell>
-                  <TableCell>{s.district || "—"}</TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {s.address || "—"}
-                  </TableCell>
-                  <TableCell>{s.phone || "—"}</TableCell>
-                  <TableCell>
-                    <span
-                      className={
-                        s.status === "active"
-                          ? "rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700"
-                          : "rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500"
-                      }
-                    >
-                      {s.status === "active" ? "营业中" : "已关闭"}
-                    </span>
-                  </TableCell>
-                  <TableCell
-                    className="text-right"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {isSuperuser && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to="/stores/$storeId" params={{ storeId: s.id }}>
-                          <UsersRound /> 管理员
-                        </Link>
-                      </Button>
-                    )}
-                    {isSuperuser && (
-                      <StoreFormDialog
-                        store={s}
-                        trigger={
-                          <Button variant="ghost" size="sm">
-                            <Pencil />
-                          </Button>
-                        }
-                      />
-                    )}
-                    {isSuperuser && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm(`确定关闭门店 "${s.name}" 吗?`))
-                            del.mutate(s.id)
-                        }}
-                      >
-                        <Trash2 className="text-rose-500" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      )}
     </div>
+  )
+}
+
+function StoreCard({
+  item,
+  full,
+  isSuperuser,
+  onEnter,
+  onDelete,
+}: {
+  item: StoreOverviewItem
+  full?: StorePublic
+  isSuperuser: boolean
+  onEnter: () => void
+  onDelete: () => void
+}) {
+  const pending = [
+    {
+      label: "待审资料",
+      value: item.pending_audits ?? 0,
+      tone: "destructive" as const,
+    },
+    {
+      label: "待核验",
+      value: item.pending_verifies ?? 0,
+      tone: "secondary" as const,
+    },
+    {
+      label: "待处理工单",
+      value: item.pending_tickets ?? 0,
+      tone: "destructive" as const,
+    },
+  ]
+  const hasTodo = pending.some((p) => p.value > 0)
+
+  return (
+    <Card className="flex flex-col transition-shadow hover:shadow-md">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="text-base">{item.name}</CardTitle>
+            <CardDescription>
+              {[item.city, item.district].filter(Boolean).join(" · ") || "—"}
+            </CardDescription>
+          </div>
+          <span
+            className={
+              item.status === "active"
+                ? "rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700"
+                : "rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500"
+            }
+          >
+            {item.status === "active" ? "营业中" : "已关闭"}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-3">
+        <div className="text-sm">
+          <span className="text-muted-foreground">会员 </span>
+          <span className="text-lg font-bold">{item.member_count ?? 0}</span>
+          <span className="text-muted-foreground"> 位</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {hasTodo ? (
+            pending.map(
+              (p) =>
+                p.value > 0 && (
+                  <Badge key={p.label} variant={p.tone}>
+                    {p.label} {p.value}
+                  </Badge>
+                ),
+            )
+          ) : (
+            <Badge variant="outline">暂无待办 ✅</Badge>
+          )}
+        </div>
+        <div className="mt-auto flex items-center gap-2 pt-2">
+          <Button className="flex-1" onClick={onEnter}>
+            进店工作台 <ArrowRight />
+          </Button>
+          {isSuperuser && (
+            <>
+              <StoreFormDialog
+                store={full}
+                trigger={
+                  <Button variant="ghost" size="icon" aria-label="编辑门店">
+                    <Pencil />
+                  </Button>
+                }
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="关闭门店"
+                onClick={onDelete}
+              >
+                <Trash2 className="text-rose-500" />
+              </Button>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -210,6 +339,7 @@ function StoreFormDialog({
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-stores"] })
+      qc.invalidateQueries({ queryKey: ["stores-overview"] })
       toast.success(store ? "已更新" : "已创建")
       setOpen(false)
     },

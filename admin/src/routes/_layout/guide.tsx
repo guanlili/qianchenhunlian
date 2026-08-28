@@ -40,7 +40,7 @@ const mobileOps = [
   {
     icon: Search,
     title: "查会员、看资料和联系方式",
-    desc: "会员管理 → 点任意一行进 360° 详情 (整行可点)",
+    desc: "进本店工作台 → 「会员」页签 → 点任意一行进 360° 详情 (整行可点)",
   },
   {
     icon: BadgeCheck,
@@ -55,12 +55,12 @@ const mobileOps = [
   {
     icon: Heart,
     title: "处理撮合工单",
-    desc: "撮合工单 → 待处理工单 → 处理",
+    desc: "本店工作台 → 「撮合工单」页签 → 待处理工单 → 处理",
   },
   {
     icon: LineChart,
     title: "看本店经营数据",
-    desc: "工作台",
+    desc: "本店工作台 → 「概览」页签",
   },
 ]
 
@@ -75,7 +75,7 @@ const desktopOps = [
     desc: "同上",
   },
   {
-    title: "批量筛选、会员管理",
+    title: "批量筛选、跨店看板",
     desc: "大屏看全字段方便",
   },
 ]
