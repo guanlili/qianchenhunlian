@@ -420,3 +420,139 @@ def test_feedback_store_scoped(client, db: Session, superuser_token_headers) -> 
     )
     contents2 = [i["content"] for i in r2.json()["items"]]
     assert set(contents2) == {"本店会员反馈", "他店会员反馈"}
+
+
+# ---------------- 门店总览 / 未归属 (store-hub 设计) ----------------
+
+
+def _wx_member(db: Session, home_store_id=None, verified="none") -> User:
+    """造小程序式会员 (有 openid, 才进 admin 会员列表)."""
+    user = crud.create_user(
+        session=db,
+        user_create=UserCreate(
+            email=random_email(), password=random_lower_string() + "Aa1!"
+        ),
+    )
+    user.openid = "oHX" + random_lower_string()[:8]
+    user.verified = verified
+    db.add(
+        Profile(
+            user_id=user.id,
+            home_store_id=home_store_id,
+            progress=80,
+            nickname="测试会员",
+        )
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def test_stores_overview_badges(client, db: Session, superuser_token_headers) -> None:
+    """总览卡片: 每店待审/核验/工单徽标 + 全平台未归属计数."""
+    from app.models import ContactRequest, Feedback
+
+    store_a = Store(name="总览店A", city="济南")
+    db.add(store_a)
+    db.commit()
+    db.refresh(store_a)
+    store_b = _another_store(db)
+
+    # 店 A: 1 会员待审 + 1 待核验(资料已过审); 店 B: 1 会员无待办
+    # (Profile.audit_status 默认 pending, 需显式把非待审的置为 approved)
+    ma = _wx_member(db, home_store_id=store_a.id)
+    pa = _profile_of(db, ma.id)
+    pa.audit_status = "pending"
+    db.add(pa)
+    mv = _wx_member(db, home_store_id=store_a.id, verified="pending")
+    pv = _profile_of(db, mv.id)
+    pv.audit_status = "approved"
+    db.add(pv)
+    mb = _wx_member(db, home_store_id=store_b.id)
+    pb = _profile_of(db, mb.id)
+    pb.audit_status = "approved"
+    db.add(pb)
+    # 店 A 一条 pending 工单
+    target = _wx_member(db, home_store_id=store_b.id)
+    pt = _profile_of(db, target.id)
+    pt.audit_status = "approved"
+    db.add(pt)
+    db.add(
+        ContactRequest(from_user_id=ma.id, to_user_id=target.id, store_id=store_a.id)
+    )
+    # 未归属: 1 会员 + 1 工单 + 1 反馈
+    orphan = _wx_member(db, home_store_id=None)
+    db.add(ContactRequest(from_user_id=orphan.id, to_user_id=target.id, store_id=None))
+    db.add(Feedback(user_id=orphan.id, content="无主反馈"))
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/stores/overview", headers=superuser_token_headers
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    by_id = {i["id"]: i for i in body["items"]}
+    a = by_id[str(store_a.id)]
+    assert a["member_count"] == 2
+    assert a["pending_audits"] == 1
+    assert a["pending_verifies"] == 1
+    assert a["pending_tickets"] == 1
+    assert by_id[str(store_b.id)]["pending_audits"] == 0
+    assert body["unassigned_members"] == 1
+    assert body["unassigned_tickets"] == 1
+    assert body["open_feedback"] == 1
+
+    # 门店管理员: 只看到本店卡片
+    headers, own = _setup_store_admin(client, db)
+    r2 = client.get(f"{settings.API_V1_STR}/admin/stores/overview", headers=headers)
+    assert r2.status_code == 200
+    items2 = r2.json()["items"]
+    assert [i["id"] for i in items2] == [str(own.id)]
+
+
+def test_members_unassigned_filter(
+    client, db: Session, superuser_token_headers
+) -> None:
+    store = Store(name="归属店", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+    _wx_member(db, home_store_id=store.id)
+    orphan = _wx_member(db, home_store_id=None)
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/members",
+        headers=superuser_token_headers,
+        params={"unassigned": "true"},
+    )
+    assert r.status_code == 200
+    ids = [i["user_id"] for i in r.json()["items"]]
+    assert ids == [str(orphan.id)]
+
+
+def test_requests_unassigned_filter(
+    client, db: Session, superuser_token_headers
+) -> None:
+    from app.models import ContactRequest
+
+    store = Store(name="工单店", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+    ua = _wx_member(db, home_store_id=store.id)
+    ub = _wx_member(db, home_store_id=None)
+    db.add(ContactRequest(from_user_id=ua.id, to_user_id=ub.id, store_id=store.id))
+    db.add(ContactRequest(from_user_id=ub.id, to_user_id=ua.id, store_id=None))
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/contact-requests",
+        headers=superuser_token_headers,
+        params={"unassigned": "true"},
+    )
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["from_user_id"] == str(ub.id)
+    assert items[0]["store_id"] is None

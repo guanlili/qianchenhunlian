@@ -1,16 +1,13 @@
 import {
-  Activity,
   Award,
   BookOpen,
-  ClipboardCheck,
-  Heart,
   Home,
+  Inbox,
   MapPin,
   MessageSquare,
   ScrollText,
   Store,
   UserCog,
-  Users,
 } from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
@@ -25,18 +22,23 @@ import useAuth from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
-// 信息架构见 docs/10-后台功能重设计.md.
-// 以门店为主体 (2026-08 重构): 总部保留全局页面, 「门店」上移为第二入口;
-// 门店管理员只保留「本店工作台」+ 帮助入口 —— 会员/审核/核验/工单/动态
-// 全部聚合在门店工作台的 Tab 里, 不再暴露全局菜单页.
-const superuserItems: Item[] = [
-  { icon: Home, title: "工作台", path: "/dashboard" },
-  { icon: MapPin, title: "门店", path: "/stores" },
-  { icon: Users, title: "会员管理", path: "/members" },
-  { icon: Activity, title: "行为动态", path: "/activities" },
-  { icon: ClipboardCheck, title: "审核中心", path: "/review" },
-  { icon: Heart, title: "撮合工单", path: "/requests" },
+// 信息架构 (store-hub 设计, 2026-08): 平台 = 门店的集合 + 全局兜底.
+// - 总部登录落「门店总览」卡片墙, 日常作业全部在门店工作台内完成;
+//   跨店视角收进「跨店看板」(会员/审核/工单/动态四个全局页收编为其页签);
+//   总部兜底职责集中在「未归属处理」(无主会员分店 / 无主工单改派 / 反馈).
+// - 门店管理员: 只保留「本店工作台」+ 帮助入口.
+const storeHubItems: Item[] = [
+  { icon: MapPin, title: "门店总览", path: "/stores" },
+  { icon: Home, title: "跨店看板", path: "/dashboard" },
+  { icon: Inbox, title: "未归属处理", path: "/unassigned" },
+]
+
+// 仅总部管理员可见的平台级工具
+const platformItems: Item[] = [
   { icon: MessageSquare, title: "意见反馈", path: "/feedback" },
+  { icon: Award, title: "平台设置", path: "/qualifications" },
+  { icon: UserCog, title: "管理员账号", path: "/admins" },
+  { icon: ScrollText, title: "操作日志", path: "/audit-logs" },
 ]
 
 // 门店管理员: 仅有本店工作台 (数据范围由后端强制本店; 残缺账号无入口, fail-closed)
@@ -46,13 +48,6 @@ const storeAdminItems: Item[] = [
     title: "本店工作台",
     path: "/stores/$storeId",
   },
-]
-
-// 仅总部管理员可见
-const adminItems: Item[] = [
-  { icon: Award, title: "平台设置", path: "/qualifications" },
-  { icon: UserCog, title: "管理员账号", path: "/admins" },
-  { icon: ScrollText, title: "操作日志", path: "/audit-logs" },
 ]
 
 // 所有角色可见的帮助入口 (docs/14 的用户可见版)
@@ -65,15 +60,13 @@ export function AppSidebar() {
   const isSuperuser = !!currentUser?.is_superuser
 
   // 门店管理员: 登录即进本店工作台 (未配置门店的残缺账号无导航入口, 与后端 fail-closed 一致)
-  const items: Item[] = isSuperuser
-    ? [...superuserItems, ...adminItems]
-    : currentUser?.store_id
-      ? storeAdminItems.map((it) =>
-          it.path === "/stores/$storeId" && currentUser.store_id
-            ? { ...it, params: { storeId: currentUser.store_id } }
-            : it,
-        )
-      : storeAdminItems
+  const storeItems: Item[] = currentUser?.store_id
+    ? storeAdminItems.map((it) =>
+        it.path === "/stores/$storeId" && currentUser.store_id
+          ? { ...it, params: { storeId: currentUser.store_id } }
+          : it,
+      )
+    : storeAdminItems
 
   return (
     <Sidebar collapsible="icon">
@@ -81,8 +74,15 @@ export function AppSidebar() {
         <Logo variant="responsive" />
       </SidebarHeader>
       <SidebarContent>
-        <Main items={items} />
-        <Main items={helpItems} />
+        {isSuperuser ? (
+          <>
+            <Main items={storeHubItems} label="作业" />
+            <Main items={platformItems} label="平台" />
+          </>
+        ) : (
+          <Main items={storeItems} label="作业" />
+        )}
+        <Main items={helpItems} label="帮助" />
       </SidebarContent>
       <SidebarFooter>
         <SidebarAppearance />
