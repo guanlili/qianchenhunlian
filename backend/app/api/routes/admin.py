@@ -1063,6 +1063,188 @@ def stores_overview(
     )
 
 
+class StatementMemberRow(SQLModel):
+    """对账单明细: 当月新增会员行."""
+
+    created_at: datetime
+    xy_code: str | None = None
+    nickname: str | None = None
+
+
+class StatementGrantRow(SQLModel):
+    """对账单明细: 当月会员发放记录行 (线上/线下)."""
+
+    created_at: datetime
+    plan_code: str
+    days: int
+    source: str  # wx_pay / admin_recharge / admin_trial / admin_compensate
+    granted_by_email: str | None = None
+
+
+class StoreStatement(SQLModel):
+    """门店月度对账单 (自然月, 北京时间切边界; docs/13 门店结算口径)."""
+
+    store_id: uuid.UUID
+    store_name: str
+    month: str  # YYYY-MM
+    new_members: int  # 当月新增会员 (主属本店)
+    total_members: int  # 截至当月末累计会员
+    grants_online: int  # 当月线上支付开通/续费次数
+    grants_offline: int  # 当月线下开通/续费次数
+    tickets_created: int  # 当月新建工单
+    tickets_handled: int  # 当月处理完成工单
+    member_rows: list[StatementMemberRow] = []
+    grant_rows: list[StatementGrantRow] = []
+
+
+def _month_range_utc(month: str) -> tuple[datetime, datetime]:
+    """'YYYY-MM' (北京时间自然月) → [start, end) 的 UTC 边界."""
+    import re
+
+    from app.core.membership import CN_TZ
+
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        raise HTTPException(status_code=400, detail="month 格式应为 YYYY-MM")
+    year, mon = int(month[:4]), int(month[5:7])
+    start_cn = datetime(year, mon, 1, tzinfo=CN_TZ)
+    end_cn = (
+        datetime(year + 1, 1, 1, tzinfo=CN_TZ)
+        if mon == 12
+        else datetime(year, mon + 1, 1, tzinfo=CN_TZ)
+    )
+    return (
+        start_cn.astimezone(timezone.utc).replace(tzinfo=None),
+        end_cn.astimezone(timezone.utc).replace(tzinfo=None),
+    )
+
+
+@router.get(
+    "/stores/{store_id}/statement",
+    response_model=StoreStatement,
+    dependencies=[Depends(require_admin_or_staff)],
+)
+def store_statement(
+    session: SessionDep,
+    actor: CurrentActor,
+    store_id: uuid.UUID,
+    month: str | None = Query(None, description="YYYY-MM, 缺省上一个北京自然月"),
+) -> StoreStatement:
+    """门店月度对账单: 新增会员 / 会员发放 (线上+线下) / 工单量 + 明细行.
+
+    门店管理员只能导出本店 (数据范围与工作台一致); CSV 由前端用本接口数据生成。
+    """
+    from app.models import ContactRequest, MembershipGrant
+
+    store = session.get(Store, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="门店不存在")
+    owner_sid = _store_owner_id(actor)
+    if owner_sid is not None and owner_sid != store_id:
+        raise HTTPException(status_code=403, detail="只能导出您的门店对账单")
+
+    if month is None:
+        now_cn = datetime.now(membership.CN_TZ)
+        first_this_month = now_cn.replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+        last_month_start = (
+            first_this_month.replace(year=now_cn.year - 1, month=12)
+            if now_cn.month == 1
+            else first_this_month.replace(month=now_cn.month - 1)
+        )
+        month = last_month_start.strftime("%Y-%m")
+    start, end = _month_range_utc(month)
+
+    # 当月新增会员 (主属本店) + 截至当月末累计
+    member_rows = session.exec(
+        select(User, Profile)
+        .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+        .where(Profile.home_store_id == store_id)
+        .where(User.openid.is_not(None))  # type: ignore[union-attr]
+        .where(User.created_at >= start, User.created_at < end)
+        .order_by(User.created_at)  # type: ignore[arg-type]
+    ).all()
+    total_members = (
+        session.exec(
+            select(func.count())
+            .select_from(User)
+            .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+            .where(Profile.home_store_id == store_id)
+            .where(User.openid.is_not(None))  # type: ignore[union-attr]
+            .where(User.created_at < end)
+        ).one()
+        or 0
+    )
+
+    # 当月会员发放: 按会员主属门店统计 (线上 wx_pay 发放的 grant.store_id 为空,
+    # 归属只能看会员本店; 线下发放也在本店), 排除已撤销; 线上/线下分计
+    grants = session.exec(
+        select(MembershipGrant)
+        .join(User, MembershipGrant.user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+        .where(Profile.home_store_id == store_id)
+        .where(MembershipGrant.revoked_at.is_(None))  # type: ignore
+        .where(MembershipGrant.created_at >= start, MembershipGrant.created_at < end)
+        .order_by(MembershipGrant.created_at)  # type: ignore[arg-type]
+    ).all()
+    grants_online = sum(1 for g in grants if g.source == membership.SOURCE_ONLINE)
+    grants_offline = len(grants) - grants_online
+
+    # 当月工单量
+    tickets_created = (
+        session.exec(
+            select(func.count())
+            .select_from(ContactRequest)
+            .where(ContactRequest.store_id == store_id)
+            .where(ContactRequest.created_at >= start, ContactRequest.created_at < end)
+        ).one()
+        or 0
+    )
+    tickets_handled = (
+        session.exec(
+            select(func.count())
+            .select_from(ContactRequest)
+            .where(ContactRequest.store_id == store_id)
+            .where(ContactRequest.handled_at.is_not(None))  # type: ignore
+            .where(
+                ContactRequest.handled_at >= start,  # type: ignore[operator]
+                ContactRequest.handled_at < end,  # type: ignore[operator]
+            )
+        ).one()
+        or 0
+    )
+
+    return StoreStatement(
+        store_id=store.id,
+        store_name=store.name,
+        month=month,
+        new_members=len(member_rows),
+        total_members=int(total_members),
+        grants_online=grants_online,
+        grants_offline=grants_offline,
+        tickets_created=int(tickets_created),
+        tickets_handled=int(tickets_handled),
+        member_rows=[
+            StatementMemberRow(
+                created_at=u.created_at,
+                xy_code=u.xy_code,
+                nickname=p.nickname,
+            )
+            for u, p in member_rows
+        ],
+        grant_rows=[
+            StatementGrantRow(
+                created_at=g.created_at,
+                plan_code=g.plan_code,
+                days=g.days,
+                source=g.source,
+                granted_by_email=g.granted_by_email,
+            )
+            for g in grants
+        ],
+    )
+
+
 @router.post(
     "/stores",
     response_model=StorePublic,

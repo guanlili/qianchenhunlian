@@ -997,6 +997,26 @@ export type StaffUpdate = {
     store_id?: (string | null);
 };
 
+/**
+ * 对账单明细: 当月会员发放记录行 (线上/线下).
+ */
+export type StatementGrantRow = {
+    created_at: string;
+    plan_code: string;
+    days: number;
+    source: string;
+    granted_by_email?: (string | null);
+};
+
+/**
+ * 对账单明细: 当月新增会员行.
+ */
+export type StatementMemberRow = {
+    created_at: string;
+    xy_code?: (string | null);
+    nickname?: (string | null);
+};
+
 export type StatsResponse = {
     total_users?: number;
     total_profiles?: number;
@@ -1071,6 +1091,23 @@ export type StorePublic = {
     fees_desc?: (string | null);
     status?: string;
     id: string;
+};
+
+/**
+ * 门店月度对账单 (自然月, 北京时间切边界; docs/13 门店结算口径).
+ */
+export type StoreStatement = {
+    store_id: string;
+    store_name: string;
+    month: string;
+    new_members: number;
+    total_members: number;
+    grants_online: number;
+    grants_offline: number;
+    tickets_created: number;
+    tickets_handled: number;
+    member_rows?: Array<StatementMemberRow>;
+    grant_rows?: Array<StatementGrantRow>;
 };
 
 export type StoreUpdate = {
@@ -1298,6 +1335,16 @@ export type AdminStoresOverviewData = {
 };
 
 export type AdminStoresOverviewResponse = (StoreOverviewList);
+
+export type AdminStoreStatementData = {
+    /**
+     * YYYY-MM, 缺省上一个北京自然月
+     */
+    month?: (string | null);
+    storeId: string;
+};
+
+export type AdminStoreStatementResponse = (StoreStatement);
 
 export type AdminAdminUpdateStoreData = {
     requestBody: StoreUpdate;

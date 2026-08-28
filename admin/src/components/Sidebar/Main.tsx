@@ -6,6 +6,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
@@ -17,6 +18,8 @@ export type Item = {
   path: string
   /** 带路径参数的路由 (如本店工作台 /stores/$storeId) */
   params?: Record<string, string>
+  /** 待办角标 (不传或 0 不显示) */
+  badge?: number
 }
 
 interface MainProps {
@@ -66,6 +69,11 @@ export function Main({ items, label }: MainProps) {
                     <span>{item.title}</span>
                   </RouterLink>
                 </SidebarMenuButton>
+                {!!item.badge && item.badge > 0 && (
+                  <SidebarMenuBadge className="bg-rose-500 text-white">
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </SidebarMenuBadge>
+                )}
               </SidebarMenuItem>
             )
           })}

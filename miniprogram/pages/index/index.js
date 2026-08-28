@@ -614,22 +614,49 @@ Page({
 
   async checkMembershipRenewal() {
     const m = await membershipSvc.getMyMembership();
-    if (!m || !m.expired_at) return; // 未到期 / 从未开通都不弹
+    if (!m) return;
     const today = new Date().toISOString().slice(0, 10);
-    if (wx.getStorageSync('qy_renewal_notice_date') === today) return;
-    wx.setStorageSync('qy_renewal_notice_date', today);
-    const expiredDate = String(m.expired_at).slice(0, 10);
-    wx.showModal({
-      title: '会员已到期',
-      content: `你的会员已于 ${expiredDate} 到期。续费后继续享受全年资料展示与智能匹配服务，可在线续费或前往附近门店办理。`,
-      confirmText: '去续费',
-      cancelText: '稍后',
-      success: (res) => {
-        if (res.confirm) {
-          wx.navigateTo({ url: '/pages/membership/membership' });
-        }
-      },
-    });
+
+    // 已到期: 每天提醒一次续费 (到期后唤回)
+    if (m.expired_at) {
+      if (wx.getStorageSync('qy_renewal_notice_date') === today) return;
+      wx.setStorageSync('qy_renewal_notice_date', today);
+      const expiredDate = String(m.expired_at).slice(0, 10);
+      wx.showModal({
+        title: '会员已到期',
+        content: `你的会员已于 ${expiredDate} 到期。续费后继续享受全年资料展示与智能匹配服务，可在线续费或前往附近门店办理。`,
+        confirmText: '去续费',
+        cancelText: '稍后',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({ url: '/pages/membership/membership' });
+          }
+        },
+      });
+      return;
+    }
+
+    // 即将到期 (7 天内): 每天温和提醒一次 (单独计数, 不与到期提醒混用)
+    if (m.is_member && m.expires_at) {
+      const daysLeft = Math.ceil(
+        (new Date(m.expires_at).getTime() - Date.now()) / 86400000
+      );
+      if (daysLeft >= 0 && daysLeft <= 7) {
+        if (wx.getStorageSync('qy_expiry_soon_date') === today) return;
+        wx.setStorageSync('qy_expiry_soon_date', today);
+        wx.showModal({
+          title: '会员即将到期',
+          content: `你的会员还有 ${daysLeft} 天到期。现在续费时间会在到期日自动往后接, 不吃亏; 可在线续费或前往附近门店办理。`,
+          confirmText: '去续费',
+          cancelText: '知道了',
+          success: (res) => {
+            if (res.confirm) {
+              wx.navigateTo({ url: '/pages/membership/membership' });
+            }
+          },
+        });
+      }
+    }
   },
 
   async loadHome() {
