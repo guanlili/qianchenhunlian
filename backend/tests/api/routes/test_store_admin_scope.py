@@ -498,6 +498,9 @@ def test_stores_overview_badges(client, db: Session, superuser_token_headers) ->
     assert a["pending_audits"] == 1
     assert a["pending_verifies"] == 1
     assert a["pending_tickets"] == 1
+    # 展示字段与单店指标 (今日新增=今天建的, 已实名=verified passed)
+    assert a["today_signups"] == 2
+    assert a["verified_members"] == 0
     assert by_id[str(store_b.id)]["pending_audits"] == 0
     assert body["unassigned_members"] == 1
     assert body["unassigned_tickets"] == 1

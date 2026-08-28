@@ -6806,6 +6806,50 @@ export const StoreOverviewItemSchema = {
             ],
             title: 'District'
         },
+        address: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Address'
+        },
+        phone: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Phone'
+        },
+        photo: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo'
+        },
+        fees_desc: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fees Desc'
+        },
         status: {
             type: 'string',
             title: 'Status',
@@ -6814,6 +6858,16 @@ export const StoreOverviewItemSchema = {
         member_count: {
             type: 'integer',
             title: 'Member Count',
+            default: 0
+        },
+        today_signups: {
+            type: 'integer',
+            title: 'Today Signups',
+            default: 0
+        },
+        verified_members: {
+            type: 'integer',
+            title: 'Verified Members',
             default: 0
         },
         pending_audits: {
@@ -6835,7 +6889,7 @@ export const StoreOverviewItemSchema = {
     type: 'object',
     required: ['id', 'name'],
     title: 'StoreOverviewItem',
-    description: '门店总览卡片: 每店待办徽标 (总部首页「哪家店有事一眼看到」).'
+    description: '门店总览卡片: 展示字段 (店招/地址/电话) + 指标 + 待办徽标.'
 } as const;
 
 export const StoreOverviewListSchema = {

@@ -6,7 +6,16 @@ import {
   useMatches,
   useNavigate,
 } from "@tanstack/react-router"
-import { ArrowRight, MapPin, Pencil, Plus, Trash2, Upload } from "lucide-react"
+import {
+  ArrowRight,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  Store,
+  Trash2,
+  Upload,
+} from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -21,7 +30,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
@@ -237,34 +245,79 @@ function StoreCard({
     },
   ]
   const hasTodo = pending.some((p) => p.value > 0)
+  const isActive = item.status === "active"
+  const photoUrl = resolveFileUrl(item.photo || undefined)
 
   return (
-    <Card className="flex flex-col transition-shadow hover:shadow-md">
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-base">{item.name}</CardTitle>
-            <CardDescription>
-              {[item.city, item.district].filter(Boolean).join(" · ") || "—"}
-            </CardDescription>
+    <Card
+      className={
+        "group flex flex-col gap-0 overflow-hidden p-0 transition-shadow hover:shadow-md" +
+        (isActive ? "" : " opacity-70")
+      }
+    >
+      {/* 店招封面: 有图用图, 无图品牌渐变兜底; 状态角标悬浮右上 */}
+      <div className="relative h-36 w-full overflow-hidden">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={`${item.name} 店招`}
+            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+          />
+        ) : (
+          <div className="from-primary to-primary/70 flex h-full w-full items-center justify-center bg-gradient-to-br">
+            <Store className="text-primary-foreground/90 size-12" />
           </div>
-          <span
-            className={
-              item.status === "active"
-                ? "rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700"
-                : "rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500"
-            }
-          >
-            {item.status === "active" ? "营业中" : "已关闭"}
-          </span>
+        )}
+        <span
+          className={
+            "absolute top-2 right-2 rounded px-2 py-0.5 text-xs shadow " +
+            (isActive
+              ? "bg-emerald-500/95 text-white"
+              : "bg-slate-500/95 text-white")
+          }
+        >
+          {isActive ? "营业中" : "已关闭"}
+        </span>
+      </div>
+
+      <CardContent className="flex flex-1 flex-col gap-2.5 p-4">
+        <div>
+          <CardTitle className="text-base">{item.name}</CardTitle>
+          <CardDescription className="mt-0.5">
+            {[item.city, item.district].filter(Boolean).join(" · ") || "—"}
+            {item.address ? ` · ${item.address}` : ""}
+          </CardDescription>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3">
-        <div className="text-sm">
-          <span className="text-muted-foreground">会员 </span>
-          <span className="text-lg font-bold">{item.member_count ?? 0}</span>
-          <span className="text-muted-foreground"> 位</span>
+
+        {item.phone && (
+          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <Phone className="size-3.5" />
+            <span className="font-mono">{item.phone}</span>
+          </div>
+        )}
+
+        {/* 单店指标: 会员 / 今日新增 / 已实名 */}
+        <div className="grid grid-cols-3 divide-x rounded-md border py-2 text-center">
+          <div>
+            <div className="text-lg leading-tight font-bold">
+              {item.member_count ?? 0}
+            </div>
+            <div className="text-muted-foreground text-[11px]">会员</div>
+          </div>
+          <div>
+            <div className="text-lg leading-tight font-bold text-emerald-600">
+              +{item.today_signups ?? 0}
+            </div>
+            <div className="text-muted-foreground text-[11px]">今日新增</div>
+          </div>
+          <div>
+            <div className="text-lg leading-tight font-bold">
+              {item.verified_members ?? 0}
+            </div>
+            <div className="text-muted-foreground text-[11px]">已实名</div>
+          </div>
         </div>
+
         <div className="flex flex-wrap gap-1.5">
           {hasTodo ? (
             pending.map(
@@ -279,7 +332,14 @@ function StoreCard({
             <Badge variant="outline">暂无待办 ✅</Badge>
           )}
         </div>
-        <div className="mt-auto flex items-center gap-2 pt-2">
+
+        {item.fees_desc && (
+          <div className="text-muted-foreground line-clamp-1 text-xs">
+            {item.fees_desc}
+          </div>
+        )}
+
+        <div className="mt-auto flex items-center gap-2 pt-1">
           <Button className="flex-1" onClick={onEnter}>
             进店工作台 <ArrowRight />
           </Button>
