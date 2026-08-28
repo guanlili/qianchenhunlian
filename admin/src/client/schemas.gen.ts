@@ -6580,6 +6580,79 @@ export const StaffsPublicSchema = {
     title: 'StaffsPublic'
 } as const;
 
+export const StatementGrantRowSchema = {
+    properties: {
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        plan_code: {
+            type: 'string',
+            title: 'Plan Code'
+        },
+        days: {
+            type: 'integer',
+            title: 'Days'
+        },
+        source: {
+            type: 'string',
+            title: 'Source'
+        },
+        granted_by_email: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Granted By Email'
+        }
+    },
+    type: 'object',
+    required: ['created_at', 'plan_code', 'days', 'source'],
+    title: 'StatementGrantRow',
+    description: '对账单明细: 当月会员发放记录行 (线上/线下).'
+} as const;
+
+export const StatementMemberRowSchema = {
+    properties: {
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        xy_code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Xy Code'
+        },
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        }
+    },
+    type: 'object',
+    required: ['created_at'],
+    title: 'StatementMemberRow',
+    description: '对账单明细: 当月新增会员行.'
+} as const;
+
 export const StatsResponseSchema = {
     properties: {
         total_users: {
@@ -7036,6 +7109,68 @@ export const StorePublicSchema = {
     type: 'object',
     required: ['name', 'city', 'id'],
     title: 'StorePublic'
+} as const;
+
+export const StoreStatementSchema = {
+    properties: {
+        store_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Store Id'
+        },
+        store_name: {
+            type: 'string',
+            title: 'Store Name'
+        },
+        month: {
+            type: 'string',
+            title: 'Month'
+        },
+        new_members: {
+            type: 'integer',
+            title: 'New Members'
+        },
+        total_members: {
+            type: 'integer',
+            title: 'Total Members'
+        },
+        grants_online: {
+            type: 'integer',
+            title: 'Grants Online'
+        },
+        grants_offline: {
+            type: 'integer',
+            title: 'Grants Offline'
+        },
+        tickets_created: {
+            type: 'integer',
+            title: 'Tickets Created'
+        },
+        tickets_handled: {
+            type: 'integer',
+            title: 'Tickets Handled'
+        },
+        member_rows: {
+            items: {
+                '$ref': '#/components/schemas/StatementMemberRow'
+            },
+            type: 'array',
+            title: 'Member Rows',
+            default: []
+        },
+        grant_rows: {
+            items: {
+                '$ref': '#/components/schemas/StatementGrantRow'
+            },
+            type: 'array',
+            title: 'Grant Rows',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['store_id', 'store_name', 'month', 'new_members', 'total_members', 'grants_online', 'grants_offline', 'tickets_created', 'tickets_handled'],
+    title: 'StoreStatement',
+    description: '门店月度对账单 (自然月, 北京时间切边界; docs/13 门店结算口径).'
 } as const;
 
 export const StoreUpdateSchema = {

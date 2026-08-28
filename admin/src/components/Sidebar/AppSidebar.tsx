@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query"
 import {
   Award,
   BookOpen,
@@ -9,6 +10,8 @@ import {
   Store,
   UserCog,
 } from "lucide-react"
+
+import { AdminService } from "@/client"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -59,14 +62,47 @@ export function AppSidebar() {
   const { user: currentUser } = useAuth()
   const isSuperuser = !!currentUser?.is_superuser
 
+  // 待办角标: 门店总览卡片接口聚合 (门店管理员后端自动限本店), 60s 轮询刷新
+  const { data: overview } = useQuery({
+    queryFn: () => AdminService.storesOverview(),
+    queryKey: ["stores-overview", "sidebar"],
+    enabled: !!currentUser,
+    refetchInterval: 60_000,
+  })
+  const storePending = (overview?.items || []).reduce(
+    (sum, s) =>
+      sum +
+      (s.pending_audits ?? 0) +
+      (s.pending_verifies ?? 0) +
+      (s.pending_tickets ?? 0),
+    0,
+  )
+  const unassignedTotal =
+    (overview?.unassigned_members ?? 0) +
+    (overview?.unassigned_tickets ?? 0) +
+    (overview?.open_feedback ?? 0)
+
   // 门店管理员: 登录即进本店工作台 (未配置门店的残缺账号无导航入口, 与后端 fail-closed 一致)
   const storeItems: Item[] = currentUser?.store_id
     ? storeAdminItems.map((it) =>
         it.path === "/stores/$storeId" && currentUser.store_id
-          ? { ...it, params: { storeId: currentUser.store_id } }
+          ? {
+              ...it,
+              params: { storeId: currentUser.store_id },
+              badge: storePending,
+            }
           : it,
       )
     : storeAdminItems
+  const hubItems: Item[] = isSuperuser
+    ? storeHubItems.map((it) =>
+        it.path === "/stores"
+          ? { ...it, badge: storePending }
+          : it.path === "/unassigned"
+            ? { ...it, badge: unassignedTotal }
+            : it,
+      )
+    : []
 
   return (
     <Sidebar collapsible="icon">
@@ -76,7 +112,7 @@ export function AppSidebar() {
       <SidebarContent>
         {isSuperuser ? (
           <>
-            <Main items={storeHubItems} label="作业" />
+            <Main items={hubItems} label="作业" />
             <Main items={platformItems} label="平台" />
           </>
         ) : (

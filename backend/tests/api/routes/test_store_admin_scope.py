@@ -559,3 +559,86 @@ def test_requests_unassigned_filter(
     assert len(items) == 1
     assert items[0]["from_user_id"] == str(ub.id)
     assert items[0]["store_id"] is None
+
+
+# ---------------- 门店月度对账单 ----------------
+
+
+def test_store_statement_scoped_and_filtered(
+    client, db: Session, superuser_token_headers
+) -> None:
+    """对账单: 按月过滤 + 门店管理员限本店."""
+    from app.models import ContactRequest, MembershipGrant
+
+    store = Store(name="对账店", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+
+    m = _wx_member(db, home_store_id=store.id)
+    g = MembershipGrant(
+        user_id=m.id,
+        plan_code="yearly_365d",
+        days=365,
+        source="admin_recharge",
+        start_from=m.created_at,
+        expires_at=m.created_at,
+        granted_by_type="user",
+        granted_by_id=m.id,
+    )
+    db.add(g)
+    req = ContactRequest(
+        from_user_id=m.id,
+        to_user_id=m.id,
+        store_id=store.id,
+        status="contacted",
+        handled_at=m.created_at,
+    )
+    db.add(req)
+    db.commit()
+
+    month = m.created_at.strftime("%Y-%m")
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/statement",
+        headers=superuser_token_headers,
+        params={"month": month},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["month"] == month
+    assert body["new_members"] == 1
+    assert body["total_members"] >= 1
+    assert body["grants_offline"] == 1
+    assert body["grants_online"] == 0
+    assert body["tickets_created"] == 1
+    assert body["tickets_handled"] == 1
+    assert len(body["member_rows"]) == 1
+    assert body["member_rows"][0]["xy_code"] == m.xy_code
+    assert len(body["grant_rows"]) == 1
+
+    # 未来月份: 空对账
+    r2 = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/statement",
+        headers=superuser_token_headers,
+        params={"month": "2099-01"},
+    )
+    assert r2.json()["new_members"] == 0
+
+    # 非法月份
+    r3 = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/statement",
+        headers=superuser_token_headers,
+        params={"month": "2026-13"},
+    )
+    assert r3.status_code == 400
+
+    # 门店管理员: 本店 OK, 他店 403
+    headers, own = _setup_store_admin(client, db)
+    ok = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{own.id}/statement", headers=headers
+    )
+    assert ok.status_code == 200
+    denied = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/statement", headers=headers
+    )
+    assert denied.status_code == 403

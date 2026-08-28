@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, Inbox } from "lucide-react"
-import { useEffect } from "react"
+import { ArrowLeft, Download, Inbox } from "lucide-react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { AdminService, StoresService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
@@ -14,6 +15,13 @@ import { StaffActionsMenu } from "@/components/Staff/StaffActionsMenu"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -148,12 +156,96 @@ function StoreWorkspacePage() {
   )
 }
 
-/** 门店概览: 单店口径的待办指标 + 最近注册/提审/工单. */
+/** 生成本月/上月 (北京时间) 的 YYYY-MM; 上月跨年正确回退 */
+function cnMonth(offset: 0 | 1): string {
+  const now = new Date(Date.now() + 8 * 3600 * 1000)
+  const d = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
+const GRANT_SOURCE_LABEL: Record<string, string> = {
+  wx_pay: "线上支付",
+  admin_recharge: "线下收款",
+  admin_trial: "体验发放",
+  admin_compensate: "补偿",
+}
+
+function useStatementExport(storeId: string) {
+  const [monthOffset, setMonthOffset] = useState<0 | 1>(1) // 默认导出上一个自然月
+  const exportCsv = useMutation({
+    mutationFn: async () => {
+      const st = await AdminService.storeStatement({
+        storeId,
+        month: cnMonth(monthOffset),
+      })
+      // CSV (带 BOM, Excel 中文不乱码): 汇总 + 两段明细
+      const esc = (v: unknown) => {
+        const s = v === null || v === undefined ? "" : String(v)
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      }
+      const lines: string[] = []
+      lines.push(`门店对账单,${esc(st.store_name)},${st.month}`)
+      lines.push("")
+      lines.push("汇总项,数值")
+      lines.push(`当月新增会员,${st.new_members}`)
+      lines.push(`截至当月末累计会员,${st.total_members}`)
+      lines.push(`线上开通/续费 (微信支付),${st.grants_online}`)
+      lines.push(`线下开通/续费,${st.grants_offline}`)
+      lines.push(`当月新建工单,${st.tickets_created}`)
+      lines.push(`当月处理完成工单,${st.tickets_handled}`)
+      lines.push("")
+      lines.push("明细·当月新增会员")
+      lines.push("日期,寻缘号,昵称")
+      for (const r of st.member_rows || []) {
+        lines.push(
+          [
+            new Date(r.created_at).toLocaleString("zh-CN"),
+            r.xy_code ?? "",
+            r.nickname ?? "",
+          ]
+            .map(esc)
+            .join(","),
+        )
+      }
+      lines.push("")
+      lines.push("明细·当月会员发放")
+      lines.push("日期,套餐,天数,来源,操作人")
+      for (const r of st.grant_rows || []) {
+        lines.push(
+          [
+            new Date(r.created_at).toLocaleString("zh-CN"),
+            r.plan_code,
+            r.days,
+            GRANT_SOURCE_LABEL[r.source] ?? r.source,
+            r.granted_by_email ?? "",
+          ]
+            .map(esc)
+            .join(","),
+        )
+      }
+      const blob = new Blob([`\uFEFF${lines.join("\n")}`], {
+        type: "text/csv;charset=utf-8",
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `对账单_${st.store_name}_${st.month}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`已导出 ${st.month} 对账单`)
+    },
+    onError: (e) => toast.error(`导出失败: ${(e as Error).message}`),
+  })
+  return { monthOffset, setMonthOffset, exportCsv }
+}
+
+/** 门店概览: 单店口径的待办指标 + 最近注册/提审/工单 + 月度对账单导出. */
 function StoreOverviewTab({ storeId }: { storeId: string }) {
   const { data, isPending } = useQuery({
     queryFn: () => AdminService.adminDashboard({ storeId }),
     queryKey: ["admin-dashboard", "store", storeId],
   })
+  const { monthOffset, setMonthOffset, exportCsv } = useStatementExport(storeId)
 
   if (isPending) return <Skeleton className="h-64 w-full" />
   const stats = data?.stats
@@ -169,6 +261,33 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-muted-foreground text-sm">
+          门店月度对账 (自然月, 与门店结算口径一致)
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={String(monthOffset)}
+            onValueChange={(v) => setMonthOffset(v === "0" ? 0 : 1)}
+          >
+            <SelectTrigger className="h-8 w-[90px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">上月</SelectItem>
+              <SelectItem value="0">本月</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={exportCsv.isPending}
+            onClick={() => exportCsv.mutate()}
+          >
+            <Download /> 导出对账单 (CSV)
+          </Button>
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
           <Card key={c.label}>
