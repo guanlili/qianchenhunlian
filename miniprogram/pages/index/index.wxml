@@ -100,6 +100,18 @@
           <text wx:if="{{loginFailed}}">登录失败, 暂时无法加载真实资料。请检查网络后重新进入小程序。</text>
           <text wx:else>暂无可推荐的资料, 试试调整筛选条件</text>
         </view>
+        <view class="empty-feed" wx:if="{{apiReady && isMember && !profiles.length}}">
+          <view class="empty-feed-icon">缘</view>
+          <block wx:if="{{activeFilterCount > 0}}">
+            <view class="empty-feed-title">没有符合当前筛选的资料</view>
+            <view class="empty-feed-sub">筛选了 {{activeFilterCount}} 项条件, 试着放宽一些</view>
+            <button class="empty-feed-btn" bindtap="clearFilter">一键放宽, 恢复每日推荐</button>
+          </block>
+          <block wx:else>
+            <view class="empty-feed-title">今日推荐已看完</view>
+            <view class="empty-feed-sub">明天为你推荐新的有缘人, 也可去消息页看看谁关注了你</view>
+          </block>
+        </view>
         <view wx:for="{{profiles}}" wx:key="id" class="profile-card">
           <view class="profile-id-row">
             <text class="profile-id">用户编号 {{item.xy_code || item.id}}</text>
@@ -220,6 +232,7 @@
           <view class="pref-row"><text>婚姻要求</text><text>{{selectedProfile.wants.marriage}}</text></view>
           <view class="pref-row"><text>户籍地要求</text><text>{{selectedProfile.wants.origin}}</text></view>
           <view class="pref-row"><text>居住地要求</text><text>{{selectedProfile.wants.location}}</text></view>
+          <view class="pref-row" wx:if="{{selectedProfile.wantsNote}}"><text>补充说明</text><text class="pref-note">{{selectedProfile.wantsNote}}</text></view>
         </view>
       </scroll-view>
 

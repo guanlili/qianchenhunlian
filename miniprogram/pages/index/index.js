@@ -127,11 +127,32 @@ function adaptDetail(detailResp) {
     contact: detailResp.unlocked
       ? { wechat: p.contact_wechat || '', phone: p.contact_phone || '' }
       : null,
-    // wants 是对方的择偶要求, 当前 detail 接口没返, 留空
-    wants: {
+    // 对方择偶要求 (detail 接口的 criteria; 没填过全为「暂未填写」)
+    wants: detailResp.criteria ? _criteriaToWants(detailResp.criteria) : {
       year: '', income: '', height: '', house: '',
       edu: '', marriage: '', origin: '', location: '',
     },
+    wantsNote: (detailResp.criteria && detailResp.criteria.note) || '',
+  };
+}
+
+/** detail 接口的 criteria → 详情页 wants 行 (与 adaptCriteriaValues 同口径) */
+function _criteriaToWants(c) {
+  const range = (a, b, unit) => {
+    if (a && b) return `${a}${unit}-${b}${unit}`;
+    if (a) return `${a}${unit} 以上`;
+    if (b) return `${b}${unit} 以下`;
+    return '不限';
+  };
+  return {
+    year: c.year_min || c.year_max ? `${c.year_min || ''}年-${c.year_max || ''}年` : '不限',
+    income: c.income || '不限',
+    height: range(c.height_min, c.height_max, 'cm'),
+    house: c.house || '不限',
+    edu: c.edu || '不限',
+    marriage: c.marriage || '不限',
+    origin: (c.origins && c.origins[0]) || '不限',
+    location: (c.locations && c.locations[0]) || '不限',
   };
 }
 
@@ -1579,7 +1600,7 @@ Page({
   _handleQuotaExhausted() {
     wx.showModal({
       title: '今日额度已用完',
-      content: '开通会员后每日可申请 20 次, 可在线续费或前往附近门店办理。',
+      content: '开通会员可享更多每日申请次数, 可在线续费或前往附近门店办理。',
       confirmText: '去开通',
       cancelText: '稍后',
       success: (res) => {

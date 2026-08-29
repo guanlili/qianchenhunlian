@@ -18,7 +18,7 @@
   <!-- 权益说明 -->
   <view class="mp-card">
     <view class="mp-card-title">会员权益</view>
-    <view class="mp-benefit"><text class="mp-dot">·</text>每日申请联系 20 次（非会员每日 5 次）</view>
+    <view class="mp-benefit"><text class="mp-dot">·</text>每日申请联系 {{memberDailyQuota}} 次（非会员每日 {{freeDailyQuota}} 次）</view>
     <view class="mp-benefit"><text class="mp-dot">·</text>红娘一对一撮合, 优先安排推荐</view>
     <view class="mp-benefit"><text class="mp-dot">·</text>全年资料展示, 不限查阅次数</view>
   </view>

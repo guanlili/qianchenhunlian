@@ -2566,3 +2566,58 @@ page {
   color: #a1651c;
   font-size: 23rpx;
 }
+
+/* --- 推荐空态引导 --- */
+.empty-feed {
+  margin: 40rpx 28rpx;
+  padding: 70rpx 40rpx;
+  border-radius: 20rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(98, 21, 21, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-feed-icon {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: #f9e5e0;
+  color: #c93434;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: 800;
+  margin-bottom: 26rpx;
+}
+
+.empty-feed-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1f1a17;
+}
+
+.empty-feed-sub {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #8d8175;
+}
+
+.empty-feed-btn {
+  margin-top: 36rpx;
+  width: 380rpx;
+  min-height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 999rpx;
+  background: #c93434;
+  color: #ffffff;
+  font-size: 27rpx;
+  font-weight: 700;
+  border: none;
+}
+
+.pref-note {
+  text-align: right;
+}

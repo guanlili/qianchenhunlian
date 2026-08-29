@@ -689,12 +689,30 @@ export type MatchBrief = {
     verified?: string;
 };
 
+/**
+ * 对方择偶要求摘要 (详情页展示用; 未填的字段为 None 由端上显示不限).
+ */
+export type MatchCriteriaBrief = {
+    year_min?: (number | null);
+    year_max?: (number | null);
+    height_min?: (number | null);
+    height_max?: (number | null);
+    income?: (string | null);
+    edu?: (string | null);
+    marriage?: (string | null);
+    house?: (string | null);
+    origins?: Array<(string)>;
+    locations?: Array<(string)>;
+    note?: (string | null);
+};
+
 export type MatchDetailResponse = {
     profile: ProfilePublic;
     xy_code?: (string | null);
     unlocked?: boolean;
     starred?: boolean;
     verified?: string;
+    criteria?: (MatchCriteriaBrief | null);
 };
 
 export type MatchListResponse = {
@@ -764,6 +782,8 @@ export type MembershipGrantResponse = {
 
 export type MembershipPlansOut = {
     pay_mode: string;
+    free_daily_quota?: number;
+    member_daily_quota?: number;
     plans?: Array<PlanItem>;
 };
 
