@@ -2443,10 +2443,29 @@ class MembershipPlansResponse(SQLModel):
 
 
 class MembershipConfigUpdate(SQLModel):
-    """只放开支付相关开关; 套餐/额度调整后续按需扩展."""
+    """支付开关 + 优惠券限领; 套餐/额度调整后续按需扩展."""
 
     pay_enabled: bool | None = None
     pay_mock: bool | None = None
+    coupon_monthly_limit: int | None = Field(default=None, ge=0, le=99)
+
+
+class CouponGrantRequest(SQLModel):
+    """门店优惠券: 两类之一."""
+
+    kind: Literal["member_days", "contact_uses"]
+    days: int | None = Field(default=None, ge=1, le=90)  # member_days 必填
+    uses: int | None = Field(default=None, ge=1, le=20)  # contact_uses 必填
+    note: str | None = Field(default=None, max_length=120)
+
+
+class CouponGrantResponse(SQLModel):
+    kind: str
+    days: int | None = None
+    member_expires_at: datetime | None = None  # member_days: 发放后到期时间
+    uses: int | None = None
+    unlock_balance: int | None = None  # contact_uses: 发放后余额
+    remaining_quota: int | None = None  # 近 30 天剩余可领 (null = 不限额)
 
 
 class MembershipGrantRequest(SQLModel):
@@ -2493,6 +2512,8 @@ def update_membership_config(
         cfg["pay_enabled"] = body.pay_enabled
     if body.pay_mock is not None:
         cfg["pay_mock"] = body.pay_mock
+    if body.coupon_monthly_limit is not None:
+        cfg["coupon_monthly_limit"] = body.coupon_monthly_limit
     row = session.get(SiteSetting, membership.CONFIG_KEY)
     if row:
         row.value = cfg
@@ -2514,6 +2535,139 @@ def _plans_response(
         pay_mock=bool(cfg.get("pay_mock", False)),
         pay_mode=membership.purchase_mode(session),
         plans=list(cfg.get("plans", [])),
+    )
+
+
+@router.post(
+    "/members/{user_id}/grant-coupon",
+    response_model=CouponGrantResponse,
+    dependencies=[Depends(require_perm(Perm.MEMBER_GRANT))],
+)
+def grant_coupon_endpoint(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+    body: CouponGrantRequest = Body(),
+) -> CouponGrantResponse:
+    """发放门店优惠券 (店长促活工具): 会员体验券 (N 天) / 申请次数券 (N 次).
+
+    - 门店管理员限本店会员; 记录 source=store_coupon (可统计/审计)
+    - 限领: 每会员每 30 天 coupon_monthly_limit 张 (两类合计, 0 = 不限)
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.is_superuser:
+        raise HTTPException(status_code=400, detail="不能给后台账号发券")
+    _check_member_scope(actor, session, user_id)
+
+    # 校验券参数
+    if body.kind == "member_days":
+        if not body.days or not (1 <= body.days <= 90):
+            raise HTTPException(status_code=400, detail="会员天数券应为 1-90 天")
+    else:
+        if not body.uses or not (1 <= body.uses <= 20):
+            raise HTTPException(status_code=400, detail="申请次数券应为 1-20 次")
+    days = int(body.days or 0) if body.kind == "member_days" else 0
+    uses = int(body.uses or 0) if body.kind == "contact_uses" else 0
+
+    # 限领校验: 近 30 天两类券合计 (发放记录 + 余额流水)
+    cfg = membership.get_config(session)
+    limit = int(cfg.get("coupon_monthly_limit", 2))
+    since = datetime.utcnow() - timedelta(days=30)
+    used_grants = (
+        session.exec(
+            select(func.count())
+            .select_from(MembershipGrant)
+            .where(MembershipGrant.user_id == user_id)
+            .where(MembershipGrant.source == membership.SOURCE_COUPON)
+            .where(MembershipGrant.created_at >= since)
+        ).one()
+        or 0
+    )
+    used_txn = (
+        session.exec(
+            select(func.count())
+            .select_from(BalanceTransaction)
+            .where(BalanceTransaction.user_id == user_id)
+            .where(BalanceTransaction.source == membership.SOURCE_COUPON)
+            .where(BalanceTransaction.created_at >= since)
+        ).one()
+        or 0
+    )
+    used = int(used_grants) + int(used_txn)
+    if limit > 0 and used >= limit:
+        raise HTTPException(
+            status_code=400,
+            detail=f"该会员近 30 天已领 {used} 张优惠券, 已达上限 {limit} 张",
+        )
+
+    owner_sid = _store_owner_id(actor)
+    note = (body.note or "").strip()[:120] or None
+
+    if body.kind == "member_days":
+        membership.grant_membership(
+            session,
+            user=user,
+            plan_code=f"coupon_{days}d",
+            days=days,
+            source=membership.SOURCE_COUPON,
+            granted_by_type=actor.actor_type,
+            granted_by_id=uuid.UUID(actor.id),
+            granted_by_email=actor.email,
+            store_id=owner_sid,
+            note=note or "门店优惠券",
+        )
+        _audit(
+            session,
+            actor,
+            "grant_coupon",
+            target_user_id=user_id,
+            detail={"kind": "member_days", "days": days},
+        )
+        session.commit()
+        session.refresh(user)
+        return CouponGrantResponse(
+            kind="member_days",
+            days=days,
+            member_expires_at=user.membership_expires_at,
+            remaining_quota=(limit - used - 1) if limit > 0 else None,
+        )
+
+    # 申请次数券: 原子加余额 + 流水
+    from sqlalchemy import update as sa_update
+
+    session.execute(
+        sa_update(User)
+        .where(User.id == user_id)  # type: ignore[arg-type]
+        .values(
+            unlock_balance=User.unlock_balance + uses,
+            updated_at=datetime.utcnow(),
+        )
+    )
+    session.refresh(user)
+    crud.add_balance_txn(
+        session=session,
+        user_id=user_id,
+        amount=uses,
+        balance_after=user.unlock_balance,
+        source=membership.SOURCE_COUPON,
+        note=note or "门店优惠券",
+    )
+    _audit(
+        session,
+        actor,
+        "grant_coupon",
+        target_user_id=user_id,
+        detail={"kind": "contact_uses", "uses": uses},
+    )
+    session.commit()
+    session.refresh(user)
+    return CouponGrantResponse(
+        kind="contact_uses",
+        uses=uses,
+        unlock_balance=user.unlock_balance,
+        remaining_quota=(limit - used - 1) if limit > 0 else None,
     )
 
 
