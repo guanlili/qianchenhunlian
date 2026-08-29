@@ -5,7 +5,12 @@
       <view class="member-lock-crown">✦</view>
       <view class="member-lock-title">门店会员专享</view>
       <view class="member-lock-sub">乾缘婚恋为门店会员制服务, 到你所在门店开通会员后即可查看严选会员资料</view>
-      <button class="member-lock-btn" bindtap="goStoreCities">去附近门店开通</button>
+      <block wx:if="{{myHomeStore && myHomeStore.phone}}">
+        <view class="member-lock-store">{{myHomeStore.city}} · {{myHomeStore.name}}</view>
+        <button class="member-lock-btn" bindtap="callHomeStore">拨打门店电话, 现场开通</button>
+        <view class="member-lock-phone">{{myHomeStore.phone}}</view>
+      </block>
+      <button wx:else class="member-lock-btn" bindtap="goStoreCities">去附近门店开通</button>
       <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
     </view>
 
@@ -45,6 +50,12 @@
             <text>{{favoriteTotal}} 人</text>
           </view>
         </view>
+      </view>
+
+      <view class="quota-bar" wx:if="{{isMember && memberQuota}}">
+        <text class="quota-tag">会员</text>
+        <text>今日还可申请 {{memberQuota.remaining}}/{{memberQuota.limit}} 次</text>
+        <text wx:if="{{memberQuota.balance > 0}}" class="quota-extra">· 余额 {{memberQuota.balance}} 次</text>
       </view>
 
       <view class="home-tabs">
@@ -887,7 +898,7 @@
       <view class="sheet-handle"></view>
 
       <view class="sheet-title">联系当地门店</view>
-      <view class="sheet-sub">用户编号 {{selectedProfile.xy_code || selectedProfile.id}} · 消耗 1 次申请额度</view>
+      <view class="sheet-sub">用户编号 {{selectedProfile.xy_code || selectedProfile.id}} · 消耗 1 次申请额度<block wx:if="{{memberQuota}}"> · 今日还可 {{memberQuota.remaining}}/{{memberQuota.limit}} 次</block></view>
       <view class="sheet-profile">
         <view class="avatar tone-{{selectedProfile.tone}}">{{selectedProfile.glyph}}</view>
         <view>

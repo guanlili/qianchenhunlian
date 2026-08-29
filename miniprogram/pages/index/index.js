@@ -519,6 +519,7 @@ Page({
     loginFailed: false, // 登录失败时不展示任何示例资料
     apiReady: false,    // 登录成功后置 true; false 时不请求推荐
     isMember: false,    // 门店会员制: 非会员首页锁屏 (浏览为会员专享)
+    memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
   },
 
   // ============================================================
@@ -583,11 +584,8 @@ Page({
           this.loadMyProfile().catch(() => {});
         }
         // 门店会员制: 拉会员状态决定首页是否锁屏; 会员才加载推荐
-        membershipSvc.getMyMembership().then((m) => {
-          const isMember = !!(m && m.is_member);
-          this.setData({ isMember });
-          if (isMember) this.loadHome();
-        }).catch(() => {});
+        this.refreshMembership();
+        if (payload.has_profile !== false) { /* 推荐加载由 refreshMembership 决定 */ }
         // 门店码进入且尚未绑定门店 → 自动绑定为该店会员 (不覆盖已有绑定)
         if (this._pendingStoreId) {
           this._bindSceneStore(this._pendingStoreId);
@@ -1364,6 +1362,7 @@ Page({
     if (!this._gatePhoneSoftGuide()) return;
     try {
       const res = await contactSvc.requestContact(targetId, null);
+      this.refreshMembership();
       wx.showModal({
         title: '已提交申请',
         content: `红娘会尽快联系门店撮合, 请耐心等待 (剩余申请额度 ${res.balance})`,
@@ -1496,6 +1495,7 @@ Page({
         requestSubmitting: false,
         requestSubmitted: true,        // 详情页可显示"已申请"标签
       });
+      this.refreshMembership();
       wx.showModal({
         title: '已提交申请',
         content: `红娘会尽快联系对方撮合, 请耐心等待 (剩余申请额度 ${res.balance})`,
@@ -2380,6 +2380,24 @@ Page({
       title: '乾缘婚恋 · 寻一份合适的姻缘',
       query: sp && sp.user_id ? `target=${sp.user_id}` : '',
     };
+  },
+
+  /** 拉会员状态: 决定锁屏/推荐加载, 并刷新「今日剩余次数」展示 */
+  refreshMembership() {
+    membershipSvc.getMyMembership().then((m) => {
+      if (!m) return;
+      const isMember = !!m.is_member;
+      this.setData({ isMember, memberQuota: m.quota || null });
+      if (isMember) this.loadHome();
+    }).catch(() => {});
+  },
+
+  /** 锁屏页一键拨打本店电话 (红娘可当场帮开通) */
+  callHomeStore() {
+    const home = this.data.myHomeStore;
+    if (home && home.phone) {
+      wx.makePhoneCall({ phoneNumber: String(home.phone) });
+    }
   },
 
   /** 门店会员制锁屏 CTA */

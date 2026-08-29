@@ -2483,3 +2483,49 @@ page {
   font-size: 25rpx;
   font-weight: 600;
 }
+
+/* --- 会员权益可视化 --- */
+.quota-bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: 0 28rpx 20rpx;
+  padding: 14rpx 22rpx;
+  border-radius: 12rpx;
+  background: #fdf3e0;
+  border: 1rpx solid #f0d9ae;
+  color: #a1651c;
+  font-size: 24rpx;
+}
+
+.quota-bar.sheet {
+  margin: 0 0 16rpx;
+}
+
+.quota-tag {
+  background: linear-gradient(90deg, #f4a23a, #ed7030);
+  color: #ffffff;
+  font-size: 20rpx;
+  font-weight: 700;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+}
+
+.quota-extra {
+  color: #b3a89a;
+}
+
+/* 锁屏页门店电话 */
+.member-lock-store {
+  margin-top: 44rpx;
+  color: #c93434;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.member-lock-phone {
+  margin-top: 14rpx;
+  color: #8d8175;
+  font-size: 26rpx;
+  font-variant-numeric: tabular-nums;
+}
