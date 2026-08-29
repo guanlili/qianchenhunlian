@@ -30,6 +30,28 @@ class WechatError(Exception):
         super().__init__(f"WeChat API error {errcode}: {errmsg}")
 
 
+async def get_wxacode_unlimit(*, scene: str, page: str) -> bytes:
+    """不限量小程序码 (scene ≤ 32 字符), 返回 PNG 字节.
+
+    check_path=False: 落地页不必已在线上版本存在 (发版前也能生成);
+    线下物料印刷用, 宽度 430px。凭证复用同步 get_access_token (stable_token 缓存)。
+    """
+    token = get_access_token()
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            f"{WX_API_BASE}/wxa/getwxacodeunlimit",
+            params={"access_token": token},
+            json={"scene": scene, "page": page, "check_path": False, "width": 430},
+        )
+    # 微信出错时返回 JSON (errcode/errmsg), 正常时返回 image 二进制
+    if "json" in resp.headers.get("content-type", ""):
+        err: dict[str, Any] = resp.json()
+        raise WechatError(
+            int(err.get("errcode", -1)), str(err.get("errmsg", "unknown"))
+        )
+    return resp.content
+
+
 async def jscode2session(code: str) -> dict[str, str]:
     """用 code 换取 openid + session_key.
 
@@ -151,7 +173,9 @@ def assert_text_safe(text: object, openid: str | None, *, scene: int = 1) -> Non
         raise HTTPException(status_code=400, detail="内容安全检测失败，请稍后重试")
 
 
-def assert_text_safe_fields(data: dict[str, Any], openid: str | None, *, scene: int = 1) -> None:
+def assert_text_safe_fields(
+    data: dict[str, Any], openid: str | None, *, scene: int = 1
+) -> None:
     """批量审核数据字典里所有自由文本: 字符串值 + 字符串列表元素, fail-closed。
 
     用于资料/择偶/联系方式等含多个用户输入字段的写入接口,

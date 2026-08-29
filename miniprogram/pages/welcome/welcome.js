@@ -1,5 +1,6 @@
-// 首启动强引导: 协议必勾 (头像 + 昵称给默认值, 用户想改再改)
+// 首启动强引导: 协议必勾 (头像 + 昵称给默认值, 用户想改再改) + 可选门店步骤
 const profileSvc = require('../../services/profile');
+const storeSvc = require('../../services/store');
 
 const _GLYPHS = ['寻', '缘', '乾', '合', '雅', '良'];
 
@@ -13,12 +14,17 @@ function _pickGlyph(seed) {
 
 Page({
   data: {
+    step: 'info',           // info = 头像昵称协议; store = 可选门店步骤
     avatarTempPath: '',     // 用户选择的本地路径 (展示用); 空字符串表示用默认
     avatarUploadedUrl: '',  // 上传到 backend 后的 URL; 空表示用默认
     nickname: '',           // 默认 = "用户" + xy_code 后4位; 用户可改
     defaultGlyph: '缘',     // 默认占位字
     agreed: false,
     submitting: false,
+    cities: [],             // 有门店的城市
+    selectedCity: '',       // 当前选择的城市
+    stores: [],             // 当前城市的门店
+    bindingStoreId: '',     // 正在绑定的门店
   },
 
   onLoad() {
@@ -119,10 +125,63 @@ Page({
       app.globalData.isWelcomed = true;
       app.globalData.hasProfile = true;
       this.setData({ submitting: false });
-      wx.reLaunch({ url: '/pages/index/index' });
+      // 第二步: 可选门店 (不强制, 可跳过)
+      this.loadCities();
+      this.setData({ step: 'store' });
     } catch (e) {
       this.setData({ submitting: false });
       wx.showToast({ title: (e && e.detail) || '提交失败', icon: 'none' });
     }
+  },
+
+  /** 加载有门店的城市列表 (选店步骤) */
+  async loadCities() {
+    if (this.data.cities.length) return;
+    try {
+      const cities = await storeSvc.listCities();
+      const list = (cities || []).map((c) => c.city || c);
+      this.setData({ cities: list });
+      if (list.length === 1) this.selectCity({ currentTarget: { dataset: { city: list[0] } } });
+    } catch (e) {
+      console.warn('[welcome] loadCities', e);
+    }
+  },
+
+  /** 选城市 → 拉门店列表 */
+  async selectCity(e) {
+    const city = e.currentTarget.dataset.city;
+    if (!city || city === this.data.selectedCity) return;
+    this.setData({ selectedCity: city, stores: [] });
+    try {
+      const r = await storeSvc.listStores({ city, limit: 50 });
+      this.setData({ stores: (r && r.items) || [] });
+    } catch (e) {
+      console.warn('[welcome] listStores', e);
+    }
+  },
+
+  /** 选定门店 → 绑定后进入 */
+  async onPickStore(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name;
+    if (!id || this.data.bindingStoreId) return;
+    this.setData({ bindingStoreId: id });
+    try {
+      await storeSvc.setHomeStore(id);
+      wx.showToast({ title: `已加入 ${name}`, icon: 'success' });
+      setTimeout(() => this.enterApp(), 600);
+    } catch (err) {
+      this.setData({ bindingStoreId: '' });
+      wx.showToast({ title: '绑定失败, 可稍后在「我的-当地门店」选择', icon: 'none' });
+    }
+  },
+
+  /** 跳过选店直接进入 */
+  skipStore() {
+    this.enterApp();
+  },
+
+  enterApp() {
+    wx.reLaunch({ url: '/pages/index/index' });
   },
 });

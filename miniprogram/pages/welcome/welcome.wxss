@@ -155,3 +155,88 @@ page {
   color: #ffffff;
 }
 .submit-btn::after { border: none; }
+
+/* --- 第二步: 门店选择 --- */
+.store-step-sub {
+  font-size: 24rpx;
+  color: #8d8175;
+  line-height: 1.6;
+  margin-bottom: 20rpx;
+}
+
+.city-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  margin-bottom: 24rpx;
+}
+
+.city-chip {
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.city-chip.on {
+  background: #c93434;
+  color: #ffffff;
+}
+
+.store-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.store-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 22rpx 24rpx;
+  border: 1rpx solid #f0e8dd;
+  border-radius: 14rpx;
+  background: #ffffff;
+}
+
+.store-item.binding {
+  opacity: 0.6;
+}
+
+.store-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.store-item-name {
+  font-size: 29rpx;
+  font-weight: 700;
+  color: #1f1a17;
+}
+
+.store-item-sub {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #8d8175;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-item-go {
+  color: #c93434;
+  font-size: 26rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.store-empty {
+  padding: 30rpx 0;
+  text-align: center;
+  color: #b3a89a;
+  font-size: 24rpx;
+}

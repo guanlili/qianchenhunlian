@@ -749,3 +749,55 @@ def test_store_coupon_scope_and_limit(client, db: Session) -> None:
     )
     # schema 层 (422) 或业务层 (400) 拒绝均可
     assert r4.status_code in (400, 422)
+
+
+# ---------------- 门店专属小程序码 ----------------
+
+
+def test_store_qrcode(
+    client, db: Session, superuser_token_headers, monkeypatch
+) -> None:
+    """门店码: PNG 返回 + 门店管理员限本店。微信接口 mock 掉不打真网络。"""
+    store = Store(name="码店A", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+
+    scenes: list[str] = []
+
+    async def _fake_code(*, scene: str, page: str) -> bytes:
+        scenes.append(scene)
+        assert len(scene) == 32  # 门店ID hex (UUID 去掉连字符)
+        assert page == "pages/index/index"
+        return b"\x89PNG-fake-bytes"
+
+    monkeypatch.setattr("app.api.routes.admin.wechat.get_wxacode_unlimit", _fake_code)
+
+    r = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/qrcode",
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+    assert r.content == b"\x89PNG-fake-bytes"
+    assert scenes == [store.id.hex]
+
+    # 门店管理员: 本店 OK, 他店 403
+    headers, own = _setup_store_admin(client, db)
+    ok = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{own.id}/qrcode", headers=headers
+    )
+    assert ok.status_code == 200
+    other = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/qrcode", headers=headers
+    )
+    assert other.status_code == 403
+
+    # 不存在的门店
+    import uuid as _uuid
+
+    gone = client.get(
+        f"{settings.API_V1_STR}/admin/stores/{_uuid.uuid4()}/qrcode",
+        headers=superuser_token_headers,
+    )
+    assert gone.status_code == 404

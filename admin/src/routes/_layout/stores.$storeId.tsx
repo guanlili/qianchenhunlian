@@ -1,10 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, Download, Inbox } from "lucide-react"
+import { ArrowLeft, Download, Inbox, QrCode } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { AdminService, StoresService } from "@/client"
+import { AdminService, OpenAPI, StoresService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import { TrendPanel } from "@/components/Common/TrendPanel"
 import { memberColumns } from "@/components/Members/columns"
@@ -247,6 +247,35 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
     queryKey: ["admin-dashboard", "store", storeId],
   })
   const { monthOffset, setMonthOffset, exportCsv } = useStatementExport(storeId)
+  const [qrDownloading, setQrDownloading] = useState(false)
+
+  /** 下载门店专属小程序码 (扫码进入自动绑定为本店会员, 印线下物料用) */
+  const downloadStoreQr = async (id: string) => {
+    setQrDownloading(true)
+    try {
+      const resp = await fetch(
+        `${OpenAPI.BASE ?? ""}/api/v1/admin/stores/${id}/qrcode`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        },
+      )
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `门店小程序码_${storeId.slice(0, 8)}.png`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success("门店码已下载, 可直接印刷使用 (扫码自动绑店)")
+    } catch (e) {
+      toast.error(`下载失败: ${(e as Error).message}`)
+    } finally {
+      setQrDownloading(false)
+    }
+  }
 
   if (isPending) return <Skeleton className="h-64 w-full" />
   const stats = data?.stats
@@ -286,6 +315,14 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
             onClick={() => exportCsv.mutate()}
           >
             <Download /> 导出对账单 (CSV)
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={qrDownloading}
+            onClick={() => downloadStoreQr(storeId)}
+          >
+            <QrCode /> 下载门店码
           </Button>
         </div>
       </div>
