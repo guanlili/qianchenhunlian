@@ -279,14 +279,17 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
 
   if (isPending) return <Skeleton className="h-64 w-full" />
   const stats = data?.stats
+  const navigate = useNavigate()
+  const goTab = (tab: string) => navigate({ to: ".", search: { tab } })
 
+  // 指标卡可点击 → 直达对应页签 (待办即入口)
   const cards = [
-    { label: "本店会员", value: stats?.total_users ?? 0 },
-    { label: "今日新增", value: stats?.today_signups ?? 0 },
-    { label: "待审资料", value: stats?.pending_audits ?? 0 },
-    { label: "待实名核验", value: stats?.pending_verifies ?? 0 },
-    { label: "待处理工单", value: stats?.pending_tickets ?? 0 },
-    { label: "已实名会员", value: stats?.verified_users ?? 0 },
+    { label: "本店会员", value: stats?.total_users ?? 0, tab: "members" },
+    { label: "今日新增", value: stats?.today_signups ?? 0, tab: "members" },
+    { label: "待审资料", value: stats?.pending_audits ?? 0, tab: "audit" },
+    { label: "待实名核验", value: stats?.pending_verifies ?? 0, tab: "verify" },
+    { label: "待处理工单", value: stats?.pending_tickets ?? 0, tab: "requests" },
+    { label: "已实名会员", value: stats?.verified_users ?? 0, tab: "members" },
   ]
 
   return (
@@ -335,10 +338,17 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
-          <Card key={c.label}>
+          <Card
+            key={c.label}
+            className="cursor-pointer transition-shadow hover:shadow-md"
+            onClick={() => goTab(c.tab)}
+          >
             <CardContent className="pt-4">
               <div className="text-2xl font-bold">{c.value}</div>
-              <div className="text-muted-foreground text-xs">{c.label}</div>
+              <div className="text-muted-foreground text-xs">
+                {c.label}
+                <span className="ml-1 opacity-0 transition-opacity group-hover:opacity-100">›</span>
+              </div>
             </CardContent>
           </Card>
         ))}
