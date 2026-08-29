@@ -2529,3 +2529,40 @@ page {
   font-size: 26rpx;
   font-variant-numeric: tabular-nums;
 }
+
+/* --- 资料完善差距提示 --- */
+.gap-card {
+  margin: 20rpx 28rpx;
+  padding: 24rpx;
+  border-radius: 16rpx;
+  background: #fdf3e0;
+  border: 1rpx solid #f0d9ae;
+}
+
+.gap-title {
+  color: #a1651c;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.gap-sub {
+  color: #8d8175;
+  font-size: 23rpx;
+  margin-top: 8rpx;
+}
+
+.gap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.gap-chip {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  border: 1rpx solid #e8d5b5;
+  color: #a1651c;
+  font-size: 23rpx;
+}

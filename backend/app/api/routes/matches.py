@@ -72,6 +72,7 @@ class FilterRequest(SQLModel):
     region: list[str] | None = None  # 户籍/居住地关键字
     job: list[str] | None = None
     has_house: list[str] | None = None
+    has_car: bool | None = None  # True=有车 False=无车
     cursor: str | None = None
     limit: int = Field(default=20, ge=1, le=50)
 
@@ -283,6 +284,8 @@ def apply_filter(
         stmt = stmt.where(Profile.job.in_(body.job))  # type: ignore
     if body.has_house:
         stmt = stmt.where(Profile.has_house.in_(body.has_house))  # type: ignore
+    if body.has_car is not None:
+        stmt = stmt.where(Profile.has_car == ("有车" if body.has_car else "无车"))
 
     stmt = stmt.order_by(Profile.updated_at.desc())  # type: ignore
     rows = session.exec(stmt.offset(offset).limit(body.limit + 1)).all()

@@ -173,6 +173,12 @@ const GRANT_SOURCE_LABEL: Record<string, string> = {
 
 function useStatementExport(storeId: string) {
   const [monthOffset, setMonthOffset] = useState<0 | 1>(1) // 默认导出上一个自然月
+  // 摘要行常驻展示 (选中月份), 导出直接复用缓存数据
+  const { data: statement } = useQuery({
+    queryFn: () =>
+      AdminService.storeStatement({ storeId, month: cnMonth(monthOffset) }),
+    queryKey: ["store-statement", storeId, monthOffset],
+  })
   const exportCsv = useMutation({
     mutationFn: async () => {
       const st = await AdminService.storeStatement({
@@ -194,6 +200,9 @@ function useStatementExport(storeId: string) {
       lines.push(`线下开通/续费,${st.grants_offline}`)
       lines.push(`当月新建工单,${st.tickets_created}`)
       lines.push(`当月处理完成工单,${st.tickets_handled}`)
+      lines.push(`当月发优惠券 (张),${st.coupon_issued ?? 0}`)
+      lines.push(`当月领券用户 (人),${st.coupon_users ?? 0}`)
+      lines.push(`领券后转正式会员 (人),${st.coupon_converted ?? 0}`)
       lines.push("")
       lines.push("明细·当月新增会员")
       lines.push("日期,寻缘号,昵称")
@@ -237,7 +246,7 @@ function useStatementExport(storeId: string) {
     },
     onError: (e) => toast.error(`导出失败: ${(e as Error).message}`),
   })
-  return { monthOffset, setMonthOffset, exportCsv }
+  return { monthOffset, setMonthOffset, exportCsv, statement }
 }
 
 /** 门店概览: 单店口径的待办指标 + 最近注册/提审/工单 + 月度对账单导出. */
@@ -246,7 +255,8 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
     queryFn: () => AdminService.adminDashboard({ storeId }),
     queryKey: ["admin-dashboard", "store", storeId],
   })
-  const { monthOffset, setMonthOffset, exportCsv } = useStatementExport(storeId)
+  const { monthOffset, setMonthOffset, exportCsv, statement } =
+    useStatementExport(storeId)
   const [qrDownloading, setQrDownloading] = useState(false)
 
   /** 下载门店专属小程序码 (扫码进入自动绑定为本店会员, 印线下物料用) */
@@ -288,7 +298,11 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
     { label: "今日新增", value: stats?.today_signups ?? 0, tab: "members" },
     { label: "待审资料", value: stats?.pending_audits ?? 0, tab: "audit" },
     { label: "待实名核验", value: stats?.pending_verifies ?? 0, tab: "verify" },
-    { label: "待处理工单", value: stats?.pending_tickets ?? 0, tab: "requests" },
+    {
+      label: "待处理工单",
+      value: stats?.pending_tickets ?? 0,
+      tab: "requests",
+    },
     { label: "已实名会员", value: stats?.verified_users ?? 0, tab: "members" },
   ]
 
@@ -297,6 +311,13 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-muted-foreground text-sm">
           门店月度对账 (自然月, 与门店结算口径一致)
+          {statement && (
+            <span className="ml-2">
+              · {statement.month}: 发券 {statement.coupon_issued} 张 / 领券{" "}
+              {statement.coupon_users} 人 / 转正式会员{" "}
+              {statement.coupon_converted} 人
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Select
@@ -347,7 +368,9 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
               <div className="text-2xl font-bold">{c.value}</div>
               <div className="text-muted-foreground text-xs">
                 {c.label}
-                <span className="ml-1 opacity-0 transition-opacity group-hover:opacity-100">›</span>
+                <span className="ml-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  ›
+                </span>
               </div>
             </CardContent>
           </Card>

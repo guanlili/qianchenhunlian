@@ -606,6 +606,37 @@ def test_store_statement_scoped_and_filtered(
     db.add(req)
     db.commit()
 
+    # 优惠券转化: 先发一张券, 再线下付费开通 (时间在后) → 转化 1 人
+    from datetime import timedelta as _td
+
+    db.add(
+        MembershipGrant(
+            user_id=m.id,
+            plan_code="coupon_7d",
+            days=7,
+            source="store_coupon",
+            start_from=m.created_at,
+            expires_at=m.created_at + _td(days=7),
+            granted_by_type="staff",
+            granted_by_id=m.id,
+            store_id=store.id,
+        )
+    )
+    db.add(
+        MembershipGrant(
+            user_id=m.id,
+            plan_code="yearly_365d",
+            days=365,
+            source="admin_recharge",
+            start_from=m.created_at + _td(days=7),
+            expires_at=m.created_at + _td(days=372),
+            granted_by_type="staff",
+            granted_by_id=m.id,
+            store_id=store.id,
+        )
+    )
+    db.commit()
+
     month = m.created_at.strftime("%Y-%m")
     r = client.get(
         f"{settings.API_V1_STR}/admin/stores/{store.id}/statement",
@@ -617,13 +648,17 @@ def test_store_statement_scoped_and_filtered(
     assert body["month"] == month
     assert body["new_members"] == 1
     assert body["total_members"] >= 1
-    assert body["grants_offline"] == 1
+    # 3 条线下: 原有 1 条 + 券 1 条 + 券后付费 1 条 (券 source 非 online 均计入线下)
+    assert body["grants_offline"] == 3
     assert body["grants_online"] == 0
     assert body["tickets_created"] == 1
     assert body["tickets_handled"] == 1
+    assert body["coupon_issued"] == 1
+    assert body["coupon_users"] == 1
+    assert body["coupon_converted"] == 1
     assert len(body["member_rows"]) == 1
     assert body["member_rows"][0]["xy_code"] == m.xy_code
-    assert len(body["grant_rows"]) == 1
+    assert len(body["grant_rows"]) == 3
 
     # 未来月份: 空对账
     r2 = client.get(

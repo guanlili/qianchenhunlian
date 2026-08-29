@@ -1108,6 +1108,9 @@ class StoreStatement(SQLModel):
     grants_offline: int  # 当月线下开通/续费次数
     tickets_created: int  # 当月新建工单
     tickets_handled: int  # 当月处理完成工单
+    coupon_issued: int = 0  # 当月发券张数 (会员天数券; 次数券走余额流水)
+    coupon_users: int = 0  # 当月领券用户数
+    coupon_converted: int = 0  # 领券用户中后来转为正式付费会员的人数
     member_rows: list[StatementMemberRow] = []
     grant_rows: list[StatementGrantRow] = []
 
@@ -1205,6 +1208,33 @@ def store_statement(
     grants_online = sum(1 for g in grants if g.source == membership.SOURCE_ONLINE)
     grants_offline = len(grants) - grants_online
 
+    # 优惠券转化: 当月发出的券 (天数券) → 领券用户中后来转为正式付费会员的人数
+    paid_sources = {membership.SOURCE_RECHARGE, membership.SOURCE_ONLINE}
+    coupon_grants = [g for g in grants if g.source == membership.SOURCE_COUPON]
+    coupon_user_ids = {g.user_id for g in coupon_grants}
+    first_coupon_at: dict[Any, datetime] = {}
+    for g in coupon_grants:
+        cur = first_coupon_at.get(g.user_id)
+        if cur is None or g.created_at < cur:
+            first_coupon_at[g.user_id] = g.created_at
+    coupon_converted = 0
+    if coupon_user_ids:
+        # 领券之后的付费发放 (不限本店; 券是钩子, 转化可能发生在任意渠道)
+        paid_rows = session.exec(
+            select(MembershipGrant.user_id, MembershipGrant.created_at)
+            .where(MembershipGrant.user_id.in_(coupon_user_ids))  # type: ignore[attr-defined]
+            .where(MembershipGrant.source.in_(paid_sources))  # type: ignore[attr-defined]
+            .where(MembershipGrant.revoked_at.is_(None))  # type: ignore
+        ).all()
+        paid_first: dict[Any, datetime] = {}
+        for uid, cat in paid_rows:
+            fc = first_coupon_at.get(uid)
+            if fc is not None and cat >= fc:
+                cur = paid_first.get(uid)
+                if cur is None or cat < cur:
+                    paid_first[uid] = cat
+        coupon_converted = len(paid_first)
+
     # 当月工单量
     tickets_created = (
         session.exec(
@@ -1239,6 +1269,9 @@ def store_statement(
         grants_offline=grants_offline,
         tickets_created=int(tickets_created),
         tickets_handled=int(tickets_handled),
+        coupon_issued=len(coupon_grants),
+        coupon_users=len(coupon_user_ids),
+        coupon_converted=coupon_converted,
         member_rows=[
             StatementMemberRow(
                 created_at=u.created_at,
