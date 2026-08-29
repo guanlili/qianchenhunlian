@@ -4554,6 +4554,129 @@ export const MatchBriefSchema = {
     description: '列表项 - 不含联系方式 / desc 截断'
 } as const;
 
+export const MatchCriteriaBriefSchema = {
+    properties: {
+        year_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year Min'
+        },
+        year_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year Max'
+        },
+        height_min: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Height Min'
+        },
+        height_max: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Height Max'
+        },
+        income: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Income'
+        },
+        edu: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Edu'
+        },
+        marriage: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Marriage'
+        },
+        house: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'House'
+        },
+        origins: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Origins',
+            default: []
+        },
+        locations: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Locations',
+            default: []
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        }
+    },
+    type: 'object',
+    title: 'MatchCriteriaBrief',
+    description: '对方择偶要求摘要 (详情页展示用; 未填的字段为 None 由端上显示不限).'
+} as const;
+
 export const MatchDetailResponseSchema = {
     properties: {
         profile: {
@@ -4584,6 +4707,16 @@ export const MatchDetailResponseSchema = {
             type: 'string',
             title: 'Verified',
             default: 'none'
+        },
+        criteria: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/MatchCriteriaBrief'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
@@ -4909,6 +5042,16 @@ export const MembershipPlansOutSchema = {
         pay_mode: {
             type: 'string',
             title: 'Pay Mode'
+        },
+        free_daily_quota: {
+            type: 'integer',
+            title: 'Free Daily Quota',
+            default: 5
+        },
+        member_daily_quota: {
+            type: 'integer',
+            title: 'Member Daily Quota',
+            default: 20
         },
         plans: {
             items: {

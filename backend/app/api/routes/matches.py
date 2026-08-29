@@ -21,6 +21,7 @@ from app.api.deps import (
 # 山东省限制: 只推荐山东省下的用户, 子句实现见 app.api.shandong
 from app.api.shandong import shandong_clause as _shandong_clause
 from app.models import (
+    Criteria,
     Favorite,
     Profile,
     ProfilePublic,
@@ -77,6 +78,22 @@ class FilterRequest(SQLModel):
     limit: int = Field(default=20, ge=1, le=50)
 
 
+class MatchCriteriaBrief(SQLModel):
+    """对方择偶要求摘要 (详情页展示用; 未填的字段为 None 由端上显示不限)."""
+
+    year_min: int | None = None
+    year_max: int | None = None
+    height_min: int | None = None
+    height_max: int | None = None
+    income: str | None = None
+    edu: str | None = None
+    marriage: str | None = None
+    house: str | None = None
+    origins: list[str] = []
+    locations: list[str] = []
+    note: str | None = None
+
+
 class MatchDetailResponse(SQLModel):
     # 始终用 ProfilePublic (不含 contact); 联系方式仅在 /profiles/me (本人自己看)
     # 或 admin 后台 (店长/admin) 才下发. 类型收紧避免回归泄密.
@@ -85,6 +102,7 @@ class MatchDetailResponse(SQLModel):
     unlocked: bool = False
     starred: bool = False
     verified: str = "none"  # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
+    criteria: MatchCriteriaBrief | None = None  # 对方择偶要求 (没填过为 None)
 
 
 # ---------------- Helpers ----------------
@@ -362,12 +380,35 @@ def get_profile_detail(
     # 客户端的 unlocked 字段始终 False (兼容旧字段, 等小程序新版上线后移除)
     public = ProfilePublic.model_validate(profile, from_attributes=True)
 
+    # 对方择偶要求摘要 (没填过 criteria 为 None, 端上显示「暂未填写」)
+    criteria_row = session.exec(
+        select(Criteria).where(Criteria.user_id == user_id)
+    ).first()
+    criteria_brief = (
+        MatchCriteriaBrief(
+            year_min=criteria_row.year_min,
+            year_max=criteria_row.year_max,
+            height_min=criteria_row.height_min,
+            height_max=criteria_row.height_max,
+            income=criteria_row.income,
+            edu=criteria_row.edu,
+            marriage=criteria_row.marriage,
+            house=criteria_row.house,
+            origins=criteria_row.origins or [],
+            locations=criteria_row.locations or [],
+            note=criteria_row.note,
+        )
+        if criteria_row
+        else None
+    )
+
     return MatchDetailResponse(
         profile=public,
         xy_code=target_xy_code,
         unlocked=False,
         starred=starred,
         verified=(target_user.verified or "none"),
+        criteria=criteria_brief,
     )
 
 

@@ -11,6 +11,8 @@ Page({
   data: {
     loading: true,
     status: null,      // /membership/me: is_member/expires_at/quota
+    memberDailyQuota: 20, // 权益文案动态化 (后台可配)
+    freeDailyQuota: 5,
     plans: [],         // 可购套餐
     payMode: 'off',    // online (真实微信支付) / mock (模拟支付联调) / off (仅门店线下)
     latestOrder: null,
@@ -56,6 +58,8 @@ Page({
       this.setData({
         status,
         plans: plansRes.plans || [],
+        memberDailyQuota: plansRes.member_daily_quota || 20,
+        freeDailyQuota: plansRes.free_daily_quota || 5,
         payMode: plansRes.pay_mode || 'off',
         latestOrder: latestOrder
           ? { ...latestOrder, plan_name: planName(latestOrder.plan_code) }

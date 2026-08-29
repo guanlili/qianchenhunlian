@@ -39,6 +39,9 @@ class PlanItem(SQLModel):
 class MembershipPlansOut(SQLModel):
     # 线上购买模式: online (真实微信支付) / mock (模拟支付, 联调演练) / off (仅门店线下)
     pay_mode: str
+    # 权益数字动态化: 页面文案与后台配置保持一致 (后台可调, 前端不再写死)
+    free_daily_quota: int = 5
+    member_daily_quota: int = 20
     plans: list[PlanItem] = []
 
 
@@ -95,7 +98,12 @@ def list_plans(
         for p in cfg.get("plans", [])
         if isinstance(p, dict) and p.get("price") is not None
     ]
-    return MembershipPlansOut(pay_mode=membership.purchase_mode(session), plans=plans)
+    return MembershipPlansOut(
+        pay_mode=membership.purchase_mode(session),
+        free_daily_quota=int(cfg.get("free_daily_quota", 5)),
+        member_daily_quota=int(cfg.get("member_daily_quota", 20)),
+        plans=plans,
+    )
 
 
 def _gen_out_trade_no() -> str:

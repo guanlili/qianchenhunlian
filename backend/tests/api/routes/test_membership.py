@@ -552,3 +552,14 @@ def test_browse_requires_member(client, db: Session) -> None:
     db.commit()
     r3 = client.get(f"{API}/matches/daily", headers=headers)
     assert r3.status_code == 200
+
+
+def test_plans_return_quota_config(client, db: Session) -> None:
+    """plans 返回额度配置 (权益文案动态化, 与后台配置一致)."""
+    _set_cfg(db, free_daily_quota=7, member_daily_quota=25)
+    user = _make_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    r = client.get(f"{API}/membership/plans", headers=headers)
+    assert r.status_code == 200
+    assert r.json()["free_daily_quota"] == 7
+    assert r.json()["member_daily_quota"] == 25
