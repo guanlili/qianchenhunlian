@@ -303,6 +303,8 @@ const createFilterSteps = () => [
   { key: 'gender', title: '性别', multiple: false, columns: 'two', options: makeOptions(['不限', '男', '女']) },
   { key: 'marriage', title: '婚姻', multiple: true, columns: 'two', options: makeOptions(marriageOptions.filter((m) => m !== '不限')) },
   { key: 'edu', title: '学历', multiple: true, columns: 'two', options: makeOptions(eduOptions.filter((e) => e !== '不限')) },
+  { key: 'house', title: '婚房', multiple: false, columns: 'two', options: makeOptions(['不限', '有婚房', '无婚房', '有购房计划']) },
+  { key: 'car', title: '车辆', multiple: false, columns: 'two', options: makeOptions(['不限', '有车', '无车']) },
 ];
 
 // income 10 档桶 (后端实际枚举值, 给 backend 用)
@@ -367,6 +369,8 @@ function countFilterCategories(req) {
   if (req.edu && req.edu.length) n++;
   if (req.region && req.region.length) n++;
   if (req.job && req.job.length) n++;
+  if (req.has_house && req.has_house.length) n++;
+  if (req.has_car === true || req.has_car === false) n++;
   return n;
 }
 
@@ -406,6 +410,16 @@ function filterStepsToRequest(filterSteps) {
       case 'job':
         req.job = selected;
         break;
+      case 'house': {
+        const picked = selected.filter((x) => x !== '不限');
+        if (picked.length) req.has_house = picked;
+        break;
+      }
+      case 'car': {
+        if (selected[0] === '有车') req.has_car = true;
+        else if (selected[0] === '无车') req.has_car = false;
+        break;
+      }
     }
   }
   return req;
@@ -520,6 +534,7 @@ Page({
     apiReady: false,    // 登录成功后置 true; false 时不请求推荐
     isMember: false,    // 门店会员制: 非会员首页锁屏 (浏览为会员专享)
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
+    profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
   },
 
   // ============================================================
@@ -756,6 +771,7 @@ Page({
           desc:      p.desc      || this.data.profileForm.desc,
         };
         updates.profileFields = buildProfileFields(updates.profileForm);
+        this._pendingGapRefresh = true;
         updates.photos = createPhotos(p.photos || []);
         updates.myPhotos = _resolveList(p.photos);
         // relation: 后端权威值 (覆盖 storage)
@@ -783,6 +799,10 @@ Page({
         it.label === '我的当地门店' ? { ...it, sub: homeName } : it,
       );
       this.setData(updates);
+      if (this._pendingGapRefresh) {
+        this._pendingGapRefresh = false;
+        this._refreshGaps();
+      }
     } catch (e) {
       console.warn('[index] loadMyProfile', e);
     }
@@ -1723,6 +1743,7 @@ Page({
       profileFields: buildProfileFields(profileForm),
       profileProgress: calcProfileProgress(profileForm, this.data.photos),
     });
+    this._refreshGaps();
   },
 
   openProfileOption(e) {
@@ -1790,6 +1811,15 @@ Page({
       profileFields: buildProfileFields(profileForm),
       profileProgress: calcProfileProgress(profileForm, this.data.photos),
     });
+    this._refreshGaps();
+  },
+
+  /** 资料完善差距: 未填字段标签列表 (60% 才能发起申请, 给用户明确目标) */
+  _refreshGaps() {
+    const gaps = (this.data.profileFields || [])
+      .filter((f) => !f.value || !String(f.value).trim())
+      .map((f) => f.label);
+    this.setData({ profileGaps: gaps });
   },
 
   /** 资料编辑页内的 region picker change */
@@ -2085,6 +2115,7 @@ Page({
         profileProgress: calcProfileProgress(profileForm, this.data.photos),
         optionSheet: null,
       });
+      this._refreshGaps();
       return;
     }
 

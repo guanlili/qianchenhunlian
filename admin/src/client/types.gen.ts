@@ -639,6 +639,7 @@ export type FilterRequest = {
     region?: (Array<(string)> | null);
     job?: (Array<(string)> | null);
     has_house?: (Array<(string)> | null);
+    has_car?: (boolean | null);
     cursor?: (string | null);
     limit?: number;
 };
@@ -1139,6 +1140,9 @@ export type StoreStatement = {
     grants_offline: number;
     tickets_created: number;
     tickets_handled: number;
+    coupon_issued?: number;
+    coupon_users?: number;
+    coupon_converted?: number;
     member_rows?: Array<StatementMemberRow>;
     grant_rows?: Array<StatementGrantRow>;
 };
@@ -1378,6 +1382,12 @@ export type AdminStoreStatementData = {
 };
 
 export type AdminStoreStatementResponse = (StoreStatement);
+
+export type AdminStoreQrcodeData = {
+    storeId: string;
+};
+
+export type AdminStoreQrcodeResponse = (unknown);
 
 export type AdminAdminUpdateStoreData = {
     requestBody: StoreUpdate;

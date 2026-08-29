@@ -577,6 +577,13 @@
       </view>
 
       <scroll-view class="child-scroll with-bottom" scroll-y>
+        <view class="gap-card" wx:if="{{profileGaps.length > 0 && profileProgress < 60}}">
+          <view class="gap-title">完善度 {{profileProgress}}% · 发起联系申请需 60%</view>
+          <view class="gap-sub">再填以下 {{profileGaps.length}} 项, 更容易通过红娘撮合:</view>
+          <view class="gap-chips">
+            <text wx:for="{{profileGaps}}" wx:key="*this" class="gap-chip">{{item}}</text>
+          </view>
+        </view>
         <view class="progress-card">
           <view><text>资料完善度：</text><text>完善度越高，匹配成功率越高</text></view>
           <view class="progress-track"><view style="width: {{profileProgress}}%;"></view><text>{{profileProgress}}%</text></view>
@@ -790,6 +797,26 @@
             <view wx:for="{{filterSteps[2].options}}" wx:for-item="opt" wx:for-index="optIndex" wx:key="label"
               class="filter-option {{opt.selected ? 'selected' : ''}}"
               bindtap="toggleFilterOption" data-step="2" data-opt="{{optIndex}}">{{opt.label}}</view>
+          </view>
+        </view>
+
+        <!-- 5.5 婚房 (filterSteps[3], 单选) -->
+        <view class="filter-group">
+          <view class="filter-group-title">婚房</view>
+          <view class="option-grid two">
+            <view wx:for="{{filterSteps[3].options}}" wx:for-item="opt" wx:for-index="optIndex" wx:key="label"
+              class="filter-option {{opt.selected ? 'selected' : ''}}"
+              bindtap="toggleFilterOption" data-step="3" data-opt="{{optIndex}}">{{opt.label}}</view>
+          </view>
+        </view>
+
+        <!-- 5.6 车辆 (filterSteps[4], 单选) -->
+        <view class="filter-group">
+          <view class="filter-group-title">车辆</view>
+          <view class="option-grid two">
+            <view wx:for="{{filterSteps[4].options}}" wx:for-item="opt" wx:for-index="optIndex" wx:key="label"
+              class="filter-option {{opt.selected ? 'selected' : ''}}"
+              bindtap="toggleFilterOption" data-step="4" data-opt="{{optIndex}}">{{opt.label}}</view>
           </view>
         </view>
 

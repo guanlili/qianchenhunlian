@@ -4286,6 +4286,17 @@ export const FilterRequestSchema = {
             ],
             title: 'Has House'
         },
+        has_car: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Car'
+        },
         cursor: {
             anyOf: [
                 {
@@ -7323,6 +7334,21 @@ export const StoreStatementSchema = {
         tickets_handled: {
             type: 'integer',
             title: 'Tickets Handled'
+        },
+        coupon_issued: {
+            type: 'integer',
+            title: 'Coupon Issued',
+            default: 0
+        },
+        coupon_users: {
+            type: 'integer',
+            title: 'Coupon Users',
+            default: 0
+        },
+        coupon_converted: {
+            type: 'integer',
+            title: 'Coupon Converted',
+            default: 0
         },
         member_rows: {
             items: {
