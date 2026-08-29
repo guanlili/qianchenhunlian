@@ -518,6 +518,7 @@ Page({
     meVerified: false,  // 我自己是否实名认证 (彩色徽章)
     loginFailed: false, // 登录失败时不展示任何示例资料
     apiReady: false,    // 登录成功后置 true; false 时不请求推荐
+    isMember: false,    // 门店会员制: 非会员首页锁屏 (浏览为会员专享)
   },
 
   // ============================================================
@@ -581,6 +582,12 @@ Page({
         if (payload.has_profile) {
           this.loadMyProfile().catch(() => {});
         }
+        // 门店会员制: 拉会员状态决定首页是否锁屏; 会员才加载推荐
+        membershipSvc.getMyMembership().then((m) => {
+          const isMember = !!(m && m.is_member);
+          this.setData({ isMember });
+          if (isMember) this.loadHome();
+        }).catch(() => {});
         // 门店码进入且尚未绑定门店 → 自动绑定为该店会员 (不覆盖已有绑定)
         if (this._pendingStoreId) {
           this._bindSceneStore(this._pendingStoreId);
@@ -694,7 +701,7 @@ Page({
   },
 
   async loadHome() {
-    if (!this.data.apiReady) return;
+    if (!this.data.apiReady || !this.data.isMember) return; // 非会员不请求推荐 (403)
     try {
       let items, next_cursor;
       if (this.data.activeFilter) {
@@ -1124,6 +1131,10 @@ Page({
   },
 
   async openDetail(e) {
+    if (!this.data.isMember) {
+      wx.showToast({ title: '开通会员后可查看', icon: 'none' });
+      return;
+    }
     const id = e.currentTarget.dataset.id;
     // 先切到 detail 屏 (loading 由 request 层显示)
     this.setData({
@@ -2369,6 +2380,15 @@ Page({
       title: '乾缘婚恋 · 寻一份合适的姻缘',
       query: sp && sp.user_id ? `target=${sp.user_id}` : '',
     };
+  },
+
+  /** 门店会员制锁屏 CTA */
+  goStoreCities() {
+    wx.navigateTo({ url: '/pages/store-cities/store-cities' });
+  },
+
+  goMembership() {
+    wx.navigateTo({ url: '/pages/membership/membership' });
   },
 
   noop() {},

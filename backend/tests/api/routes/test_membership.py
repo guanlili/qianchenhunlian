@@ -32,7 +32,9 @@ API = settings.API_V1_STR
 def _make_user(db: Session, *, unlock_balance: int = 0, home_store_id=None) -> User:
     user = crud.create_user(
         session=db,
-        user_create=UserCreate(email=random_email(), password=random_lower_string() + "Aa1!"),
+        user_create=UserCreate(
+            email=random_email(), password=random_lower_string() + "Aa1!"
+        ),
     )
     user.unlock_balance = unlock_balance
     db.add(Profile(user_id=user.id, home_store_id=home_store_id, progress=100))
@@ -54,7 +56,9 @@ def _set_cfg(db: Session, **overrides) -> None:
     db.commit()
 
 
-def _grant(db: Session, user: User, *, days: int, plan_code: str = "monthly_30d") -> MembershipGrant:
+def _grant(
+    db: Session, user: User, *, days: int, plan_code: str = "monthly_30d"
+) -> MembershipGrant:
     grant = membership.grant_membership(
         session=db,
         user=user,
@@ -80,7 +84,11 @@ def _setup_store_admin(client: TestClient, db: Session) -> tuple[dict[str, str],
     crud.create_staff(
         session=db,
         staff_create=StaffCreate(
-            email=email, name="店长", password=pwd, role="store_admin", store_id=store.id
+            email=email,
+            name="店长",
+            password=pwd,
+            role="store_admin",
+            store_id=store.id,
         ),
     )
     r = client.post(
@@ -116,7 +124,11 @@ def test_consume_free_daily_then_balance_then_none(db: Session) -> None:
         ).all()
     ]
     # 日额度消耗 amount=0 仅留痕; 余额消耗 -1
-    assert sorted(sources) == [("contact_request_cost", -1), ("daily_free_cost", 0), ("daily_free_cost", 0)]
+    assert sorted(sources) == [
+        ("contact_request_cost", -1),
+        ("daily_free_cost", 0),
+        ("daily_free_cost", 0),
+    ]
 
     status = membership.quota_status(db, user)
     assert status["used"] == 2 and status["remaining"] == 0 and status["balance"] == 0
@@ -282,12 +294,18 @@ def test_online_pay_source_reserved(db: Session) -> None:
     assert membership.is_member(user) is True  # 线上/线下开通效果一致
 
 
-def test_grant_flow_superuser(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+def test_grant_flow_superuser(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
     user = _make_user(db)
     r = client.post(
         f"{API}/admin/members/{user.id}/grant-membership",
         headers=superuser_token_headers,
-        json={"plan_code": "monthly_30d", "source": "admin_recharge", "note": "线下收款"},
+        json={
+            "plan_code": "monthly_30d",
+            "source": "admin_recharge",
+            "note": "线下收款",
+        },
     )
     assert r.status_code == 200, r.text
     body = r.json()
@@ -299,7 +317,8 @@ def test_grant_flow_superuser(client: TestClient, db: Session, superuser_token_h
     assert user.membership_expires_at is not None
 
     grants = client.get(
-        f"{API}/admin/members/{user.id}/membership-grants", headers=superuser_token_headers
+        f"{API}/admin/members/{user.id}/membership-grants",
+        headers=superuser_token_headers,
     )
     assert grants.status_code == 200
     assert grants.json()["total"] == 1
@@ -309,7 +328,9 @@ def test_grant_flow_superuser(client: TestClient, db: Session, superuser_token_h
     assert len(logs) == 1 and str(logs[0].target_user_id) == str(user.id)
 
 
-def test_revoke_endpoint(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+def test_revoke_endpoint(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
     user = _make_user(db)
     grant = _grant(db, user, days=30)
 
@@ -324,7 +345,9 @@ def test_revoke_endpoint(client: TestClient, db: Session, superuser_token_header
     assert user.membership_expires_at is None
 
 
-def test_trial_once_enforced(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+def test_trial_once_enforced(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
     """体验卡每人限一次 (docs/13 决策)."""
     user = _make_user(db)
     r1 = client.post(
@@ -343,7 +366,9 @@ def test_trial_once_enforced(client: TestClient, db: Session, superuser_token_he
     assert "体验卡" in r2.json()["detail"]
 
 
-def test_custom_plan_requires_days(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+def test_custom_plan_requires_days(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
     user = _make_user(db)
     r = client.post(
         f"{API}/admin/members/{user.id}/grant-membership",
@@ -362,7 +387,9 @@ def test_custom_plan_requires_days(client: TestClient, db: Session, superuser_to
     assert user.membership_plan_code == "custom"
 
 
-def test_grant_rejects_superuser_target(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+def test_grant_rejects_superuser_target(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
     su = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).one()
     r = client.post(
         f"{API}/admin/members/{su.id}/grant-membership",
@@ -372,7 +399,9 @@ def test_grant_rejects_superuser_target(client: TestClient, db: Session, superus
     assert r.status_code == 400
 
 
-def test_unknown_plan_rejected(client: TestClient, db: Session, superuser_token_headers: dict) -> None:
+def test_unknown_plan_rejected(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
     user = _make_user(db)
     r = client.post(
         f"{API}/admin/members/{user.id}/grant-membership",
@@ -405,7 +434,9 @@ def test_store_admin_grant_scope(client: TestClient, db: Session) -> None:
     db.refresh(own)
     assert own.membership_expires_at is not None
     # 发放记录挂在门店名下
-    grant = db.exec(select(MembershipGrant).where(MembershipGrant.user_id == own.id)).one()
+    grant = db.exec(
+        select(MembershipGrant).where(MembershipGrant.user_id == own.id)
+    ).one()
     assert grant.store_id == store.id
 
     r = client.post(
@@ -487,3 +518,37 @@ def test_contact_submit_quota_flow(client: TestClient, db: Session) -> None:
 
     db.refresh(me)
     assert me.unlock_balance == 0  # 会员日额度内从未动余额
+
+
+# ---------------- 门店会员制: 浏览类接口会员门槛 ----------------
+
+
+def test_browse_requires_member(client, db: Session) -> None:
+    """非会员看不了推荐/详情 (门店会员制); 开通会员后放行."""
+    user = _make_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+
+    r = client.get(f"{API}/matches/daily", headers=headers)
+    assert r.status_code == 403
+    assert "NOT_MEMBER" in str(r.json()["detail"])
+    # 详情同样拒绝
+    import uuid as _uuid
+
+    r2 = client.get(f"{API}/matches/{_uuid.uuid4()}", headers=headers)
+    assert r2.status_code == 403
+    assert "NOT_MEMBER" in str(r2.json()["detail"])
+
+    # 开通会员后放行 (返回空列表也算 200)
+    db.refresh(user)
+    membership.grant_membership(
+        session=db,
+        user=user,
+        plan_code="yearly_365d",
+        days=365,
+        source=membership.SOURCE_RECHARGE,
+        granted_by_type="user",
+        granted_by_id=user.id,
+    )
+    db.commit()
+    r3 = client.get(f"{API}/matches/daily", headers=headers)
+    assert r3.status_code == 200
