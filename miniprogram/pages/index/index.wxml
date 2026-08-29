@@ -244,6 +244,9 @@
         <button class="home-small" bindtap="goHome">回首页</button>
         <button class="btn primary wide" bindtap="openContact" disabled="{{requestSubmitted}}">{{requestSubmitted ? '已申请, 等红娘联系' : '联系当地门店'}}</button>
       </view>
+      <view class="report-row">
+        <text bindtap="reportProfile">发现虚假资料或骚扰? 举报此人</text>
+      </view>
       <view class="prev-next">
         <button bindtap="prevProfile">‹ 上一个</button>
         <button bindtap="nextProfile">下一个 ›</button>
@@ -376,11 +379,31 @@
           <view class="nav-placeholder"></view>
         </view>
         <view class="me-profile">
-          <view class="avatar big tone-ocean">乾</view>
+          <image wx:if="{{myAvatar}}" class="avatar big me-avatar-img" src="{{myAvatar}}" mode="aspectFill" />
+          <view wx:else class="avatar big tone-ocean">乾</view>
           <view>
-            <view>用户编号 {{myXyCode || '53652255'}}</view>
-            <text>已登记 · 审核中</text>
+            <view class="me-nick-row">
+              <text class="me-nick">{{myNickname || '用户' + (myXyCode || '')}}</text>
+              <text class="me-badge {{isMember ? 'on' : ''}}">{{isMember ? '✦ 会员' : '未开通会员'}}</text>
+            </view>
+            <text class="me-sub">编号 {{myXyCode || '—'}}{{isMember && memberExpiresAt ? ' · ' + memberExpiresAt + ' 到期' : ''}}</text>
           </view>
+        </view>
+      </view>
+
+      <!-- 三格状态条: 完善度 / 今日剩余 / 会员状态 -->
+      <view class="me-stats">
+        <view class="me-stat">
+          <view>{{profileProgress}}%</view>
+          <text>资料完善度</text>
+        </view>
+        <view class="me-stat">
+          <view>{{memberQuota ? memberQuota.remaining : '—'}}</view>
+          <text>今日可申请</text>
+        </view>
+        <view class="me-stat">
+          <view>{{isMember ? '生效中' : '—'}}</view>
+          <text>会员状态</text>
         </view>
       </view>
       <view class="action-list">
