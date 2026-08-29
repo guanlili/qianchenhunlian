@@ -4,51 +4,92 @@
     <view class="brand-sub">真诚 · 严选资料</view>
   </view>
 
-  <view class="form-card">
-    <view class="form-title">欢迎你, 先完善基本信息</view>
+  <!-- 第一步: 基本信息 + 协议 -->
+  <block wx:if="{{step === 'info'}}">
+    <view class="form-card">
+      <view class="form-title">欢迎你, 先完善基本信息</view>
 
-    <view class="row">
-      <view class="row-label">头像</view>
-      <view class="avatar-btn" bindtap="onPickAvatar">
-        <image
-          wx:if="{{avatarTempPath}}"
-          class="avatar-img"
-          src="{{avatarTempPath}}"
-          mode="aspectFill"
-        />
-        <view wx:else class="avatar-default">
-          <text>{{defaultGlyph}}</text>
+      <view class="row">
+        <view class="row-label">头像</view>
+        <view class="avatar-btn" bindtap="onPickAvatar">
+          <image
+            wx:if="{{avatarTempPath}}"
+            class="avatar-img"
+            src="{{avatarTempPath}}"
+            mode="aspectFill"
+          />
+          <view wx:else class="avatar-default">
+            <text>{{defaultGlyph}}</text>
+          </view>
+          <text class="avatar-edit-tag">点击更换</text>
         </view>
-        <text class="avatar-edit-tag">点击更换</text>
+      </view>
+
+      <view class="row">
+        <view class="row-label">昵称</view>
+        <input
+          class="nick-input"
+          type="text"
+          placeholder="请填写昵称"
+          value="{{nickname}}"
+          bindinput="onNicknameInput"
+          maxlength="20"
+        />
+      </view>
+
+      <view class="fee-notice">乾缘婚恋会员费 100元/年</view>
+
+      <view class="agreement-row" bindtap="toggleAgreed">
+        <view class="checkbox {{agreed ? 'on' : ''}}">{{agreed ? '✓' : ''}}</view>
+        <text class="agree-text">
+          我已阅读并同意
+          <text class="link" catchtap="openAgreement">《用户协议》</text>
+          <text class="link" catchtap="openPrivacy">《隐私政策》</text>
+          <text class="link" catchtap="openRefund">《线上报名退费协议》</text>
+        </text>
       </view>
     </view>
 
-    <view class="row">
-      <view class="row-label">昵称</view>
-      <input
-        class="nick-input"
-        type="text"
-        placeholder="请填写昵称"
-        value="{{nickname}}"
-        bindinput="onNicknameInput"
-        maxlength="20"
-      />
+    <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '下一步'}}
+    </button>
+  </block>
+
+  <!-- 第二步: 可选门店 (线下服务由门店提供, 可跳过) -->
+  <block wx:if="{{step === 'store'}}">
+    <view class="form-card">
+      <view class="form-title">选择你的门店</view>
+      <view class="store-step-sub">红娘服务由你所在门店提供, 选择后优先为你撮合; 也可以暂时跳过</view>
+
+      <view class="city-chips" wx:if="{{cities.length > 0}}">
+        <view
+          wx:for="{{cities}}"
+          wx:key="*this"
+          class="city-chip {{selectedCity === item ? 'on' : ''}}"
+          bindtap="selectCity"
+          data-city="{{item}}"
+        >{{item}}</view>
+      </view>
+
+      <view class="store-list" wx:if="{{selectedCity}}">
+        <view
+          wx:for="{{stores}}"
+          wx:key="id"
+          class="store-item {{bindingStoreId === item.id ? 'binding' : ''}}"
+          bindtap="onPickStore"
+          data-id="{{item.id}}"
+          data-name="{{item.name}}"
+        >
+          <view class="store-item-main">
+            <view class="store-item-name">{{item.name}}</view>
+            <text class="store-item-sub">{{item.district || item.city}}{{item.address ? ' · ' + item.address : ''}}</text>
+          </view>
+          <text class="store-item-go">{{bindingStoreId === item.id ? '绑定中' : '选择 ›'}}</text>
+        </view>
+        <view wx:if="{{!stores.length}}" class="store-empty">该城市暂无门店</view>
+      </view>
     </view>
 
-    <view class="fee-notice">乾缘婚恋会员费 100元/年</view>
-
-    <view class="agreement-row" bindtap="toggleAgreed">
-      <view class="checkbox {{agreed ? 'on' : ''}}">{{agreed ? '✓' : ''}}</view>
-      <text class="agree-text">
-        我已阅读并同意
-        <text class="link" catchtap="openAgreement">《用户协议》</text>
-        <text class="link" catchtap="openPrivacy">《隐私政策》</text>
-        <text class="link" catchtap="openRefund">《线上报名退费协议》</text>
-      </text>
-    </view>
-  </view>
-
-  <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
-    {{submitting ? '提交中...' : '会员注册'}}
-  </button>
+    <button class="submit-btn" bindtap="skipStore">暂不选择, 直接进入</button>
+  </block>
 </view>

@@ -9,6 +9,9 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi.responses import Response
+
+import logging
 from sqlalchemy.orm import aliased
 from sqlmodel import Field, SQLModel, and_, func, or_, select
 
@@ -16,7 +19,7 @@ from app import crud
 from app.api.audit import write_audit as _audit
 from app.api.deps import CurrentActor, SessionDep, require_admin_or_staff
 from app.api.permissions import Perm, has_perm, require_perm
-from app.core import membership
+from app.core import membership, wechat
 from app.core.wechat import assert_text_safe_fields
 from app.models import (
     Affinity,
@@ -49,6 +52,8 @@ from app.models import (
     User,
     View,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/admin",
@@ -1253,6 +1258,35 @@ def store_statement(
             for g in grants
         ],
     )
+
+
+@router.get(
+    "/stores/{store_id}/qrcode",
+    dependencies=[Depends(require_admin_or_staff)],
+)
+async def store_qrcode(
+    session: SessionDep,
+    actor: CurrentActor,
+    store_id: uuid.UUID,
+) -> Response:
+    """门店专属小程序码 (PNG): scene=门店ID hex, 扫码进入自动绑定为该店会员.
+
+    门店管理员限本店 (给自己店印物料); 总部任意店。凭证/配额由 core/wechat 管理。
+    """
+    store = session.get(Store, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="门店不存在")
+    owner_sid = _store_owner_id(actor)
+    if owner_sid is not None and owner_sid != store_id:
+        raise HTTPException(status_code=403, detail="只能获取您的门店码")
+    try:
+        png = await wechat.get_wxacode_unlimit(
+            scene=store_id.hex, page="pages/index/index"
+        )
+    except wechat.WechatError as e:
+        logger.warning("门店码生成失败 store=%s: %s", store_id, e)
+        raise HTTPException(status_code=502, detail="小程序码生成失败, 请稍后重试")
+    return Response(content=png, media_type="image/png")
 
 
 @router.post(

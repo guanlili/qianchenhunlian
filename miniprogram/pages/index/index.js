@@ -527,6 +527,8 @@ Page({
   async onLoad(options) {
     // 分享带 target 参数: 登录完成后打开对应详情
     this._pendingTargetId = options && options.target ? String(options.target) : null;
+    // 门店专属码进入: scene=门店ID hex (32位, 微信小程序码) 或 store=UUID (直链/测试)
+    this._pendingStoreId = this._parseStoreParam(options);
 
     // 先恢复 storage 里的 relation, 避免弹窗瞬间闪一下
     const cachedRelation = wx.getStorageSync('qy_relation');
@@ -579,6 +581,11 @@ Page({
         if (payload.has_profile) {
           this.loadMyProfile().catch(() => {});
         }
+        // 门店码进入且尚未绑定门店 → 自动绑定为该店会员 (不覆盖已有绑定)
+        if (this._pendingStoreId) {
+          this._bindSceneStore(this._pendingStoreId);
+          this._pendingStoreId = null;
+        }
       }
     } catch (e) {
       console.warn('[index] 登录失败', e);
@@ -610,6 +617,33 @@ Page({
       });
     }
     this._pendingTargetId = null;
+  },
+
+  /** 门店码参数解析: scene (32位hex → UUID) 或 store (UUID 直链) */
+  _parseStoreParam(options) {
+    if (!options) return null;
+    const raw = options.scene ? decodeURIComponent(options.scene) : '';
+    if (/^[0-9a-f]{32}$/i.test(raw)) {
+      const h = raw.toLowerCase();
+      return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+    }
+    if (options.store && /^[0-9a-f-]{36}$/i.test(options.store)) {
+      return options.store;
+    }
+    return null;
+  },
+
+  /** 扫门店码自动绑店: 未绑定才绑 (不覆盖用户已选门店), 失败静默不阻断 */
+  async _bindSceneStore(storeId) {
+    try {
+      const me = await profileSvc.getMe();
+      if (me && me.home_store_id) return; // 已有门店, 尊重现状
+      await storeSvc.setHomeStore(storeId);
+      wx.showToast({ title: '已关联你的门店', icon: 'success', duration: 1500 });
+      this.loadMyProfile().catch(() => {});
+    } catch (e) {
+      console.warn('[index] bindSceneStore', e);
+    }
   },
 
   async checkMembershipRenewal() {
