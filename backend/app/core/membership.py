@@ -39,6 +39,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     # 下单→支付→自动开通 (不真扣款, 订单 transaction_id 带 MOCK 前缀)。
     # 真实支付配置齐全时 online 优先, 本开关被忽略。
     "pay_mock": False,
+    # 门店优惠券限领: 每会员每 30 天最多可领张数 (两类券合计), 0 = 不限。
+    # 防线下无限发券冲击会员付费体系。
+    "coupon_monthly_limit": 2,
     "plans": [
         {"code": "trial_7d", "name": "7天体验卡", "days": 7, "price": None},
         {"code": "monthly_30d", "name": "月卡", "days": 30, "price": 99},
@@ -55,11 +58,15 @@ SOURCE_COMPENSATE = "admin_compensate"  # 补偿
 # 同一张 MembershipGrant 表和同一个发放引擎, 体系一致。
 # 注意: admin 手动发放端点的 source 枚举不含此项 (管理员不能伪造线上支付记录)。
 SOURCE_ONLINE = "wx_pay"
+# 门店优惠券 (店长发放给本店会员的体验权益): 会员天数券走 MembershipGrant,
+# 申请次数券走 BalanceTransaction, source 均为 store_coupon 便于统计与限领。
+SOURCE_COUPON = "store_coupon"
 VALID_SOURCES = {
     SOURCE_RECHARGE,
     SOURCE_TRIAL,
     SOURCE_COMPENSATE,
     SOURCE_ONLINE,
+    SOURCE_COUPON,
 }
 
 # trial 类套餐: 受 trial_once_per_user 约束

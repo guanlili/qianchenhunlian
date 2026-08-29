@@ -504,6 +504,27 @@ export type ContactViewResponse = {
     contact_phone?: (string | null);
 };
 
+/**
+ * 门店优惠券: 两类之一.
+ */
+export type CouponGrantRequest = {
+    kind: 'member_days' | 'contact_uses';
+    days?: (number | null);
+    uses?: (number | null);
+    note?: (string | null);
+};
+
+export type kind = 'member_days' | 'contact_uses';
+
+export type CouponGrantResponse = {
+    kind: string;
+    days?: (number | null);
+    member_expires_at?: (string | null);
+    uses?: (number | null);
+    unlock_balance?: (number | null);
+    remaining_quota?: (number | null);
+};
+
 export type CriteriaPublic = {
     year_min?: (number | null);
     year_max?: (number | null);
@@ -692,11 +713,12 @@ export type MemberCounts = {
 };
 
 /**
- * 只放开支付相关开关; 套餐/额度调整后续按需扩展.
+ * 支付开关 + 优惠券限领; 套餐/额度调整后续按需扩展.
  */
 export type MembershipConfigUpdate = {
     pay_enabled?: (boolean | null);
     pay_mock?: (boolean | null);
+    coupon_monthly_limit?: (number | null);
 };
 
 export type MembershipGrantList = {
@@ -1514,6 +1536,13 @@ export type AdminUpdateMembershipConfigData = {
 };
 
 export type AdminUpdateMembershipConfigResponse = (MembershipPlansResponse);
+
+export type AdminGrantCouponEndpointData = {
+    requestBody: CouponGrantRequest;
+    userId: string;
+};
+
+export type AdminGrantCouponEndpointResponse = (CouponGrantResponse);
 
 export type AdminGrantMembershipEndpointData = {
     requestBody: MembershipGrantRequest;

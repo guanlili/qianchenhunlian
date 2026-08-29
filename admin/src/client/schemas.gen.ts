@@ -3353,6 +3353,126 @@ export const ContactViewResponseSchema = {
     title: 'ContactViewResponse'
 } as const;
 
+export const CouponGrantRequestSchema = {
+    properties: {
+        kind: {
+            type: 'string',
+            enum: ['member_days', 'contact_uses'],
+            title: 'Kind'
+        },
+        days: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 90,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Days'
+        },
+        uses: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 20,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Uses'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        }
+    },
+    type: 'object',
+    required: ['kind'],
+    title: 'CouponGrantRequest',
+    description: '门店优惠券: 两类之一.'
+} as const;
+
+export const CouponGrantResponseSchema = {
+    properties: {
+        kind: {
+            type: 'string',
+            title: 'Kind'
+        },
+        days: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Days'
+        },
+        member_expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Member Expires At'
+        },
+        uses: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Uses'
+        },
+        unlock_balance: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Unlock Balance'
+        },
+        remaining_quota: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Remaining Quota'
+        }
+    },
+    type: 'object',
+    required: ['kind'],
+    title: 'CouponGrantResponse'
+} as const;
+
 export const CriteriaPublicSchema = {
     properties: {
         year_min: {
@@ -4556,11 +4676,24 @@ export const MembershipConfigUpdateSchema = {
                 }
             ],
             title: 'Pay Mock'
+        },
+        coupon_monthly_limit: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 99,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Coupon Monthly Limit'
         }
     },
     type: 'object',
     title: 'MembershipConfigUpdate',
-    description: '只放开支付相关开关; 套餐/额度调整后续按需扩展.'
+    description: '支付开关 + 优惠券限领; 套餐/额度调整后续按需扩展.'
 } as const;
 
 export const MembershipGrantListSchema = {

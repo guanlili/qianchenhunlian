@@ -1,10 +1,19 @@
 """门店管理员 (store_admin) 数据范围测试: 会员级操作仅限本店."""
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app import crud
+from app.core import membership
 from app.core.config import settings
-from app.models import Profile, StaffCreate, Store, User, UserCreate
+from app.models import (
+    BalanceTransaction,
+    MembershipGrant,
+    Profile,
+    StaffCreate,
+    Store,
+    User,
+    UserCreate,
+)
 from tests.utils.utils import random_email, random_lower_string
 
 
@@ -642,3 +651,101 @@ def test_store_statement_scoped_and_filtered(
         f"{settings.API_V1_STR}/admin/stores/{store.id}/statement", headers=headers
     )
     assert denied.status_code == 403
+
+
+# ---------------- 门店优惠券 (store_coupon) ----------------
+
+
+def _coupon_headers(client, db: Session) -> tuple[dict[str, str], Store, User]:
+    """店长 (建在本店) + 本店会员."""
+    headers, own = _setup_store_admin(client, db)
+    member = _wx_member(db, home_store_id=own.id)
+    return headers, own, member
+
+
+def test_store_coupon_member_days(client, db: Session) -> None:
+    """店长发会员天数券: 本店会员生效, 记录 source=store_coupon 且带门店."""
+    headers, store, member = _coupon_headers(client, db)
+
+    r = client.post(
+        f"{settings.API_V1_STR}/admin/members/{member.id}/grant-coupon",
+        headers=headers,
+        json={"kind": "member_days", "days": 7},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["kind"] == "member_days"
+    assert body["days"] == 7
+    assert body["member_expires_at"]
+
+    db.expire_all()
+    db.refresh(member)
+    assert member.membership_expires_at is not None
+    grant = db.exec(
+        select(MembershipGrant).where(MembershipGrant.user_id == member.id)  # type: ignore[arg-type]
+    ).first()
+    assert grant is not None
+    assert grant.source == membership.SOURCE_COUPON
+    assert grant.store_id == store.id
+    assert grant.plan_code == "coupon_7d"
+
+
+def test_store_coupon_contact_uses(client, db: Session) -> None:
+    headers, _store, member = _coupon_headers(client, db)
+    before = member.unlock_balance
+
+    r = client.post(
+        f"{settings.API_V1_STR}/admin/members/{member.id}/grant-coupon",
+        headers=headers,
+        json={"kind": "contact_uses", "uses": 3},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["unlock_balance"] == before + 3
+
+    db.expire_all()
+    txn = db.exec(
+        select(BalanceTransaction)
+        .where(BalanceTransaction.user_id == member.id)  # type: ignore[arg-type]
+        .where(BalanceTransaction.source == membership.SOURCE_COUPON)
+    ).first()
+    assert txn is not None and txn.amount == 3
+
+
+def test_store_coupon_scope_and_limit(client, db: Session) -> None:
+    """他店会员 403; 限领 (默认 2 张/30 天) 触发后 400."""
+    headers, _store, member = _coupon_headers(client, db)
+    other = _another_store(db)
+    stranger = _wx_member(db, home_store_id=other.id)
+
+    # 他店会员 403
+    r0 = client.post(
+        f"{settings.API_V1_STR}/admin/members/{stranger.id}/grant-coupon",
+        headers=headers,
+        json={"kind": "member_days", "days": 3},
+    )
+    assert r0.status_code == 403
+
+    # 连发 3 张 (默认上限 2), 第 3 张被拒
+    for i in range(2):
+        ri = client.post(
+            f"{settings.API_V1_STR}/admin/members/{member.id}/grant-coupon",
+            headers=headers,
+            json={"kind": "contact_uses", "uses": 1},
+        )
+        assert ri.status_code == 200, f"第 {i + 1} 张应成功"
+    r3 = client.post(
+        f"{settings.API_V1_STR}/admin/members/{member.id}/grant-coupon",
+        headers=headers,
+        json={"kind": "member_days", "days": 1},
+    )
+    assert r3.status_code == 400
+    assert "上限" in r3.json()["detail"]
+
+    # 参数越界
+    r4 = client.post(
+        f"{settings.API_V1_STR}/admin/members/{member.id}/grant-coupon",
+        headers=headers,
+        json={"kind": "member_days", "days": 999},
+    )
+    # schema 层 (422) 或业务层 (400) 拒绝均可
+    assert r4.status_code in (400, 422)
