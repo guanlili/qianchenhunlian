@@ -1,11 +1,13 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { ShieldAlert, Store } from "lucide-react"
 import { Suspense } from "react"
 
 import { AdminService } from "@/client"
 import { AddAdmin } from "@/components/AdminAccounts/AddAdmin"
 import { columns } from "@/components/AdminAccounts/columns"
 import { DataTable } from "@/components/Common/DataTable"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
 
@@ -55,6 +57,32 @@ function AdminsPage() {
           </p>
         </div>
         <AddAdmin />
+      </div>
+
+      {/* 权限强调: 管理员账号 = 全部系统权限, 门店人员走门店账号 */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border border-rose-300 bg-rose-50 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-rose-700">
+            <ShieldAlert className="size-4" /> 拥有系统全部权限, 谨慎发放
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-rose-900/80">
+            管理员账号可操作全平台所有数据:
+            会员与资金相关操作、门店管理、员工账号、 平台设置等,
+            不受门店范围限制。请仅发放给总部核心人员, 离职或转岗及时停用。
+          </p>
+        </div>
+        <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+            <Store className="size-4" /> 给门店工作人员开账号?
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-emerald-900/80">
+            门店店长/红娘请勿使用管理员账号。到门店管理中为其创建「门店管理员」账号,
+            数据自动限定本店, 权限受角色矩阵约束。
+          </p>
+          <Button size="sm" variant="outline" className="mt-2" asChild>
+            <Link to="/stores">去门店总览创建门店账号</Link>
+          </Button>
+        </div>
       </div>
       <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <AdminsTableContent />
