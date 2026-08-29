@@ -51,6 +51,10 @@ export function AddAdmin() {
         <DialogHeader>
           <DialogTitle>新建管理员账号</DialogTitle>
         </DialogHeader>
+        <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+          ⚠ 该账号拥有系统全部权限 (含资金与门店管理), 请确认发放对象。
+          门店工作人员请在「门店总览 → 门店 → 管理员」中创建门店账号。
+        </div>
         <div className="space-y-4 py-2">
           <div>
             <Label htmlFor="admin-email">邮箱 *</Label>
