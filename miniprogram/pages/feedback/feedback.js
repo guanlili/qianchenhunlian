@@ -5,6 +5,18 @@ Page({
     content: '',
     contact: '',
     submitting: false,
+    reportTarget: '',  // 举报目标编号 (详情页「举报此人」带入)
+  },
+
+  onLoad(query) {
+    // 详情页举报入口: 带 about=寻缘号 预填举报模板
+    const about = query && query.about ? decodeURIComponent(query.about) : '';
+    if (about) {
+      this.setData({
+        reportTarget: about,
+        content: `举报用户 ${about}:\n（请补充具体情况, 如骚扰/虚假资料/不当言论, 便于红娘核实处理）`,
+      });
+    }
   },
   onContentInput(e) {
     this.setData({ content: (e.detail.value || '').slice(0, 1000) });

@@ -556,6 +556,9 @@ Page({
     isMember: false,    // 门店会员制: 非会员首页锁屏 (浏览为会员专享)
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
     profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
+    myAvatar: '',       // 我的页门面: 真实头像
+    myNickname: '',     // 昵称 (空则显示用户编号)
+    memberExpiresAt: '',// 会员到期时间 (我的页徽章)
   },
 
   // ============================================================
@@ -769,6 +772,11 @@ Page({
       const updates = {};
       if (data.profile) {
         updates.myProfileRows = adaptMyProfileRows(data.profile);
+        // 我的页门面: 真实头像/昵称
+        updates.myAvatar = data.profile.avatar_url
+          ? resolveFileUrl(data.profile.avatar_url)
+          : '';
+        updates.myNickname = data.profile.nickname || '';
         updates.profileDesc = data.profile.desc || '';
         updates.profileProgress = data.profile.progress || 0;
         updates.myContactPhone = data.profile.contact_phone || '';
@@ -2439,7 +2447,11 @@ Page({
     membershipSvc.getMyMembership().then((m) => {
       if (!m) return;
       const isMember = !!m.is_member;
-      this.setData({ isMember, memberQuota: m.quota || null });
+      this.setData({
+        isMember,
+        memberQuota: m.quota || null,
+        memberExpiresAt: (m && m.expires_at) || '',
+      });
       if (isMember) this.loadHome();
     }).catch(() => {});
   },
@@ -2450,6 +2462,15 @@ Page({
     if (home && home.phone) {
       wx.makePhoneCall({ phoneNumber: String(home.phone) });
     }
+  },
+
+  /** 详情页举报此人: 跳反馈页预填目标寻缘号 */
+  reportProfile() {
+    const sp = this.data.selectedProfile;
+    const code = sp && sp.xy_code ? sp.xy_code : '';
+    wx.navigateTo({
+      url: `/pages/feedback/feedback?about=${encodeURIComponent(code)}`,
+    });
   },
 
   /** 门店会员制锁屏 CTA */

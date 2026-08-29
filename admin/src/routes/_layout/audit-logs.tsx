@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { AdminService } from "@/client"
 import { columns } from "@/components/AuditLogs/columns"
@@ -52,6 +53,58 @@ function AuditLogsPage() {
       }),
   })
 
+  // 导出当前筛选下的日志 (分页拉全, 上限 2000 条防超大文件)
+  const exportCsv = useMutation({
+    mutationFn: async () => {
+      const rows: Awaited<
+        ReturnType<typeof AdminService.listAuditLogs>
+      >["items"] = []
+      for (let skip2 = 0; skip2 < 2000; skip2 += 200) {
+        const r = await AdminService.listAuditLogs({
+          action: action === ALL_ACTIONS ? undefined : action,
+          skip: skip2,
+          limit: 200,
+        })
+        rows.push(...(r.items ?? []))
+        if (rows.length >= (r.total ?? 0) || (r.items ?? []).length < 200) break
+      }
+      const esc = (v: unknown) => {
+        const str = v === null || v === undefined ? "" : String(v)
+        return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
+      }
+      const ACTION_LABEL: Record<string, string> = Object.fromEntries(
+        ACTION_OPTIONS.filter(([v]) => v !== ALL_ACTIONS),
+      )
+      const lines = [
+        "时间,操作人,动作,目标用户ID,详情",
+        ...rows.map((r) =>
+          [
+            new Date(r.created_at).toLocaleString("zh-CN"),
+            r.actor_email ?? "",
+            ACTION_LABEL[r.action] ?? r.action,
+            r.target_user_id ?? "",
+            typeof r.detail === "string"
+              ? r.detail
+              : JSON.stringify(r.detail ?? {}),
+          ]
+            .map(esc)
+            .join(","),
+        ),
+      ]
+      const blob = new Blob([`\uFEFF${lines.join("\n")}`], {
+        type: "text/csv;charset=utf-8",
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `操作日志_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`已导出 ${rows.length} 条操作日志`)
+    },
+    onError: (e) => toast.error(`导出失败: ${(e as Error).message}`),
+  })
+
   if (user && !user.is_superuser) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -74,24 +127,34 @@ function AuditLogsPage() {
             敏感操作留痕: 查看联系方式 / 赠送额度 / 封禁 / 审核等, 共 {total} 条
           </p>
         </div>
-        <Select
-          value={action}
-          onValueChange={(v) => {
-            setAction(v)
-            setSkip(0)
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="全部操作" />
-          </SelectTrigger>
-          <SelectContent>
-            {ACTION_OPTIONS.map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select
+            value={action}
+            onValueChange={(v) => {
+              setAction(v)
+              setSkip(0)
+            }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="全部操作" />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTION_OPTIONS.map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={exportCsv.isPending}
+            onClick={() => exportCsv.mutate()}
+          >
+            <Download /> 导出 CSV
+          </Button>
+        </div>
       </div>
 
       {isPending ? (
