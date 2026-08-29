@@ -130,6 +130,23 @@ def _enforce_api_detail_limit(current_user: CurrentUser) -> None:
 ApiDetailLimited = Annotated[None, Depends(_enforce_api_detail_limit)]
 
 
+def _require_member(current_user: CurrentUser) -> None:
+    """浏览类接口 (推荐/筛选/详情/收藏/好感列表) 门店会员专享.
+
+    产品模式: 小程序为门店付费会员的工具 (非获客漏斗), 非会员 403 引导到店开通。
+    """
+    from app.core.membership import is_member
+
+    if not is_member(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="NOT_MEMBER|乾缘为门店会员制服务, 请到你所在门店开通会员后使用",
+        )
+
+
+MemberRequired = Annotated[None, Depends(_require_member)]
+
+
 def _enforce_api_write_limit(current_user: CurrentUser) -> None:
     """业务写接口按用户限流: 好感/收藏/反馈/上传/资料修改等, 防机器刷量."""
     key = f"api:write:{current_user.id}"
@@ -137,7 +154,9 @@ def _enforce_api_write_limit(current_user: CurrentUser) -> None:
         raise HTTPException(
             status_code=429,
             detail="操作过于频繁, 请稍后再试",
-            headers={"Retry-After": str(api_limiter.retry_after(key, API_WRITE_WINDOW))},
+            headers={
+                "Retry-After": str(api_limiter.retry_after(key, API_WRITE_WINDOW))
+            },
         )
 
 

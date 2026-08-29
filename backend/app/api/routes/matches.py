@@ -10,7 +10,13 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, and_, or_, select
 
-from app.api.deps import ApiDetailLimited, ApiReadLimited, CurrentUser, SessionDep
+from app.api.deps import (
+    ApiDetailLimited,
+    ApiReadLimited,
+    CurrentUser,
+    MemberRequired,
+    SessionDep,
+)
 
 # 山东省限制: 只推荐山东省下的用户, 子句实现见 app.api.shandong
 from app.api.shandong import shandong_clause as _shandong_clause
@@ -171,6 +177,7 @@ def get_daily_recommendations(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
+    _mem: MemberRequired,
     tab: Literal["today", "new", "missed"] = Query("today"),
     cursor: str | None = None,
     limit: int = Query(10, ge=1, le=50),
@@ -232,6 +239,7 @@ def apply_filter(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
+    _mem: MemberRequired,
     body: FilterRequest,
 ) -> MatchListResponse:
     """根据筛选条件查询资料."""
@@ -293,6 +301,7 @@ def get_profile_detail(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiDetailLimited,
+    _mem: MemberRequired,
     user_id: uuid.UUID,
 ) -> MatchDetailResponse:
     """获取他人资料详情.
@@ -368,6 +377,7 @@ def get_neighbor(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
+    _mem: MemberRequired,
     user_id: uuid.UUID,
     direction: Literal["prev", "next"] = Query("next"),
 ) -> NeighborResponse:

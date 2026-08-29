@@ -1,6 +1,15 @@
 <view class="qy-page">
   <block wx:if="{{screen == 'home'}}">
-    <scroll-view class="screen main-screen" scroll-y>
+    <!-- 门店会员制: 非会员锁定浏览, 引导到店开通 -->
+    <view class="member-lock" wx:if="{{apiReady && !isMember}}">
+      <view class="member-lock-crown">✦</view>
+      <view class="member-lock-title">门店会员专享</view>
+      <view class="member-lock-sub">乾缘婚恋为门店会员制服务, 到你所在门店开通会员后即可查看严选会员资料</view>
+      <button class="member-lock-btn" bindtap="goStoreCities">去附近门店开通</button>
+      <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+    </view>
+
+    <scroll-view wx:if="{{!apiReady || isMember}}" class="screen main-screen" scroll-y>
       <view class="hero-header">
         <view class="nav-row light">
           <view class="nav-placeholder"></view>

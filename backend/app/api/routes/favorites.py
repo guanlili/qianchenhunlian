@@ -8,7 +8,13 @@ from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel, and_, func, select
 
-from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
+from app.api.deps import (
+    ApiReadLimited,
+    ApiWriteLimited,
+    CurrentUser,
+    MemberRequired,
+    SessionDep,
+)
 from app.api.shandong import shandong_clause
 from app.models import Favorite, Profile, User, View
 
@@ -87,9 +93,7 @@ def toggle_favorite(
             raise HTTPException(status_code=404, detail="对方资料不可见")
         # 非山东资料对外 404, 与推荐池契约一致
         target_profile = session.exec(
-            select(Profile)
-            .where(Profile.user_id == target_id)
-            .where(shandong_clause())
+            select(Profile).where(Profile.user_id == target_id).where(shandong_clause())
         ).first()
         if not target_profile:
             raise HTTPException(status_code=404, detail="对方资料不可见")
@@ -135,6 +139,7 @@ def list_my_favorites(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
+    _mem: MemberRequired,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> FavoriteList:
@@ -181,6 +186,7 @@ def list_visitors(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
+    _mem: MemberRequired,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> VisitorList:
@@ -234,6 +240,7 @@ def list_seen_by_me(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
+    _mem: MemberRequired,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> VisitorList:
