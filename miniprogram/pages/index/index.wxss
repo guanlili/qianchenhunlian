@@ -2424,59 +2424,138 @@ page {
 }
 
 /* --- 门店会员制锁屏 (非会员首页) --- */
+/* --- 会员锁屏 (系统重设计 v3: 深红头部 + 白卡片 + 红渐变主按钮 + 三步引导) --- */
 .member-lock {
   min-height: 100vh;
-  background: linear-gradient(160deg, #c93434 0%, #8f1f1f 46%, #fbf6ee 46.5%, #fbf6ee 100%);
+  background: linear-gradient(165deg, #a01f1f 0%, #8f1f1f 36%, #fbf6ee 36.4%, #fbf6ee 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 180rpx 60rpx 60rpx;
+  padding: 96rpx 52rpx 56rpx;
   box-sizing: border-box;
 }
 
+.member-lock-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 皇冠光晕: 金色径向渐变垫在图标后 */
+.member-lock-crown-wrap {
+  position: relative;
+  margin-bottom: 24rpx;
+}
+
+.member-lock-crown-wrap::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 380rpx;
+  height: 380rpx;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(246, 198, 107, 0.38) 0%, rgba(246, 198, 107, 0) 68%);
+  pointer-events: none;
+}
+
 .member-lock-crown {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 50%;
+  width: 156rpx;
+  height: 156rpx;
+  border-radius: 52rpx;
   background: linear-gradient(135deg, #f6c66b, #ed7030);
-  border: 6rpx solid rgba(255, 255, 255, 0.85);
+  border: 5rpx solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 20rpx 52rpx rgba(237, 112, 48, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 64rpx;
+  font-size: 72rpx;
   font-weight: 800;
   color: #ffffff;
-  margin-bottom: 36rpx;
 }
 
 .member-lock-title {
   color: #ffffff;
-  font-size: 42rpx;
+  font-size: 44rpx;
   font-weight: 800;
-  letter-spacing: 2rpx;
+  letter-spacing: 4rpx;
 }
 
 .member-lock-sub {
-  margin-top: 18rpx;
-  color: rgba(255, 255, 255, 0.9);
+  margin-top: 12rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.92);
   font-size: 26rpx;
   line-height: 1.7;
-  text-align: center;
 }
 
-/* 与会员页「去附近门店」按钮同款: 浅粉底 + 品牌红字 + 胶囊 */
+/* 白色信息卡片: 门店 + 主按钮 + 电话 + 次级链接 */
+.member-lock-card {
+  margin-top: 88rpx;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 40rpx;
+  padding: 40rpx 36rpx 36rpx;
+  box-sizing: border-box;
+  box-shadow: 0 32rpx 80rpx rgba(98, 21, 21, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.member-lock-store {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+}
+
+.member-lock-store .pin {
+  font-size: 28rpx;
+  line-height: 1;
+  transform: translateY(2rpx);
+}
+
+.member-lock-store .name {
+  font-size: 31rpx;
+  font-weight: 800;
+  color: #1f1a17;
+}
+
+.member-lock-store .badge {
+  margin-left: 12rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(246, 198, 107, 0.22);
+  color: #a1651c;
+  font-size: 21rpx;
+  font-weight: 700;
+}
+
+/* 主按钮: 与会员页「去附近门店」同款——浅粉底 + 品牌红字 + 胶囊, 无阴影 */
 .member-lock-btn {
-  margin-top: 56rpx;
-  width: 460rpx;
-  min-height: 88rpx;
-  line-height: 88rpx;
+  margin-top: 32rpx;
+  width: 100%;
+  min-height: 92rpx;
   border-radius: 999rpx;
   background: #f9e5e0;
   color: #c93434;
   font-size: 29rpx;
   font-weight: 700;
-  letter-spacing: 1rpx;
+  letter-spacing: 2rpx;
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  box-sizing: border-box;
+  padding: 0 24rpx;
+}
+
+.member-lock-btn .ico {
+  font-size: 28rpx;
 }
 
 .member-lock-btn::after {
@@ -2487,11 +2566,92 @@ page {
   opacity: 0.85;
 }
 
-.member-lock-alt {
-  margin-top: 30rpx;
-  color: #c93434;
+.member-lock-phone {
+  margin-top: 24rpx;
+  color: #8d8175;
   font-size: 25rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+/* 号码深灰降权: 主按钮是卡片内唯一红字焦点 */
+.member-lock-phone .num {
+  color: #1f1a17;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  font-variant-numeric: tabular-nums;
+}
+
+.member-lock-divide {
+  width: 100%;
+  height: 1rpx;
+  background: #f0e8dd;
+  margin: 28rpx 0 24rpx;
+}
+
+/* 次级链接: 弱化为暖灰, 不与主按钮抢焦点 */
+.member-lock-alt {
+  color: #93826d;
+  font-size: 25rpx;
+  font-weight: 500;
+}
+
+/* 三步开通引导: 填充下半屏留白, 强化转化路径 */
+.member-lock-steps {
+  margin-top: 60rpx;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 32rpx;
+  padding: 32rpx 28rpx 28rpx;
+  box-sizing: border-box;
+  box-shadow: 0 16rpx 44rpx rgba(98, 21, 21, 0.06);
+  display: flex;
+  align-items: flex-start;
+}
+
+.member-lock-steps .step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.member-lock-steps .no {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 50%;
+  background: #fdf3e0;
+  color: #c93434;
+  font-size: 30rpx;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-lock-steps .txt {
+  font-size: 24rpx;
   font-weight: 600;
+  color: #8d8175;
+}
+
+.member-lock-steps .arrow {
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  color: #d9c9b4;
+  font-size: 26rpx;
+  padding: 0 4rpx;
+}
+
+.member-lock-foot {
+  margin-top: auto;
+  padding-top: 48rpx;
+  color: #a89c8d;
+  font-size: 25rpx;
+  letter-spacing: 2rpx;
 }
 
 /* --- 会员权益可视化 --- */
@@ -2523,21 +2683,6 @@ page {
 
 .quota-extra {
   color: #b3a89a;
-}
-
-/* 锁屏页门店电话 */
-.member-lock-store {
-  margin-top: 44rpx;
-  color: #c93434;
-  font-size: 30rpx;
-  font-weight: 700;
-}
-
-.member-lock-phone {
-  margin-top: 14rpx;
-  color: #8d8175;
-  font-size: 26rpx;
-  font-variant-numeric: tabular-nums;
 }
 
 /* --- 资料完善差距提示 --- */
@@ -2615,17 +2760,21 @@ page {
   color: #8d8175;
 }
 
+/* 与「去附近门店」按钮同款: 浅粉胶囊, 全局统一 CTA 语言 */
 .empty-feed-btn {
   margin-top: 36rpx;
-  width: 420rpx;
-  min-height: 84rpx;
-  line-height: 84rpx;
+  width: 460rpx;
+  min-height: 88rpx;
   border-radius: 999rpx;
   background: #f9e5e0;
   color: #c93434;
   font-size: 28rpx;
   font-weight: 700;
+  letter-spacing: 2rpx;
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-feed-btn::after {
@@ -2756,22 +2905,24 @@ page {
   align-items: center;
 }
 
+/* 图标与锁屏皇冠同语言: 金橙渐变圆角方 + 白色符号 */
 .affinity-lock-crown {
   width: 100rpx;
   height: 100rpx;
-  border-radius: 50%;
-  background: #f9e5e0;
-  color: #c93434;
+  border-radius: 34rpx;
+  background: linear-gradient(135deg, #f6c66b, #ed7030);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 46rpx;
   margin-bottom: 24rpx;
+  box-shadow: 0 12rpx 28rpx rgba(237, 112, 48, 0.35);
 }
 
 .affinity-lock-title {
   font-size: 31rpx;
-  font-weight: 700;
+  font-weight: 800;
   color: #1f1a17;
 }
 
@@ -2783,17 +2934,21 @@ page {
   line-height: 1.6;
 }
 
+/* 与「去附近门店」按钮同款: 浅粉胶囊 CTA */
 .affinity-lock-btn {
   margin-top: 36rpx;
-  width: 440rpx;
-  min-height: 84rpx;
-  line-height: 84rpx;
+  width: 100%;
+  min-height: 88rpx;
   border-radius: 999rpx;
   background: #f9e5e0;
   color: #c93434;
   font-size: 28rpx;
   font-weight: 700;
+  letter-spacing: 2rpx;
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .affinity-lock-btn::after {
