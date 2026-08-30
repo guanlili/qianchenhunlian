@@ -2464,19 +2464,19 @@ page {
   text-align: center;
 }
 
+/* 与会员页「去附近门店」按钮同款: 浅粉底 + 品牌红字 + 胶囊 */
 .member-lock-btn {
   margin-top: 56rpx;
   width: 460rpx;
-  min-height: 92rpx;
-  line-height: 92rpx;
-  border-radius: 20rpx;
-  background: linear-gradient(135deg, #f6c66b 0%, #ed7030 100%);
-  color: #ffffff;
-  font-size: 30rpx;
+  min-height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
+  font-size: 29rpx;
   font-weight: 700;
-  letter-spacing: 2rpx;
+  letter-spacing: 1rpx;
   border: none;
-  box-shadow: 0 12rpx 28rpx rgba(237, 112, 48, 0.4);
 }
 
 .member-lock-btn::after {
@@ -2484,8 +2484,7 @@ page {
 }
 
 .member-lock-btn:active {
-  transform: translateY(3rpx);
-  box-shadow: 0 6rpx 14rpx rgba(237, 112, 48, 0.3);
+  opacity: 0.85;
 }
 
 .member-lock-alt {
@@ -2621,14 +2620,12 @@ page {
   width: 420rpx;
   min-height: 84rpx;
   line-height: 84rpx;
-  border-radius: 20rpx;
-  background: linear-gradient(135deg, #d0453a 0%, #a02222 100%);
-  color: #ffffff;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
   font-size: 28rpx;
   font-weight: 700;
-  letter-spacing: 1rpx;
   border: none;
-  box-shadow: 0 12rpx 28rpx rgba(201, 52, 52, 0.3);
 }
 
 .empty-feed-btn::after {
@@ -2636,8 +2633,7 @@ page {
 }
 
 .empty-feed-btn:active {
-  transform: translateY(3rpx);
-  box-shadow: 0 6rpx 14rpx rgba(201, 52, 52, 0.24);
+  opacity: 0.85;
 }
 
 .pref-note {
@@ -2790,16 +2786,14 @@ page {
 .affinity-lock-btn {
   margin-top: 36rpx;
   width: 440rpx;
-  min-height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 20rpx;
-  background: linear-gradient(135deg, #d0453a 0%, #a02222 100%);
-  color: #ffffff;
+  min-height: 84rpx;
+  line-height: 84rpx;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
   font-size: 28rpx;
   font-weight: 700;
-  letter-spacing: 1rpx;
   border: none;
-  box-shadow: 0 12rpx 28rpx rgba(201, 52, 52, 0.3);
 }
 
 .affinity-lock-btn::after {
@@ -2807,6 +2801,5 @@ page {
 }
 
 .affinity-lock-btn:active {
-  transform: translateY(3rpx);
-  box-shadow: 0 6rpx 14rpx rgba(201, 52, 52, 0.24);
+  opacity: 0.85;
 }
