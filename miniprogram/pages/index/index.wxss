@@ -2725,3 +2725,55 @@ page {
   margin-right: 16rpx;
   background: #f0e8dd;
 }
+
+/* --- 消息页非会员锁 --- */
+.affinity-lock {
+  margin: 40rpx 28rpx;
+  padding: 60rpx 40rpx;
+  border-radius: 20rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(98, 21, 21, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.affinity-lock-crown {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #f9e5e0;
+  color: #c93434;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46rpx;
+  margin-bottom: 24rpx;
+}
+
+.affinity-lock-title {
+  font-size: 31rpx;
+  font-weight: 700;
+  color: #1f1a17;
+}
+
+.affinity-lock-sub {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #8d8175;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.affinity-lock-btn {
+  margin-top: 36rpx;
+  width: 400rpx;
+  min-height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 999rpx;
+  background: #c93434;
+  color: #ffffff;
+  font-size: 27rpx;
+  font-weight: 700;
+  border: none;
+}

@@ -1082,6 +1082,7 @@ export class AdminService {
      * 全局操作审计日志 - 仅 superuser.
      * @param data The data for the request.
      * @param data.action
+     * @param data.actorEmail 按操作人邮箱模糊筛
      * @param data.targetUserId
      * @param data.skip
      * @param data.limit
@@ -1094,6 +1095,7 @@ export class AdminService {
             url: '/api/v1/admin/audit-logs',
             query: {
                 action: data.action,
+                actor_email: data.actorEmail,
                 target_user_id: data.targetUserId,
                 skip: data.skip,
                 limit: data.limit

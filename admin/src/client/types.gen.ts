@@ -1646,6 +1646,10 @@ export type AdminListMemberAuditLogsResponse = (AuditLogList);
 
 export type AdminListAuditLogsData = {
     action?: (string | null);
+    /**
+     * 按操作人邮箱模糊筛
+     */
+    actorEmail?: (string | null);
     limit?: number;
     skip?: number;
     targetUserId?: (string | null);

@@ -531,6 +531,16 @@
           <view class="nav-placeholder"></view>
         </view>
       </view>
+
+      <!-- 会员制: 非会员消息页锁定 -->
+      <view class="affinity-lock" wx:if="{{apiReady && !isMember}}">
+        <view class="affinity-lock-crown">❤</view>
+        <view class="affinity-lock-title">好感消息为会员专享</view>
+        <view class="affinity-lock-sub">开通会员后可查看谁看过你、互心动消息与红娘撮合进展</view>
+        <button class="affinity-lock-btn" bindtap="goMembership">查看会员开通方式</button>
+      </view>
+
+      <block wx:if="{{!apiReady || isMember}}">
       <view class="action-list affinity-shortcuts">
         <view wx:for="{{affinityShortcuts}}" wx:key="key" class="action-row" bindtap="tapAffinityShortcut" data-key="{{item.key}}">
           <view class="action-icon">{{item.icon}}</view>
@@ -559,7 +569,8 @@
         </view>
         <text class="visitor-arrow">›</text>
       </view>
-    </scroll-view>
+    
+      </block></scroll-view>
   </block>
 
   <block wx:if="{{screen == 'my-likes'}}">
