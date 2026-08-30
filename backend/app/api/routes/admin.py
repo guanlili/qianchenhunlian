@@ -1674,6 +1674,8 @@ class StatsResponse(SQLModel):
     active_stores: int = 0  # 营业中门店数
     # — 工作台待办 (docs/10) —
     pending_verifies: int = 0  # 待实名核验 (User.verified='pending')
+    # 7 天内到期会员 (店长续费回访名单口径; 未过期且 <=now+7d)
+    expiring_members: int = 0
     open_feedback: int = 0  # 未处理反馈 (Feedback.status='open')
     # — 门店对账 (2026-08-19) —
     last_month_signups: int = 0  # 上个北京自然月新增会员 (对账口径)
@@ -1782,6 +1784,13 @@ def _compute_stats(
         ).one()
         or 0,
         pending_verifies=_member_count(session, sid, User.verified == "pending"),
+        expiring_members=_member_count(
+            session,
+            sid,
+            User.membership_expires_at.between(  # type: ignore[union-attr]
+                datetime.utcnow(), datetime.utcnow() + timedelta(days=7)
+            ),
+        ),
         open_feedback=session.exec(
             select(func.count()).select_from(Feedback).where(Feedback.status == "open")
         ).one()

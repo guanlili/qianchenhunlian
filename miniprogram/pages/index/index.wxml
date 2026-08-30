@@ -188,6 +188,23 @@
           </view>
         </view>
 
+        <view class="section-card" wx:if="{{selectedProfile.photos.length > 0}}">
+          <view class="card-head">
+            <view><text class="head-icon">照</text>照片 (点击查看大图)</view>
+          </view>
+          <scroll-view class="detail-photos" scroll-x>
+            <image
+              wx:for="{{selectedProfile.photos}}"
+              wx:key="*this"
+              src="{{item}}"
+              mode="aspectFill"
+              class="detail-photo"
+              bindtap="previewDetailPhoto"
+              data-index="{{index}}"
+            />
+          </scroll-view>
+        </view>
+
         <view class="section-card">
           <view class="detail-grid">
             <view><text>出生</text><text>{{selectedProfile.birthLabel || (selectedProfile.year + '年')}}</text></view>

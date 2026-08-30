@@ -565,6 +565,13 @@ Page({
   // 数据加载
   // ============================================================
 
+  onShow() {
+    // 会员开通/支付完成「秒解锁」: 切回小程序自动刷新会员状态与资料门面
+    if (!this.data.apiReady) return;
+    this.refreshMembership();
+    this.loadMyProfile().catch(() => {});
+  },
+
   async onLoad(options) {
     // 分享带 target 参数: 登录完成后打开对应详情
     this._pendingTargetId = options && options.target ? String(options.target) : null;
@@ -2446,14 +2453,25 @@ Page({
   refreshMembership() {
     membershipSvc.getMyMembership().then((m) => {
       if (!m) return;
+      const wasMember = this.data.isMember;
       const isMember = !!m.is_member;
       this.setData({
         isMember,
         memberQuota: m.quota || null,
         memberExpiresAt: (m && m.expires_at) || '',
       });
-      if (isMember) this.loadHome();
+      // 仅在身份刚切换 (首次判定 / 红娘刚开通 / 支付刚成功) 时拉推荐,
+      // 避免每次切前台都重打推荐接口
+      if (isMember && !wasMember) this.loadHome();
     }).catch(() => {});
+  },
+
+  /** 详情页照片全屏预览 (左右滑动细看) */
+  previewDetailPhoto(e) {
+    const idx = Number(e.currentTarget.dataset.index || 0);
+    const sp = this.data.selectedProfile;
+    if (!sp || !sp.photos || !sp.photos.length) return;
+    wx.previewImage({ current: sp.photos[idx], urls: sp.photos });
   },
 
   /** 锁屏页一键拨打本店电话 (红娘可当场帮开通) */

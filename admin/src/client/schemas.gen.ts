@@ -7028,6 +7028,11 @@ export const StatsResponseSchema = {
             title: 'Pending Verifies',
             default: 0
         },
+        expiring_members: {
+            type: 'integer',
+            title: 'Expiring Members',
+            default: 0
+        },
         open_feedback: {
             type: 'integer',
             title: 'Open Feedback',

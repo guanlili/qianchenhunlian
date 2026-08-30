@@ -47,8 +47,14 @@ const VALID_TABS = [
 
 export const Route = createFileRoute("/_layout/stores/$storeId")({
   // Tab 进 URL (?tab=), 门店工作台任意页签可直接分享/收藏
-  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): {
+    tab?: string
+    mfilter?: string
+  } => ({
     tab: typeof search.tab === "string" ? search.tab : undefined,
+    mfilter: typeof search.mfilter === "string" ? search.mfilter : undefined,
   }),
   component: StoreWorkspacePage,
   head: () => ({ meta: [{ title: "门店工作台 - 乾缘后台" }] }),
@@ -290,7 +296,8 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
   if (isPending) return <Skeleton className="h-64 w-full" />
   const stats = data?.stats
   const navigate = useNavigate()
-  const goTab = (tab: string) => navigate({ to: ".", search: { tab } })
+  const goTab = (tab: string, mfilter?: string) =>
+    navigate({ to: ".", search: { tab, mfilter } })
 
   // 指标卡可点击 → 直达对应页签 (待办即入口)
   const cards = [
@@ -302,6 +309,12 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
       label: "待处理工单",
       value: stats?.pending_tickets ?? 0,
       tab: "requests",
+    },
+    {
+      label: "7天内到期",
+      value: stats?.expiring_members ?? 0,
+      tab: "members",
+      mfilter: "expiring",
     },
     { label: "已实名会员", value: stats?.verified_users ?? 0, tab: "members" },
   ]
@@ -362,7 +375,7 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
           <Card
             key={c.label}
             className="cursor-pointer transition-shadow hover:shadow-md"
-            onClick={() => goTab(c.tab)}
+            onClick={() => goTab(c.tab, c.mfilter)}
           >
             <CardContent className="pt-4">
               <div className="text-2xl font-bold">{c.value}</div>
@@ -468,9 +481,21 @@ function RecentMemberList({
 
 function StoreMembersTab({ storeId }: { storeId: string }) {
   const navigate = useNavigate()
+  const { mfilter } = Route.useSearch()
+  const membership = (
+    ["all", "member", "expiring", "normal"] as const
+  ).includes(mfilter as "all")
+    ? (mfilter as "all")
+    : "all"
   const { data, isPending } = useQuery({
-    queryFn: () => AdminService.listMembers({ storeId, skip: 0, limit: 200 }),
-    queryKey: ["admin-members", "store", storeId],
+    queryFn: () =>
+      AdminService.listMembers({
+        storeId,
+        membership: membership === "all" ? undefined : membership,
+        skip: 0,
+        limit: 200,
+      }),
+    queryKey: ["admin-members", "store", storeId, membership],
   })
 
   if (isPending) {
@@ -481,8 +506,30 @@ function StoreMembersTab({ storeId }: { storeId: string }) {
   const items = data?.items ?? []
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>本店会员 (共 {data?.total ?? 0} 位)</CardTitle>
+        <Select
+          value={membership}
+          onValueChange={(v) =>
+            navigate({
+              to: ".",
+              search: (prev: { tab?: string }) => ({
+                ...prev,
+                mfilter: v === "all" ? undefined : v,
+              }),
+            })
+          }
+        >
+          <SelectTrigger className="h-8 w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部会员</SelectItem>
+            <SelectItem value="member">会员中</SelectItem>
+            <SelectItem value="expiring">7天内到期</SelectItem>
+            <SelectItem value="normal">非会员</SelectItem>
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
