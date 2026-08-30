@@ -138,8 +138,9 @@ function request(options, _retry = false) {
           return;
         }
 
-        // 401/403: token 失效, 自动重登 + 重试一次
-        if ((res.statusCode === 401 || res.statusCode === 403) && !_retry && auth) {
+        // 401: token 失效, 自动重登 + 重试一次
+        // (403 是权限类错误 — 非会员/越权/资料未完善 — 重登解决不了, 不重试)
+        if (res.statusCode === 401 && !_retry && auth) {
           clearToken();
           try {
             await loginAndGetToken();

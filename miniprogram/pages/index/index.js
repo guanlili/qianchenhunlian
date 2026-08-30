@@ -854,7 +854,8 @@ Page({
     });
     if (tab === 'home') this.loadHome();
     else if (tab === 'me') {
-      this.loadMeStats();
+      // 访客/收藏统计是会员专属接口, 非会员不请求 (避免 403)
+      if (this.data.isMember) this.loadMeStats();
       this.loadMyProfile();  // 我的资料挪到了 me 页里, 顺手加载
     }
     else if (tab === 'affinity') this.openAffinity();
