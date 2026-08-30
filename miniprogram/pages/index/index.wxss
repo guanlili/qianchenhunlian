@@ -2710,3 +2710,18 @@ page {
   font-size: 23rpx;
   text-decoration: underline;
 }
+
+/* --- 详情页照片横滑区 --- */
+.detail-photos {
+  white-space: nowrap;
+  padding: 0 28rpx 24rpx;
+}
+
+.detail-photo {
+  display: inline-block;
+  width: 220rpx;
+  height: 280rpx;
+  border-radius: 14rpx;
+  margin-right: 16rpx;
+  background: #f0e8dd;
+}

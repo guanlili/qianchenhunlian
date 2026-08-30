@@ -1081,6 +1081,7 @@ export type StatsResponse = {
     verified_ratio?: number;
     active_stores?: number;
     pending_verifies?: number;
+    expiring_members?: number;
     open_feedback?: number;
     last_month_signups?: number;
 };
