@@ -1,13 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { ChevronLeft, ChevronRight, Download } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
-
 import { AdminService } from "@/client"
 import { columns } from "@/components/AuditLogs/columns"
 import { DataTable } from "@/components/Common/DataTable"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -42,12 +42,24 @@ function AuditLogsPage() {
   const { user } = useAuth()
   const [action, setAction] = useState<string>(ALL_ACTIONS)
   const [skip, setSkip] = useState(0)
+  const [actorInput, setActorInput] = useState("") // 输入即时态
+  const [actorEmail, setActorEmail] = useState("") // 防抖后的查询态
+
+  // 操作人输入防抖 (400ms), 避免逐键打接口
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setActorEmail(actorInput.trim())
+      setSkip(0)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [actorInput])
 
   const { data, isPending } = useQuery({
-    queryKey: ["audit-logs", action, skip],
+    queryKey: ["audit-logs", action, actorEmail, skip],
     queryFn: () =>
       AdminService.listAuditLogs({
         action: action === ALL_ACTIONS ? undefined : action,
+        actorEmail: actorEmail || undefined,
         skip,
         limit: PAGE_SIZE,
       }),
@@ -62,6 +74,7 @@ function AuditLogsPage() {
       for (let skip2 = 0; skip2 < 2000; skip2 += 200) {
         const r = await AdminService.listAuditLogs({
           action: action === ALL_ACTIONS ? undefined : action,
+          actorEmail: actorEmail || undefined,
           skip: skip2,
           limit: 200,
         })
@@ -128,6 +141,12 @@ function AuditLogsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Input
+            placeholder="操作人邮箱筛选"
+            value={actorInput}
+            onChange={(e) => setActorInput(e.target.value)}
+            className="h-9 w-44"
+          />
           <Select
             value={action}
             onValueChange={(v) => {

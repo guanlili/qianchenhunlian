@@ -3169,6 +3169,7 @@ def list_member_audit_logs(
 def list_audit_logs(
     session: SessionDep,
     action: str | None = Query(None),
+    actor_email: str | None = Query(None, description="按操作人邮箱模糊筛"),
     target_user_id: uuid.UUID | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -3177,6 +3178,8 @@ def list_audit_logs(
     base = select(AuditLog)
     if action:
         base = base.where(AuditLog.action == action)
+    if actor_email:
+        base = base.where(AuditLog.actor_email.like(f"%{actor_email.strip()}%"))  # type: ignore[union-attr]
     if target_user_id is not None:
         base = base.where(AuditLog.target_user_id == target_user_id)
     total = session.exec(select(func.count()).select_from(base.subquery())).one()

@@ -2196,6 +2196,10 @@ Page({
 
   /** 好感页顶部快捷区点击 (我看过的人 / 看过我的人 / ...) */
   tapAffinityShortcut(e) {
+    if (!this.data.isMember) {
+      wx.showToast({ title: '开通会员后可查看', icon: 'none' });
+      return;
+    }
     const key = e.currentTarget.dataset.key;
     this.setData({ childFrom: 'affinity' });
     if (key === 'i-visited') return this.openIVisited();
@@ -2365,6 +2369,8 @@ Page({
   /** 好感消息 (互相好感) — 进入 affinity screen */
   async openAffinity() {
     this.setData({ screen: 'affinity', activeTab: 'affinity' });
+    // 会员制: 非会员消息页锁定 (不请求, 避免接口 403 报错噪音)
+    if (!this.data.isMember) return;
     this.loadMeStats();  // 刷新顶部快捷区计数 (看过我的人/我收藏的)
     if (!this.data.apiReady) return;
     try {
