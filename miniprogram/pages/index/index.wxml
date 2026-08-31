@@ -114,6 +114,10 @@
           <view class="guest-label">昵称<text class="req">*</text></view>
           <input class="guest-input" type="text" placeholder="请填写昵称" value="{{guestNickname}}" bindinput="onGuestNicknameInput" maxlength="20" />
         </view>
+        <view class="guest-row">
+          <view class="guest-label">体验码 (选填)</view>
+          <input class="guest-input" type="text" placeholder="输入门店提供的体验码, 注册直接开通会员" value="{{guestRedeemCode}}" bindinput="onGuestRedeemInput" maxlength="32" />
+        </view>
         <view class="guest-agree" bindtap="toggleGuestAgreed">
           <view class="guest-checkbox {{guestAgreed ? 'on' : ''}}">{{guestAgreed ? '✓' : ''}}</view>
           <text class="guest-agree-text">我已阅读并同意

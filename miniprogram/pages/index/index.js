@@ -575,6 +575,7 @@ Page({
     guestNickname: '',
     guestAgreed: false,
     guestSubmitting: false,
+    guestRedeemCode: '',  // 体验码 (选填): 注册完成直接开通体验会员
     eduOptions: eduOptions.filter((it) => it !== '不限'),
     marriageOptions: marriageOptions.filter((it) => it !== '不限'),
     incomeOptions: incomeOptions.filter((it) => it !== '不限'),
@@ -2731,6 +2732,10 @@ Page({
     this.setData({ guestNickname: (e.detail.value || '').slice(0, 20) });
   },
 
+  onGuestRedeemInput(e) {
+    this.setData({ guestRedeemCode: (e.detail.value || '').slice(0, 32) });
+  },
+
   toggleGuestAgreed() {
     this.setData({ guestAgreed: !this.data.guestAgreed });
   },
@@ -2764,13 +2769,36 @@ Page({
       wx.setStorageSync('qy_welcomed', true);
       app.globalData.isWelcomed = true;
       app.globalData.hasProfile = true;
-      // 注册全部完成 → 进入预览; 会员开通后不再被引导卡拦截
       this.setData({
         guestSubmitting: false,
         previewLoaded: false,
         previewGate: false,
         guestStep: 1,
       });
+
+      // 体验码: 注册即开通体验会员, 直接进完整会员流 (不走预览)
+      const code = (this.data.guestRedeemCode || '').trim();
+      if (code) {
+        this.setData({ guestRedeemCode: '' });
+        try {
+          const r = await membershipSvc.redeemCode(code);
+          const exp = r.member_expires_at ? r.member_expires_at.slice(0, 10) : '';
+          wx.showToast({
+            title: exp ? `体验会员已开通 · 至 ${exp}` : '体验会员已开通',
+            icon: 'none',
+            duration: 3000,
+          });
+          this.refreshMembership(); // isMember 翻转后 refreshMembership 自动 loadHome
+          return;
+        } catch (err) {
+          // 码无效不阻断注册: 提示后仍走预览流, 会员页可重试
+          wx.showToast({
+            title: (err && err.detail) || '体验码无效, 可稍后在会员页重试',
+            icon: 'none',
+            duration: 3000,
+          });
+        }
+      }
       this.loadPreview();
     } catch (err) {
       this.setData({ guestSubmitting: false });
