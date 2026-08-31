@@ -18,6 +18,8 @@ Page({
     latestOrder: null,
     latestOrderStatusLabel: '',
     submitting: false, // 防双击
+    redeemCode: '',    // 门店发的会员兑换码
+    redeeming: false,  // 防双击
   },
 
   onLoad() {
@@ -172,6 +174,37 @@ Page({
 
   goStore() {
     wx.navigateTo({ url: '/pages/store-cities/store-cities' });
+  },
+
+  /** 门店发的兑换码: 输码自助开通 (收款后店员把码给用户) */
+  onRedeemInput(e) {
+    this.setData({ redeemCode: (e.detail.value || '').slice(0, 32) });
+  },
+
+  async onRedeem() {
+    if (this.data.redeeming) return;
+    const code = (this.data.redeemCode || '').trim();
+    if (!code) {
+      wx.showToast({ title: '请输入会员码', icon: 'none' });
+      return;
+    }
+    this.setData({ redeeming: true });
+    try {
+      const r = await membershipSvc.redeemCode(code);
+      const exp = r.member_expires_at ? r.member_expires_at.slice(0, 10) : '';
+      wx.showToast({
+        title: exp ? `已开通 ${r.days} 天 · 至 ${exp}` : `已开通 ${r.days} 天`,
+        icon: 'none',
+        duration: 3000,
+      });
+      this.setData({ redeemCode: '' });
+      this.refresh({ quiet: true });
+    } catch (err) {
+      const detail = err && typeof err.detail === 'string' ? err.detail : '兑换失败, 请核对会员码';
+      wx.showToast({ title: detail, icon: 'none' });
+    } finally {
+      this.setData({ redeeming: false });
+    }
   },
 
   goRefund() {

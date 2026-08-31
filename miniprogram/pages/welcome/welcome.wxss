@@ -94,6 +94,56 @@ page {
   color: #1f1a17;
 }
 
+/* 必填星标 */
+.req {
+  color: #c93434;
+  margin-left: 4rpx;
+}
+
+/* 性别两枚胶囊 */
+.gender-chips {
+  display: flex;
+  gap: 20rpx;
+}
+
+.gender-chip {
+  flex: 1;
+  height: 84rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 999rpx;
+  background: #fbf7ee;
+  color: #5a4f47;
+  font-size: 28rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.gender-chip.on {
+  border-color: #c93434;
+  background: #f9e5e0;
+  color: #c93434;
+}
+
+/* 出生年份 picker */
+.year-value {
+  height: 88rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 12rpx;
+  background: #fbf7ee;
+  font-size: 28rpx;
+  color: #1f1a17;
+  display: flex;
+  align-items: center;
+}
+
+.year-value.placeholder {
+  color: #b3a89a;
+}
+
 .fee-notice {
   margin-top: 26rpx;
   padding: 18rpx 24rpx;
