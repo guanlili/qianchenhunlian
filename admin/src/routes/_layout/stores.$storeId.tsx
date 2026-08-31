@@ -81,6 +81,10 @@ function StoreWorkspacePage() {
       })
     }
   }, [myStoreId, foreignStore, navigate])
+  const { data: store } = useQuery({
+    queryFn: () => StoresService.getStore({ storeId }),
+    queryKey: ["store", storeId],
+  })
   if (foreignStore) {
     return (
       <div className="p-10 text-center text-muted-foreground">
@@ -91,11 +95,6 @@ function StoreWorkspacePage() {
 
   const activeTab =
     tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : "overview"
-
-  const { data: store } = useQuery({
-    queryFn: () => StoresService.getStore({ storeId }),
-    queryKey: ["store", storeId],
-  })
 
   return (
     <div className="space-y-6 p-6">
@@ -257,6 +256,7 @@ function useStatementExport(storeId: string) {
 
 /** 门店概览: 单店口径的待办指标 + 最近注册/提审/工单 + 月度对账单导出. */
 function StoreOverviewTab({ storeId }: { storeId: string }) {
+  const navigate = useNavigate()
   const { data, isPending } = useQuery({
     queryFn: () => AdminService.adminDashboard({ storeId }),
     queryKey: ["admin-dashboard", "store", storeId],
@@ -295,7 +295,6 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
 
   if (isPending) return <Skeleton className="h-64 w-full" />
   const stats = data?.stats
-  const navigate = useNavigate()
   const goTab = (tab: string, mfilter?: string) =>
     navigate({ to: ".", search: { tab, mfilter } })
 
