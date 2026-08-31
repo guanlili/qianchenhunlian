@@ -39,9 +39,10 @@
           <view class="guest-label">所在城市<text class="req">*</text></view>
           <picker mode="selector" range="{{guestCities}}" value="{{guestCityIndex < 0 ? 0 : guestCityIndex}}" bindchange="onGuestCityPick">
             <view class="guest-picker {{guestCityIndex < 0 ? 'placeholder' : ''}}">
-              {{guestCityIndex < 0 ? '请选择所在城市' : guestCities[guestCityIndex]}}
+              {{guestCityIndex < 0 ? (guestCities.length ? '请选择所在城市' : '城市加载失败, 点此重试') : guestCities[guestCityIndex]}}
             </view>
           </picker>
+          <view wx:if="{{!guestCities.length}}" class="guest-retry" bindtap="loadGuestCities">重新加载城市列表</view>
         </view>
         <button class="member-lock-btn" bindtap="submitGuestBasics">下一步</button>
       </view>

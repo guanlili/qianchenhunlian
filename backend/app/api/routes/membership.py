@@ -13,7 +13,7 @@ from sqlmodel import Field, SQLModel, select
 from app.api.deps import ApiReadLimited, CurrentUser, SessionDep
 from app.core import membership, wechat_pay
 from app.core.ratelimit import REDEEM_MAX, REDEEM_WINDOW, client_ip, redeem_limiter
-from app.models import MembershipOrder, MembershipRedeemCode, User
+from app.models import MembershipOrder, MembershipRedeemCode, Profile, User
 
 logger = logging.getLogger(__name__)
 
@@ -469,6 +469,15 @@ def redeem_code(
         store_id=code.store_id,
         note=f"兑换码 {code.code}",
     )
+    # 归属回填: 未绑店的用户用哪家的码, 就归哪家门店 (店长可见/工单归店/对账口径)
+    if code.store_id:
+        profile = session.exec(
+            select(Profile).where(Profile.user_id == current_user.id)
+        ).first()
+        if profile and not profile.home_store_id:
+            profile.home_store_id = code.store_id
+            profile.updated_at = datetime.utcnow()
+            session.add(profile)
     session.commit()
     session.refresh(current_user)
     return RedeemOut(

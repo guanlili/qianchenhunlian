@@ -25,9 +25,9 @@ function saveContact({ wechat, phone }) {
   return put('/profiles/me/contact', { wechat, phone });
 }
 
-/** 首启动引导提交 (头像 url + 昵称, 必填) */
-function submitWelcome({ nickname, avatar_url }) {
-  return post('/profiles/me/welcome', { nickname, avatar_url });
+/** 首启动引导提交 (头像 url + 昵称必填; gender/year 缺失时 is_welcomed 无法置真) */
+function submitWelcome({ nickname, avatar_url, gender, year }) {
+  return post('/profiles/me/welcome', { nickname, avatar_url, gender, year });
 }
 
 /** 创建/更新我的择偶要求 */

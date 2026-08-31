@@ -405,7 +405,7 @@ function MemberDetail() {
           <ContactCard userId={userId} canView={!!full.can_view_contact} />
         </TabsContent>
         <TabsContent value="membership" className="mt-4">
-          <MembershipTab userId={userId} canOperate={canOperateMember} />
+          <MembershipTab userId={userId} canWrite={canWrite} />
         </TabsContent>
         <TabsContent value="balance" className="mt-4">
           <BalanceTab
@@ -744,6 +744,11 @@ const GRANT_PLAN_LABEL: Record<string, string> = {
   monthly_30d: "月卡",
   yearly_365d: "年卡",
   custom: "自定义",
+  // 体验码开通: plan_code 为 redeem_{天数}d
+  redeem_7d: "体验码 7天",
+  redeem_30d: "体验码 30天",
+  redeem_60d: "体验码 60天",
+  redeem_90d: "体验码 90天",
 }
 
 const GRANT_SOURCE_LABEL: Record<string, string> = {
@@ -752,14 +757,16 @@ const GRANT_SOURCE_LABEL: Record<string, string> = {
   admin_compensate: "补偿",
   // 线上支付回调自动写入 (docs/13 P3), 管理员不可手动选
   wx_pay: "线上支付",
+  // 体验码开通 (总部生码, 用户自助兑换)
+  redeem_code: "体验码",
 }
 
 function MembershipTab({
   userId,
-  canOperate,
+  canWrite,
 }: {
   userId: string
-  canOperate: boolean
+  canWrite: boolean
 }) {
   const qc = useQueryClient()
   const { data, isLoading } = useQuery({
@@ -825,7 +832,7 @@ function MembershipTab({
                   {g.revoked_at ? (
                     <Badge variant="destructive">已撤销</Badge>
                   ) : (
-                    canOperate && (
+                    canWrite && (
                       <Button
                         size="sm"
                         variant="ghost"

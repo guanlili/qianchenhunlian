@@ -1822,9 +1822,7 @@ def _compute_stats(
             User.created_at < lm_end_utc,
         ),
         guest_today=_guest_count(session, sid, User.created_at >= today_start),
-        guest_this_month=_guest_count(
-            session, sid, User.created_at >= this_month_start
-        ),
+        guest_this_month=_guest_count(session, sid, User.created_at >= lm_end_utc),
         guest_last_month=_guest_count(
             session,
             sid,
@@ -2190,7 +2188,7 @@ def list_contact_requests(
 @router.post(
     "/contact-requests/{request_id}/handle",
     response_model=AdminContactRequestItem,
-    dependencies=[Depends(require_admin_or_staff)],
+    dependencies=[Depends(require_perm(Perm.HANDLE_REQUEST))],
 )
 def handle_contact_request(
     session: SessionDep,

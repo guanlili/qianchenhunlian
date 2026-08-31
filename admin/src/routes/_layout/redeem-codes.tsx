@@ -36,7 +36,7 @@ import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/redeem-codes")({
   component: RedeemCodesPage,
-  head: () => ({ meta: [{ title: "会员兑换码 - 乾缘后台" }] }),
+  head: () => ({ meta: [{ title: "会员体验 - 乾缘后台" }] }),
 })
 
 const ALL_STATUS = "__all__"
@@ -55,6 +55,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 function RedeemCodesPage() {
   const { user } = useAuth()
+  const canWrite = !!user?.can_write_admin // 生码/作废为总部专属 (MEMBER_GRANT)
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS)
 
@@ -91,15 +92,21 @@ function RedeemCodesPage() {
       setCreateOpen(false)
       setLastCreated(items)
       setNote("")
-      toast.success(`已生成 ${items.length} 张兑换码`)
+      toast.success(`已生成 ${items.length} 张体验码`)
       queryClient.invalidateQueries({ queryKey: ["redeem-codes"] })
     },
     onError: (e) => {
-      const detail =
+      const body =
         e && typeof e === "object" && "body" in e
-          ? String((e.body as { detail?: string })?.detail ?? "生成失败")
+          ? (e.body as { detail?: string | { msg?: string }[] })
+          : undefined
+      const d = body?.detail
+      const msg = Array.isArray(d)
+        ? d.map((it) => it.msg ?? "").join("; ")
+        : typeof d === "string"
+          ? d
           : "生成失败"
-      toast.error(detail)
+      toast.error(msg)
     },
   })
 
@@ -137,9 +144,11 @@ function RedeemCodesPage() {
             会员码开通」输码自助开通。
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" /> 批量生成
-        </Button>
+        {canWrite && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="size-4" /> 批量生成
+          </Button>
+        )}
       </div>
 
       <div className="mb-3 w-44">
@@ -181,7 +190,7 @@ function RedeemCodesPage() {
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-sm">
-                  还没有兑换码, 点右上角「批量生成」开始
+                  还没有体验码, 点右上角「批量生成」开始
                 </TableCell>
               </TableRow>
             ) : (
@@ -238,12 +247,19 @@ function RedeemCodesPage() {
                       >
                         <Copy className="size-3.5" />
                       </Button>
-                      {it.status === "unused" && (
+                      {canWrite && it.status === "unused" && (
                         <Button
                           variant="ghost"
                           size="sm"
                           disabled={voidMutation.isPending}
-                          onClick={() => voidMutation.mutate(it.id)}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `确认作废 ${it.code}? 作废后不可恢复`,
+                              )
+                            )
+                              voidMutation.mutate(it.id)
+                          }}
                         >
                           <TicketX className="size-3.5" />
                         </Button>
@@ -257,7 +273,7 @@ function RedeemCodesPage() {
         </Table>
       </div>
       <p className="text-muted-foreground mt-2 text-xs">
-        共 {listQuery.data?.total ?? 0} 条
+        共 {listQuery.data?.total ?? 0} 张
         {user?.store_id ? " (仅显示本店生成的兑换码)" : ""}
       </p>
 
@@ -369,9 +385,10 @@ function RedeemCodesPage() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>生成成功</DialogTitle>
+            <DialogTitle>体验码生成成功</DialogTitle>
             <DialogDescription>
-              共 {lastCreated?.length ?? 0} 张, 建议整批复制后分发给门店。
+              共 {lastCreated?.length ?? 0} 张,
+              建议整批复制后分发给门店转发用户。
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-72 overflow-y-auto rounded-md border bg-muted/40 p-3 font-mono text-sm">
