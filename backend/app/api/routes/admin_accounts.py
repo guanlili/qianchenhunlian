@@ -106,6 +106,7 @@ def create_admin_account(
     session.refresh(user)
     return user
 
+
 @router.patch("/{user_id}", response_model=AdminAccountItem)
 def update_admin_account(
     session: SessionDep,

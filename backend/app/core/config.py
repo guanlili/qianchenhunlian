@@ -120,7 +120,9 @@ class Settings(BaseSettings):
     WECHAT_PAY_CERT_SERIAL_NO: str = ""  # 商户 API 证书序列号 (请求签名用)
     WECHAT_PAY_PRIVATE_KEY: str = ""  # 商户私钥 PEM 文本 (\n 转义亦可)
     WECHAT_PAY_APIV3_KEY: str = ""  # APIv3 密钥 (32 位, 回调 AES-GCM 解密用)
-    WECHAT_PAY_PUBLIC_KEY_ID: str = ""  # 微信支付公钥 ID (公钥模式, 回调验签比对 serial)
+    WECHAT_PAY_PUBLIC_KEY_ID: str = (
+        ""  # 微信支付公钥 ID (公钥模式, 回调验签比对 serial)
+    )
     WECHAT_PAY_PUBLIC_KEY: str = ""  # 微信支付公钥 PEM 文本 (回调验签用)
     WECHAT_PAY_NOTIFY_URL: str = ""  # 回调地址, 须 https 公网可达
 

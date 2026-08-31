@@ -28,16 +28,12 @@ class _RegexMatch(BinaryExpression[Any]):
 
 
 @compiles(_RegexMatch, "postgresql")  # type: ignore[no-untyped-call, misc]
-def _compile_pg_regex(
-    element: _RegexMatch, compiler: Any, **kw: Any
-) -> str:
+def _compile_pg_regex(element: _RegexMatch, compiler: Any, **kw: Any) -> str:
     return f"{compiler.process(element.left, **kw)} ~ {compiler.process(element.right, **kw)}"
 
 
 @compiles(_RegexMatch, "sqlite")  # type: ignore[no-untyped-call, misc]
-def _compile_sqlite_regex(
-    element: _RegexMatch, compiler: Any, **kw: Any
-) -> str:
+def _compile_sqlite_regex(element: _RegexMatch, compiler: Any, **kw: Any) -> str:
     # SQLite 单测: 依赖连接上注册的 regexp(pattern, value) 函数 (见 tests/conftest.py)
     return f"regexp({compiler.process(element.right, **kw)}, {compiler.process(element.left, **kw)})"
 
