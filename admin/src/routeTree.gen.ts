@@ -19,6 +19,7 @@ import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
 import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
+import { Route as LayoutRedeemCodesRouteImport } from './routes/_layout/redeem-codes'
 import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
 import { Route as LayoutMembersRouteImport } from './routes/_layout/members'
 import { Route as LayoutGuideRouteImport } from './routes/_layout/guide'
@@ -77,6 +78,11 @@ const LayoutReviewRoute = LayoutReviewRouteImport.update({
 const LayoutRequestsRoute = LayoutRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutRedeemCodesRoute = LayoutRedeemCodesRouteImport.update({
+  id: '/redeem-codes',
+  path: '/redeem-codes',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutQualificationsRoute = LayoutQualificationsRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/guide': typeof LayoutGuideRoute
   '/members': typeof LayoutMembersRouteWithChildren
   '/qualifications': typeof LayoutQualificationsRoute
+  '/redeem-codes': typeof LayoutRedeemCodesRoute
   '/requests': typeof LayoutRequestsRoute
   '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByTo {
   '/guide': typeof LayoutGuideRoute
   '/members': typeof LayoutMembersRouteWithChildren
   '/qualifications': typeof LayoutQualificationsRoute
+  '/redeem-codes': typeof LayoutRedeemCodesRoute
   '/requests': typeof LayoutRequestsRoute
   '/review': typeof LayoutReviewRoute
   '/settings': typeof LayoutSettingsRoute
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/_layout/guide': typeof LayoutGuideRoute
   '/_layout/members': typeof LayoutMembersRouteWithChildren
   '/_layout/qualifications': typeof LayoutQualificationsRoute
+  '/_layout/redeem-codes': typeof LayoutRedeemCodesRoute
   '/_layout/requests': typeof LayoutRequestsRoute
   '/_layout/review': typeof LayoutReviewRoute
   '/_layout/settings': typeof LayoutSettingsRoute
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/guide'
     | '/members'
     | '/qualifications'
+    | '/redeem-codes'
     | '/requests'
     | '/review'
     | '/settings'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/guide'
     | '/members'
     | '/qualifications'
+    | '/redeem-codes'
     | '/requests'
     | '/review'
     | '/settings'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/_layout/guide'
     | '/_layout/members'
     | '/_layout/qualifications'
+    | '/_layout/redeem-codes'
     | '/_layout/requests'
     | '/_layout/review'
     | '/_layout/settings'
@@ -340,6 +352,13 @@ declare module '@tanstack/react-router' {
       path: '/requests'
       fullPath: '/requests'
       preLoaderRoute: typeof LayoutRequestsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/redeem-codes': {
+      id: '/_layout/redeem-codes'
+      path: '/redeem-codes'
+      fullPath: '/redeem-codes'
+      preLoaderRoute: typeof LayoutRedeemCodesRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/qualifications': {
@@ -448,6 +467,7 @@ interface LayoutRouteChildren {
   LayoutGuideRoute: typeof LayoutGuideRoute
   LayoutMembersRoute: typeof LayoutMembersRouteWithChildren
   LayoutQualificationsRoute: typeof LayoutQualificationsRoute
+  LayoutRedeemCodesRoute: typeof LayoutRedeemCodesRoute
   LayoutRequestsRoute: typeof LayoutRequestsRoute
   LayoutReviewRoute: typeof LayoutReviewRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
@@ -464,6 +484,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutGuideRoute: LayoutGuideRoute,
   LayoutMembersRoute: LayoutMembersRouteWithChildren,
   LayoutQualificationsRoute: LayoutQualificationsRoute,
+  LayoutRedeemCodesRoute: LayoutRedeemCodesRoute,
   LayoutRequestsRoute: LayoutRequestsRoute,
   LayoutReviewRoute: LayoutReviewRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,

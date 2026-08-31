@@ -8,9 +8,9 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException
-from sqlmodel import SQLModel, select
+from sqlmodel import Field, SQLModel, select
 
-from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
+from app.api.deps import ApiWriteLimited, CurrentUser, SessionDep
 from app.core.wechat import assert_text_safe, assert_text_safe_fields
 from app.models import (
     Criteria,
@@ -120,6 +120,9 @@ class PhotoCommit(SQLModel):
 class WelcomeBody(SQLModel):
     nickname: str
     avatar_url: str
+    # 基本信息必填项: 前端强制, 后端可选兼容老客户端 (is_welcomed 口径含这两项)
+    gender: str | None = Field(default=None, max_length=8)
+    year: int | None = Field(default=None, ge=1950, le=2015)
 
 
 # ---------------- Routes ----------------
@@ -143,7 +146,7 @@ def read_my_profile(
     home_store = None
     if profile and profile.home_store_id:
         home_store = session.get(Store, profile.home_store_id)
-    is_welcomed = bool(profile and profile.nickname and profile.avatar_url)
+    is_welcomed = bool(profile and profile.is_welcomed)
     return ProfileMeResponse(
         profile=ProfileWithContact.model_validate(profile, from_attributes=True)
         if profile
@@ -171,10 +174,10 @@ def submit_welcome(
     current_user: CurrentUser,
     body: WelcomeBody,
 ) -> ProfileWithContact:
-    """首启动引导提交: 头像 + 昵称.
+    """首启动引导提交: 头像 + 昵称 + 性别 + 出生年份.
 
-    用户首次进入小程序的强引导, 必须填这两项才能继续使用.
-    幂等: 已存在 Profile 也会更新这两项.
+    用户首次进入小程序的强引导, 必须填齐基本信息才能浏览会员资料.
+    幂等: 已存在 Profile 也会更新这几项 (老用户补填走同一端点).
     """
     nickname = (body.nickname or "").strip()
     avatar_url = (body.avatar_url or "").strip()
@@ -188,6 +191,10 @@ def submit_welcome(
         raise HTTPException(status_code=400, detail="昵称过长 (最多 64 字符)")
     assert_text_safe(nickname, current_user.openid)
 
+    gender = (body.gender or "").strip() or None
+    if gender and gender not in ("男", "女"):
+        raise HTTPException(status_code=400, detail="性别取值不正确")
+
     profile = session.exec(
         select(Profile).where(Profile.user_id == current_user.id)
     ).first()
@@ -196,11 +203,17 @@ def submit_welcome(
             user_id=current_user.id,
             nickname=nickname,
             avatar_url=avatar_url,
+            gender=gender,
+            year=body.year,
             audit_status="approved",
         )
     else:
         profile.nickname = nickname
         profile.avatar_url = avatar_url
+        if gender:
+            profile.gender = gender
+        if body.year:
+            profile.year = body.year
         profile.updated_at = datetime.utcnow()
 
     profile.progress = _calc_profile_progress(profile)

@@ -5,7 +5,7 @@
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, and_, or_, select
@@ -20,6 +20,7 @@ from app.api.deps import (
 
 # 山东省限制: 只推荐山东省下的用户, 子句实现见 app.api.shandong
 from app.api.shandong import shandong_clause as _shandong_clause
+from app.core import membership
 from app.models import (
     Criteria,
     Favorite,
@@ -31,6 +32,14 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/matches", tags=["matches"])
+
+
+def _member_only_clause() -> Any:
+    """推荐池只收录在期会员 (时间口径与 membership.is_member 一致).
+
+    会员制闭环: 付费开通会员后自己的资料才对外可见, 未续费自动退出推荐池.
+    """
+    return User.membership_expires_at > datetime.utcnow()  # type: ignore[operator]
 
 
 # ---------------- DTOs ----------------
@@ -216,6 +225,7 @@ def get_daily_recommendations(
         .where(User.is_superuser == False)  # noqa: E712  排除 admin
         .where(User.xy_code.is_not(None))  # type: ignore
         .where(Profile.audit_status == "approved")
+        .where(_member_only_clause())  # 仅在期会员资料对外可见
         .where(_shandong_clause())  # 仅推审核通过的资料
     )
 
@@ -272,6 +282,7 @@ def apply_filter(
         .where(User.is_superuser == False)  # noqa: E712
         .where(User.xy_code.is_not(None))  # type: ignore
         .where(Profile.audit_status == "approved")
+        .where(_member_only_clause())  # 仅在期会员资料对外可见
         .where(_shandong_clause())
     )
 
@@ -346,7 +357,12 @@ def get_profile_detail(
     if profile.audit_status != "approved":
         raise HTTPException(status_code=404, detail="资料不存在或不可见")
     target_user = session.get(User, user_id)
-    if not target_user or target_user.status != "active" or target_user.is_superuser:
+    if (
+        not target_user
+        or target_user.status != "active"
+        or target_user.is_superuser
+        or not membership.is_member(target_user)
+    ):
         raise HTTPException(status_code=404, detail="资料不存在或不可见")
     target_xy_code = target_user.xy_code
 
@@ -442,6 +458,7 @@ def get_neighbor(
             .where(User.is_superuser == False)  # noqa: E712
             .where(User.xy_code.is_not(None))  # type: ignore
             .where(Profile.audit_status == "approved")
+            .where(_member_only_clause())  # 仅在期会员资料对外可见
             .where(_shandong_clause())
             .where(Profile.user_id != current_user.id)
             .where(Profile.updated_at < current.updated_at)
@@ -456,6 +473,7 @@ def get_neighbor(
             .where(User.is_superuser == False)  # noqa: E712
             .where(User.xy_code.is_not(None))  # type: ignore
             .where(Profile.audit_status == "approved")
+            .where(_member_only_clause())  # 仅在期会员资料对外可见
             .where(_shandong_clause())
             .where(Profile.user_id != current_user.id)
             .where(Profile.updated_at > current.updated_at)

@@ -30,10 +30,16 @@ function getLatestOrder() {
   return get('/membership/orders/latest', { silent: true, loading: false });
 }
 
+/** 会员兑换码开通: 门店线下收款后发码, 用户输码自助开通 */
+function redeemCode(code) {
+  return post('/membership/redeem', { code });
+}
+
 module.exports = {
   getMyMembership,
   getPlans,
   createOrder,
   mockPay,
   getLatestOrder,
+  redeemCode,
 };

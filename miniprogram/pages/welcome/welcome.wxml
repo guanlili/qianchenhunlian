@@ -10,7 +10,7 @@
       <view class="form-title">欢迎你, 先完善基本信息</view>
 
       <view class="row">
-        <view class="row-label">头像</view>
+        <view class="row-label">头像<text class="req">*</text></view>
         <view class="avatar-btn" bindtap="onPickAvatar">
           <image
             wx:if="{{avatarTempPath}}"
@@ -21,12 +21,12 @@
           <view wx:else class="avatar-default">
             <text>{{defaultGlyph}}</text>
           </view>
-          <text class="avatar-edit-tag">点击更换</text>
+          <text class="avatar-edit-tag">{{avatarTempPath ? '点击更换' : '上传真实头像'}}</text>
         </view>
       </view>
 
       <view class="row">
-        <view class="row-label">昵称</view>
+        <view class="row-label">昵称<text class="req">*</text></view>
         <input
           class="nick-input"
           type="text"
@@ -35,6 +35,37 @@
           bindinput="onNicknameInput"
           maxlength="20"
         />
+      </view>
+
+      <view class="row">
+        <view class="row-label">性别<text class="req">*</text></view>
+        <view class="gender-chips">
+          <view
+            class="gender-chip {{gender === '男' ? 'on' : ''}}"
+            bindtap="onGenderTap"
+            data-gender="男"
+          >男</view>
+          <view
+            class="gender-chip {{gender === '女' ? 'on' : ''}}"
+            bindtap="onGenderTap"
+            data-gender="女"
+          >女</view>
+        </view>
+      </view>
+
+      <view class="row">
+        <view class="row-label">出生年份<text class="req">*</text></view>
+        <picker
+          class="year-picker"
+          mode="selector"
+          range="{{years}}"
+          value="{{yearIndex < 0 ? 0 : yearIndex}}"
+          bindchange="onYearPick"
+        >
+          <view class="year-value {{yearIndex < 0 ? 'placeholder' : ''}}">
+            {{yearIndex < 0 ? '请选择出生年份' : years[yearIndex] + ' 年'}}
+          </view>
+        </picker>
       </view>
 
       <view class="fee-notice">乾缘婚恋会员费 100元/年</view>

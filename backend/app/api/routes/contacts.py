@@ -72,25 +72,34 @@ def submit_contact_request(
 ) -> ContactRequestResult:
     """提交"想联系 X"工单. 红娘后台看到后人工撮合.
 
+    - 必须已到店实名核验 (verified=passed), 否则 403 NOT_VERIFIED 引导到店
     - 必须自己资料完善度 >= 60% (CompleteProfileUser)
     - 消耗 1 次申请额度 (docs/13 三桶: 会员日额度/每日免费/永久余额)
     - 同一目标 24h 内不允许重复申请 (避免骚扰红娘)
     - 三桶全空 → 402
-    - 目标已封禁 / 未审核 → 404
+    - 目标已封禁 / 未审核 / 非在期会员 → 404
     """
+    # 实名门槛: 安排相亲必须先到所属门店线下实名核验 (红娘当面核验后后台标通过)
+    if (current_user.verified or "none") != "passed":
+        raise HTTPException(
+            status_code=403,
+            detail="NOT_VERIFIED|请先到所属门店完成实名核验, 再申请安排相亲",
+        )
+
     target_id = body.target_user_id
     if target_id == current_user.id:
         raise HTTPException(status_code=400, detail="不能向自己发起申请")
 
     target_user = session.get(User, target_id)
     target_profile = session.exec(
-        select(Profile)
-        .where(Profile.user_id == target_id)
-        .where(shandong_clause())
+        select(Profile).where(Profile.user_id == target_id).where(shandong_clause())
     ).first()
     if not target_user or not target_profile:
         raise HTTPException(status_code=404, detail="对方资料不存在")
     if target_user.status != "active" or target_user.is_superuser:
+        raise HTTPException(status_code=404, detail="对方资料不可见")
+    if not membership.is_member(target_user):
+        # 非在期会员的资料不对外 (与推荐池口径一致), 也不可作为撮合目标
         raise HTTPException(status_code=404, detail="对方资料不可见")
     if target_profile.audit_status != "approved":
         raise HTTPException(status_code=404, detail="对方资料未通过审核")
