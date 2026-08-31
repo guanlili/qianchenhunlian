@@ -73,8 +73,18 @@ def test_detail_includes_criteria(client, db: Session) -> None:
     assert body["criteria"]["origins"] == ["济南"]
     assert body["criteria"]["note"] == "希望对方踏实"
 
-    # 未填过 criteria 的用户 → null
+    # 未填过 criteria 的用户 → null (同须在期会员才可见)
     fresh_target = _mk_user(db)
+    membership.grant_membership(
+        session=db,
+        user=fresh_target,
+        plan_code="monthly_30d",
+        days=30,
+        source=membership.SOURCE_RECHARGE,
+        granted_by_type="user",
+        granted_by_id=fresh_target.id,
+    )
+    db.commit()
     r2 = client.get(f"{API}/matches/{fresh_target.id}", headers=headers)
     assert r2.status_code == 200
     assert r2.json()["criteria"] is None
