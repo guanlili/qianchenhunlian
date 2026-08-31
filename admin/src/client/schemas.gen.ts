@@ -5111,6 +5111,94 @@ export const MembershipPlansResponseSchema = {
     title: 'MembershipPlansResponse'
 } as const;
 
+export const MembershipRedeemCodePublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        days: {
+            type: 'integer',
+            title: 'Days'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        used_by_user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Used By User Id'
+        },
+        used_by_email: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Used By Email'
+        },
+        used_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Used At'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'code', 'days', 'status', 'created_at'],
+    title: 'MembershipRedeemCodePublic'
+} as const;
+
 export const MembershipStatusSchema = {
     properties: {
         is_member: {
@@ -6637,6 +6725,91 @@ export const QualificationListSchema = {
     title: 'QualificationList'
 } as const;
 
+export const RedeemCodeCreateRequestSchema = {
+    properties: {
+        days: {
+            type: 'integer',
+            maximum: 365,
+            minimum: 1,
+            title: 'Days'
+        },
+        count: {
+            type: 'integer',
+            maximum: 100,
+            minimum: 1,
+            title: 'Count',
+            default: 1
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        }
+    },
+    type: 'object',
+    required: ['days'],
+    title: 'RedeemCodeCreateRequest',
+    description: '批量生成会员兑换码: 门店收款后把码交给用户, 用户在小程序输码开通.'
+} as const;
+
+export const RedeemCodeListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/MembershipRedeemCodePublic'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'RedeemCodeList'
+} as const;
+
+export const RedeemInSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            maxLength: 32,
+            minLength: 4,
+            title: 'Code'
+        }
+    },
+    type: 'object',
+    required: ['code'],
+    title: 'RedeemIn'
+} as const;
+
+export const RedeemOutSchema = {
+    properties: {
+        days: {
+            type: 'integer',
+            title: 'Days'
+        },
+        member_expires_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Member Expires At'
+        }
+    },
+    type: 'object',
+    required: ['days', 'member_expires_at'],
+    title: 'RedeemOut'
+} as const;
+
 export const RefreshTokenBodySchema = {
     properties: {
         refresh_token: {
@@ -8161,6 +8334,31 @@ export const WelcomeBodySchema = {
         avatar_url: {
             type: 'string',
             title: 'Avatar Url'
+        },
+        gender: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 8
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Gender'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 2015,
+                    minimum: 1950
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
         }
     },
     type: 'object',
