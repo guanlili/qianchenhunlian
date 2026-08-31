@@ -61,13 +61,44 @@ SOURCE_ONLINE = "wx_pay"
 # 门店优惠券 (店长发放给本店会员的体验权益): 会员天数券走 MembershipGrant,
 # 申请次数券走 BalanceTransaction, source 均为 store_coupon 便于统计与限领。
 SOURCE_COUPON = "store_coupon"
+# 会员兑换码 (门店线下收款后发码, 用户在缴费页输码自助开通): 系统兑换时写入
+SOURCE_REDEEM = "redeem_code"
 VALID_SOURCES = {
     SOURCE_RECHARGE,
     SOURCE_TRIAL,
     SOURCE_COMPENSATE,
     SOURCE_ONLINE,
     SOURCE_COUPON,
+    SOURCE_REDEEM,
 }
+
+# 兑换码字符集: 去掉易混淆的 0/O/1/I/L
+REDEEM_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+
+
+def normalize_redeem_code(raw: str) -> str:
+    """用户输入归一化: 去空白与连字符, 转大写 (大小写/带不带横杠都能兑换)."""
+    return "".join(ch for ch in raw.upper() if ch.isalnum())
+
+
+def format_redeem_code(norm: str) -> str:
+    """归一化码 → 展示格式 QY-XXXX-XXXX-XXXX."""
+    body = norm.removeprefix("QY")
+    groups = [body[i : i + 4] for i in range(0, len(body), 4)]
+    return "-".join(["QY", *groups])
+
+
+def generate_redeem_code() -> tuple[str, str]:
+    """随机生成一个未用过的兑换码 (展示格式, 归一化格式).
+
+    12 位随机段 (去掉易混淆字符) + QY 前缀, 爆破空间 31^12, 足够防猜.
+    """
+    import secrets
+
+    body = "".join(secrets.choice(REDEEM_ALPHABET) for _ in range(12))
+    norm = f"QY{body}"
+    return format_redeem_code(norm), norm
+
 
 # trial 类套餐: 受 trial_once_per_user 约束
 TRIAL_PLANS = {"trial_7d"}

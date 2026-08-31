@@ -100,6 +100,11 @@ login_limiter = SlidingWindowLimiter()
 # 业务读接口限流单例 (与 login_limiter 分开, 不互相影响计数/重置)
 api_limiter = SlidingWindowLimiter()
 
+# 兑换码防爆破限流单例 (按用户维度, 猜码行为压住; conftest 已跟进重置)
+REDEEM_WINDOW = 60
+REDEEM_MAX = 5
+redeem_limiter = SlidingWindowLimiter()
+
 
 def client_ip(request: Request) -> str:
     """取真实客户端 IP.

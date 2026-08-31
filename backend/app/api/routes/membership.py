@@ -1,4 +1,4 @@
-"""小程序会员 (docs/13): 状态 / 可购套餐 / 线上缴费订单 / 微信支付回调."""
+"""小程序会员 (docs/13): 状态 / 可购套餐 / 线上缴费订单 / 兑换码 / 微信支付回调."""
 
 import json
 import logging
@@ -8,11 +8,12 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import update as sa_update
-from sqlmodel import SQLModel, Field, select
+from sqlmodel import Field, SQLModel, select
 
 from app.api.deps import ApiReadLimited, CurrentUser, SessionDep
 from app.core import membership, wechat_pay
-from app.models import MembershipOrder, User
+from app.core.ratelimit import REDEEM_MAX, REDEEM_WINDOW, client_ip, redeem_limiter
+from app.models import MembershipOrder, MembershipRedeemCode, User
 
 logger = logging.getLogger(__name__)
 
@@ -374,3 +375,85 @@ async def pay_notify(request: Request, session: SessionDep) -> dict[str, str]:
         return {"code": "SUCCESS", "message": "重复通知已忽略"}
     logger.info("线上缴费发放成功: 订单 %s 用户 %s", out_trade_no, order.user_id)
     return {"code": "SUCCESS", "message": "成功"}
+
+
+# ---------------- 兑换码开通 (门店线下收款发码, 用户自助输码) ----------------
+
+
+class RedeemIn(SQLModel):
+    code: str = Field(min_length=4, max_length=32)
+
+
+class RedeemOut(SQLModel):
+    days: int
+    # 兑换后的会员到期时间 (叠加续费起算, 非当前时间+days)
+    member_expires_at: datetime
+
+
+@router.post("/redeem", response_model=RedeemOut)
+def redeem_code(
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: RedeemIn,
+    request: Request,
+) -> RedeemOut:
+    """输码开通会员: 门店线下收款后把兑换码给用户, 用户在此自助开通.
+
+    - 防爆破: 按用户+IP 双维度限流 (猜码行为压住)
+    - 防双用: 条件 UPDATE (unused→used), rowcount=1 才发放, 并发安全
+    - 无需已是会员: 兑换即开通 (与超管/店长发放走同一 grant 引擎)
+    """
+    u_key = f"u:{current_user.id}"
+    ip_key = f"ip:{client_ip(request)}"
+    if redeem_limiter.record(u_key, REDEEM_WINDOW) > REDEEM_MAX or (
+        redeem_limiter.record(ip_key, REDEEM_WINDOW) > REDEEM_MAX * 4
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="尝试过于频繁, 请稍后再试",
+            headers={
+                "Retry-After": str(redeem_limiter.retry_after(u_key, REDEEM_WINDOW))
+            },
+        )
+
+    norm = membership.normalize_redeem_code(body.code)
+    code = session.exec(
+        select(MembershipRedeemCode).where(MembershipRedeemCode.code_norm == norm)
+    ).first()
+    # 统一文案, 不区分「不存在/已用/作废」, 防码枚举
+    if not code or code.status != "unused":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="兑换码无效或已被使用"
+        )
+
+    # 条件更新占坑 (防并发双用); rowcount 是 Any, mypy strict 下需显式检查
+    result = session.execute(
+        sa_update(MembershipRedeemCode)
+        .where(MembershipRedeemCode.id == code.id)  # type: ignore[arg-type]
+        .where(MembershipRedeemCode.status == "unused")  # type: ignore[arg-type]
+        .values(
+            status="used",
+            used_by_user_id=current_user.id,
+            used_at=datetime.utcnow(),
+            used_by_email=current_user.email,
+        )
+    )
+    if int(result.rowcount or 0) != 1:  # type: ignore[attr-defined]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="兑换码无效或已被使用"
+        )
+
+    grant = membership.grant_membership(
+        session,
+        user=current_user,
+        plan_code=f"redeem_{code.days}d",
+        days=code.days,
+        source=membership.SOURCE_REDEEM,
+        granted_by_type="self",
+        granted_by_id=current_user.id,
+        store_id=code.store_id,
+        note=f"兑换码 {code.code}",
+    )
+    session.commit()
+    session.refresh(current_user)
+    return RedeemOut(days=code.days, member_expires_at=grant.expires_at)

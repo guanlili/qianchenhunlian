@@ -4,14 +4,13 @@
 写权限 (审核/发放/封禁/管员工): 仅 superuser.
 """
 
+import logging
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import Response
-
-import logging
 from sqlalchemy.orm import aliased
 from sqlmodel import Field, SQLModel, and_, func, or_, select
 
@@ -36,9 +35,12 @@ from app.models import (
     MembershipGrant,
     MembershipGrantList,
     MembershipGrantPublic,
+    MembershipRedeemCode,
+    MembershipRedeemCodePublic,
     Message,
     ParentsInfo,
     Profile,
+    SiteSetting,
     Staff,
     StaffCreate,
     StaffPublic,
@@ -48,7 +50,6 @@ from app.models import (
     StoreCreate,
     StorePublic,
     StoreUpdate,
-    SiteSetting,
     User,
     View,
 )
@@ -2557,6 +2558,19 @@ class RevokeRequest(SQLModel):
     reason: str | None = Field(default=None, max_length=255)
 
 
+class RedeemCodeCreateRequest(SQLModel):
+    """批量生成会员兑换码: 门店收款后把码交给用户, 用户在小程序输码开通."""
+
+    days: int = Field(ge=1, le=365)  # 兑换天数
+    count: int = Field(default=1, ge=1, le=100)  # 一次最多 100 张
+    note: str | None = Field(default=None, max_length=120)
+
+
+class RedeemCodeList(SQLModel):
+    items: list[MembershipRedeemCodePublic] = []
+    total: int = 0
+
+
 class MembershipGrantResponse(SQLModel):
     grant: MembershipGrantPublic
     is_member: bool
@@ -2745,6 +2759,131 @@ def grant_coupon_endpoint(
         unlock_balance=user.unlock_balance,
         remaining_quota=(limit - used - 1) if limit > 0 else None,
     )
+
+
+@router.post(
+    "/membership/redeem-codes",
+    response_model=list[MembershipRedeemCodePublic],
+    dependencies=[Depends(require_perm(Perm.MEMBER_GRANT))],
+)
+def create_redeem_codes(
+    session: SessionDep,
+    actor: CurrentActor,
+    body: RedeemCodeCreateRequest = Body(),
+) -> list[MembershipRedeemCodePublic]:
+    """批量生成会员兑换码 (门店收款后发码, 用户输码自助开通).
+
+    - 店长生成的码强制归属本店; 总部生成可指定 (暂不开放, store_id 为空)
+    - 码唯一性: 撞库重试, 理论上极难触发
+    """
+    owner_sid = _store_owner_id(actor)
+    note = (body.note or "").strip()[:120] or None
+    created: list[MembershipRedeemCode] = []
+    for _ in range(body.count):
+        for _attempt in range(5):  # 撞库重试 (12 位随机段, 实际几乎不会撞)
+            display, norm = membership.generate_redeem_code()
+            clash = session.exec(
+                select(MembershipRedeemCode).where(
+                    MembershipRedeemCode.code_norm == norm
+                )
+            ).first()
+            if clash is None:
+                break
+        else:  # pragma: no cover - 5 次全撞概率可忽略
+            raise HTTPException(status_code=500, detail="兑换码生成冲突, 请重试")
+        created.append(
+            MembershipRedeemCode(
+                code=display,
+                code_norm=norm,
+                days=body.days,
+                store_id=owner_sid,
+                note=note,
+                created_by_type=actor.actor_type,
+                created_by_id=uuid.UUID(actor.id),
+            )
+        )
+    session.add_all(created)
+    _audit(
+        session,
+        actor,
+        "create_redeem_codes",
+        detail={"count": body.count, "days": body.days, "note": note},
+    )
+    session.commit()
+    for c in created:
+        session.refresh(c)
+    return [
+        MembershipRedeemCodePublic.model_validate(c, from_attributes=True)
+        for c in created
+    ]
+
+
+@router.get(
+    "/membership/redeem-codes",
+    response_model=RedeemCodeList,
+)
+def list_redeem_codes(
+    session: SessionDep,
+    actor: CurrentActor,
+    status: str | None = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> RedeemCodeList:
+    """兑换码列表 (默认倒序). 店长只看本店生成的码."""
+    limit = max(1, min(limit, 200))
+    stmt = select(MembershipRedeemCode).order_by(
+        MembershipRedeemCode.created_at.desc()  # type: ignore[attr-defined]
+    )
+    count_stmt = select(func.count()).select_from(MembershipRedeemCode)
+    owner_sid = _store_owner_id(actor)
+    if owner_sid:  # 门店管理员强制本店
+        stmt = stmt.where(MembershipRedeemCode.store_id == owner_sid)
+        count_stmt = count_stmt.where(MembershipRedeemCode.store_id == owner_sid)
+    if status:
+        stmt = stmt.where(MembershipRedeemCode.status == status)
+        count_stmt = count_stmt.where(MembershipRedeemCode.status == status)
+    total = int(session.exec(count_stmt).one() or 0)
+    items = session.exec(stmt.offset(skip).limit(limit)).all()
+    return RedeemCodeList(
+        items=[
+            MembershipRedeemCodePublic.model_validate(i, from_attributes=True)
+            for i in items
+        ],
+        total=total,
+    )
+
+
+@router.post(
+    "/membership/redeem-codes/{code_id}/void",
+    response_model=MembershipRedeemCodePublic,
+    dependencies=[Depends(require_perm(Perm.MEMBER_GRANT))],
+)
+def void_redeem_code(
+    code_id: uuid.UUID,
+    session: SessionDep,
+    actor: CurrentActor,
+) -> MembershipRedeemCodePublic:
+    """作废未使用的兑换码 (已兑换/已作废的不能再作废)."""
+    code = session.get(MembershipRedeemCode, code_id)
+    if not code:
+        raise HTTPException(status_code=404, detail="兑换码不存在")
+    owner_sid = _store_owner_id(actor)
+    if owner_sid and code.store_id != owner_sid:
+        raise HTTPException(status_code=403, detail="只能操作本店的兑换码")
+    if code.status != "unused":
+        raise HTTPException(status_code=400, detail="该兑换码已被使用或已作废")
+    code.status = "void"
+    code.updated_at = datetime.utcnow()
+    _audit(
+        session,
+        actor,
+        "void_redeem_code",
+        target_user_id=None,
+        detail={"code": code.code},
+    )
+    session.commit()
+    session.refresh(code)
+    return MembershipRedeemCodePublic.model_validate(code, from_attributes=True)
 
 
 @router.post(
