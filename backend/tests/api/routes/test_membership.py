@@ -473,7 +473,18 @@ def _approved_target(db: Session) -> User:
     # 地域限制: 对外资料只收山东, 目标用户需带山东 location 才能被申请联系
     profile.location = "山东省济南市"
     db.add(profile)
+    # 撮合目标须为在期会员 (会员制闭环口径)
+    membership.grant_membership(
+        session=db,
+        user=user,
+        plan_code="monthly_30d",
+        days=30,
+        source=membership.SOURCE_RECHARGE,
+        granted_by_type="user",
+        granted_by_id=user.id,
+    )
     db.commit()
+    db.refresh(user)
     return user
 
 
@@ -481,6 +492,9 @@ def test_contact_submit_quota_flow(client: TestClient, db: Session) -> None:
     """申请联系走三桶: 免费额度耗尽 402 → 开会员后走会员日额度."""
     _set_cfg(db, free_daily_quota=1, member_daily_quota=2)
     me = _make_user(db, unlock_balance=0)
+    me.verified = "passed"  # 发起申请需已到店实名 (NOT_VERIFIED 门槛)
+    db.commit()
+    db.refresh(me)
     t1, t2, t3 = _approved_target(db), _approved_target(db), _approved_target(db)
     headers = authentication_token_from_email(client=client, email=me.email, db=db)
 
