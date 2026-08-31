@@ -177,8 +177,9 @@ Page({
   async loadCities() {
     if (this.data.cities.length) return;
     try {
-      const cities = await storeSvc.listCities();
-      const list = (cities || []).map((c) => c.city || c);
+      const res = await storeSvc.listCities();
+      // /stores/cities 返回 {items: [{city, count}]}, 取城市名字符串数组
+      const list = ((res && res.items) || []).map((c) => c.city || c);
       this.setData({ cities: list });
       if (list.length === 1) this.selectCity({ currentTarget: { dataset: { city: list[0] } } });
     } catch (e) {
