@@ -555,6 +555,16 @@ Page({
     apiReady: false,    // 登录成功后置 true; false 时不请求推荐
     isMember: false,    // 门店会员制: 非会员首页锁屏 (浏览为会员专享)
     isWelcomed: false,  // 首启引导 (头像+昵称+协议) 是否完成: 未完成不给看资料
+    // 游客预览: 未开通会员先看 5 个与自己相配的会员资料 (转化钩子)
+    previewList: [],    // 匹配预览资料 (异性/同城/年龄接近)
+    previewGate: false, // 需要先填 游客三问 (性别/出生年份/城市)
+    previewLoaded: false,
+    previewError: false,
+    guestGender: '',    // 三问表单
+    guestYears: [],
+    guestYearIndex: -1,
+    guestCities: [],
+    guestCityIndex: -1,
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
     profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
     myAvatar: '',       // 我的页门面: 真实头像
@@ -2518,6 +2528,9 @@ Page({
       // 仅在身份刚切换 (首次判定 / 红娘刚开通 / 支付刚成功) 时拉推荐,
       // 避免每次切前台都重打推荐接口; 未完成首启引导先不拉 (见 welcomed-gate)
       if (isMember && !wasMember && this.data.isWelcomed) this.loadHome();
+      else if (!isMember && !this.data.previewLoaded && !this.data.previewGate) {
+        this.loadPreview(); // 游客: 拉 5 个匹配预览 (未填三问则展示三问卡)
+      }
     }).catch(() => {});
   },
 
@@ -2532,6 +2545,100 @@ Page({
   /** 引导中间态: 会员已开通但未完成首启引导, 去补基本资料 */
   goWelcome() {
     wx.navigateTo({ url: '/pages/welcome/welcome' });
+  },
+
+  // ============================================================
+  // 游客预览: 三问 (性别/出生年份/城市) + 5 个匹配会员资料
+  // ============================================================
+
+  /** 拉游客预览: 未填三问 (403 BASIC_INFO_REQUIRED) 则转三问表单 */
+  async loadPreview() {
+    if (this.data.isMember) return;
+    try {
+      const r = await matchSvc.preview({ limit: 5 });
+      this.setData({
+        previewList: (r.items || []).map((it) => ({
+          ...it,
+          ageNow: it.year ? new Date().getFullYear() - it.year : '',
+        })),
+        previewLoaded: true,
+        previewGate: false,
+        previewError: false,
+      });
+    } catch (e) {
+      const detail = (e && e.detail) || '';
+      if (
+        e && e.statusCode === 403 &&
+        typeof detail === 'string' && detail.startsWith('BASIC_INFO_REQUIRED')
+      ) {
+        this.setData({ previewGate: true });
+        this.loadGuestCities();
+      } else {
+        this.setData({ previewError: true });
+      }
+    }
+  },
+
+  /** 预览加载失败重试 */
+  retryPreview() {
+    this.setData({ previewError: false });
+    this.loadPreview();
+  },
+
+  /** 三问表单: 出生年份候选 (2015→1950) + 有门店的城市列表 */
+  loadGuestCities() {
+    if (!this.data.guestYears.length) {
+      const years = [];
+      for (let y = 2015; y >= 1950; y--) years.push(String(y));
+      this.setData({ guestYears: years });
+    }
+    storeSvc
+      .listCities()
+      .then((cities) => this.setData({ guestCities: cities || [] }))
+      .catch(() => this.setData({ guestCities: [] }));
+  },
+
+  onGuestGenderTap(e) {
+    this.setData({ guestGender: e.currentTarget.dataset.gender || '' });
+  },
+
+  onGuestYearPick(e) {
+    this.setData({ guestYearIndex: Number(e.detail.value) || 0 });
+  },
+
+  onGuestCityPick(e) {
+    this.setData({ guestCityIndex: Number(e.detail.value) || 0 });
+  },
+
+  /** 提交三问: 落到自己的 Profile (与会员资料同源), 成功后重拉预览 */
+  async submitGuestBasics() {
+    const { guestGender: g, guestYears: ys, guestYearIndex: yi, guestCities: cs, guestCityIndex: ci } =
+      this.data;
+    if (!g) return wx.showToast({ title: '请选择性别', icon: 'none' });
+    if (yi < 0) return wx.showToast({ title: '请选择出生年份', icon: 'none' });
+    if (ci < 0) return wx.showToast({ title: '请选择所在城市', icon: 'none' });
+    try {
+      await profileSvc.saveProfile({ gender: g, year: Number(ys[yi]), location: cs[ci] });
+      this.setData({ previewLoaded: false, previewGate: false });
+      this.loadPreview();
+    } catch (err) {
+      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
+    }
+  },
+
+  /** 预览卡点击: 看详情/联系需会员, 引导到店开通 */
+  onPreviewCardTap() {
+    const that = this;
+    const hasPhone = !!(this.data.myHomeStore && this.data.myHomeStore.phone);
+    wx.showModal({
+      title: '开通会员查看更多',
+      content: '到店开通会员后, 可查看全部严选会员资料并由红娘牵线。',
+      confirmText: hasPhone ? '拨打门店电话' : '知道了',
+      cancelText: '先逛逛',
+      success(res) {
+        if (res.confirm && hasPhone) that.callHomeStore();
+      },
+    });
   },
 
   /** 锁屏页一键拨打本店电话 (红娘可当场帮开通) */

@@ -68,7 +68,9 @@ def _mk_guest(db: Session) -> str:
     return u.email
 
 
-def _set_basics(client: TestClient, headers: dict, *, gender="男", year=1990, city="济南"):
+def _set_basics(
+    client: TestClient, headers: dict, *, gender="男", year=1990, city="济南"
+):
     """游客三问: 复用 PUT /profiles/me 部分更新 (exclude_unset)."""
     r = client.put(
         f"{API}/profiles/me",

@@ -18,6 +18,14 @@ function daily({ tab = 'today', cursor = null, limit = 10 } = {}) {
 }
 
 /**
+ * 游客匹配预览: 未开通会员先看 5 个与自己相配的会员资料
+ * 前置要求自己已填 性别/出生年份/城市, 缺则 403 BASIC_INFO_REQUIRED
+ */
+function preview({ limit = 5 } = {}) {
+  return get(`/matches/preview?limit=${limit}`);
+}
+
+/**
  * 应用筛选
  * @param {Object} filter - { gender, year_min, year_max, height_min, height_max, edu, income, marriage, region, cursor, limit }
  */
@@ -36,6 +44,7 @@ function getNeighbor(userId, direction = 'next') {
 }
 
 module.exports = {
+  preview,
   daily,
   applyFilter,
   getDetail,

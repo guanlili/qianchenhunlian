@@ -2646,6 +2646,150 @@ page {
   padding: 0 4rpx;
 }
 
+.member-lock-card.tight {
+  margin-top: 40rpx;
+}
+
+/* --- 游客三问表单 (性别/出生年份/城市) --- */
+.guest-row {
+  width: 100%;
+  margin-bottom: 26rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.guest-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.guest-label {
+  color: #5a4f47;
+  font-size: 26rpx;
+  margin-bottom: 14rpx;
+  font-weight: 600;
+  text-align: left;
+}
+
+.req {
+  color: #c93434;
+  margin-left: 4rpx;
+}
+
+.gender-chips {
+  display: flex;
+  gap: 20rpx;
+}
+
+.gender-chip {
+  flex: 1;
+  height: 84rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 999rpx;
+  background: #fbf7ee;
+  color: #5a4f47;
+  font-size: 28rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.gender-chip.on {
+  border-color: #c93434;
+  background: #f9e5e0;
+  color: #c93434;
+}
+
+.guest-picker {
+  height: 84rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 12rpx;
+  background: #fbf7ee;
+  font-size: 28rpx;
+  color: #1f1a17;
+  display: flex;
+  align-items: center;
+}
+
+.guest-picker.placeholder {
+  color: #b3a89a;
+}
+
+.member-lock-card .guest-row .member-lock-btn,
+.member-lock-card > .member-lock-btn {
+  margin-top: 32rpx;
+}
+
+/* --- 预览资料卡 (游客可见, 点击引导开通) --- */
+.preview-card {
+  width: 100%;
+  margin-top: 32rpx;
+  background: #ffffff;
+  border-radius: 32rpx;
+  padding: 30rpx 32rpx;
+  box-sizing: border-box;
+  box-shadow: 0 16rpx 44rpx rgba(98, 21, 21, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.preview-card.first {
+  margin-top: 88rpx;
+}
+
+.preview-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-code {
+  color: #b3a89a;
+  font-size: 22rpx;
+  letter-spacing: 1rpx;
+}
+
+.preview-lock {
+  color: #a1651c;
+  background: rgba(246, 198, 107, 0.22);
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.preview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.preview-line {
+  color: #5a4f47;
+  font-size: 26rpx;
+  text-align: left;
+}
+
+.preview-line.big {
+  color: #1f1a17;
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.preview-desc {
+  color: #8d8175;
+  font-size: 24rpx;
+  line-height: 1.6;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .member-lock-foot {
   margin-top: auto;
   padding-top: 48rpx;
