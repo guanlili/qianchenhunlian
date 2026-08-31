@@ -1466,6 +1466,21 @@ Page({
   /** 点"联系当地门店" → 检查主属门店, 没选就跳门店选择 */
   openContact() {
     if (!this._gateCompleteProfile()) return;
+    // 实名门槛: 安排相亲须先到店核验 (与后端 NOT_VERIFIED 门槛一致)
+    if (this.data.meVerified !== 'passed') {
+      const that = this;
+      const hasPhone = !!(this.data.myHomeStore && this.data.myHomeStore.phone);
+      wx.showModal({
+        title: '需要实名核验',
+        content: '安排相亲前请先到所属门店完成实名核验 (红娘当面核验)。',
+        confirmText: hasPhone ? '拨打门店电话' : '知道了',
+        cancelText: '知道了',
+        success(res) {
+          if (res.confirm && hasPhone) that.callHomeStore();
+        },
+      });
+      return;
+    }
     // 必须先选门店才能发工单
     if (!this.data.myHomeStore) {
       const that = this;
@@ -1587,6 +1602,17 @@ Page({
       if (typeof detail === 'string' && detail.startsWith('DUPLICATE|')) {
         wx.showToast({ title: '24 小时内已申请过', icon: 'none' });
         this.setData({ contactOpen: false });
+        return;
+      }
+      if (typeof detail === 'string' && detail.startsWith('NOT_VERIFIED|')) {
+        // 实名门槛 (后端兜底): 引导到店核验
+        this.setData({ contactOpen: false });
+        wx.showModal({
+          title: '需要实名核验',
+          content: '安排相亲前请先到所属门店完成实名核验 (红娘当面核验)。',
+          showCancel: false,
+          confirmText: '知道了',
+        });
         return;
       }
       if (e && e.statusCode === 402) {

@@ -14,11 +14,14 @@ function _pickGlyph(seed) {
 
 Page({
   data: {
-    step: 'info',           // info = 头像昵称协议; store = 可选门店步骤
+    step: 'info',           // info = 头像昵称等基本信息; store = 可选门店步骤
     avatarTempPath: '',     // 用户选择的本地路径 (展示用); 空字符串表示用默认
     avatarUploadedUrl: '',  // 上传到 backend 后的 URL; 空表示用默认
     nickname: '',           // 默认 = "用户" + xy_code 后4位; 用户可改
     defaultGlyph: '缘',     // 默认占位字
+    gender: '',             // 必填: 男 / 女 (与资料编辑页取值一致)
+    years: [],              // 必填: 出生年份候选 (2015→1950 倒序)
+    yearIndex: -1,
     agreed: false,
     submitting: false,
     cities: [],             // 有门店的城市
@@ -28,6 +31,11 @@ Page({
   },
 
   onLoad() {
+    // 出生年份候选: 2015→1950 倒序 (与 Profile.year 校验范围一致)
+    const years = [];
+    for (let y = 2015; y >= 1950; y--) years.push(String(y));
+    this.setData({ years });
+
     // 用 xy_code 后4位 拼默认昵称, 用户不主动改也能直接提交
     const app = getApp();
     const seed =
@@ -52,6 +60,14 @@ Page({
         }
       }).catch(() => {});
     }
+  },
+
+  onGenderTap(e) {
+    this.setData({ gender: e.currentTarget.dataset.gender || '' });
+  },
+
+  onYearPick(e) {
+    this.setData({ yearIndex: Number(e.detail.value) || 0 });
   },
 
   /** 普通相册/相机选图, 不再用 chooseAvatar */
@@ -105,6 +121,28 @@ Page({
       wx.showToast({ title: '请先勾选用户协议', icon: 'none' });
       return;
     }
+    // 基本信息必填: 未填齐不放行资料流 (后端 is_welcomed 同口径)
+    if (!this.data.avatarUploadedUrl) {
+      wx.showToast({
+        title: this.data.avatarTempPath
+          ? '头像上传中, 请稍候'
+          : '请上传真实头像',
+        icon: 'none',
+      });
+      return;
+    }
+    if (!(this.data.nickname || '').trim()) {
+      wx.showToast({ title: '请填写昵称', icon: 'none' });
+      return;
+    }
+    if (!this.data.gender) {
+      wx.showToast({ title: '请选择性别', icon: 'none' });
+      return;
+    }
+    if (this.data.yearIndex < 0) {
+      wx.showToast({ title: '请选择出生年份', icon: 'none' });
+      return;
+    }
 
     this.setData({ submitting: true });
 
@@ -116,10 +154,11 @@ Page({
     }
 
     try {
-      // 头像和昵称留空时, 后端会落默认值
       await profileSvc.submitWelcome({
         nickname: (this.data.nickname || '').trim(),
-        avatar_url: this.data.avatarUploadedUrl || '',
+        avatar_url: this.data.avatarUploadedUrl,
+        gender: this.data.gender,
+        year: Number(this.data.years[this.data.yearIndex]),
       });
       wx.setStorageSync('qy_welcomed', true);
       app.globalData.isWelcomed = true;
