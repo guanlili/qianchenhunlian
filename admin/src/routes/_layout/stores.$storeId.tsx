@@ -9,7 +9,6 @@ import { DataTable } from "@/components/Common/DataTable"
 import { TrendPanel } from "@/components/Common/TrendPanel"
 import { memberColumns } from "@/components/Members/columns"
 import { RequestBoard } from "@/components/Requests/RequestBoard"
-import { AuditQueue } from "@/components/Review/AuditQueue"
 import { VerifyQueue } from "@/components/Review/VerifyQueue"
 import { AddStaff } from "@/components/Staff/AddStaff"
 import { StaffActionsMenu } from "@/components/Staff/StaffActionsMenu"
@@ -38,7 +37,6 @@ import useAuth from "@/hooks/useAuth"
 const VALID_TABS = [
   "overview",
   "members",
-  "audit",
   "verify",
   "requests",
   "activities",
@@ -117,7 +115,7 @@ function StoreWorkspacePage() {
           )}
         </h1>
         <p className="text-muted-foreground">
-          门店工作台: 会员 / 审核 / 核验 / 工单均限定本店范围, 进店即干活
+          门店工作台: 会员 / 核验 / 工单均限定本店范围, 进店即干活
         </p>
       </div>
 
@@ -128,7 +126,6 @@ function StoreWorkspacePage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">概览</TabsTrigger>
           <TabsTrigger value="members">会员</TabsTrigger>
-          <TabsTrigger value="audit">资料审核</TabsTrigger>
           <TabsTrigger value="verify">实名核验</TabsTrigger>
           <TabsTrigger value="requests">撮合工单</TabsTrigger>
           <TabsTrigger value="activities">行为动态</TabsTrigger>
@@ -139,9 +136,6 @@ function StoreWorkspacePage() {
         </TabsContent>
         <TabsContent value="members" className="mt-4">
           <StoreMembersTab storeId={storeId} />
-        </TabsContent>
-        <TabsContent value="audit" className="mt-4">
-          <AuditQueue storeId={storeId} />
         </TabsContent>
         <TabsContent value="verify" className="mt-4">
           <VerifyQueue storeId={storeId} />
@@ -302,7 +296,6 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
   const cards = [
     { label: "本店会员", value: stats?.total_users ?? 0, tab: "members" },
     { label: "今日新增", value: stats?.today_signups ?? 0, tab: "members" },
-    { label: "待审资料", value: stats?.pending_audits ?? 0, tab: "audit" },
     { label: "待实名核验", value: stats?.pending_verifies ?? 0, tab: "verify" },
     {
       label: "待处理工单",
@@ -391,10 +384,6 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <RecentMemberList title="最近注册" items={data?.recent_signups || []} />
-        <RecentMemberList
-          title="最近提审"
-          items={data?.recent_pending_audits || []}
-        />
         <Card>
           <CardHeader>
             <CardTitle className="text-base">最近工单</CardTitle>

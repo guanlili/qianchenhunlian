@@ -125,7 +125,7 @@ function RedeemCodesPage() {
     <div className="container mx-auto max-w-5xl px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">会员兑换码</h1>
+          <h1 className="text-xl font-bold">体验码管理</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             门店线下收款后把会员码交给用户, 用户在小程序「会员页 -
             会员码开通」输码自助开通。
@@ -249,7 +249,24 @@ function RedeemCodesPage() {
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
-              <Label htmlFor="redeem-days">兑换天数</Label>
+              <Label htmlFor="redeem-days">体验时长 (天)</Label>
+              <div className="flex gap-2">
+                {[
+                  ["30", "一个月"],
+                  ["60", "两个月"],
+                  ["90", "一季度"],
+                ].map(([v, label]) => (
+                  <Button
+                    key={v}
+                    type="button"
+                    size="sm"
+                    variant={days === v ? "default" : "outline"}
+                    onClick={() => setDays(v)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
               <Input
                 id="redeem-days"
                 type="number"
@@ -292,7 +309,7 @@ function RedeemCodesPage() {
               disabled={createMutation.isPending}
               onClick={() => createMutation.mutate()}
             >
-              {createMutation.isPending ? "生成中..." : "生成"}
+              {createMutation.isPending ? "生成中..." : "生成体验码"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -35,11 +35,11 @@ def _store_admin(store_id: uuid.UUID | None = uuid.uuid4()) -> Actor:
     )
 
 
-# 期望矩阵 (三层模型, 2026-08 与业务确认; 以门店为主体重构: 审核下放门店)
+# 期望矩阵 (三层模型, 2026-08 与业务确认;
+# 2026-08-31 起: 资料审核下线, 会员发放收归总部改体验码模式 → 店长收回两项)
 EXPECTED: dict[str, set[Perm]] = {
     "superuser": set(Perm),  # 系统管理员: 全部权限
-    "store_admin": {  # 门店管理员: 本店全权 (数据范围由 store scope helper 限本店)
-        Perm.PROFILE_AUDIT,
+    "store_admin": {  # 门店管理员: 本店服务权限 (数据范围由 store scope helper 限本店)
         Perm.PROFILE_EDIT,
         Perm.PROFILE_VERIFY,
         Perm.VIEW_CONTACT,
@@ -47,7 +47,6 @@ EXPECTED: dict[str, set[Perm]] = {
         Perm.HANDLE_REQUEST,
         Perm.GRANT_BALANCE,
         Perm.BLOCK_USER,
-        Perm.MEMBER_GRANT,
     },
 }
 

@@ -49,8 +49,8 @@ const mobileOps = [
   },
   {
     icon: Crown,
-    title: "开通 / 续费会员",
-    desc: "会员详情 → 「开通会员」→ 选套餐 → 确认发放；到期续费时间自动往后接",
+    title: "给会员开通 / 续费",
+    desc: "门店不再直接开通：找总部生成体验码 (一个月/两个月) → 门店把码发给用户 → 用户注册时填码或在小程序「会员页-会员码开通」输码, 到期自动往后接",
   },
   {
     icon: Heart,
@@ -111,8 +111,8 @@ const permMatrix: {
   {
     name: "资料审核（线上）",
     superAdmin: true,
-    storeAdmin: "scoped",
-    desc: "用户提交的资料审核（门店管理员仅本店会员）",
+    storeAdmin: false,
+    desc: "已下线：资料由用户注册时自填，先发后审；违规资料由总部下架",
   },
   {
     name: "编辑/代录会员资料",

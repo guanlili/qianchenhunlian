@@ -87,11 +87,27 @@ def test_create_codes_superuser(
     assert r.json()["total"] >= 3
 
 
-def test_create_codes_store_scoped(client: TestClient, db: Session) -> None:
-    """店长生码强制归属本店."""
+def test_create_codes_hq_only(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """体验码模式: 生码收归总部; 店长生码 403; 总部可指定归属门店."""
     headers, store = _setup_store_admin(client, db)
-    items = _create_codes(client, headers, days=30, count=2)
-    for it in items:
+    # 店长生码 → 403
+    r = client.post(
+        f"{API}/admin/membership/redeem-codes",
+        json={"days": 30, "count": 1},
+        headers=headers,
+    )
+    assert r.status_code == 403
+
+    # 总部指定归属门店生成 (对账用)
+    r2 = client.post(
+        f"{API}/admin/membership/redeem-codes",
+        json={"days": 30, "count": 2, "store_id": str(store.id)},
+        headers=superuser_token_headers,
+    )
+    assert r2.status_code == 200, r2.text
+    for it in r2.json():
         assert it["store_id"] == str(store.id)
 
 
@@ -148,12 +164,14 @@ def test_redeem_twice_rejected(
     assert r.status_code == 400
 
 
-def test_voided_code_rejected(client: TestClient, db: Session) -> None:
-    """作废后的码不可兑换; 店长可作废本店码."""
-    headers, _store = _setup_store_admin(client, db)
-    (item,) = _create_codes(client, headers, days=30)
+def test_voided_code_rejected(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """作废后的码不可兑换."""
+    (item,) = _create_codes(client, superuser_token_headers, days=30)
     r = client.post(
-        f"{API}/admin/membership/redeem-codes/{item['id']}/void", headers=headers
+        f"{API}/admin/membership/redeem-codes/{item['id']}/void",
+        headers=superuser_token_headers,
     )
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "void"
