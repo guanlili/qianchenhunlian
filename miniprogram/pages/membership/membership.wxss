@@ -203,6 +203,47 @@
   line-height: 76rpx;
 }
 
+/* 会员码兑换 */
+.redeem-row {
+  margin-top: 20rpx;
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.redeem-input {
+  flex: 1;
+  height: 84rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 12rpx;
+  background: #fbf7ee;
+  font-size: 27rpx;
+  color: #1f1a17;
+  box-sizing: border-box;
+}
+
+.redeem-btn {
+  flex-shrink: 0;
+  width: 176rpx;
+  min-height: 84rpx;
+  border: none;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
+  font-size: 27rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.redeem-btn[disabled] {
+  opacity: 0.6;
+  background: #f9e5e0;
+  color: #c93434;
+}
+
 .mp-footer-tip {
   margin-top: 36rpx;
   text-align: center;

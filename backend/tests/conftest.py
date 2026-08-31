@@ -9,7 +9,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from app import crud
 from app.api.deps import get_db
 from app.core.config import settings
-from app.core.ratelimit import api_limiter, login_limiter
+from app.core.ratelimit import api_limiter, login_limiter, redeem_limiter
 from app.main import app
 from app.models import User, UserCreate
 from tests.utils.user import authentication_token_from_email
@@ -68,6 +68,7 @@ def _reset_login_limiter() -> Generator[None, None, None]:
     """
     login_limiter._hits.clear()
     api_limiter._hits.clear()
+    redeem_limiter._hits.clear()
     yield
 
 

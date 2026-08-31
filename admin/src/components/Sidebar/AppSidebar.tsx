@@ -8,6 +8,7 @@ import {
   MessageSquare,
   ScrollText,
   Store,
+  Ticket,
   UserCog,
 } from "lucide-react"
 
@@ -38,6 +39,7 @@ const storeHubItems: Item[] = [
 
 // 仅总部管理员可见的平台级工具
 const platformItems: Item[] = [
+  { icon: Ticket, title: "会员兑换码", path: "/redeem-codes" },
   { icon: MessageSquare, title: "意见反馈", path: "/feedback" },
   { icon: Award, title: "平台设置", path: "/qualifications" },
   { icon: UserCog, title: "管理员账号", path: "/admins" },
@@ -51,6 +53,7 @@ const storeAdminItems: Item[] = [
     title: "本店工作台",
     path: "/stores/$storeId",
   },
+  { icon: Ticket, title: "会员兑换码", path: "/redeem-codes" },
 ]
 
 // 所有角色可见的帮助入口 (docs/14 的用户可见版)

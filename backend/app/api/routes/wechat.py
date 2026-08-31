@@ -37,7 +37,7 @@ def _build_login_response(session: Session, user: User) -> WechatLoginResponse:
         session.exec(select(Criteria).where(Criteria.user_id == user.id)).first()
         is not None
     )
-    is_welcomed = bool(profile and profile.nickname and profile.avatar_url)
+    is_welcomed = bool(profile and profile.is_welcomed)
     return WechatLoginResponse(
         access_token=access_token,
         token_type="bearer",

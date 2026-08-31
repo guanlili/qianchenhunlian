@@ -43,6 +43,25 @@
     </view>
   </view>
 
+  <!-- 会员码兑换: 门店线下收款后发码, 输码自助开通 -->
+  <view class="mp-card">
+    <view class="mp-card-title">会员码开通</view>
+    <view class="mp-tip">在门店现场缴费后, 输入红娘提供的会员码即可自助开通。</view>
+    <view class="redeem-row">
+      <input
+        class="redeem-input"
+        type="text"
+        placeholder="请输入会员码"
+        value="{{redeemCode}}"
+        bindinput="onRedeemInput"
+        maxlength="32"
+      />
+      <button class="redeem-btn" bindtap="onRedeem" disabled="{{redeeming}}">
+        {{redeeming ? '开通中...' : '开通'}}
+      </button>
+    </view>
+  </view>
+
   <!-- 线下办理引导 (线上开关关闭时始终展示; 开启时也给一条线下路径) -->
   <view class="mp-card">
     <view class="mp-card-title">线下办理</view>

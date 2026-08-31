@@ -219,6 +219,11 @@ class Profile(ProfileBase, table=True):
 
     user: User = Relationship(back_populates="profile")
 
+    @property
+    def is_welcomed(self) -> bool:
+        """首启引导完成: 昵称 + 头像 + 性别 + 出生年份 全齐才放行资料流."""
+        return bool(self.nickname and self.avatar_url and self.gender and self.year)
+
 
 class ProfilePublic(ProfileBase):
     id: uuid.UUID
@@ -766,6 +771,51 @@ class MembershipOrderPublic(SQLModel):
     status: str
     out_trade_no: str
     paid_at: datetime | None = None
+    created_at: datetime
+
+
+# ------------------------------------------------------------
+# MembershipRedeemCode · 会员兑换码 (门店线下收款后发码, 用户自助输码开通)
+# ------------------------------------------------------------
+
+
+class MembershipRedeemCode(SQLModel, table=True):
+    """会员兑换码: 门店收款后发放, 用户在缴费页输入即开通 (source=redeem_code).
+
+    - code 展示格式 QY-XXXX-XXXX-XXXX; 库内另存去连字符大写 code_norm 供比对,
+      用户输不输连字符/大小写都能兑换.
+    - 兑换走条件更新 (status unused→used) 防并发双用.
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    code: str = Field(max_length=32, unique=True, index=True)  # 展示格式
+    code_norm: str = Field(max_length=32, unique=True, index=True)  # 归一化比对
+    days: int  # 兑换天数
+    store_id: uuid.UUID | None = Field(
+        default=None, foreign_key="store.id", index=True
+    )  # 归属门店 (总部生成可为空)
+    note: str | None = Field(default=None, max_length=255)
+    status: str = Field(default="unused", max_length=16, index=True)  # unused/used/void
+    used_by_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    used_at: datetime | None = None
+    used_by_email: str | None = Field(default=None, max_length=255)  # 对账展示
+    # 生成者: user(总部超管) / staff(门店管理员), 与 MembershipGrant.granted_by 同构
+    created_by_type: str = Field(default="staff", max_length=16)
+    created_by_id: uuid.UUID
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class MembershipRedeemCodePublic(SQLModel):
+    id: uuid.UUID
+    code: str
+    days: int
+    store_id: uuid.UUID | None = None
+    note: str | None = None
+    status: str
+    used_by_user_id: uuid.UUID | None = None
+    used_by_email: str | None = None
+    used_at: datetime | None = None
     created_at: datetime
 
 

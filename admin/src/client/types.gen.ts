@@ -799,6 +799,19 @@ export type MembershipPlansResponse = {
     }>;
 };
 
+export type MembershipRedeemCodePublic = {
+    id: string;
+    code: string;
+    days: number;
+    store_id?: (string | null);
+    note?: (string | null);
+    status: string;
+    used_by_user_id?: (string | null);
+    used_by_email?: (string | null);
+    used_at?: (string | null);
+    created_at: string;
+};
+
 export type MembershipStatus = {
     is_member: boolean;
     expires_at?: (string | null);
@@ -993,6 +1006,29 @@ export type QualificationItem = {
 
 export type QualificationList = {
     items?: Array<QualificationItem>;
+};
+
+/**
+ * 批量生成会员兑换码: 门店收款后把码交给用户, 用户在小程序输码开通.
+ */
+export type RedeemCodeCreateRequest = {
+    days: number;
+    count?: number;
+    note?: (string | null);
+};
+
+export type RedeemCodeList = {
+    items?: Array<MembershipRedeemCodePublic>;
+    total?: number;
+};
+
+export type RedeemIn = {
+    code: string;
+};
+
+export type RedeemOut = {
+    days: number;
+    member_expires_at: string;
 };
 
 export type RefreshTokenBody = {
@@ -1287,6 +1323,8 @@ export type WechatLoginResponse = {
 export type WelcomeBody = {
     nickname: string;
     avatar_url: string;
+    gender?: (string | null);
+    year?: (number | null);
 };
 
 /**
@@ -1574,6 +1612,26 @@ export type AdminGrantCouponEndpointData = {
 };
 
 export type AdminGrantCouponEndpointResponse = (CouponGrantResponse);
+
+export type AdminCreateRedeemCodesData = {
+    requestBody: RedeemCodeCreateRequest;
+};
+
+export type AdminCreateRedeemCodesResponse = (Array<MembershipRedeemCodePublic>);
+
+export type AdminListRedeemCodesData = {
+    limit?: number;
+    skip?: number;
+    status?: (string | null);
+};
+
+export type AdminListRedeemCodesResponse = (RedeemCodeList);
+
+export type AdminVoidRedeemCodeData = {
+    codeId: string;
+};
+
+export type AdminVoidRedeemCodeResponse = (MembershipRedeemCodePublic);
 
 export type AdminGrantMembershipEndpointData = {
     requestBody: MembershipGrantRequest;
@@ -1874,6 +1932,12 @@ export type MembershipMockPayResponse = (OrderCreatedOut);
 export type MembershipPayNotifyResponse = ({
     [key: string]: (string);
 });
+
+export type MembershipRedeemCodeData = {
+    requestBody: RedeemIn;
+};
+
+export type MembershipRedeemCodeResponse = (RedeemOut);
 
 export type ProfilesReadMyProfileResponse = (ProfileMeResponse);
 
