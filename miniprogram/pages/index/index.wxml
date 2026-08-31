@@ -1,57 +1,122 @@
 <view class="qy-page">
   <block wx:if="{{screen == 'home'}}">
-    <!-- 门店会员制: 非会员锁定浏览, 引导到店开通 -->
+    <!-- 门店会员制: 非会员先看 5 个匹配预览 (转化钩子), 完整浏览引导到店开通 -->
     <view class="member-lock" wx:if="{{apiReady && !isMember}}">
       <view class="member-lock-head">
         <view class="member-lock-crown-wrap">
           <view class="member-lock-crown">✦</view>
         </view>
-        <view class="member-lock-title">门店会员专享</view>
-        <view class="member-lock-sub">
-          <text>严选会员资料仅对门店会员开放</text>
-          <text>到店开通后即可查看</text>
+        <view class="member-lock-title" wx:if="{{previewGate}}">先做个小测试</view>
+        <view class="member-lock-title" wx:else>为你精选 5 位会员</view>
+        <view class="member-lock-sub" wx:if="{{previewGate}}">
+          <text>选择性别、出生年份和所在城市</text>
+          <text>马上为你匹配相配的会员</text>
+        </view>
+        <view class="member-lock-sub" wx:else>
+          <text>按你的性别、年龄、城市相配而来</text>
+          <text>开通会员可查看全部严选资料</text>
         </view>
       </view>
-      <view class="member-lock-card" wx:if="{{myHomeStore && myHomeStore.phone}}">
+
+      <!-- 游客三问表单 -->
+      <view class="member-lock-card" wx:if="{{previewGate}}">
+        <view class="guest-row">
+          <view class="guest-label">性别<text class="req">*</text></view>
+          <view class="gender-chips">
+            <view class="gender-chip {{guestGender === '男' ? 'on' : ''}}" bindtap="onGuestGenderTap" data-gender="男">男</view>
+            <view class="gender-chip {{guestGender === '女' ? 'on' : ''}}" bindtap="onGuestGenderTap" data-gender="女">女</view>
+          </view>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">出生年份<text class="req">*</text></view>
+          <picker mode="selector" range="{{guestYears}}" value="{{guestYearIndex < 0 ? 0 : guestYearIndex}}" bindchange="onGuestYearPick">
+            <view class="guest-picker {{guestYearIndex < 0 ? 'placeholder' : ''}}">
+              {{guestYearIndex < 0 ? '请选择出生年份' : guestYears[guestYearIndex] + ' 年'}}
+            </view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">所在城市<text class="req">*</text></view>
+          <picker mode="selector" range="{{guestCities}}" value="{{guestCityIndex < 0 ? 0 : guestCityIndex}}" bindchange="onGuestCityPick">
+            <view class="guest-picker {{guestCityIndex < 0 ? 'placeholder' : ''}}">
+              {{guestCityIndex < 0 ? '请选择所在城市' : guestCities[guestCityIndex]}}
+            </view>
+          </picker>
+        </view>
+        <button class="member-lock-btn" bindtap="submitGuestBasics">看与我相配的会员</button>
+      </view>
+
+      <!-- 预览资料卡 × 5 -->
+      <block wx:if="{{!previewGate && previewLoaded}}">
+        <view class="preview-card {{index === 0 ? 'first' : ''}}" wx:for="{{previewList}}" wx:key="user_id" bindtap="onPreviewCardTap">
+          <view class="preview-top">
+            <text class="preview-code">{{item.xy_code || '严选会员'}}</text>
+            <text class="preview-lock">🔒 会员可见</text>
+          </view>
+          <view class="preview-main">
+            <view class="preview-line big">{{item.gender || ''}} · {{item.year}}年<text wx:if="{{item.ageNow}}"> ({{item.ageNow}}岁)</text></view>
+            <view class="preview-line">📍 {{item.location || '山东'}}</view>
+            <view class="preview-line">{{item.edu || '学历未填'}}<text wx:if="{{item.height}}"> · {{item.height}}cm</text></view>
+          </view>
+          <view class="preview-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
+        </view>
+        <view wx:if="{{!previewList.length}}" class="member-lock-card">
+          <view class="member-lock-store">
+            <text class="name">暂无匹配的会员资料</text>
+          </view>
+          <view class="member-lock-phone">可先到店登记, 红娘优先为你物色</view>
+        </view>
+
+        <view class="member-lock-card tight" wx:if="{{myHomeStore && myHomeStore.phone}}">
+          <view class="member-lock-store">
+            <text class="pin">📍</text>
+            <text class="name">{{myHomeStore.city}} · {{myHomeStore.name}}</text>
+            <text class="badge">会员制</text>
+          </view>
+          <button class="member-lock-btn" bindtap="callHomeStore">
+            <text class="ico">☎</text>
+            <text>拨打门店电话 · 现场开通</text>
+          </button>
+          <view class="member-lock-phone">客服电话 <text class="num">{{myHomeStore.phone}}</text></view>
+          <view class="member-lock-divide"></view>
+          <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+        </view>
+        <view class="member-lock-card tight" wx:else>
+          <view class="member-lock-store">
+            <text class="pin">📍</text>
+            <text class="name">还未绑定服务门店</text>
+          </view>
+          <button class="member-lock-btn" bindtap="goStoreCities">
+            <text>去附近门店开通</text>
+          </button>
+          <view class="member-lock-divide"></view>
+          <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+        </view>
+        <view class="member-lock-steps">
+          <view class="step">
+            <view class="no">1</view>
+            <view class="txt">到店咨询</view>
+          </view>
+          <view class="arrow">›</view>
+          <view class="step">
+            <view class="no">2</view>
+            <view class="txt">实名认证</view>
+          </view>
+          <view class="arrow">›</view>
+          <view class="step">
+            <view class="no">3</view>
+            <view class="txt">开通会员</view>
+          </view>
+        </view>
+      </block>
+      <!-- 预览加载失败: 重试入口 -->
+      <view class="member-lock-card tight" wx:if="{{previewError}}">
         <view class="member-lock-store">
-          <text class="pin">📍</text>
-          <text class="name">{{myHomeStore.city}} · {{myHomeStore.name}}</text>
-          <text class="badge">会员制</text>
+          <text class="name">内容加载失败</text>
         </view>
-        <button class="member-lock-btn" bindtap="callHomeStore">
-          <text class="ico">☎</text>
-          <text>拨打门店电话 · 现场开通</text>
+        <button class="member-lock-btn" bindtap="retryPreview">
+          <text>重新加载</text>
         </button>
-        <view class="member-lock-phone">客服电话 <text class="num">{{myHomeStore.phone}}</text></view>
-        <view class="member-lock-divide"></view>
-        <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
-      </view>
-      <view class="member-lock-card" wx:else>
-        <view class="member-lock-store">
-          <text class="pin">📍</text>
-          <text class="name">还未绑定服务门店</text>
-        </view>
-        <button class="member-lock-btn" bindtap="goStoreCities">
-          <text>去附近门店开通</text>
-        </button>
-        <view class="member-lock-divide"></view>
-        <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
-      </view>
-      <view class="member-lock-steps">
-        <view class="step">
-          <view class="no">1</view>
-          <view class="txt">到店咨询</view>
-        </view>
-        <view class="arrow">›</view>
-        <view class="step">
-          <view class="no">2</view>
-          <view class="txt">实名认证</view>
-        </view>
-        <view class="arrow">›</view>
-        <view class="step">
-          <view class="no">3</view>
-          <view class="txt">开通会员</view>
-        </view>
       </view>
       <view class="member-lock-foot">乾缘婚恋 · 真诚严选</view>
     </view>

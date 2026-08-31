@@ -214,9 +214,7 @@ def get_guest_preview(
       同城优先, 同城不足时放宽到全省补齐; 年龄接近优先, 活跃优先
     - 只出列表概要 (头像/基础信息), 完整浏览/详情/联系仍为会员专享
     """
-    me = session.exec(
-        select(Profile).where(Profile.user_id == current_user.id)
-    ).first()
+    me = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
     if (
         not me
         or me.gender not in ("男", "女")
