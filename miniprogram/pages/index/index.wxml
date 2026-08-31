@@ -2,19 +2,74 @@
   <block wx:if="{{screen == 'home'}}">
     <!-- 门店会员制: 非会员锁定浏览, 引导到店开通 -->
     <view class="member-lock" wx:if="{{apiReady && !isMember}}">
-      <view class="member-lock-crown">✦</view>
-      <view class="member-lock-title">门店会员专享</view>
-      <view class="member-lock-sub">乾缘婚恋为门店会员制服务, 到你所在门店开通会员后即可查看严选会员资料</view>
-      <block wx:if="{{myHomeStore && myHomeStore.phone}}">
-        <view class="member-lock-store">{{myHomeStore.city}} · {{myHomeStore.name}}</view>
-        <button class="member-lock-btn" bindtap="callHomeStore">拨打门店电话, 现场开通</button>
-        <view class="member-lock-phone">{{myHomeStore.phone}}</view>
-      </block>
-      <button wx:else class="member-lock-btn" bindtap="goStoreCities">去附近门店开通</button>
-      <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+      <view class="member-lock-head">
+        <view class="member-lock-crown-wrap">
+          <view class="member-lock-crown">✦</view>
+        </view>
+        <view class="member-lock-title">门店会员专享</view>
+        <view class="member-lock-sub">
+          <text>严选会员资料仅对门店会员开放</text>
+          <text>到店开通后即可查看</text>
+        </view>
+      </view>
+      <view class="member-lock-card" wx:if="{{myHomeStore && myHomeStore.phone}}">
+        <view class="member-lock-store">
+          <text class="pin">📍</text>
+          <text class="name">{{myHomeStore.city}} · {{myHomeStore.name}}</text>
+          <text class="badge">会员制</text>
+        </view>
+        <button class="member-lock-btn" bindtap="callHomeStore">
+          <text class="ico">☎</text>
+          <text>拨打门店电话 · 现场开通</text>
+        </button>
+        <view class="member-lock-phone">客服电话 <text class="num">{{myHomeStore.phone}}</text></view>
+        <view class="member-lock-divide"></view>
+        <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+      </view>
+      <view class="member-lock-card" wx:else>
+        <view class="member-lock-store">
+          <text class="pin">📍</text>
+          <text class="name">还未绑定服务门店</text>
+        </view>
+        <button class="member-lock-btn" bindtap="goStoreCities">
+          <text>去附近门店开通</text>
+        </button>
+        <view class="member-lock-divide"></view>
+        <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+      </view>
+      <view class="member-lock-steps">
+        <view class="step">
+          <view class="no">1</view>
+          <view class="txt">到店咨询</view>
+        </view>
+        <view class="arrow">›</view>
+        <view class="step">
+          <view class="no">2</view>
+          <view class="txt">实名认证</view>
+        </view>
+        <view class="arrow">›</view>
+        <view class="step">
+          <view class="no">3</view>
+          <view class="txt">开通会员</view>
+        </view>
+      </view>
+      <view class="member-lock-foot">乾缘婚恋 · 真诚严选</view>
     </view>
 
-    <scroll-view wx:if="{{!apiReady || isMember}}" class="screen main-screen" scroll-y>
+    <!-- 会员已开通但未完成首启引导: 先补基本资料, 不放行资料流 -->
+    <view class="welcomed-gate" wx:if="{{apiReady && isMember && !isWelcomed}}">
+      <view class="wg-card">
+        <view class="wg-crown">✦</view>
+        <view class="wg-title">先完善基本资料</view>
+        <view class="wg-sub">
+          <text>填写头像和昵称, 约1分钟</text>
+          <text>完成后即可浏览严选会员资料</text>
+        </view>
+        <button class="wg-btn" bindtap="goWelcome">去完善基本资料</button>
+      </view>
+    </view>
+
+    <scroll-view wx:if="{{!apiReady || (isMember && isWelcomed)}}" class="screen main-screen" scroll-y>
       <view class="hero-header">
         <view class="nav-row light">
           <view class="nav-placeholder"></view>
