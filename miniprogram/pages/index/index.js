@@ -554,6 +554,7 @@ Page({
     loginFailed: false, // 登录失败时不展示任何示例资料
     apiReady: false,    // 登录成功后置 true; false 时不请求推荐
     isMember: false,    // 门店会员制: 非会员首页锁屏 (浏览为会员专享)
+    isWelcomed: false,  // 首启引导 (头像+昵称+协议) 是否完成: 未完成不给看资料
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
     profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
     myAvatar: '',       // 我的页门面: 真实头像
@@ -568,8 +569,28 @@ Page({
   onShow() {
     // 会员开通/支付完成「秒解锁」: 切回小程序自动刷新会员状态与资料门面
     if (!this.data.apiReady) return;
+    // 引导刚完成 (welcome 页 reLaunch 回来): 补拉推荐资料流
+    const welcomed = this._syncWelcomed();
+    if (welcomed && !this.data.isWelcomed && this.data.isMember) this.loadHome();
+    if (welcomed !== this.data.isWelcomed) this.setData({ isWelcomed: welcomed });
     this.refreshMembership();
     this.loadMyProfile().catch(() => {});
+  },
+
+  /** 引导完成状态唯一同步口: globalData 权威 + 本地缓存兜底 (老用户)。
+   * 不能信 ensureLogin 的旧 payload——welcome reLaunch 回来时它还是登录时的旧值。 */
+  _syncWelcomed() {
+    const app = getApp();
+    let w = !!app.globalData.isWelcomed;
+    if (!w) {
+      try {
+        w = !!wx.getStorageSync('qy_welcomed');
+      } catch (e) {
+        w = false;
+      }
+      if (w) app.globalData.isWelcomed = true;
+    }
+    return w;
   },
 
   async onLoad(options) {
@@ -624,6 +645,7 @@ Page({
           meVerified: payload.user.verified === 'passed',
           loginFailed: false,
           apiReady: true,
+          isWelcomed: this._syncWelcomed(),
         });
         // 已有 profile 的话, relation 取后端权威值 (覆盖 storage)
         if (payload.has_profile) {
@@ -2468,8 +2490,8 @@ Page({
         memberExpiresAt: (m && m.expires_at) || '',
       });
       // 仅在身份刚切换 (首次判定 / 红娘刚开通 / 支付刚成功) 时拉推荐,
-      // 避免每次切前台都重打推荐接口
-      if (isMember && !wasMember) this.loadHome();
+      // 避免每次切前台都重打推荐接口; 未完成首启引导先不拉 (见 welcomed-gate)
+      if (isMember && !wasMember && this.data.isWelcomed) this.loadHome();
     }).catch(() => {});
   },
 
@@ -2479,6 +2501,11 @@ Page({
     const sp = this.data.selectedProfile;
     if (!sp || !sp.photos || !sp.photos.length) return;
     wx.previewImage({ current: sp.photos[idx], urls: sp.photos });
+  },
+
+  /** 引导中间态: 会员已开通但未完成首启引导, 去补基本资料 */
+  goWelcome() {
+    wx.navigateTo({ url: '/pages/welcome/welcome' });
   },
 
   /** 锁屏页一键拨打本店电话 (红娘可当场帮开通) */

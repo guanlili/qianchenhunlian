@@ -2654,6 +2654,85 @@ page {
   letter-spacing: 2rpx;
 }
 
+/* --- 引导中间态: 会员已开通但未完成首启引导, 先补基本资料 --- */
+.welcomed-gate {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 52rpx;
+  box-sizing: border-box;
+}
+
+.wg-card {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 40rpx;
+  padding: 64rpx 44rpx 56rpx;
+  box-sizing: border-box;
+  box-shadow: 0 32rpx 80rpx rgba(98, 21, 21, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wg-crown {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 48rpx;
+  background: linear-gradient(135deg, #f6c66b, #ed7030);
+  box-shadow: 0 20rpx 44rpx rgba(237, 112, 48, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64rpx;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 36rpx;
+}
+
+.wg-title {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #1f1a17;
+}
+
+.wg-sub {
+  margin-top: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 25rpx;
+  color: #8d8175;
+  line-height: 1.7;
+}
+
+/* 与「去附近门店」同款浅粉胶囊 */
+.wg-btn {
+  margin-top: 48rpx;
+  width: 100%;
+  min-height: 92rpx;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
+  font-size: 29rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wg-btn::after {
+  border: none;
+}
+
+.wg-btn:active {
+  opacity: 0.85;
+}
+
 /* --- 会员权益可视化 --- */
 .quota-bar {
   display: flex;
