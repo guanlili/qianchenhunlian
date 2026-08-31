@@ -45,18 +45,16 @@ class Perm(str, Enum):
 _SUPERUSER: frozenset[Perm] = frozenset(Perm)
 _STORE_ADMIN: frozenset[Perm] = frozenset(
     {
-        # 店长权限: 本店会员的资料审核 (以门店为主体的工作流, 数据范围由
-        # _check_member_scope 限本店; 总部保留全局审核, 审计记录可追溯)
-        Perm.PROFILE_AUDIT,
+        # 店长权限: 本店会员服务 (数据范围由 _check_member_scope 限本店)
+        # 注: 资料审核 (PROFILE_AUDIT) 已下线 (用户注册自填+先发后审, 与实名
+        # 核验重复); 会员开通/发券 (MEMBER_GRANT) 收归总部 —— 统一改为生成
+        # 体验码, 门店线下转发给用户, 注册时填码或会员页输码开通。
         Perm.PROFILE_EDIT,
         Perm.PROFILE_VERIFY,
         Perm.VIEW_CONTACT,
         Perm.VIEW_REQUEST_CONTACT,
         Perm.HANDLE_REQUEST,
-        # 店长权限: 本店会员的封禁与赠送额度 (数据范围由 _check_member_scope 限本店)
         Perm.GRANT_BALANCE,
-        # 店长权限: 本店会员的会员开通/续费/回收 (docs/13)
-        Perm.MEMBER_GRANT,
         Perm.BLOCK_USER,
     }
 )

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlmodel import Field, Session, SQLModel, and_, or_, select
+from sqlmodel import Field, Session, SQLModel, and_, func, or_, select
 
 from app.api.deps import (
     ApiDetailLimited,
@@ -198,6 +198,79 @@ def _is_starred(session: Session, viewer_id: uuid.UUID, target_id: uuid.UUID) ->
 
 
 # ---------------- Routes ----------------
+
+
+@router.get("/preview", response_model=MatchListResponse)
+def get_guest_preview(
+    session: SessionDep,
+    current_user: CurrentUser,
+    _lim: ApiReadLimited,
+    limit: int = Query(5, ge=1, le=5),
+) -> MatchListResponse:
+    """游客匹配预览 (转化钩子): 未开通会员先看 5 个与自己相配的会员资料.
+
+    - 前置: 自己资料须已填 性别/出生年份/城市 (游客三问), 缺 → 403 BASIC_INFO_REQUIRED
+    - 匹配口径: 异性 + 山东 + 在期会员 + 审核通过 + 活跃账号;
+      同城优先, 同城不足时放宽到全省补齐; 年龄接近优先, 活跃优先
+    - 只出列表概要 (头像/基础信息), 完整浏览/详情/联系仍为会员专享
+    """
+    me = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
+    if (
+        not me
+        or me.gender not in ("男", "女")
+        or not me.year
+        or not (me.location or "").strip()
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="BASIC_INFO_REQUIRED|请先选择性别、出生年份和所在城市",
+        )
+    opposite = "女" if me.gender == "男" else "男"
+    city = (me.location or "").strip()
+    city_like = or_(
+        Profile.location.like(f"%{city}%"),  # type: ignore
+        Profile.origin.like(f"%{city}%"),  # type: ignore
+    )
+    age_rank = func.abs(Profile.year - me.year)  # type: ignore[operator]
+
+    base = [
+        Profile.user_id != current_user.id,
+        User.status == "active",
+        User.is_superuser == False,  # noqa: E712
+        User.xy_code.is_not(None),  # type: ignore
+        Profile.audit_status == "approved",
+        _member_only_clause(),
+        _shandong_clause(),
+        Profile.gender == opposite,
+    ]
+
+    def _query(extra: list[Any]) -> Any:
+        return (
+            select(Profile, User)
+            .join(User, Profile.user_id == User.id)  # type: ignore
+            .where(*base)
+            .where(*extra)
+            .order_by(age_rank.asc(), Profile.updated_at.desc())  # type: ignore
+        )
+
+    # 先同城精确匹配, 不足 limit 个再放宽到全省补齐 (小城市游客不至于只看到一两条)
+    rows: list[tuple[Profile, User]] = list(
+        session.exec(_query([city_like]).limit(limit)).all()
+    )
+    seen = {p.user_id for p, _ in rows}
+    if len(rows) < limit:
+        for p, u in session.exec(_query([]).limit(limit * 4)).all():
+            if p.user_id in seen:
+                continue
+            rows.append((p, u))
+            seen.add(p.user_id)
+            if len(rows) >= limit:
+                break
+    rows = rows[:limit]
+
+    starred = _starred_set(session, current_user.id, [p.user_id for p, _ in rows])
+    items = [_to_brief(p, u, starred=p.user_id in starred) for p, u in rows]
+    return MatchListResponse(items=items, next_cursor=None)
 
 
 @router.get("/daily", response_model=MatchListResponse)

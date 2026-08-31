@@ -415,7 +415,7 @@ def test_unknown_plan_rejected(
 
 
 def test_store_admin_grant_scope(client: TestClient, db: Session) -> None:
-    """门店管理员: 可给本店会员发放, 不能碰别店会员."""
+    """体验码模式: 会员发放收归总部, 店长给本店会员发放也 403."""
     headers, store = _setup_store_admin(client, db)
     own = _make_user(db, home_store_id=store.id)
 
@@ -430,14 +430,7 @@ def test_store_admin_grant_scope(client: TestClient, db: Session) -> None:
         headers=headers,
         json={"plan_code": "monthly_30d"},
     )
-    assert r.status_code == 200, r.text
-    db.refresh(own)
-    assert own.membership_expires_at is not None
-    # 发放记录挂在门店名下
-    grant = db.exec(
-        select(MembershipGrant).where(MembershipGrant.user_id == own.id)
-    ).one()
-    assert grant.store_id == store.id
+    assert r.status_code == 403  # 本店会员也不行 (体验码模式, 发放收归总部)
 
     r = client.post(
         f"{API}/admin/members/{other.id}/grant-membership",

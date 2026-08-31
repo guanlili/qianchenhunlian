@@ -1,57 +1,237 @@
 <view class="qy-page">
   <block wx:if="{{screen == 'home'}}">
-    <!-- 门店会员制: 非会员锁定浏览, 引导到店开通 -->
+    <!-- 门店会员制: 非会员先看 5 个匹配预览 (转化钩子), 完整浏览引导到店开通 -->
     <view class="member-lock" wx:if="{{apiReady && !isMember}}">
       <view class="member-lock-head">
         <view class="member-lock-crown-wrap">
           <view class="member-lock-crown">✦</view>
         </view>
-        <view class="member-lock-title">门店会员专享</view>
-        <view class="member-lock-sub">
-          <text>严选会员资料仅对门店会员开放</text>
-          <text>到店开通后即可查看</text>
+        <view class="member-lock-title" wx:if="{{previewGate}}">{{guestStep === 1 ? '先做个小测试' : guestStep === 2 ? '欢迎你, 先完善基本信息' : guestStep === 3 ? '完善基本条件' : guestStep === 4 ? '工作与资产' : '确认缴费'}}</view>
+        <view class="member-lock-title" wx:else>为你精选 5 位会员</view>
+        <view class="member-lock-sub" wx:if="{{previewGate}}">
+          <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传真实头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、学历、婚姻与收入' : guestStep === 4 ? '职业、婚房、车与联系方式' : '微信支付年费, 或填体验码直接开通'}}</text>
+          <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 5 步)</text>
+        </view>
+        <view class="member-lock-sub" wx:else>
+          <text>按你的性别、年龄、城市相配而来</text>
+          <text>开通会员可查看全部严选资料</text>
         </view>
       </view>
-      <view class="member-lock-card" wx:if="{{myHomeStore && myHomeStore.phone}}">
-        <view class="member-lock-store">
-          <text class="pin">📍</text>
-          <text class="name">{{myHomeStore.city}} · {{myHomeStore.name}}</text>
-          <text class="badge">会员制</text>
+
+      <!-- 游客注册向导 · 第 1 步: 三问 -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 1}}">
+        <view class="guest-row">
+          <view class="guest-label">性别<text class="req">*</text></view>
+          <view class="gender-chips">
+            <view class="gender-chip {{guestGender === '男' ? 'on' : ''}}" bindtap="onGuestGenderTap" data-gender="男">男</view>
+            <view class="gender-chip {{guestGender === '女' ? 'on' : ''}}" bindtap="onGuestGenderTap" data-gender="女">女</view>
+          </view>
         </view>
-        <button class="member-lock-btn" bindtap="callHomeStore">
-          <text class="ico">☎</text>
-          <text>拨打门店电话 · 现场开通</text>
+        <view class="guest-row">
+          <view class="guest-label">出生年份<text class="req">*</text></view>
+          <picker mode="selector" range="{{guestYears}}" value="{{guestYearIndex < 0 ? 0 : guestYearIndex}}" bindchange="onGuestYearPick">
+            <view class="guest-picker {{guestYearIndex < 0 ? 'placeholder' : ''}}">
+              {{guestYearIndex < 0 ? '请选择出生年份' : guestYears[guestYearIndex] + ' 年'}}
+            </view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">所在城市<text class="req">*</text></view>
+          <picker mode="selector" range="{{guestCities}}" value="{{guestCityIndex < 0 ? 0 : guestCityIndex}}" bindchange="onGuestCityPick">
+            <view class="guest-picker {{guestCityIndex < 0 ? 'placeholder' : ''}}">
+              {{guestCityIndex < 0 ? '请选择所在城市' : guestCities[guestCityIndex]}}
+            </view>
+          </picker>
+        </view>
+        <button class="member-lock-btn" bindtap="submitGuestBasics">下一步</button>
+      </view>
+      <!-- 注册页: 头像 + 昵称 + 协议 -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 2}}">
+        <view class="guest-row">
+          <view class="guest-label">真实头像<text class="req">*</text></view>
+          <view class="guest-avatar" bindtap="onGuestAvatarPick">
+            <image wx:if="{{guestAvatarPath}}" class="guest-avatar-img" src="{{guestAvatarPath}}" mode="aspectFill" />
+            <view wx:else class="guest-avatar-default"><text>+</text></view>
+            <text class="guest-avatar-tag">{{guestAvatarPath ? '点击更换' : '上传真实头像'}}</text>
+          </view>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">昵称<text class="req">*</text></view>
+          <input class="guest-input" type="text" placeholder="请填写昵称" value="{{guestNickname}}" bindinput="onGuestNicknameInput" maxlength="20" />
+        </view>
+        <view class="guest-agree" bindtap="toggleGuestAgreed">
+          <view class="guest-checkbox {{guestAgreed ? 'on' : ''}}">{{guestAgreed ? '✓' : ''}}</view>
+          <text class="guest-agree-text">我已阅读并同意
+            <text class="link" catchtap="goAgreement">《用户协议》</text>
+            <text class="link" catchtap="goPrivacy">《隐私政策》</text>
+            <text class="link" catchtap="goRefund">《线上报名退费协议》</text>
+          </text>
+        </view>
+        <button class="member-lock-btn" bindtap="submitGuestRegister" disabled="{{guestSubmitting}}">
+          {{guestSubmitting ? '提交中...' : '开始使用'}}
         </button>
-        <view class="member-lock-phone">客服电话 <text class="num">{{myHomeStore.phone}}</text></view>
-        <view class="member-lock-divide"></view>
-        <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
       </view>
-      <view class="member-lock-card" wx:else>
-        <view class="member-lock-store">
-          <text class="pin">📍</text>
-          <text class="name">还未绑定服务门店</text>
+
+
+      <!-- 填写资料 · 基本条件 -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 3}}">
+        <view class="guest-row">
+          <view class="guest-label">身高 (cm)<text class="req">*</text></view>
+          <input class="guest-input" type="number" placeholder="如 165" value="{{guestForm.height}}" bindinput="onGuestHeightInput" maxlength="3" />
         </view>
-        <button class="member-lock-btn" bindtap="goStoreCities">
-          <text>去附近门店开通</text>
+        <view class="guest-row">
+          <view class="guest-label">学历<text class="req">*</text></view>
+          <picker mode="selector" range="{{eduOptions}}" bindchange="onGuestFormPick" data-field="edu">
+            <view class="guest-picker {{!guestForm.edu ? 'placeholder' : ''}}">{{guestForm.edu || '请选择学历'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">婚姻状况<text class="req">*</text></view>
+          <picker mode="selector" range="{{marriageOptions}}" bindchange="onGuestFormPick" data-field="marriage">
+            <view class="guest-picker {{!guestForm.marriage ? 'placeholder' : ''}}">{{guestForm.marriage || '请选择婚姻状况'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">年收入<text class="req">*</text></view>
+          <picker mode="selector" range="{{incomeOptions}}" bindchange="onGuestFormPick" data-field="income">
+            <view class="guest-picker {{!guestForm.income ? 'placeholder' : ''}}">{{guestForm.income || '请选择年收入'}}</view>
+          </picker>
+        </view>
+        <button class="member-lock-btn" bindtap="submitGuestStep2">下一步</button>
+      </view>
+
+      <!-- 填写资料 · 工作与资产 + 联系方式 -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 4}}">
+        <view class="guest-row">
+          <view class="guest-label">职业<text class="req">*</text></view>
+          <picker mode="selector" range="{{jobOptions}}" bindchange="onGuestFormPick" data-field="job">
+            <view class="guest-picker {{!guestForm.job ? 'placeholder' : ''}}">{{guestForm.job || '请选择职业'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">是否有婚房<text class="req">*</text></view>
+          <picker mode="selector" range="{{houseOptions}}" bindchange="onGuestFormPick" data-field="has_house">
+            <view class="guest-picker {{!guestForm.has_house ? 'placeholder' : ''}}">{{guestForm.has_house || '请选择婚房情况'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">是否有车<text class="req">*</text></view>
+          <picker mode="selector" range="{{carOptions}}" bindchange="onGuestFormPick" data-field="has_car">
+            <view class="guest-picker {{!guestForm.has_car ? 'placeholder' : ''}}">{{guestForm.has_car || '请选择'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">自我介绍 (选填)</view>
+          <textarea class="guest-textarea" placeholder="介绍一下自己, 让会员更了解你" value="{{guestForm.desc}}" bindinput="onGuestDescInput" maxlength="200" auto-height />
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">手机号</view>
+          <input class="guest-input" type="number" placeholder="红娘联系你撮合用" value="{{guestForm.phone}}" bindinput="onGuestContactInput" data-field="phone" maxlength="11" />
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">微信号</view>
+          <input class="guest-input" type="text" placeholder="填微信号即可" value="{{guestForm.wechat}}" bindinput="onGuestContactInput" data-field="wechat" maxlength="32" />
+        </view>
+        <button class="member-lock-btn" bindtap="submitGuestStep3">下一步</button>
+      </view>
+
+      <!-- 缴费页: 微信支付年费 / 体验码开通 / 暂不缴费 -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 5}}">
+        <view class="pay-price-row">
+          <text class="pay-price-num">¥{{guestYearPrice}}</text>
+          <text class="pay-price-unit">/ 年会员</text>
+        </view>
+        <view class="pay-priv">
+          <text>· 每日申请联系 {{memberQuota ? memberQuota.limit : 20}} 次</text>
+          <text>· 红娘一对一撮合, 优先推荐</text>
+          <text>· 全年资料展示, 不限查阅</text>
+        </view>
+        <button class="member-lock-btn" bindtap="onGuestPay" disabled="{{guestPaying}}">
+          <text class="ico">💬</text>
+          <text>{{guestPaying ? '支付中...' : guestPayMode === 'mock' ? '模拟微信支付 ' + guestYearPrice + ' 元' : '微信支付 ' + guestYearPrice + ' 元'}}</text>
         </button>
-        <view class="member-lock-divide"></view>
-        <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+        <view class="pay-divide"></view>
+        <view class="guest-row">
+          <view class="guest-label">有体验码? 直接开通</view>
+          <view class="redeem-row-inline">
+            <input class="guest-input" type="text" placeholder="输入体验码" value="{{guestRedeemCode}}" bindinput="onGuestRedeemInput" maxlength="32" />
+            <button class="pay-redeem-btn" bindtap="onGuestRedeemPay" disabled="{{guestPaying}}">开通</button>
+          </view>
+        </view>
+        <view class="member-lock-alt" bindtap="skipGuestPay">暂不缴费, 先看看相配的会员 ›</view>
       </view>
-      <view class="member-lock-steps">
-        <view class="step">
-          <view class="no">1</view>
-          <view class="txt">到店咨询</view>
+
+      <!-- 预览资料卡 × 5 -->
+      <block wx:if="{{!previewGate && previewLoaded}}">
+        <view class="preview-card {{index === 0 ? 'first' : ''}}" wx:for="{{previewList}}" wx:key="user_id" bindtap="onPreviewCardTap">
+          <view class="preview-top">
+            <text class="preview-code">{{item.xy_code || '严选会员'}}</text>
+            <text class="preview-lock">🔒 会员可见</text>
+          </view>
+          <view class="preview-main">
+            <view class="preview-line big">{{item.gender || ''}} · {{item.year}}年<text wx:if="{{item.ageNow}}"> ({{item.ageNow}}岁)</text></view>
+            <view class="preview-line">📍 {{item.location || '山东'}}</view>
+            <view class="preview-line">{{item.edu || '学历未填'}}<text wx:if="{{item.height}}"> · {{item.height}}cm</text></view>
+          </view>
+          <view class="preview-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
         </view>
-        <view class="arrow">›</view>
-        <view class="step">
-          <view class="no">2</view>
-          <view class="txt">实名认证</view>
+        <view wx:if="{{!previewList.length}}" class="member-lock-card">
+          <view class="member-lock-store">
+            <text class="name">暂无匹配的会员资料</text>
+          </view>
+          <view class="member-lock-phone">可先到店登记, 红娘优先为你物色</view>
         </view>
-        <view class="arrow">›</view>
-        <view class="step">
-          <view class="no">3</view>
-          <view class="txt">开通会员</view>
+
+        <view class="member-lock-card tight" wx:if="{{myHomeStore && myHomeStore.phone}}">
+          <view class="member-lock-store">
+            <text class="pin">📍</text>
+            <text class="name">{{myHomeStore.city}} · {{myHomeStore.name}}</text>
+            <text class="badge">会员制</text>
+          </view>
+          <button class="member-lock-btn" bindtap="callHomeStore">
+            <text class="ico">☎</text>
+            <text>拨打门店电话 · 现场开通</text>
+          </button>
+          <view class="member-lock-phone">客服电话 <text class="num">{{myHomeStore.phone}}</text></view>
+          <view class="member-lock-divide"></view>
+          <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
         </view>
+        <view class="member-lock-card tight" wx:else>
+          <view class="member-lock-store">
+            <text class="pin">📍</text>
+            <text class="name">还未绑定服务门店</text>
+          </view>
+          <button class="member-lock-btn" bindtap="goStoreCities">
+            <text>去附近门店开通</text>
+          </button>
+          <view class="member-lock-divide"></view>
+          <view class="member-lock-alt" bindtap="goMembership">已是会员? 查看会员状态 ›</view>
+        </view>
+        <view class="member-lock-steps">
+          <view class="step">
+            <view class="no">1</view>
+            <view class="txt">到店咨询</view>
+          </view>
+          <view class="arrow">›</view>
+          <view class="step">
+            <view class="no">2</view>
+            <view class="txt">实名认证</view>
+          </view>
+          <view class="arrow">›</view>
+          <view class="step">
+            <view class="no">3</view>
+            <view class="txt">开通会员</view>
+          </view>
+        </view>
+      </block>
+      <!-- 预览加载失败: 重试入口 -->
+      <view class="member-lock-card tight" wx:if="{{previewError}}">
+        <view class="member-lock-store">
+          <text class="name">内容加载失败</text>
+        </view>
+        <button class="member-lock-btn" bindtap="retryPreview">
+          <text>重新加载</text>
+        </button>
       </view>
       <view class="member-lock-foot">乾缘婚恋 · 真诚严选</view>
     </view>

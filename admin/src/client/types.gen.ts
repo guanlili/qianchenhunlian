@@ -806,6 +806,7 @@ export type MembershipRedeemCodePublic = {
     store_id?: (string | null);
     note?: (string | null);
     status: string;
+    expires_at?: (string | null);
     used_by_user_id?: (string | null);
     used_by_email?: (string | null);
     used_at?: (string | null);
@@ -1009,12 +1010,14 @@ export type QualificationList = {
 };
 
 /**
- * 批量生成会员兑换码: 门店收款后把码交给用户, 用户在小程序输码开通.
+ * 批量生成体验码: 总部生成后交门店转发, 用户注册时填码或会员页输码开通.
  */
 export type RedeemCodeCreateRequest = {
     days: number;
     count?: number;
     note?: (string | null);
+    store_id?: (string | null);
+    valid_days?: (number | null);
 };
 
 export type RedeemCodeList = {
@@ -1120,6 +1123,9 @@ export type StatsResponse = {
     expiring_members?: number;
     open_feedback?: number;
     last_month_signups?: number;
+    guest_today?: number;
+    guest_this_month?: number;
+    guest_last_month?: number;
 };
 
 export type StoreCreate = {
@@ -1883,6 +1889,12 @@ export type LoginRecoverPasswordHtmlContentData = {
 };
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
+
+export type MatchesGetGuestPreviewData = {
+    limit?: number;
+};
+
+export type MatchesGetGuestPreviewResponse = (MatchListResponse);
 
 export type MatchesGetDailyRecommendationsData = {
     cursor?: (string | null);
