@@ -2643,11 +2643,13 @@ Page({
               ? this.data.houseOptions[idx]
               : field === 'has_car'
                 ? this.data.carOptions[idx]
-                : field === 'year'
-                  ? guestYears[idx]
-                  : field === 'location'
-                    ? guestCities[idx]
-                    : '';
+                : field === 'job'
+                  ? this.data.jobOptions[idx]
+                  : field === 'year'
+                    ? guestYears[idx]
+                    : field === 'location'
+                      ? guestCities[idx]
+                      : '';
     this.setData({ guestForm: { ...guestForm, [field]: value } });
   },
 
