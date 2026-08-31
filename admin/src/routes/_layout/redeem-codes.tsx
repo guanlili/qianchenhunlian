@@ -63,6 +63,7 @@ function RedeemCodesPage() {
   const [days, setDays] = useState("30")
   const [count, setCount] = useState("10")
   const [note, setNote] = useState("")
+  const [validDays, setValidDays] = useState("30")
   const [lastCreated, setLastCreated] = useState<
     MembershipRedeemCodePublic[] | null
   >(null)
@@ -83,6 +84,7 @@ function RedeemCodesPage() {
           days: Number(days),
           count: Number(count),
           note: note.trim() || undefined,
+          valid_days: validDays === "0" ? undefined : Number(validDays),
         },
       }),
     onSuccess: (items) => {
@@ -125,7 +127,11 @@ function RedeemCodesPage() {
     <div className="container mx-auto max-w-5xl px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">体验码管理</h1>
+          <h1 className="text-xl font-bold">会员体验</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            会员体验码发放: 从会员注册/缴费页面填写体验码,
+            直接开通对应时长的会员。
+          </p>
           <p className="text-muted-foreground mt-1 text-sm">
             门店线下收款后把会员码交给用户, 用户在小程序「会员页 -
             会员码开通」输码自助开通。
@@ -158,6 +164,7 @@ function RedeemCodesPage() {
               <TableHead>会员码</TableHead>
               <TableHead>天数</TableHead>
               <TableHead>状态</TableHead>
+              <TableHead>有效期至</TableHead>
               <TableHead>使用人</TableHead>
               <TableHead>使用时间</TableHead>
               <TableHead>备注</TableHead>
@@ -167,13 +174,13 @@ function RedeemCodesPage() {
           <TableBody>
             {listQuery.isPending ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm">
+                <TableCell colSpan={8} className="text-center text-sm">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm">
+                <TableCell colSpan={8} className="text-center text-sm">
                   还没有兑换码, 点右上角「批量生成」开始
                 </TableCell>
               </TableRow>
@@ -182,6 +189,22 @@ function RedeemCodesPage() {
                 <TableRow key={it.id}>
                   <TableCell className="font-mono text-sm">{it.code}</TableCell>
                   <TableCell>{it.days} 天</TableCell>
+                  <TableCell className="text-sm">
+                    {it.expires_at ? (
+                      <span
+                        className={
+                          new Date(it.expires_at) < new Date() &&
+                          it.status === "unused"
+                            ? "text-destructive"
+                            : ""
+                        }
+                      >
+                        {it.expires_at.slice(0, 10)}
+                      </span>
+                    ) : (
+                      "长期"
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={
@@ -286,6 +309,28 @@ function RedeemCodesPage() {
                 value={count}
                 onChange={(e) => setCount(e.target.value)}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="redeem-valid">
+                码有效期 (超期未兑换自动作废)
+              </Label>
+              <div className="flex gap-2">
+                {[
+                  ["7", "7 天"],
+                  ["30", "30 天"],
+                  ["0", "长期有效"],
+                ].map(([v, label]) => (
+                  <Button
+                    key={v}
+                    type="button"
+                    size="sm"
+                    variant={validDays === v ? "default" : "outline"}
+                    onClick={() => setValidDays(v)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="redeem-note">备注 (可选)</Label>

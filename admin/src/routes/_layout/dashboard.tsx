@@ -3,7 +3,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   ArrowRight,
   BadgeCheck,
-  ClipboardCheck,
   Heart,
   MessageSquare,
   ShieldAlert,
@@ -115,13 +114,6 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
     ...(isSuperuser
       ? [
           {
-            label: "待审资料",
-            value: stats?.pending_audits ?? 0,
-            to: "/dashboard?tab=review",
-            icon: ClipboardCheck,
-            accent: "text-amber-600",
-          },
-          {
             label: "未处理反馈",
             value: stats?.open_feedback ?? 0,
             to: "/feedback",
@@ -149,6 +141,13 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
       value: `${stats?.verified_ratio ?? 0}%`,
     },
     { label: "互相好感", value: stats?.mutual_affinity_pairs ?? 0 },
+  ]
+
+  // 游客模块: 注册了但还没成为会员的用户 (转化池)
+  const guestCards = [
+    { label: "今日游客", value: stats?.guest_today ?? 0 },
+    { label: "本月游客", value: stats?.guest_this_month ?? 0 },
+    { label: "上月游客", value: stats?.guest_last_month ?? 0 },
   ]
 
   return (
@@ -208,6 +207,23 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
         ))}
       </div>
 
+      {/* 游客模块: 注册未开通会员的转化池 */}
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <UserPlus className="size-4" /> 游客 (注册未开通会员)
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {guestCards.map((m) => (
+            <Card key={m.label}>
+              <CardContent className="py-4">
+                <div className="text-xs text-muted-foreground">{m.label}</div>
+                <div className="text-xl font-semibold">{m.value}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
       {/* 最近动态 */}
       <div className="grid gap-4 lg:grid-cols-3">
         <RecentCard
@@ -223,19 +239,6 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
           }))}
           footer={{ label: "去会员视图", to: "/dashboard?tab=members" }}
         />
-        {(data?.recent_pending_audits ?? []).length >= 0 && (
-          <RecentCard
-            title="待审资料"
-            icon={ClipboardCheck}
-            empty="没有待审资料"
-            rows={(data?.recent_pending_audits ?? []).map((m) => ({
-              key: m.user_id,
-              main: memberDisplayName(m),
-              sub: m.audit_status === "pending" ? "待审核" : "",
-            }))}
-            footer={{ label: "去审核队列", to: "/dashboard?tab=review" }}
-          />
-        )}
         <RecentCard
           title="最近工单"
           icon={Heart}

@@ -198,3 +198,52 @@ def test_redeem_bruteforce_limited(client: TestClient, db: Session) -> None:
             headers=headers,
         )
     assert last is not None and last.status_code == 429
+
+
+def test_code_validity_expiry(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """码有效期: 生码可设 valid_days; 过期码兑换提示已过期; 不设则长期有效."""
+    email = _mk_user(db)
+    headers = authentication_token_from_email(client=client, email=email, db=db)
+
+    # 有效期 1 天的码
+    r = client.post(
+        f"{API}/admin/membership/redeem-codes",
+        json={"days": 30, "count": 1, "valid_days": 1},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
+    (item,) = r.json()
+    assert item["expires_at"] is not None
+
+    # 拨到过去 → 兑换提示已过期
+    from datetime import datetime as dt
+
+    from sqlmodel import select as _select
+
+    from app.models import MembershipRedeemCode
+
+    row = db.exec(
+        _select(MembershipRedeemCode).where(MembershipRedeemCode.code == item["code"])
+    ).one()
+    row.expires_at = dt(2000, 1, 1)
+    db.commit()
+    r2 = client.post(
+        f"{API}/membership/redeem", json={"code": item["code"]}, headers=headers
+    )
+    assert r2.status_code == 400
+    assert "过期" in r2.json()["detail"]
+
+    # 不设有效期的码 → 长期有效, 可正常兑换
+    r3 = client.post(
+        f"{API}/admin/membership/redeem-codes",
+        json={"days": 30, "count": 1},
+        headers=superuser_token_headers,
+    )
+    (item3,) = r3.json()
+    assert item3["expires_at"] is None
+    r4 = client.post(
+        f"{API}/membership/redeem", json={"code": item3["code"]}, headers=headers
+    )
+    assert r4.status_code == 200, r4.text
