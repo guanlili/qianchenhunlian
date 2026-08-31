@@ -7,6 +7,7 @@ import {
   Ban,
   Check,
   Crown,
+  Ticket,
   MapPin,
   Pencil,
   ShieldCheck,
@@ -25,6 +26,7 @@ import {
   memberDisplayName,
   VerifiedBadge,
 } from "@/components/Members/columns"
+import { CouponGrantDialog } from "@/components/Members/CouponGrantDialog"
 import { GrantDialog } from "@/components/Members/GrantDialog"
 import { AuditDialog } from "@/components/Profiles/AuditDialog"
 import { EditCriteriaDialog } from "@/components/Profiles/EditCriteriaDialog"
@@ -316,15 +318,26 @@ function MemberDetail() {
                 />
               </>
             )}
+            {canOperateMember && (
+              <GrantDialog
+                userId={userId}
+                xyCode={m.xy_code}
+                balance={m.unlock_balance ?? 0}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <Zap /> 赠送次数
+                  </Button>
+                }
+              />
+            )}
             {canWrite && (
               <>
-                <GrantDialog
+                <CouponGrantDialog
                   userId={userId}
                   xyCode={m.xy_code}
-                  balance={m.unlock_balance ?? 0}
                   trigger={
                     <Button size="sm" variant="outline">
-                      <Zap /> 赠送次数
+                      <Ticket /> 发优惠券
                     </Button>
                   }
                 />

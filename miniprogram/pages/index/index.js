@@ -560,6 +560,7 @@ Page({
     previewGate: false, // 需要先填 游客三问 (性别/出生年份/城市)
     previewLoaded: false,
     previewError: false,
+    resumeToStep: 0,    // 注册中途退出的续填入口: 3/4=待续步骤, 0=不显示
     guestGender: '',    // 三问表单
     guestYears: [],
     guestYearIndex: -1,
@@ -2586,6 +2587,7 @@ Page({
         previewGate: false,
         previewError: false,
       });
+      this.checkWizardResume();
     } catch (e) {
       const detail = (e && e.detail) || '';
       if (
@@ -2604,6 +2606,40 @@ Page({
   retryPreview() {
     this.setData({ previewError: false });
     this.loadPreview();
+  },
+
+  /** 注册中途退出的用户: 资料不齐则在预览页给「继续完善」入口 */
+  checkWizardResume() {
+    profileSvc
+      .getMe()
+      .then((res) => {
+        const p = res && res.profile;
+        if (!p) return;
+        let step = 0;
+        if (!p.height || !p.edu || !p.marriage || !p.income) step = 3;
+        else if (!p.job || !p.has_house || !p.has_car) step = 4;
+        // 已填字段预填进表单, 续填时只补缺的
+        const gf = {
+          ...this.data.guestForm,
+          height: p.height ? String(p.height) : '',
+          edu: p.edu || '',
+          marriage: p.marriage || '',
+          income: p.income || '',
+          job: p.job || '',
+          has_house: p.has_house || '',
+          has_car: p.has_car || '',
+          desc: p.desc || '',
+          phone: p.contact_phone || this.data.guestForm.phone,
+          wechat: p.contact_wechat || this.data.guestForm.wechat,
+        };
+        this.setData({ resumeToStep: step, guestForm: gf });
+      })
+      .catch(() => {});
+  },
+
+  /** 回到向导继续填 (从缺失的那一步开始) */
+  resumeWizard() {
+    this.setData({ previewGate: true, guestStep: this.data.resumeToStep });
   },
 
   /** 三问表单: 出生年份候选 (2015→1950) + 有门店的城市列表 */
