@@ -2615,7 +2615,11 @@ Page({
     }
     storeSvc
       .listCities()
-      .then((cities) => this.setData({ guestCities: cities || [] }))
+      .then((res) => {
+        // /stores/cities 返回 {items: [{city, count}]}, 取城市名字符串数组
+        const list = ((res && res.items) || []).map((c) => c.city || c);
+        this.setData({ guestCities: list });
+      })
       .catch(() => this.setData({ guestCities: [] }));
   },
 
