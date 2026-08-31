@@ -3,7 +3,7 @@
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -61,6 +61,18 @@ class OrderCreatedOut(SQLModel):
     status: str = "pending"
 
 
+def _fmt_cn_date(value: datetime | None) -> str | None:
+    """到期时间 → 北京时间日期串 YYYY-MM-DD (用户只关心到期日, 不看时分秒)."""
+    if not value:
+        return None
+    return (
+        value.replace(tzinfo=timezone.utc)
+        .astimezone(membership.CN_TZ)
+        .date()
+        .isoformat()
+    )
+
+
 @router.get("/me", response_model=MembershipStatus)
 def get_my_membership(
     session: SessionDep, current_user: CurrentUser, _lim: ApiReadLimited
@@ -71,11 +83,9 @@ def get_my_membership(
     exp = current_user.membership_expires_at
     return MembershipStatus(
         is_member=member,
-        expires_at=exp.isoformat() if member and exp else None,
+        expires_at=_fmt_cn_date(exp) if member else None,
         plan_code=current_user.membership_plan_code if member else None,
-        expired_at=(
-            exp.isoformat() if not member and exp and exp <= datetime.utcnow() else None
-        ),
+        expired_at=_fmt_cn_date(exp) if not member and exp else None,
         quota=quota,
     )
 
@@ -386,8 +396,8 @@ class RedeemIn(SQLModel):
 
 class RedeemOut(SQLModel):
     days: int
-    # 兑换后的会员到期时间 (叠加续费起算, 非当前时间+days)
-    member_expires_at: datetime
+    # 兑换后的会员到期日 (北京时间 YYYY-MM-DD; 叠加续费起算, 非当前时间+days)
+    member_expires_at: str
 
 
 @router.post("/redeem", response_model=RedeemOut)
@@ -461,4 +471,6 @@ def redeem_code(
     )
     session.commit()
     session.refresh(current_user)
-    return RedeemOut(days=code.days, member_expires_at=grant.expires_at)
+    return RedeemOut(
+        days=code.days, member_expires_at=_fmt_cn_date(grant.expires_at) or ""
+    )

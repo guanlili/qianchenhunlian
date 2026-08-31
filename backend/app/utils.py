@@ -52,7 +52,11 @@ def send_email(
     if settings.SMTP_PASSWORD:
         smtp_options["password"] = settings.SMTP_PASSWORD
     response = message.send(to=email_to, smtp=smtp_options)
-    logger.info("send email to %s: status=%s", email_to, response.status if hasattr(response, "status") else "ok")
+    logger.info(
+        "send email to %s: status=%s",
+        email_to,
+        response.status if hasattr(response, "status") else "ok",
+    )
 
 
 def generate_test_email(email_to: str) -> EmailData:
