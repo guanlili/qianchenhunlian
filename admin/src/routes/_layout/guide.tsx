@@ -3,11 +3,14 @@ import {
   BadgeCheck,
   Crown,
   Heart,
+  Home,
   LineChart,
   Monitor,
+  QrCode,
   Search,
   Shield,
   Smartphone,
+  Ticket,
   Users,
 } from "lucide-react"
 
@@ -59,8 +62,13 @@ const mobileOps = [
   },
   {
     icon: LineChart,
-    title: "看本店经营数据",
-    desc: "本店工作台 → 「概览」页签",
+    title: "看本店经营数据 / 月度对账",
+    desc: "本店工作台 → 「概览」页签: 待办指标、月度对账 (发券/领券/转化) 可导出",
+  },
+  {
+    icon: QrCode,
+    title: "下载门店专属二维码",
+    desc: "本店工作台 → 「概览」页签 → 门店码; 用户扫码进小程序自动绑定本店",
   },
 ]
 
@@ -80,6 +88,59 @@ const desktopOps = [
   },
 ]
 
+// 两类管理员都应了解的业务规则 (2026-08 会员制改版后)
+const rules = [
+  {
+    title: "会员开通只走体验码",
+    desc: "门店不能直接开通会员: 总部「平台 → 会员体验」生成体验码 → 转发给用户 → 用户注册最后一步填码或在「会员页-会员码开通」输码。码有两个独立时间: 体验时长 (一个月/两个月, 开通后会员持续多久) 和码有效期 (7/30 天, 超期未兑换自动作废)。",
+  },
+  {
+    title: "游客先看 5 个匹配预览",
+    desc: "新用户首次进入必须选性别/出生年份/城市, 系统据此推 5 位异性、同城、年龄相近的会员资料; 填完注册资料并缴费 (或填体验码) 后才解锁全部资料。游客统计见跨店看板总览。",
+  },
+  {
+    title: "实名核验线下做, 实名才能安排相亲",
+    desc: "用户到店由红娘当面核验身份证件 → 后台会员详情点「实名认证」标记通过。未实名的用户发起相亲申请会被拦截并引导到店。",
+  },
+  {
+    title: "资料审核已下线",
+    desc: "资料由用户注册时自己填写, 保存即生效 (先发后审); 发现违规资料由总部在会员详情处理。资料修改走「代录资料」或用户意见反馈。",
+  },
+  {
+    title: "管理员账号谨慎发放",
+    desc: "系统管理员账号拥有全部权限 (含生码、门店管理、数据导出), 仅限总部核心人员; 门店人员一律用门店账号 (门店总览 → 对应门店 → 「管理员」页签创建)。",
+  },
+]
+
+// 总部管理员高频操作 (门店管理员用不到)
+const hqOps = [
+  {
+    icon: Ticket,
+    title: "生成体验码",
+    desc: "平台 → 「会员体验」: 选体验时长 (一个月/两个月/自定义) + 码有效期 + 数量 → 生成后一键复制发给门店。列表可查每张码的状态与使用人。",
+  },
+  {
+    icon: BadgeCheck,
+    title: "实名核验 & 资料下架",
+    desc: "「跨店看板 → 实名核验」处理全局队列; 违规资料在会员详情处理 (资料审核队列已下线)。",
+  },
+  {
+    icon: Users,
+    title: "门店与账号管理",
+    desc: "门店总览 → 新建门店 / 进门店工作台 → 「管理员」页签创建店长账号 (必须挂门店); 平台 → 「管理员账号」仅加总部人员。",
+  },
+  {
+    icon: Home,
+    title: "跨店看板 & 未归属处理",
+    desc: "「跨店看板」看全平台指标/游客/工单/动态; 「未归属处理」给没绑店的会员和工单分配门店。",
+  },
+  {
+    icon: Shield,
+    title: "平台设置 & 操作日志",
+    desc: "平台 → 「平台设置」管理资质图片/公告; 「操作日志」查所有后台敏感操作记录 (发码/实名/封禁等均有留痕)。",
+  },
+]
+
 const faqs = [
   {
     q: "手机上点开「代录资料」发现字段很多？",
@@ -96,6 +157,30 @@ const faqs = [
   {
     q: "看不到某会员？",
     a: "门店管理员只能看本店会员 (资料归属门店决定), 跨店资料找总部。",
+  },
+  {
+    q: "门店收了钱, 怎么给用户开会员？",
+    a: "找总部生成体验码 → 把码发给用户 → 用户在注册最后一步填码, 或打开小程序「会员页 → 会员码开通」输码, 即时生效 (可只发微信号让对方截图)。",
+  },
+  {
+    q: "用户说体验码输了无效？",
+    a: "按顺序排查: ① 输入是否完整 (不区分大小写和横杠); ② 会员详情页发放记录里是否有这条码的兑换记录; ③ 码是否已过期/作废 (总部在「会员体验」列表可查); 过期就找总部重新生成一张。",
+  },
+  {
+    q: "用户说付了钱会员没生效？",
+    a: "会员详情页看「最近订单」: paid = 已生效 (让用户重新打开小程序刷新); pending = 支付未完成; 都没有 = 未在本平台下单。仍异常截图找总部。",
+  },
+  {
+    q: "用户的资料填错了要改？",
+    a: "会员详情页 → 「代录资料」直接修改, 保存即生效; 用户也可以通过小程序「意见反馈」提交修改意向。",
+  },
+  {
+    q: "撮合工单超时了会怎样？",
+    a: "超 48 小时未处理会在门店工作台概览显示红色「逾期」提醒; 建议每天进工作台清一遍待办。",
+  },
+  {
+    q: "忘记后台密码？",
+    a: "登录页点「忘记密码」自助重置; 收不到邮件找总部在「管理员账号/员工账号」里重置。",
   },
 ]
 
@@ -220,19 +305,14 @@ function PermMark({ value }: { value: PermCell }) {
 // 小程序用户身份与额度 (套餐参数来源: backend/app/core/membership.py, 后台可调)
 const userTiers = [
   {
-    name: "游客（未登录）",
-    can: "浏览门店列表、平台资质、协议文案等公开内容",
-    quota: "无额度，需注册登录",
+    name: "游客（未开通会员）",
+    can: "先选性别/出生年份/城市 → 注册填资料 → 看系统匹配的 5 位会员资料; 浏览门店列表、平台资质",
+    quota: "无法查看完整资料, 不能发起联系",
   },
   {
-    name: "注册用户（非会员）",
-    can: "浏览、搜索相亲资料，完善自己的资料",
-    quota: "每日 5 次免费额度，用完后扣余额",
-  },
-  {
-    name: "付费会员",
-    can: "同上，带会员身份标识，到期自动降回非会员",
-    quota: "每日 20 次会员额度，用完后扣余额",
+    name: "会员（缴费或体验码开通）",
+    can: "查看全部严选会员资料、发起联系申请、红娘优先撮合; 到期自动降回游客",
+    quota: "每日 20 次申请额度, 用完扣永久余额 (余额可由门店赠送)",
   },
 ]
 
@@ -263,6 +343,32 @@ function GuidePage() {
             手机推荐用浏览器 (Safari / Chrome)
             打开并「添加到主屏幕」，以后一点就进；菜单在左上角 ☰。
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="size-5" /> 业务规则速览（全员必读）
+          </CardTitle>
+          <CardDescription>
+            2026-08 会员制改版后的核心规则, 后台管理员和门店管理员都要了解。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {rules.map((r, i) => (
+            <div key={r.title} className="flex gap-3">
+              <div className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold">
+                {i + 1}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm leading-6 font-medium">{r.title}</div>
+                <div className="text-muted-foreground text-sm leading-6 break-words">
+                  {r.desc}
+                </div>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
@@ -313,6 +419,32 @@ function GuidePage() {
               <span className="text-muted-foreground ml-2 text-sm">
                 {op.desc}
               </span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="size-5" /> 总部管理员常用操作
+          </CardTitle>
+          <CardDescription>
+            以下入口仅系统管理员可见, 门店管理员不涉及。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hqOps.map((op) => (
+            <div key={op.title} className="flex gap-3">
+              <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
+                <op.icon className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm leading-6 font-medium">{op.title}</div>
+                <div className="text-muted-foreground text-sm leading-6 break-words">
+                  {op.desc}
+                </div>
+              </div>
             </div>
           ))}
         </CardContent>
