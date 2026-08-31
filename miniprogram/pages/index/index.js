@@ -565,6 +565,22 @@ Page({
     guestYearIndex: -1,
     guestCities: [],
     guestCityIndex: -1,
+    guestStep: 1,       // 注册向导: 1=三问 2=基本条件 3=工作与资产 → 预览
+    guestForm: {
+      height: '', edu: '', marriage: '', income: '',
+      job: '', has_house: '', has_car: '', desc: '',
+    },
+    guestAvatarPath: '',  // 向导第 4 步: 头像/昵称/协议
+    guestAvatarUrl: '',
+    guestNickname: '',
+    guestAgreed: false,
+    guestSubmitting: false,
+    eduOptions: eduOptions.filter((it) => it !== '不限'),
+    marriageOptions: marriageOptions.filter((it) => it !== '不限'),
+    incomeOptions: incomeOptions.filter((it) => it !== '不限'),
+    houseOptions: houseOptions.filter((it) => it !== '不限'),
+    carOptions: ['有车', '无车'],
+    jobOptions,
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
     profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
     myAvatar: '',       // 我的页门面: 真实头像
@@ -2602,6 +2618,166 @@ Page({
     this.setData({ guestGender: e.currentTarget.dataset.gender || '' });
   },
 
+  /** 注册向导: 通用 picker (data-field 指定字段) */
+  onGuestFormPick(e) {
+    const field = e.currentTarget.dataset.field;
+    const { guestForm, guestYears, guestCities } = this.data;
+    const idx = Number(e.detail.value) || 0;
+    const value =
+      field === 'edu'
+        ? this.data.eduOptions[idx]
+        : field === 'marriage'
+          ? this.data.marriageOptions[idx]
+          : field === 'income'
+            ? this.data.incomeOptions[idx]
+            : field === 'has_house'
+              ? this.data.houseOptions[idx]
+              : field === 'has_car'
+                ? this.data.carOptions[idx]
+                : field === 'year'
+                  ? guestYears[idx]
+                  : field === 'location'
+                    ? guestCities[idx]
+                    : '';
+    this.setData({ guestForm: { ...guestForm, [field]: value } });
+  },
+
+  onGuestHeightInput(e) {
+    const v = (e.detail.value || '').replace(/[^0-9]/g, '').slice(0, 3);
+    this.setData({ guestForm: { ...this.data.guestForm, height: v } });
+  },
+
+  onGuestDescInput(e) {
+    this.setData({ guestForm: { ...this.data.guestForm, desc: (e.detail.value || '').slice(0, 200) } });
+  },
+
+  /** 第 2 步: 基本条件 (身高/学历/婚姻/收入) → 第 3 步 */
+  async submitGuestStep2() {
+    const f = this.data.guestForm;
+    if (!f.height || Number(f.height) < 100 || Number(f.height) > 250) {
+      return wx.showToast({ title: '请填写正确身高', icon: 'none' });
+    }
+    if (!f.edu) return wx.showToast({ title: '请选择学历', icon: 'none' });
+    if (!f.marriage) return wx.showToast({ title: '请选择婚姻状况', icon: 'none' });
+    if (!f.income) return wx.showToast({ title: '请选择年收入', icon: 'none' });
+    try {
+      await profileSvc.saveProfile({
+        height: Number(f.height),
+        edu: f.edu,
+        marriage: f.marriage,
+        income: f.income,
+      });
+      this.setData({ guestStep: 3 });
+    } catch (err) {
+      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
+    }
+  },
+
+  /** 第 3 步: 工作与资产 (职业/婚房/车, 简介可选) → 第 4 步 */
+  async submitGuestStep3() {
+    const f = this.data.guestForm;
+    if (!f.job) return wx.showToast({ title: '请选择职业', icon: 'none' });
+    if (!f.has_house) return wx.showToast({ title: '请选择婚房情况', icon: 'none' });
+    if (!f.has_car) return wx.showToast({ title: '请选择是否有车', icon: 'none' });
+    try {
+      await profileSvc.saveProfile({
+        job: f.job,
+        has_house: f.has_house,
+        has_car: f.has_car,
+        desc: f.desc || undefined,
+      });
+      this.setData({ guestStep: 4 });
+      this.initGuestNickname();
+    } catch (err) {
+      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
+    }
+  },
+
+  // ---- 第 4 步: 头像 + 昵称 + 协议 (与 welcome 页同一接口, 一次注册到位) ----
+
+  initGuestNickname() {
+    if (this.data.guestNickname) return;
+    const app = getApp();
+    const seed =
+      (app.globalData && app.globalData.user && app.globalData.user.xy_code) || '';
+    if (seed) this.setData({ guestNickname: `用户${seed.slice(-4)}` });
+  },
+
+  onGuestAvatarPick() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      success: async ({ tempFiles }) => {
+        if (!tempFiles || !tempFiles.length) return;
+        const tempPath = tempFiles[0].tempFilePath;
+        this.setData({ guestAvatarPath: tempPath, guestAvatarUrl: '' });
+        wx.showLoading({ title: '上传头像', mask: true });
+        try {
+          const url = await profileSvc.uploadAvatar(tempPath);
+          this.setData({ guestAvatarUrl: url });
+          wx.hideLoading();
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: '头像上传失败, 请重试', icon: 'none' });
+          this.setData({ guestAvatarPath: '' });
+        }
+      },
+    });
+  },
+
+  onGuestNicknameInput(e) {
+    this.setData({ guestNickname: (e.detail.value || '').slice(0, 20) });
+  },
+
+  toggleGuestAgreed() {
+    this.setData({ guestAgreed: !this.data.guestAgreed });
+  },
+
+  goAgreement() {
+    wx.navigateTo({ url: '/pages/agreement/agreement' });
+  },
+
+  /** 第 4 步提交: 走 /profiles/me/welcome, 全部完成 → 看预览 */
+  async submitGuestStep4() {
+    if (this.data.guestSubmitting) return;
+    if (!this.data.guestAvatarUrl) {
+      return wx.showToast({
+        title: this.data.guestAvatarPath ? '头像上传中, 请稍候' : '请上传真实头像',
+        icon: 'none',
+      });
+    }
+    if (!(this.data.guestNickname || '').trim()) {
+      return wx.showToast({ title: '请填写昵称', icon: 'none' });
+    }
+    if (!this.data.guestAgreed) {
+      return wx.showToast({ title: '请先勾选用户协议', icon: 'none' });
+    }
+    this.setData({ guestSubmitting: true });
+    const app = getApp();
+    try {
+      await profileSvc.submitWelcome({
+        nickname: (this.data.guestNickname || '').trim(),
+        avatar_url: this.data.guestAvatarUrl,
+      });
+      wx.setStorageSync('qy_welcomed', true);
+      app.globalData.isWelcomed = true;
+      app.globalData.hasProfile = true;
+      // 注册全部完成 → 进入预览; 会员开通后不再被引导卡拦截
+      this.setData({
+        guestSubmitting: false,
+        previewLoaded: false,
+        previewGate: false,
+        guestStep: 1,
+      });
+      this.loadPreview();
+    } catch (err) {
+      this.setData({ guestSubmitting: false });
+      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
+    }
+  },
+
   onGuestYearPick(e) {
     this.setData({ guestYearIndex: Number(e.detail.value) || 0 });
   },
@@ -2619,8 +2795,8 @@ Page({
     if (ci < 0) return wx.showToast({ title: '请选择所在城市', icon: 'none' });
     try {
       await profileSvc.saveProfile({ gender: g, year: Number(ys[yi]), location: cs[ci] });
-      this.setData({ previewLoaded: false, previewGate: false });
-      this.loadPreview();
+      // 三问完成 → 继续注册向导 (基本条件/工作与资产), 填齐后再看预览
+      this.setData({ guestStep: 2 });
     } catch (err) {
       wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
     }
