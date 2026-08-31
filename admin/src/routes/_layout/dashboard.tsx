@@ -16,7 +16,6 @@ import { TrendPanel } from "@/components/Common/TrendPanel"
 import { memberDisplayName } from "@/components/Members/columns"
 import { MembersList } from "@/components/Members/MembersList"
 import { RequestBoard } from "@/components/Requests/RequestBoard"
-import { AuditQueue } from "@/components/Review/AuditQueue"
 import { VerifyQueue } from "@/components/Review/VerifyQueue"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -60,7 +59,7 @@ function Dashboard() {
         <h1 className="text-2xl font-bold tracking-tight">跨店看板</h1>
         <p className="text-muted-foreground">
           {isSuperuser
-            ? "全平台跨店视角: 指标 + 会员 / 审核 / 工单 / 动态四张全局视图 (单店作业请进门店工作台)"
+            ? "全平台跨店视角: 指标 + 会员 / 核验 / 工单 / 动态四张全局视图 (单店作业请进门店工作台)"
             : "本店概览与待办 (单店作业请进门店工作台)"}
         </p>
       </div>
@@ -69,7 +68,7 @@ function Dashboard() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">总览</TabsTrigger>
           <TabsTrigger value="members">会员</TabsTrigger>
-          <TabsTrigger value="review">审核</TabsTrigger>
+          <TabsTrigger value="review">实名核验</TabsTrigger>
           <TabsTrigger value="tickets">工单</TabsTrigger>
           <TabsTrigger value="activities">动态</TabsTrigger>
         </TabsList>
@@ -81,10 +80,6 @@ function Dashboard() {
         </TabsContent>
         <TabsContent value="review" className="mt-4">
           <div className="space-y-6">
-            <section>
-              <h2 className="mb-3 text-base font-semibold">资料审核</h2>
-              <AuditQueue />
-            </section>
             <section>
               <h2 className="mb-3 text-base font-semibold">实名核验</h2>
               <VerifyQueue />

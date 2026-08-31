@@ -1,16 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BadgeCheck } from "lucide-react"
+import { BadgeCheck, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
-
 import { AdminService } from "@/client"
 import { memberDisplayName, VerifiedBadge } from "@/components/Members/columns"
-import { EmptyQueue } from "@/components/Review/AuditQueue"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { resolveFileUrl } from "@/lib/utils"
+
+function EmptyQueue({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <CheckCircle2 className="mb-3 size-10 text-emerald-500" />
+      <div className="text-lg font-semibold">{text}</div>
+      <p className="text-muted-foreground text-sm">当前队列已清空</p>
+    </div>
+  )
+}
 
 /** 实名核验队列. storeId 传入时按门店过滤 (门店工作台); 不传为全局队列. */
 export function VerifyQueue({ storeId }: { storeId?: string }) {
