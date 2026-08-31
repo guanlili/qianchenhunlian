@@ -2646,6 +2646,318 @@ page {
   padding: 0 4rpx;
 }
 
+.member-lock-card.tight {
+  margin-top: 40rpx;
+}
+
+/* --- 游客三问表单 (性别/出生年份/城市) --- */
+.guest-row {
+  width: 100%;
+  margin-bottom: 26rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.guest-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.guest-label {
+  color: #5a4f47;
+  font-size: 26rpx;
+  margin-bottom: 14rpx;
+  font-weight: 600;
+  text-align: left;
+}
+
+.req {
+  color: #c93434;
+  margin-left: 4rpx;
+}
+
+.gender-chips {
+  display: flex;
+  gap: 20rpx;
+}
+
+.gender-chip {
+  flex: 1;
+  height: 84rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 999rpx;
+  background: #fbf7ee;
+  color: #5a4f47;
+  font-size: 28rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.gender-chip.on {
+  border-color: #c93434;
+  background: #f9e5e0;
+  color: #c93434;
+}
+
+.guest-picker {
+  height: 84rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 12rpx;
+  background: #fbf7ee;
+  font-size: 28rpx;
+  color: #1f1a17;
+  display: flex;
+  align-items: center;
+}
+
+.guest-picker.placeholder {
+  color: #b3a89a;
+}
+
+.guest-input {
+  height: 84rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 12rpx;
+  background: #fbf7ee;
+  font-size: 28rpx;
+  color: #1f1a17;
+  box-sizing: border-box;
+}
+
+/* 缴费页 */
+.pay-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.pay-price-num {
+  color: #c93434;
+  font-size: 64rpx;
+  font-weight: 800;
+}
+
+.pay-price-unit {
+  color: #8d8175;
+  font-size: 26rpx;
+}
+
+.pay-priv {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  background: #fdf7ef;
+  border: 1rpx solid #f0e1d6;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 28rpx;
+}
+
+.pay-priv text {
+  color: #8d8175;
+  font-size: 23rpx;
+  text-align: left;
+}
+
+.pay-divide {
+  width: 100%;
+  height: 1rpx;
+  background: #f0e8dd;
+  margin: 28rpx 0 24rpx;
+}
+
+.redeem-row-inline {
+  display: flex;
+  gap: 14rpx;
+  align-items: center;
+}
+
+.redeem-row-inline .guest-input {
+  flex: 1;
+}
+
+.pay-redeem-btn {
+  flex-shrink: 0;
+  width: 160rpx;
+  min-height: 84rpx;
+  border: none;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
+  font-size: 27rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pay-redeem-btn[disabled] {
+  opacity: 0.6;
+  background: #f9e5e0;
+  color: #c93434;
+}
+
+/* 向导第 4 步: 头像 / 协议 */
+.guest-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  align-self: center;
+}
+
+.guest-avatar-img {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 4rpx solid #c93434;
+}
+
+.guest-avatar-default {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f7d6cf 0%, #c93434 100%);
+  color: #ffffff;
+  font-size: 72rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guest-avatar-tag {
+  font-size: 22rpx;
+  color: #9a8e84;
+}
+
+.guest-agree {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.guest-checkbox {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  border: 2rpx solid #c93434;
+  border-radius: 8rpx;
+  color: #ffffff;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guest-checkbox.on {
+  background: #c93434;
+}
+
+.guest-agree-text {
+  font-size: 23rpx;
+  color: #8d8175;
+  line-height: 1.5;
+}
+
+.guest-agree-text .link {
+  color: #c93434;
+}
+
+.guest-textarea {
+  min-height: 120rpx;
+  padding: 20rpx 24rpx;
+  border: 1rpx solid #e3d6bf;
+  border-radius: 12rpx;
+  background: #fbf7ee;
+  font-size: 26rpx;
+  color: #1f1a17;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.member-lock-card .guest-row .member-lock-btn,
+.member-lock-card > .member-lock-btn {
+  margin-top: 32rpx;
+}
+
+/* --- 预览资料卡 (游客可见, 点击引导开通) --- */
+.preview-card {
+  width: 100%;
+  margin-top: 32rpx;
+  background: #ffffff;
+  border-radius: 32rpx;
+  padding: 30rpx 32rpx;
+  box-sizing: border-box;
+  box-shadow: 0 16rpx 44rpx rgba(98, 21, 21, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.preview-card.first {
+  margin-top: 88rpx;
+}
+
+.preview-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-code {
+  color: #b3a89a;
+  font-size: 22rpx;
+  letter-spacing: 1rpx;
+}
+
+.preview-lock {
+  color: #a1651c;
+  background: rgba(246, 198, 107, 0.22);
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.preview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.preview-line {
+  color: #5a4f47;
+  font-size: 26rpx;
+  text-align: left;
+}
+
+.preview-line.big {
+  color: #1f1a17;
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.preview-desc {
+  color: #8d8175;
+  font-size: 24rpx;
+  line-height: 1.6;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .member-lock-foot {
   margin-top: auto;
   padding-top: 48rpx;

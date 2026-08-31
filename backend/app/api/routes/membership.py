@@ -420,10 +420,15 @@ def redeem_code(
     code = session.exec(
         select(MembershipRedeemCode).where(MembershipRedeemCode.code_norm == norm)
     ).first()
-    # 统一文案, 不区分「不存在/已用/作废」, 防码枚举
+    # 不存在/已用/作废统一文案防码枚举; 过期单独提示 (用户可找门店换新码)
     if not code or code.status != "unused":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="兑换码无效或已被使用"
+        )
+    if code.expires_at and code.expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="体验码已过期, 请联系门店重新获取",
         )
 
     # 条件更新占坑 (防并发双用); rowcount 是 Any, mypy strict 下需显式检查

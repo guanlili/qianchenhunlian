@@ -796,6 +796,7 @@ class MembershipRedeemCode(SQLModel, table=True):
     )  # 归属门店 (总部生成可为空)
     note: str | None = Field(default=None, max_length=255)
     status: str = Field(default="unused", max_length=16, index=True)  # unused/used/void
+    expires_at: datetime | None = None  # 码有效期 (过期不能兑换; 空 = 长期有效)
     used_by_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
     used_at: datetime | None = None
     used_by_email: str | None = Field(default=None, max_length=255)  # 对账展示
@@ -813,6 +814,7 @@ class MembershipRedeemCodePublic(SQLModel):
     store_id: uuid.UUID | None = None
     note: str | None = None
     status: str
+    expires_at: datetime | None = None
     used_by_user_id: uuid.UUID | None = None
     used_by_email: str | None = None
     used_at: datetime | None = None

@@ -10,7 +10,6 @@ import {
   MapPin,
   Pencil,
   ShieldCheck,
-  Ticket,
   X,
   Zap,
 } from "lucide-react"
@@ -20,7 +19,6 @@ import { toast } from "sonner"
 import { type AdminMemberFull, AdminService } from "@/client"
 import { AssignStoreDialog } from "@/components/Members/AssignStoreDialog"
 import { ContactCard } from "@/components/Members/ContactCard"
-import { CouponGrantDialog } from "@/components/Members/CouponGrantDialog"
 import {
   AuditBadge,
   MemberBadge,
@@ -28,7 +26,6 @@ import {
   VerifiedBadge,
 } from "@/components/Members/columns"
 import { GrantDialog } from "@/components/Members/GrantDialog"
-import { MembershipGrantDialog } from "@/components/Members/MembershipGrantDialog"
 import { AuditDialog } from "@/components/Profiles/AuditDialog"
 import { EditCriteriaDialog } from "@/components/Profiles/EditCriteriaDialog"
 import { EditParentsDialog } from "@/components/Profiles/EditParentsDialog"
@@ -293,26 +290,6 @@ function MemberDetail() {
               ))}
             {canOperateMember && (
               <>
-                <MembershipGrantDialog
-                  userId={userId}
-                  xyCode={m.xy_code}
-                  isMember={!!m.is_member}
-                  expiresAt={m.membership_expires_at}
-                  trigger={
-                    <Button size="sm" variant="outline">
-                      <Crown /> {m.is_member ? "续费会员" : "开通会员"}
-                    </Button>
-                  }
-                />
-                <CouponGrantDialog
-                  userId={userId}
-                  xyCode={m.xy_code}
-                  trigger={
-                    <Button size="sm" variant="outline">
-                      <Ticket /> 发优惠券
-                    </Button>
-                  }
-                />
                 <EditProfileDialog
                   item={p}
                   trigger={

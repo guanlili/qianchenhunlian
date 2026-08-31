@@ -5153,6 +5153,18 @@ export const MembershipRedeemCodePublicSchema = {
             type: 'string',
             title: 'Status'
         },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
         used_by_user_id: {
             anyOf: [
                 {
@@ -6751,12 +6763,37 @@ export const RedeemCodeCreateRequestSchema = {
                 }
             ],
             title: 'Note'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        },
+        valid_days: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 365,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Valid Days'
         }
     },
     type: 'object',
     required: ['days'],
     title: 'RedeemCodeCreateRequest',
-    description: '批量生成会员兑换码: 门店收款后把码交给用户, 用户在小程序输码开通.'
+    description: '批量生成体验码: 总部生成后交门店转发, 用户注册时填码或会员页输码开通.'
 } as const;
 
 export const RedeemCodeListSchema = {
@@ -7214,6 +7251,21 @@ export const StatsResponseSchema = {
         last_month_signups: {
             type: 'integer',
             title: 'Last Month Signups',
+            default: 0
+        },
+        guest_today: {
+            type: 'integer',
+            title: 'Guest Today',
+            default: 0
+        },
+        guest_this_month: {
+            type: 'integer',
+            title: 'Guest This Month',
+            default: 0
+        },
+        guest_last_month: {
+            type: 'integer',
+            title: 'Guest Last Month',
             default: 0
         }
     },

@@ -1680,6 +1680,10 @@ class StatsResponse(SQLModel):
     open_feedback: int = 0  # 未处理反馈 (Feedback.status='open')
     # — 门店对账 (2026-08-19) —
     last_month_signups: int = 0  # 上个北京自然月新增会员 (对账口径)
+    # — 游客 (2026-08-31): 注册了但当前非会员的用户, 跨店看板总览用 —
+    guest_today: int = 0  # 今日新增游客
+    guest_this_month: int = 0  # 本月新增游客
+    guest_last_month: int = 0  # 上月新增游客
 
 
 @router.get("/stats", response_model=StatsResponse)
@@ -1704,6 +1708,21 @@ def _member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> in
     for cond in extra:
         stmt = stmt.where(cond)
     return session.exec(stmt).one() or 0
+
+
+def _guest_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
+    """游客计数: 注册了但当前非会员的微信用户 (游客未绑店, 门店口径下恒 0)."""
+    return _member_count(
+        session,
+        sid,
+        User.openid.is_not(None),  # type: ignore[union-attr]
+        User.is_superuser == False,  # noqa: E712
+        or_(
+            User.membership_expires_at.is_(None),  # type: ignore[union-attr]
+            User.membership_expires_at < datetime.utcnow(),  # type: ignore[operator]
+        ),
+        *extra,
+    )
 
 
 def _compute_stats(
@@ -1797,6 +1816,16 @@ def _compute_stats(
         ).one()
         or 0,
         last_month_signups=_member_count(
+            session,
+            sid,
+            User.created_at >= lm_start_utc,
+            User.created_at < lm_end_utc,
+        ),
+        guest_today=_guest_count(session, sid, User.created_at >= today_start),
+        guest_this_month=_guest_count(
+            session, sid, User.created_at >= this_month_start
+        ),
+        guest_last_month=_guest_count(
             session,
             sid,
             User.created_at >= lm_start_utc,
@@ -2559,11 +2588,15 @@ class RevokeRequest(SQLModel):
 
 
 class RedeemCodeCreateRequest(SQLModel):
-    """批量生成会员兑换码: 门店收款后把码交给用户, 用户在小程序输码开通."""
+    """批量生成体验码: 总部生成后交门店转发, 用户注册时填码或会员页输码开通."""
 
-    days: int = Field(ge=1, le=365)  # 兑换天数
+    days: int = Field(ge=1, le=365)  # 体验天数 (30=一个月 / 60=两个月)
     count: int = Field(default=1, ge=1, le=100)  # 一次最多 100 张
     note: str | None = Field(default=None, max_length=120)
+    # 归属门店 (总部生成时可指定, 仅用于对账统计; 店长无生码权, 该参数忽略)
+    store_id: uuid.UUID | None = None
+    # 码有效期 (天): 超过该天数未兑换自动作废; 不填 = 长期有效
+    valid_days: int | None = Field(default=None, ge=1, le=365)
 
 
 class RedeemCodeList(SQLModel):
@@ -2771,12 +2804,18 @@ def create_redeem_codes(
     actor: CurrentActor,
     body: RedeemCodeCreateRequest = Body(),
 ) -> list[MembershipRedeemCodePublic]:
-    """批量生成会员兑换码 (门店收款后发码, 用户输码自助开通).
+    """批量生成体验码 (总部统一生成, 交门店线下转发给用户).
 
-    - 店长生成的码强制归属本店; 总部生成可指定 (暂不开放, store_id 为空)
+    - 体验码模式: 新用户注册时填码直接开通体验会员; 老用户会员页输码续费
+    - 店长无生码权 (MEMBER_GRANT 已收归总部); 总部可指定归属门店用于对账
     - 码唯一性: 撞库重试, 理论上极难触发
     """
     owner_sid = _store_owner_id(actor)
+    if not owner_sid and body.store_id:
+        # 总部生码可指定归属门店 (须真实存在), 仅用于对账统计
+        if not session.get(Store, body.store_id):
+            raise HTTPException(status_code=400, detail="门店不存在")
+        owner_sid = body.store_id
     note = (body.note or "").strip()[:120] or None
     created: list[MembershipRedeemCode] = []
     for _ in range(body.count):
@@ -2798,6 +2837,11 @@ def create_redeem_codes(
                 days=body.days,
                 store_id=owner_sid,
                 note=note,
+                expires_at=(
+                    datetime.utcnow() + timedelta(days=body.valid_days)
+                    if body.valid_days
+                    else None
+                ),
                 created_by_type=actor.actor_type,
                 created_by_id=uuid.UUID(actor.id),
             )
