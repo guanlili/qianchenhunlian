@@ -172,12 +172,14 @@ def read_my_profile(
 def submit_welcome(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: WelcomeBody,
 ) -> ProfileWithContact:
     """首启动引导提交: 头像 + 昵称 + 性别 + 出生年份.
 
     用户首次进入小程序的强引导, 必须填齐基本信息才能浏览会员资料.
     幂等: 已存在 Profile 也会更新这几项 (老用户补填走同一端点).
+    限流: 每次调用扇出微信 msg_sec_check, 按写接口限频.
     """
     nickname = (body.nickname or "").strip()
     avatar_url = (body.avatar_url or "").strip()

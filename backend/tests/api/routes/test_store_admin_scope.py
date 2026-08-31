@@ -1,5 +1,7 @@
 """门店管理员 (store_admin) 数据范围测试: 会员级操作仅限本店."""
 
+from datetime import timezone
+
 from sqlmodel import Session, select
 
 from app import crud
@@ -613,7 +615,15 @@ def test_store_statement_scoped_and_filtered(
     )
     db.commit()
 
-    month = m.created_at.strftime("%Y-%m")
+    # 对账按北京自然月切: created_at 是 UTC naive, 需转北京时区取月份
+    # (月初北京 0-8 点窗口 UTC 仍是上月, 直接 strftime 会错位 → 历史 flaky)
+    from app.core import membership as _membership
+
+    month = (
+        m.created_at.replace(tzinfo=timezone.utc)
+        .astimezone(_membership.CN_TZ)
+        .strftime("%Y-%m")
+    )
     r = client.get(
         f"{settings.API_V1_STR}/admin/stores/{store.id}/statement",
         headers=superuser_token_headers,

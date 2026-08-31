@@ -2619,6 +2619,20 @@ Page({
         // /stores/cities 返回 {items: [{city, count}]}, 取城市名字符串数组
         const list = ((res && res.items) || []).map((c) => c.city || c);
         this.setData({ guestCities: list });
+        if (!list.length) this.loadGuestCitiesFallback();
+      })
+      .catch(() => this.loadGuestCitiesFallback());
+  },
+
+  /** 城市接口兜底: 直接拉门店列表取城市去重 (防 cities 接口异常卡死三问) */
+  loadGuestCitiesFallback() {
+    storeSvc
+      .listStores({ limit: 100 })
+      .then((res) => {
+        const set = new Set(
+          ((res && res.items) || []).map((it) => it.city).filter(Boolean)
+        );
+        this.setData({ guestCities: [...set] });
       })
       .catch(() => this.setData({ guestCities: [] }));
   },
@@ -2747,12 +2761,33 @@ Page({
     try {
       const order = await membershipSvc.createOrder('yearly_365d');
       if (mode === 'mock') {
-        const paid = await membershipSvc.mockPay(order.order_id);
-        wx.showToast({
-          title: paid.status === 'paid' ? '开通成功' : '支付未完成',
-          icon: paid.status === 'paid' ? 'success' : 'none',
+        // 与会员页一致: 模拟支付需二次确认, 防误触
+        const that = this;
+        wx.showModal({
+          title: '模拟支付',
+          content: `确认支付 ¥${this.data.guestYearPrice} 开通会员? (模拟支付, 不真实扣款)`,
+          success: async (res) => {
+            if (!res.confirm) {
+              that.setData({ guestPaying: false });
+              return;
+            }
+            try {
+              const paid = await membershipSvc.mockPay(order.order_id);
+              wx.showToast({
+                title: paid.status === 'paid' ? '开通成功' : '支付未完成',
+                icon: paid.status === 'paid' ? 'success' : 'none',
+              });
+              that.finishGuestOnboarding();
+            } catch (err) {
+              wx.showToast({
+                title: (err && err.detail) || '支付未完成',
+                icon: 'none',
+              });
+            } finally {
+              that.setData({ guestPaying: false });
+            }
+          },
         });
-        this.finishGuestOnboarding();
         return;
       }
       await new Promise((resolve, reject) => {
@@ -2763,10 +2798,21 @@ Page({
         });
       });
       wx.showToast({ title: '开通成功', icon: 'success' });
-      this.finishGuestOnboarding();
+      // 微信回调 /pay/notify 常晚于客户端 success: 延迟后再刷新会员状态
+      setTimeout(() => this.finishGuestOnboarding(), 1500);
     } catch (err) {
       const detail = err && typeof err.detail === 'string' ? err.detail : '';
-      if (detail.includes('取消') || err && err.errMsg && err.errMsg.includes('cancel')) {
+      if (detail.includes('PAY_NOT_ENABLED')) {
+        wx.showModal({
+          title: '线上支付暂未开启',
+          content: '可到门店现场缴费开通, 或填体验码直接开通会员。',
+          showCancel: false,
+          confirmText: '知道了',
+        });
+      } else if (
+        detail.includes('取消') ||
+        (err && err.errMsg && err.errMsg.includes('cancel'))
+      ) {
         wx.showToast({ title: '已取消支付', icon: 'none' });
       } else {
         wx.showToast({ title: detail || '支付未完成, 可稍后在会员页重试', icon: 'none' });

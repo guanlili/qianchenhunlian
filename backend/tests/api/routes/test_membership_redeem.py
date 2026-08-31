@@ -200,6 +200,43 @@ def test_redeem_bruteforce_limited(client: TestClient, db: Session) -> None:
     assert last is not None and last.status_code == 429
 
 
+def test_redeem_backfills_home_store(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """未绑店用户用指定门店的码开通 → 自动归属该门店 (店长可见/工单归店)."""
+    from sqlmodel import select as _select
+
+    from app.models import Profile as ProfileModel
+
+    email = _mk_user(db)  # 未绑店
+    headers = authentication_token_from_email(client=client, email=email, db=db)
+    store = Store(name="回填测试店", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+
+    r = client.post(
+        f"{API}/admin/membership/redeem-codes",
+        json={"days": 30, "count": 1, "store_id": str(store.id)},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
+    (item,) = r.json()
+
+    r2 = client.post(
+        f"{API}/membership/redeem", json={"code": item["code"]}, headers=headers
+    )
+    assert r2.status_code == 200, r2.text
+
+    profile = db.exec(_select(ProfileModel).where(ProfileModel.progress == 100)).first()
+    # 精确断言: 该 email 用户的 profile 归属被回填
+    from app.models import User as UserModel
+
+    u = db.exec(_select(UserModel).where(UserModel.email == email)).one()
+    profile = db.exec(_select(ProfileModel).where(ProfileModel.user_id == u.id)).one()
+    assert profile.home_store_id == store.id
+
+
 def test_code_validity_expiry(
     client: TestClient, db: Session, superuser_token_headers: dict
 ) -> None:

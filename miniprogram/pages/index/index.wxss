@@ -2717,6 +2717,13 @@ page {
   color: #b3a89a;
 }
 
+.guest-retry {
+  margin-top: 10rpx;
+  color: #c93434;
+  font-size: 23rpx;
+  text-align: left;
+}
+
 .guest-input {
   height: 84rpx;
   padding: 0 24rpx;

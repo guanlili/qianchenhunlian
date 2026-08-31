@@ -124,7 +124,7 @@ function StoresPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">门店总览</h1>
           <p className="text-muted-foreground">
-            进店干活: 会员 / 审核 / 核验 / 工单都在门店工作台里处理
+            进店干活: 会员 / 核验 / 工单都在门店工作台里处理
           </p>
         </div>
         {isSuperuser && (
@@ -228,11 +228,6 @@ function StoreCard({
   onDelete: () => void
 }) {
   const pending = [
-    {
-      label: "待审资料",
-      value: item.pending_audits ?? 0,
-      tone: "destructive" as const,
-    },
     {
       label: "待核验",
       value: item.pending_verifies ?? 0,
