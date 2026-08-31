@@ -2915,6 +2915,35 @@ page {
   margin-top: 88rpx;
 }
 
+.preview-card.after-resume {
+  margin-top: 40rpx;
+}
+
+/* 续填入口条 */
+.resume-bar {
+  width: 100%;
+  margin-top: 88rpx;
+  padding: 22rpx 28rpx;
+  background: rgba(246, 198, 107, 0.16);
+  border: 1rpx solid rgba(246, 198, 107, 0.5);
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resume-txt {
+  color: #a1651c;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.resume-go {
+  color: #c93434;
+  font-size: 25rpx;
+  font-weight: 700;
+}
+
 .preview-top {
   display: flex;
   align-items: center;

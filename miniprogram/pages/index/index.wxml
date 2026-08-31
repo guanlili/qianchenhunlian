@@ -164,7 +164,12 @@
 
       <!-- 预览资料卡 × 5 -->
       <block wx:if="{{!previewGate && previewLoaded}}">
-        <view class="preview-card {{index === 0 ? 'first' : ''}}" wx:for="{{previewList}}" wx:key="user_id" bindtap="onPreviewCardTap">
+        <!-- 注册中途退出的续填入口 -->
+        <view class="resume-bar" wx:if="{{resumeToStep}}" bindtap="resumeWizard">
+          <text class="resume-txt">继续完善资料, 解锁完整权益</text>
+          <text class="resume-go">去完善 ›</text>
+        </view>
+        <view class="preview-card {{index === 0 ? (resumeToStep ? 'after-resume' : 'first') : ''}}" wx:for="{{previewList}}" wx:key="user_id" bindtap="onPreviewCardTap">
           <view class="preview-top">
             <text class="preview-code">{{item.xy_code || '严选会员'}}</text>
             <text class="preview-lock">🔒 会员可见</text>
