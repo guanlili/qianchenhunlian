@@ -42,7 +42,6 @@ def _setup_store_admin(client, db: Session) -> tuple[dict[str, str], Store]:
 
 
 def _last_staff_email(db: Session) -> str:
-
     from app.models import Staff
 
     staffs = db.exec(select(Staff).order_by(Staff.created_at.desc())).all()  # type: ignore
@@ -161,7 +160,6 @@ def _another_store(db: Session) -> Store:
 
 
 def _profile_of(db: Session, user_id) -> Profile:
-
     p = db.exec(select(Profile).where(Profile.user_id == user_id)).first()  # type: ignore[arg-type]
     assert p is not None
     return p

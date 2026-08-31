@@ -39,7 +39,7 @@ const storeHubItems: Item[] = [
 
 // 仅总部管理员可见的平台级工具
 const platformItems: Item[] = [
-  { icon: Ticket, title: "体验码管理", path: "/redeem-codes" },
+  { icon: Ticket, title: "会员体验", path: "/redeem-codes" },
   { icon: MessageSquare, title: "意见反馈", path: "/feedback" },
   { icon: Award, title: "平台设置", path: "/qualifications" },
   { icon: UserCog, title: "管理员账号", path: "/admins" },

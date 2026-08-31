@@ -12,7 +12,7 @@ from sqlmodel import Session
 from app import crud
 from app.core import membership
 from app.core.config import settings
-from app.models import Profile, UserCreate
+from app.models import Profile, User, UserCreate
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import random_email, random_lower_string
 
@@ -148,3 +148,46 @@ def test_preview_excludes_expired_members(client: TestClient, db: Session) -> No
     r = client.get(f"{API}/matches/preview", headers=headers)
     assert r.status_code == 200
     assert len(r.json()["items"]) == 0
+
+
+# ---------------- 跨店看板 · 游客统计 ----------------
+
+
+def test_guest_stats_today_and_months(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """游客 = 注册了但当前非会员; 今日/本月/上月三口径."""
+    from datetime import datetime as dt
+    from datetime import timezone
+
+    from sqlmodel import select as _select
+
+    # 会员 (不计游客) + 今日游客 + 上月游客
+    _mk_member(db, gender="女", year=1993, location="山东 济南")
+    guest_today_email = _mk_guest(db)
+    guest_old_email = _mk_guest(db)
+    # 游客口径要求有 openid (微信游客); email 后台账号不计入
+    for em in (guest_today_email, guest_old_email):
+        u = db.exec(_select(User).where(User.email == em)).one()
+        u.openid = "oGX" + random_lower_string()[:8]
+    db.commit()
+    guest_old = db.exec(_select(User).where(User.email == guest_old_email)).one()
+    now_cn = dt.now(membership.CN_TZ)
+    last_month_day = (
+        (
+            now_cn.replace(year=now_cn.year - 1, month=12, day=15)
+            if now_cn.month == 1
+            else now_cn.replace(month=now_cn.month - 1, day=15)
+        )
+        .astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
+    guest_old.created_at = last_month_day
+    db.commit()
+
+    r = client.get(f"{API}/admin/stats", headers=superuser_token_headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["guest_today"] >= 1
+    assert body["guest_this_month"] == body["guest_today"]  # 上月游客不计入本月
+    assert body["guest_last_month"] >= 1
