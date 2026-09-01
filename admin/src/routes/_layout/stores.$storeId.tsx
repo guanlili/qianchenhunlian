@@ -470,11 +470,12 @@ function RecentMemberList({
 function StoreMembersTab({ storeId }: { storeId: string }) {
   const navigate = useNavigate()
   const { mfilter } = Route.useSearch()
+  // 默认只显示会员 (游客口径见「未归属处理」); mfilter 可切全部
   const membership = (
     ["all", "member", "expiring", "normal"] as const
   ).includes(mfilter as "all")
     ? (mfilter as "all")
-    : "all"
+    : "member"
   const { data, isPending } = useQuery({
     queryFn: () =>
       AdminService.listMembers({

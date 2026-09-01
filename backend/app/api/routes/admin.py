@@ -897,11 +897,14 @@ def admin_list_stores(
     rows = session.exec(
         base.order_by(Store.city, Store.name).offset(skip).limit(limit)
     ).all()
-    # 每店会员数: 一条 group-by, 避免逐店 count (N+1)
+    # 每店会员数: 一条 group-by, 避免逐店 count (N+1); 严格在期会员口径 (游客不计)
     member_counts: dict[Any, int] = dict(
         session.exec(
             select(Profile.home_store_id, func.count())
+            .select_from(Profile)
+            .join(User, Profile.user_id == User.id)  # type: ignore[arg-type]
             .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+            .where(User.membership_expires_at > datetime.utcnow())  # type: ignore[operator]
             .group_by(Profile.home_store_id)  # type: ignore[arg-type]
         ).all()
     )
@@ -970,9 +973,13 @@ def stores_overview(
     def _group_count(stmt: Any) -> dict[Any, int]:
         return dict(session.exec(stmt).all())
 
+    # 在期会员口径 (游客不计入)
     member_counts = _group_count(
         select(Profile.home_store_id, func.count())
+        .select_from(Profile)
+        .join(User, Profile.user_id == User.id)  # type: ignore[arg-type]
         .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
+        .where(User.membership_expires_at > datetime.utcnow())  # type: ignore[operator]
         .group_by(Profile.home_store_id)  # type: ignore[arg-type]
     )
     audit_counts = _group_count(
@@ -1011,6 +1018,7 @@ def stores_overview(
         .select_from(User)
         .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
         .where(User.verified == "passed")
+        .where(User.membership_expires_at > datetime.utcnow())  # type: ignore[operator]
         .where(Profile.home_store_id.is_not(None))  # type: ignore[union-attr]
         .group_by(Profile.home_store_id)  # type: ignore[arg-type]
     )
@@ -1704,8 +1712,12 @@ def admin_stats(
     return _compute_stats(session, actor, store_id=store_id)
 
 
-def _member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
-    """会员类计数; 门店口径时 join Profile 限本店. extra 为追加的 User 列条件."""
+def _user_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
+    """用户计数 (注册口径, 含游客); 门店口径时 join Profile 限本店.
+
+    ⚠️ 统计「会员」请用 _paid_member_count — 游客与会员在全平台必须严格区分.
+    extra 为追加的 User 列条件.
+    """
     stmt = (
         select(func.count())
         .select_from(User)
@@ -1718,9 +1730,19 @@ def _member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> in
     return session.exec(stmt).one() or 0
 
 
+def _paid_member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
+    """在期会员计数 (membership_expires_at > now); 门店口径限本店绑定会员."""
+    return _user_count(
+        session,
+        sid,
+        User.membership_expires_at > datetime.utcnow(),  # type: ignore[operator]
+        *extra,
+    )
+
+
 def _guest_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
     """游客计数: 注册了但当前非会员的微信用户 (游客未绑店, 门店口径下恒 0)."""
-    return _member_count(
+    return _user_count(
         session,
         sid,
         User.openid.is_not(None),  # type: ignore[union-attr]
@@ -1747,8 +1769,9 @@ def _compute_stats(
     if sid is None:
         sid = store_id
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    total_users = _member_count(session, sid)
-    verified_users = _member_count(session, sid, User.verified == "passed")
+    # 会员总数/已实名: 严格按在期会员口径 (游客不计入)
+    total_users = _paid_member_count(session, sid)
+    verified_users = _paid_member_count(session, sid, User.verified == "passed")
 
     # 上个北京自然月区间 (对账口径: 门店结算按自然月, 用北京时间切边界)
     now_cn = datetime.now(membership.CN_TZ)
@@ -1802,7 +1825,7 @@ def _compute_stats(
         total_users=total_users,
         total_profiles=session.exec(profile_stmt).one() or 0,
         pending_audits=session.exec(audit_stmt).one() or 0,
-        today_signups=_member_count(session, sid, User.created_at >= today_start),
+        today_signups=_user_count(session, sid, User.created_at >= today_start),
         pending_tickets=pending_tickets,
         mutual_affinity_pairs=mutual_pairs,
         verified_users=verified_users,
@@ -1811,8 +1834,8 @@ def _compute_stats(
             select(func.count()).select_from(Store).where(Store.status == "active")
         ).one()
         or 0,
-        pending_verifies=_member_count(session, sid, User.verified == "pending"),
-        expiring_members=_member_count(
+        pending_verifies=_user_count(session, sid, User.verified == "pending"),
+        expiring_members=_user_count(
             session,
             sid,
             User.membership_expires_at.between(  # type: ignore[union-attr]
@@ -1823,7 +1846,7 @@ def _compute_stats(
             select(func.count()).select_from(Feedback).where(Feedback.status == "open")
         ).one()
         or 0,
-        last_month_signups=_member_count(
+        last_month_signups=_user_count(
             session,
             sid,
             User.created_at >= lm_start_utc,

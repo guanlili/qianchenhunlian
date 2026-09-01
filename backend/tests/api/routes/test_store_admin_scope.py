@@ -1,6 +1,6 @@
 """门店管理员 (store_admin) 数据范围测试: 会员级操作仅限本店."""
 
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, select
 
@@ -51,14 +51,18 @@ def _last_staff_email(db: Session) -> str:
     return staffs[0].email
 
 
-def _member_with_store(db: Session, home_store_id=None) -> User:
-    """造一个小程序会员, home_store_id 决定归属门店."""
+def _member_with_store(db: Session, home_store_id=None, member_days=None) -> User:
+    """造一个小程序用户; member_days 给定则为在期会员 (严格游客/会员区分)."""
     user = crud.create_user(
         session=db,
         user_create=UserCreate(
             email=random_email(), password=random_lower_string() + "Aa1!"
         ),
     )
+    if member_days:
+        from datetime import timedelta as _td
+
+        user.membership_expires_at = datetime.utcnow() + _td(days=member_days)
     db.add(Profile(user_id=user.id, home_store_id=home_store_id, progress=80))
     db.commit()
     db.refresh(user)
@@ -258,6 +262,11 @@ def test_stats_store_scoped_pending_audits(
     pb = _profile_of(db, b_user.id)
     pb.audit_status = "pending"
     db.add(pb)
+    # 在期会员 (total_users 现为在期会员口径, 游客不计)
+    from datetime import timedelta as _td
+
+    ma_user = db.exec(select(User).where(User.id == ma.id)).one()
+    ma_user.membership_expires_at = datetime.utcnow() + _td(days=30)
     db.commit()
 
     r = client.get(
@@ -268,7 +277,7 @@ def test_stats_store_scoped_pending_audits(
     assert r.status_code == 200
     body = r.json()
     assert body["pending_audits"] == 1  # 只算店 A 的待审
-    assert body["total_users"] == 1  # 店 A 只有 1 个会员
+    assert body["total_users"] == 1  # 店 A 只有 1 个在期会员
 
     # dashboard 同口径: 最近提审只返回店 A 的
     r2 = client.get(
@@ -317,13 +326,16 @@ def test_staff_store_filter(client, db: Session, superuser_token_headers) -> Non
 
 
 def test_stores_list_member_count(client, db: Session, superuser_token_headers) -> None:
+    """每店会员数 = 在期会员口径 (游客不计入)."""
     store_a = Store(name="计数店A", city="济南")
     db.add(store_a)
     db.commit()
     db.refresh(store_a)
-    _member_with_store(db, home_store_id=store_a.id)
-    _member_with_store(db, home_store_id=store_a.id)
-    _member_with_store(db, home_store_id=None)
+    from datetime import datetime, timedelta as _td
+
+    for _ in range(2):
+        _member_with_store(db, home_store_id=store_a.id, member_days=30)
+    _member_with_store(db, home_store_id=store_a.id)  # 游客 (未开通) 不计入
 
     r = client.get(
         f"{settings.API_V1_STR}/admin/stores",
@@ -412,8 +424,14 @@ def test_feedback_store_scoped(client, db: Session, superuser_token_headers) -> 
 # ---------------- 门店总览 / 未归属 (store-hub 设计) ----------------
 
 
-def _wx_member(db: Session, home_store_id=None, verified="none") -> User:
-    """造小程序式会员 (有 openid, 才进 admin 会员列表)."""
+def _wx_member(
+    db: Session, home_store_id=None, verified="none", member_days=None
+) -> User:
+    """造小程序式用户 (有 openid, 才进 admin 会员列表).
+
+    member_days 给定 → 造在期会员 (membership_expires_at = now + days);
+    不给 → 游客 (游客/会员在全平台严格区分).
+    """
     user = crud.create_user(
         session=db,
         user_create=UserCreate(
@@ -422,6 +440,10 @@ def _wx_member(db: Session, home_store_id=None, verified="none") -> User:
     )
     user.openid = "oHX" + random_lower_string()[:8]
     user.verified = verified
+    if member_days:
+        from datetime import timedelta as _td
+
+        user.membership_expires_at = datetime.utcnow() + _td(days=member_days)
     db.add(
         Profile(
             user_id=user.id,
@@ -448,15 +470,15 @@ def test_stores_overview_badges(client, db: Session, superuser_token_headers) ->
 
     # 店 A: 1 会员待审 + 1 待核验(资料已过审); 店 B: 1 会员无待办
     # (Profile.audit_status 默认 pending, 需显式把非待审的置为 approved)
-    ma = _wx_member(db, home_store_id=store_a.id)
+    ma = _wx_member(db, home_store_id=store_a.id, member_days=30)
     pa = _profile_of(db, ma.id)
     pa.audit_status = "pending"
     db.add(pa)
-    mv = _wx_member(db, home_store_id=store_a.id, verified="pending")
+    mv = _wx_member(db, home_store_id=store_a.id, verified="pending", member_days=30)
     pv = _profile_of(db, mv.id)
     pv.audit_status = "approved"
     db.add(pv)
-    mb = _wx_member(db, home_store_id=store_b.id)
+    mb = _wx_member(db, home_store_id=store_b.id, member_days=30)
     pb = _profile_of(db, mb.id)
     pb.audit_status = "approved"
     db.add(pb)
@@ -520,7 +542,7 @@ def test_members_unassigned_filter(
     db.add(store)
     db.commit()
     db.refresh(store)
-    _wx_member(db, home_store_id=store.id)
+    _wx_member(db, home_store_id=store.id, member_days=30)
     orphan = _wx_member(db, home_store_id=None)
 
     r = client.get(
