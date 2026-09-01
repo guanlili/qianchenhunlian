@@ -183,10 +183,14 @@
             <text class="preview-code">{{item.xy_code || '严选会员'}}</text>
             <text class="preview-lock">🔒 会员可见</text>
           </view>
-          <view class="preview-main">
-            <view class="preview-line big">{{item.gender || ''}} · {{item.year}}年<text wx:if="{{item.ageNow}}"> ({{item.ageNow}}岁)</text></view>
-            <view class="preview-line">📍 {{item.location || '山东'}}</view>
-            <view class="preview-line">{{item.edu || '学历未填'}}<text wx:if="{{item.height}}"> · {{item.height}}cm</text></view>
+          <view class="preview-body">
+            <image wx:if="{{item.photo}}" class="preview-avatar" src="{{item.photo}}" mode="aspectFill" />
+            <view wx:else class="preview-avatar placeholder"><text>缘</text></view>
+            <view class="preview-main">
+              <view class="preview-line big">{{item.gender || ''}} · {{item.year}}年<text wx:if="{{item.ageNow}}"> ({{item.ageNow}}岁)</text></view>
+              <view class="preview-line">📍 {{item.location || '山东'}}</view>
+              <view class="preview-line">{{item.edu || '学历未填'}}<text wx:if="{{item.height}}"> · {{item.height}}cm</text></view>
+            </view>
           </view>
           <view class="preview-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
         </view>

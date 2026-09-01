@@ -2582,6 +2582,7 @@ Page({
         previewList: (r.items || []).map((it) => ({
           ...it,
           ageNow: it.year ? new Date().getFullYear() - it.year : '',
+          photo: _resolveList(it.photos || [])[0] || '',
         })),
         previewLoaded: true,
         previewGate: false,

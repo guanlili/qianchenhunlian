@@ -2965,6 +2965,30 @@ page {
   font-weight: 700;
 }
 
+.preview-body {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+}
+
+.preview-avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2rpx solid #f0e1d6;
+}
+
+.preview-avatar.placeholder {
+  background: linear-gradient(135deg, #f7d6cf 0%, #c93434 100%);
+  color: #ffffff;
+  font-size: 52rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .preview-main {
   display: flex;
   flex-direction: column;

@@ -6810,6 +6810,21 @@ export const RedeemCodeListSchema = {
             type: 'integer',
             title: 'Total',
             default: 0
+        },
+        total_unused: {
+            type: 'integer',
+            title: 'Total Unused',
+            default: 0
+        },
+        total_used: {
+            type: 'integer',
+            title: 'Total Used',
+            default: 0
+        },
+        total_void: {
+            type: 'integer',
+            title: 'Total Void',
+            default: 0
         }
     },
     type: 'object',
@@ -6838,7 +6853,6 @@ export const RedeemOutSchema = {
         },
         member_expires_at: {
             type: 'string',
-            format: 'date-time',
             title: 'Member Expires At'
         }
     },

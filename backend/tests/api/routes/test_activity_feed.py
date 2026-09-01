@@ -49,10 +49,16 @@ def _setup_store_admin(client: TestClient, db: Session) -> tuple[dict[str, str],
     crud.create_staff(
         session=db,
         staff_create=StaffCreate(
-            email=email, name="店长", password=pwd, role="store_admin", store_id=store.id
+            email=email,
+            name="店长",
+            password=pwd,
+            role="store_admin",
+            store_id=store.id,
         ),
     )
-    r = client.post(f"{API}/login/access-token", data={"username": email, "password": pwd})
+    r = client.post(
+        f"{API}/login/access-token", data={"username": email, "password": pwd}
+    )
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['access_token']}"}, store
 
@@ -87,10 +93,16 @@ def test_activity_feed_scoped_and_mutual(
 
     now = datetime.utcnow()
     # 两条错开时间: limit=1 只取一条时, 另一条不在页内, 互心动标记仍须命中
-    db.add(Affinity(from_user_id=a.id, to_user_id=b.id, created_at=now - timedelta(seconds=1)))
+    db.add(
+        Affinity(
+            from_user_id=a.id, to_user_id=b.id, created_at=now - timedelta(seconds=1)
+        )
+    )
     db.add(Affinity(from_user_id=b.id, to_user_id=a.id, created_at=now))  # 互心动
     db.add(Affinity(from_user_id=c.id, to_user_id=d.id, created_at=now))  # 别店, 不可见
-    db.add(Favorite(user_id=a.id, target_user_id=c.id, created_at=now))  # 跨店, 本店方 a
+    db.add(
+        Favorite(user_id=a.id, target_user_id=c.id, created_at=now)
+    )  # 跨店, 本店方 a
     db.add(View(user_id=c.id, target_user_id=d.id, created_at=now))  # 别店, 不可见
     db.commit()
 
@@ -112,7 +124,9 @@ def test_activity_feed_scoped_and_mutual(
     assert r.json()["total"] == 0
 
     # superuser: 全量 3 条心动, 只有 a↔b 互心动
-    r = client.get(f"{API}/admin/activity-feed?kind=affinity", headers=superuser_token_headers)
+    r = client.get(
+        f"{API}/admin/activity-feed?kind=affinity", headers=superuser_token_headers
+    )
     body = r.json()
     assert body["total"] == 3
     assert sum(1 for it in body["items"] if it["mutual"]) == 2

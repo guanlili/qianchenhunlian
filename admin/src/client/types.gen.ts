@@ -1023,6 +1023,9 @@ export type RedeemCodeCreateRequest = {
 export type RedeemCodeList = {
     items?: Array<MembershipRedeemCodePublic>;
     total?: number;
+    total_unused?: number;
+    total_used?: number;
+    total_void?: number;
 };
 
 export type RedeemIn = {

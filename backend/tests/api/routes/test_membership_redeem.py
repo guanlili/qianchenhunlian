@@ -78,13 +78,17 @@ def test_create_codes_superuser(
         assert it["status"] == "unused"
         assert it["code"].startswith("QY-")
         assert len(it["code"].replace("-", "")) == 14  # QY + 12 位随机段
-    # 列表可查
+    # 列表可查 + 状态分布统计
     r = client.get(
         f"{API}/admin/membership/redeem-codes",
         headers=superuser_token_headers,
     )
     assert r.status_code == 200
-    assert r.json()["total"] >= 3
+    body = r.json()
+    assert body["total"] >= 3
+    assert body["total_unused"] >= 3
+    assert body["total_used"] == 0
+    assert body["total_void"] == 0
 
 
 def test_create_codes_hq_only(
