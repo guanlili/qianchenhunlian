@@ -556,7 +556,8 @@ Page({
     isMember: false,    // 门店会员制: 非会员首页锁屏 (浏览为会员专享)
     isWelcomed: false,  // 首启引导 (头像+昵称+协议) 是否完成: 未完成不给看资料
     // 游客预览: 未开通会员先看 5 个与自己相配的会员资料 (转化钩子)
-    previewList: [],    // 匹配预览资料 (异性/同城/年龄接近)
+    previewList: [],    // 每日推荐: 前 5 位详细资料 (异性/同城/年龄接近)
+    blurredList: [],    // 剩余会员模糊条目 (性别/年龄段/城市)
     previewGate: false, // 需要先填 游客三问 (性别/出生年份/城市)
     previewLoaded: false,
     previewError: false,
@@ -570,8 +571,9 @@ Page({
     guestForm: {
       height: '', edu: '', marriage: '', income: '',
       job: '', has_house: '', has_car: '', desc: '',
-      phone: '', wechat: '',
+      phone: '', wechat: '', origin: '', hometown: '', body_type: '',
     },
+    bodyOptions: ['偏瘦', '苗条', '匀称', '适中', '中等', '偏胖'],
     guestAvatarPath: '',  // 注册页 (头像/昵称/协议)
     guestAvatarUrl: '',
     guestNickname: '',
@@ -580,6 +582,7 @@ Page({
     guestRedeemCode: '',  // 缴费页: 体验码 (选填, 直接开通)
     guestPayMode: 'off',  // 缴费页: online/mock/off
     guestYearPrice: 100,  // 年卡价格 (后台可配)
+    guestDailyQuota: 2,   // 会员每日申请额度 (后台可配)
     guestPaying: false,
     eduOptions: eduOptions.filter((it) => it !== '不限'),
     marriageOptions: marriageOptions.filter((it) => it !== '不限'),
@@ -2584,6 +2587,10 @@ Page({
           ageNow: it.year ? new Date().getFullYear() - it.year : '',
           photo: _resolveList(it.photos || [])[0] || '',
         })),
+        blurredList: (r.blurred || []).map((b) => ({
+          ...b,
+          location: b.location || '山东',
+        })),
         previewLoaded: true,
         previewGate: false,
         previewError: false,
@@ -2618,7 +2625,7 @@ Page({
         if (!p) return;
         let step = 0;
         if (!p.height || !p.edu || !p.marriage || !p.income) step = 3;
-        else if (!p.job || !p.has_house || !p.has_car) step = 4;
+        else if (!p.job || !p.has_house || !p.has_car || !p.body_type) step = 4;
         // 已填字段预填进表单, 续填时只补缺的
         const gf = {
           ...this.data.guestForm,
@@ -2630,6 +2637,9 @@ Page({
           has_house: p.has_house || '',
           has_car: p.has_car || '',
           desc: p.desc || '',
+          origin: p.origin || '',
+          hometown: p.hometown || '',
+          body_type: p.body_type || '',
           phone: p.contact_phone || this.data.guestForm.phone,
           wechat: p.contact_wechat || this.data.guestForm.wechat,
         };
@@ -2696,10 +2706,14 @@ Page({
                 ? this.data.carOptions[idx]
                 : field === 'job'
                   ? this.data.jobOptions[idx]
-                  : field === 'year'
-                    ? guestYears[idx]
-                    : field === 'location'
-                      ? guestCities[idx]
+                  : field === 'body_type'
+                    ? this.data.bodyOptions[idx]
+                    : field === 'origin' || field === 'hometown'
+                      ? regions[idx]
+                      : field === 'year'
+                        ? guestYears[idx]
+                        : field === 'location'
+                          ? guestCities[idx]
                       : '';
     this.setData({ guestForm: { ...guestForm, [field]: value } });
   },
@@ -2728,6 +2742,8 @@ Page({
         edu: f.edu,
         marriage: f.marriage,
         income: f.income,
+        origin: f.origin || undefined,
+        hometown: f.hometown || undefined,
       });
       this.setData({ guestStep: 4 });
     } catch (err) {
@@ -2746,6 +2762,7 @@ Page({
         job: f.job,
         has_house: f.has_house,
         has_car: f.has_car,
+        body_type: f.body_type || undefined,
         desc: f.desc || undefined,
       });
       // 联系方式 (红娘联系你撮合用; 微信号即可)
@@ -2996,13 +3013,40 @@ Page({
     if (ci < 0) return wx.showToast({ title: '请选择所在城市', icon: 'none' });
     try {
       await profileSvc.saveProfile({ gender: g, year: Number(ys[yi]), location: cs[ci] });
-      // 三问完成 → 注册页 (头像/昵称/协议), 之后填资料 → 缴费
-      this.setData({ guestStep: 2 });
-      this.initGuestNickname();
-      this.loadGuestPlans();
+      // 三问完成 → 直接进每日推荐 (游客态); 注册由推荐页「注册会员」入口进入
+      this.setData({
+        previewLoaded: false,
+        previewGate: false,
+        guestStep: 1,
+        resumeToStep: 0,
+      });
+      this.loadPreview();
     } catch (err) {
       wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
     }
+  },
+
+  /** 推荐页注册横幅: 未注册进注册页, 已注册未缴费进缴费页 */
+  goRegister() {
+    const app = getApp();
+    const step = app.globalData.isWelcomed
+      ? this.data.resumeToStep || 5
+      : 2;
+    this.setData({ previewGate: true, guestStep: step });
+    if (step === 2) this.initGuestNickname();
+    this.loadGuestPlans();
+  },
+
+  /** 游客推荐页: 资质与协议入口 */
+  goQualifications() {
+    wx.navigateTo({ url: '/pages/qualifications/qualifications' });
+  },
+
+  /** 加红娘微信: 展示门店二维码大图 (长按识别添加) */
+  showStoreQr() {
+    const qr = this.data.myHomeStore && this.data.myHomeStore.contact_qr;
+    if (!qr) return;
+    wx.previewImage({ urls: [resolveFileUrl(qr)] });
   },
 
   /** 缴费页配置: 支付模式 + 年卡价格 */
@@ -3014,6 +3058,7 @@ Page({
         this.setData({
           guestPayMode: res.pay_mode || 'off',
           guestYearPrice: yearPlan ? yearPlan.price : 100,
+          guestDailyQuota: res.member_daily_quota || 2,
         });
       })
       .catch(() => {});

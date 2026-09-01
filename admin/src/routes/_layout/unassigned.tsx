@@ -29,7 +29,7 @@ function UnassignedPage() {
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <Inbox className="text-muted-foreground mb-3 size-10" />
         <div className="text-muted-foreground">
-          此页为总部兜底工具 (未归属会员 / 无主工单),
+          此页为总部兜底工具 (游客 (未归属) / 无主工单),
           门店工作请在门店工作台内处理
         </div>
       </div>
@@ -48,7 +48,7 @@ function UnassignedPage() {
 
       <Tabs defaultValue="members">
         <TabsList>
-          <TabsTrigger value="members">未归属会员</TabsTrigger>
+          <TabsTrigger value="members">游客 (未归属)</TabsTrigger>
           <TabsTrigger value="tickets">无主工单</TabsTrigger>
           <TabsTrigger value="feedback">未处理反馈</TabsTrigger>
         </TabsList>

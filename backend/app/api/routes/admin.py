@@ -2398,7 +2398,7 @@ def list_members(
     """会员统一列表 (User + Profile 合并). 替代旧 /users + /profiles 两个入口.
 
     仅小程序会员 (有 openid); 红娘只看本店.
-    unassigned=True 只返回 home_store_id 为空的会员 (供「未归属处理中心」分配门店).
+    unassigned=True 只返回 home_store_id 为空的游客 (未开通会员; 会员归属由体验码回填, 供「未归属处理中心」分配门店).
     """
     base = (
         select(User, Profile)
@@ -2410,7 +2410,15 @@ def list_members(
     if sid is not None:
         base = base.where(Profile.home_store_id == sid)
     elif unassigned:
+        # 未归属处理中心只显示游客 (注册未开通会员的用户):
+        # 会员归属由体验码兑换自动回填, 不应再堆积在无主列表
         base = base.where(Profile.home_store_id.is_(None))  # type: ignore[union-attr]
+        base = base.where(
+            or_(
+                User.membership_expires_at.is_(None),  # type: ignore[union-attr]
+                User.membership_expires_at < datetime.utcnow(),  # type: ignore[operator]
+            )
+        )
     elif store_id is not None:
         base = base.where(Profile.home_store_id == store_id)
 
@@ -2547,11 +2555,13 @@ class MembershipPlansResponse(SQLModel):
 
 
 class MembershipConfigUpdate(SQLModel):
-    """支付开关 + 优惠券限领; 套餐/额度调整后续按需扩展."""
+    """支付开关 + 优惠券限领 + 每日额度 (后台可调)."""
 
     pay_enabled: bool | None = None
     pay_mock: bool | None = None
     coupon_monthly_limit: int | None = Field(default=None, ge=0, le=99)
+    member_daily_quota: int | None = Field(default=None, ge=0, le=999)
+    free_daily_quota: int | None = Field(default=None, ge=0, le=999)
 
 
 class CouponGrantRequest(SQLModel):
@@ -2638,6 +2648,10 @@ def update_membership_config(
         cfg["pay_mock"] = body.pay_mock
     if body.coupon_monthly_limit is not None:
         cfg["coupon_monthly_limit"] = body.coupon_monthly_limit
+    if body.member_daily_quota is not None:
+        cfg["member_daily_quota"] = body.member_daily_quota
+    if body.free_daily_quota is not None:
+        cfg["free_daily_quota"] = body.free_daily_quota
     row = session.get(SiteSetting, membership.CONFIG_KEY)
     if row:
         row.value = cfg

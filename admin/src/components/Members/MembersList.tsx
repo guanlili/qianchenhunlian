@@ -26,7 +26,7 @@ export function MembersList() {
   const [auditStatus, setAuditStatus] = useState<AuditFilter>("all")
   const [verified, setVerified] = useState<VerifiedFilter>("all")
   const [userStatus, setUserStatus] = useState<StatusFilter>("all")
-  const [membership, setMembership] = useState<MembershipFilter>("all")
+  const [membership, setMembership] = useState<MembershipFilter>("member")
   const [storeFilter, setStoreFilter] = useState<string>("__all__")
   const [keyword, setKeyword] = useState("")
   const navigate = useNavigate()

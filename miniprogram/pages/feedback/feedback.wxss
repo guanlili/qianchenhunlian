@@ -14,3 +14,40 @@
   display: flex; align-items: center; justify-content: center;
   margin-top: 32rpx;
 }
+
+/* 我的反馈历史 */
+.history-card {
+  margin-top: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+.history-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f1a17;
+  margin-bottom: 16rpx;
+}
+.history-item {
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f0e8dd;
+}
+.hi-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+.hi-date { font-size: 22rpx; color: #b3a89a; }
+.hi-status { font-size: 22rpx; color: #b3a89a; }
+.hi-status.done { color: #1e9e5c; }
+.hi-content { font-size: 26rpx; color: #1f1a17; line-height: 1.6; }
+.hi-reply {
+  margin-top: 10rpx;
+  padding: 14rpx 18rpx;
+  background: #fdf7ef;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+  color: #5a4f47;
+  line-height: 1.6;
+}
+.hi-reply-label { color: #c93434; font-weight: 600; }

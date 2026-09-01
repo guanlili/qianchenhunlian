@@ -30,7 +30,8 @@ CN_TZ = timezone(timedelta(hours=8))
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "free_daily_quota": 5,
-    "member_daily_quota": 20,
+    # 会员每日申请额度: 调低防骚扰 (2026-09 与业务确认), 后台可调
+    "member_daily_quota": 2,
     "trial_once_per_user": True,
     # 线上支付开关 (docs/13 §10 P3): 未接入微信支付前恒 false。
     # 接入后置 true, 小程序据此展示在线购买入口; 线下后台开通不受此开关影响。

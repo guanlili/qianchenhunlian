@@ -388,6 +388,7 @@ function StoreFormDialog({
     phone: store?.phone || "",
     photo: store?.photo || "",
     fees_desc: store?.fees_desc || "",
+    contact_qr: store?.contact_qr || "",
     status: store?.status || "active",
   })
 
@@ -403,6 +404,7 @@ function StoreFormDialog({
         phone: form.phone || null,
         photo: form.photo || null,
         fees_desc: form.fees_desc || null,
+        contact_qr: form.contact_qr || null,
         status: form.status,
       }
       if (store) {
@@ -522,6 +524,11 @@ function StoreFormDialog({
           <div className="col-span-2">
             <Label>门店照片</Label>
             <PhotoField value={form.photo} onChange={update("photo")} />
+            <Label className="mt-3">红娘微信二维码 (用户扫码直接加红娘)</Label>
+            <PhotoField
+              value={form.contact_qr}
+              onChange={(v) => setForm({ ...form, contact_qr: v })}
+            />
           </div>
           <div className="col-span-2">
             <Label>收费简介</Label>

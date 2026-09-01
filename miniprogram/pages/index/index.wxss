@@ -2915,6 +2915,98 @@ page {
   margin-top: 88rpx;
 }
 
+/* 注册会员横幅 (推荐页显著入口) */
+.register-banner {
+  width: 100%;
+  margin-top: 88rpx;
+  padding: 28rpx 32rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, #f6c66b 0%, #ed7030 100%);
+  box-shadow: 0 20rpx 48rpx rgba(237, 112, 48, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.register-banner.paid {
+  background: linear-gradient(135deg, #d9534f 0%, #a01f1f 100%);
+  box-shadow: 0 20rpx 48rpx rgba(160, 31, 31, 0.4);
+}
+
+.rb-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  align-items: flex-start;
+}
+
+.rb-title {
+  color: #ffffff;
+  font-size: 34rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+}
+
+.rb-sub {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 22rpx;
+}
+
+.rb-go {
+  color: #ffffff;
+  font-size: 26rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* 模糊卡: 剩余资料只给性别/年龄段/城市 */
+.blurred-card {
+  width: 100%;
+  margin-top: 24rpx;
+  padding: 26rpx 32rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1rpx dashed #d9c9b4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.blurred-line {
+  color: #93826d;
+  font-size: 27rpx;
+  font-weight: 600;
+}
+
+.blurred-lock {
+  color: #a89c8d;
+  font-size: 21rpx;
+}
+
+/* 资质与协议入口行 */
+.qualify-links {
+  margin-top: 40rpx;
+  display: flex;
+  gap: 40rpx;
+}
+
+.qualify-links text {
+  color: #a89c8d;
+  font-size: 23rpx;
+  text-decoration: underline;
+}
+
+/* 幽灵按钮 (加红娘微信, 弱于主按钮) */
+.member-lock-btn.ghost {
+  margin-top: 20rpx;
+  background: transparent;
+  border: 2rpx solid rgba(201, 52, 52, 0.45);
+  color: #c93434;
+  min-height: 80rpx;
+}
+
 .preview-card.after-resume {
   margin-top: 40rpx;
 }

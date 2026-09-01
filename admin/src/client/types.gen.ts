@@ -327,6 +327,7 @@ export type AdminStoreItem = {
     lat?: (number | null);
     phone?: (string | null);
     photo?: (string | null);
+    contact_qr?: (string | null);
     fees_desc?: (string | null);
     status?: string;
     id: string;
@@ -434,6 +435,15 @@ export type BalanceTransactionPublic = {
     ref_id?: (string | null);
     note?: (string | null);
     created_at: string;
+};
+
+/**
+ * 每日推荐模糊条目: 只给性别/年龄段/城市, 吸引注册但不泄露信息.
+ */
+export type BlurredItem = {
+    gender?: (string | null);
+    age_range: string;
+    location?: (string | null);
 };
 
 export type Body_login_login_access_token = {
@@ -687,6 +697,8 @@ export type MatchBrief = {
     hot?: number;
     starred?: boolean;
     verified?: string;
+    marriage?: (string | null);
+    job?: (string | null);
 };
 
 /**
@@ -720,6 +732,14 @@ export type MatchListResponse = {
     next_cursor?: (string | null);
 };
 
+/**
+ * 游客每日推荐: 前 limit 位详细 + 模糊条目 (剩余资料模糊处理).
+ */
+export type MatchPreviewResponse = {
+    items?: Array<MatchBrief>;
+    blurred?: Array<BlurredItem>;
+};
+
 export type MemberCounts = {
     favorites_given?: number;
     favorites_received?: number;
@@ -732,12 +752,14 @@ export type MemberCounts = {
 };
 
 /**
- * 支付开关 + 优惠券限领; 套餐/额度调整后续按需扩展.
+ * 支付开关 + 优惠券限领 + 每日额度 (后台可调).
  */
 export type MembershipConfigUpdate = {
     pay_enabled?: (boolean | null);
     pay_mock?: (boolean | null);
     coupon_monthly_limit?: (number | null);
+    member_daily_quota?: (number | null);
+    free_daily_quota?: (number | null);
 };
 
 export type MembershipGrantList = {
@@ -825,6 +847,23 @@ export type MembershipStatus = {
 
 export type Message = {
     message: string;
+};
+
+/**
+ * 我的反馈条目: 含官方回复 (admin_note) — 后台回复是用户与管理员的沟通通道.
+ */
+export type MyFeedbackItem = {
+    id: string;
+    content: string;
+    status: string;
+    admin_note?: (string | null);
+    handled_at?: (string | null);
+    created_at: string;
+};
+
+export type MyFeedbackList = {
+    items?: Array<MyFeedbackItem>;
+    total?: number;
 };
 
 export type NeighborResponse = {
@@ -1140,6 +1179,7 @@ export type StoreCreate = {
     lat?: (number | null);
     phone?: (string | null);
     photo?: (string | null);
+    contact_qr?: (string | null);
     fees_desc?: (string | null);
     status?: string;
 };
@@ -1188,6 +1228,7 @@ export type StorePublic = {
     lat?: (number | null);
     phone?: (string | null);
     photo?: (string | null);
+    contact_qr?: (string | null);
     fees_desc?: (string | null);
     status?: string;
     id: string;
@@ -1847,6 +1888,12 @@ export type FavoritesListSeenByMeData = {
 
 export type FavoritesListSeenByMeResponse = (VisitorList);
 
+export type FeedbackListMyFeedbackData = {
+    limit?: number;
+};
+
+export type FeedbackListMyFeedbackResponse = (MyFeedbackList);
+
 export type FeedbackSubmitFeedbackData = {
     requestBody: FeedbackBody;
 };
@@ -1897,7 +1944,7 @@ export type MatchesGetGuestPreviewData = {
     limit?: number;
 };
 
-export type MatchesGetGuestPreviewResponse = (MatchListResponse);
+export type MatchesGetGuestPreviewResponse = (MatchPreviewResponse);
 
 export type MatchesGetDailyRecommendationsData = {
     cursor?: (string | null);

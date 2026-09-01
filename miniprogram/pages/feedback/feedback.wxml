@@ -20,4 +20,18 @@
   <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
     {{submitting ? '提交中...' : '提交反馈'}}
   </button>
+  <!-- 我的反馈历史 (含官方回复) -->
+  <view class="history-card" wx:if="{{historyLoaded && history.length}}">
+    <view class="history-title">我的反馈</view>
+    <view class="history-item" wx:for="{{history}}" wx:key="id">
+      <view class="hi-head">
+        <text class="hi-date">{{item.createdText}}</text>
+        <text class="hi-status {{item.status === 'handled' ? 'done' : ''}}">{{item.status === 'handled' ? '已回复' : '处理中'}}</text>
+      </view>
+      <view class="hi-content">{{item.content}}</view>
+      <view class="hi-reply" wx:if="{{item.admin_note}}">
+        <text class="hi-reply-label">官方回复：</text>{{item.admin_note}}
+      </view>
+    </view>
+  </view>
 </view>

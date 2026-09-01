@@ -2431,6 +2431,18 @@ export const AdminStoreItemSchema = {
             ],
             title: 'Photo'
         },
+        contact_qr: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact Qr'
+        },
         fees_desc: {
             anyOf: [
                 {
@@ -3008,6 +3020,41 @@ export const BalanceTransactionPublicSchema = {
     type: 'object',
     required: ['id', 'user_id', 'amount', 'balance_after', 'source', 'created_at'],
     title: 'BalanceTransactionPublic'
+} as const;
+
+export const BlurredItemSchema = {
+    properties: {
+        gender: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Gender'
+        },
+        age_range: {
+            type: 'string',
+            title: 'Age Range'
+        },
+        location: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Location'
+        }
+    },
+    type: 'object',
+    required: ['age_range'],
+    title: 'BlurredItem',
+    description: '每日推荐模糊条目: 只给性别/年龄段/城市, 吸引注册但不泄露信息.'
 } as const;
 
 export const Body_login_login_access_tokenSchema = {
@@ -4546,6 +4593,28 @@ export const MatchBriefSchema = {
             type: 'string',
             title: 'Verified',
             default: 'none'
+        },
+        marriage: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Marriage'
+        },
+        job: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Job'
         }
     },
     type: 'object',
@@ -4750,6 +4819,30 @@ export const MatchListResponseSchema = {
     title: 'MatchListResponse'
 } as const;
 
+export const MatchPreviewResponseSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/MatchBrief'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        blurred: {
+            items: {
+                '$ref': '#/components/schemas/BlurredItem'
+            },
+            type: 'array',
+            title: 'Blurred',
+            default: []
+        }
+    },
+    type: 'object',
+    title: 'MatchPreviewResponse',
+    description: '游客每日推荐: 前 limit 位详细 + 模糊条目 (剩余资料模糊处理).'
+} as const;
+
 export const MemberCountsSchema = {
     properties: {
         favorites_given: {
@@ -4833,11 +4926,37 @@ export const MembershipConfigUpdateSchema = {
                 }
             ],
             title: 'Coupon Monthly Limit'
+        },
+        member_daily_quota: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 999,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Member Daily Quota'
+        },
+        free_daily_quota: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 999,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Free Daily Quota'
         }
     },
     type: 'object',
     title: 'MembershipConfigUpdate',
-    description: '支付开关 + 优惠券限领; 套餐/额度调整后续按需扩展.'
+    description: '支付开关 + 优惠券限领 + 每日额度 (后台可调).'
 } as const;
 
 export const MembershipGrantListSchema = {
@@ -5272,6 +5391,76 @@ export const MessageSchema = {
     type: 'object',
     required: ['message'],
     title: 'Message'
+} as const;
+
+export const MyFeedbackItemSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        content: {
+            type: 'string',
+            title: 'Content'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        admin_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Admin Note'
+        },
+        handled_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Handled At'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'content', 'status', 'created_at'],
+    title: 'MyFeedbackItem',
+    description: '我的反馈条目: 含官方回复 (admin_note) — 后台回复是用户与管理员的沟通通道.'
+} as const;
+
+export const MyFeedbackListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/MyFeedbackItem'
+            },
+            type: 'array',
+            title: 'Items',
+            default: []
+        },
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'MyFeedbackList'
 } as const;
 
 export const NeighborResponseSchema = {
@@ -7369,6 +7558,18 @@ export const StoreCreateSchema = {
             ],
             title: 'Photo'
         },
+        contact_qr: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact Qr'
+        },
         fees_desc: {
             anyOf: [
                 {
@@ -7653,6 +7854,18 @@ export const StorePublicSchema = {
                 }
             ],
             title: 'Photo'
+        },
+        contact_qr: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact Qr'
         },
         fees_desc: {
             anyOf: [

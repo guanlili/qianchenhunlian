@@ -9,11 +9,23 @@ Page({
     binding: false,
   },
 
+  /** 加红娘微信: 展示二维码大图, 长按识别添加 */
+  showContactQr() {
+    if (!this.data.store.contactQr) return;
+    wx.previewImage({ urls: [this.data.store.contactQr] });
+  },
+
   async onLoad(query) {
     const id = query.id;
     try {
       const s = await storeSvc.getStore(id);
-      this.setData({ store: { ...s, photo: resolveFileUrl(s.photo) } });
+      this.setData({
+        store: {
+          ...s,
+          photo: resolveFileUrl(s.photo),
+          contactQr: resolveFileUrl(s.contact_qr),
+        },
+      });
       // 检查用户当前 home_store_id
       try {
         const me = await profileSvc.getMe();

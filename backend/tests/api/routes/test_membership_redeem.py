@@ -288,3 +288,26 @@ def test_code_validity_expiry(
         f"{API}/membership/redeem", json={"code": item3["code"]}, headers=headers
     )
     assert r4.status_code == 200, r4.text
+
+
+def test_membership_config_quota_update(
+    client: TestClient, superuser_token_headers: dict
+) -> None:
+    """额度后台可调: config 端点改 member_daily_quota 后 plans/me 口径跟随."""
+    r = client.put(
+        f"{API}/admin/membership/config",
+        json={"member_daily_quota": 2},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
+
+    r2 = client.get(f"{API}/membership/plans", headers=superuser_token_headers)
+    assert r2.status_code == 200
+    assert r2.json()["member_daily_quota"] == 2
+
+    # 还原默认 (避免影响其他用例的全局配置)
+    client.put(
+        f"{API}/admin/membership/config",
+        json={"member_daily_quota": 20},
+        headers=superuser_token_headers,
+    )

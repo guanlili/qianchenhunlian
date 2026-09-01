@@ -27,6 +27,11 @@
       <view class="info-val">{{store.phone || '—'}}</view>
       <view class="info-action" bindtap="callPhone" wx:if="{{store.phone}}">📞 拨号</view>
     </view>
+    <view class="info-row" wx:if="{{store.contactQr}}" bindtap="showContactQr">
+      <view class="info-key">红娘微信</view>
+      <view class="info-val">点此查看二维码, 长按添加</view>
+      <view class="info-action">查看 ›</view>
+    </view>
   </view>
 
   <view class="cta-area">

@@ -533,6 +533,9 @@ class StoreBase(SQLModel):
     lat: float | None = None
     phone: str | None = Field(default=None, max_length=32)
     photo: str | None = Field(default=None, max_length=500)
+    contact_qr: str | None = Field(  # 红娘微信二维码 (用户扫码直接加红娘)
+        default=None, max_length=500
+    )
     fees_desc: str | None = Field(default=None, max_length=500)  # 收费简介
     status: str = Field(
         default="active", max_length=16, index=True
