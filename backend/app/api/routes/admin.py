@@ -2600,6 +2600,9 @@ class RedeemCodeCreateRequest(SQLModel):
 class RedeemCodeList(SQLModel):
     items: list[MembershipRedeemCodePublic] = []
     total: int = 0
+    total_unused: int = 0  # 未兑换 (可转发)
+    total_used: int = 0  # 已兑换
+    total_void: int = 0  # 已作废
 
 
 class MembershipGrantResponse(SQLModel):
@@ -2886,12 +2889,24 @@ def list_redeem_codes(
         count_stmt = count_stmt.where(MembershipRedeemCode.status == status)
     total = int(session.exec(count_stmt).one() or 0)
     items = session.exec(stmt.offset(skip).limit(limit)).all()
+
+    # 状态分布 (不受 status 筛选影响, 始终全量口径)
+    def _status_count(st: str) -> int:
+        stmt_sc = select(func.count()).select_from(MembershipRedeemCode)
+        if owner_sid:
+            stmt_sc = stmt_sc.where(MembershipRedeemCode.store_id == owner_sid)
+        stmt_sc = stmt_sc.where(MembershipRedeemCode.status == st)
+        return int(session.exec(stmt_sc).one() or 0)
+
     return RedeemCodeList(
         items=[
             MembershipRedeemCodePublic.model_validate(i, from_attributes=True)
             for i in items
         ],
         total=total,
+        total_unused=_status_count("unused"),
+        total_used=_status_count("used"),
+        total_void=_status_count("void"),
     )
 
 

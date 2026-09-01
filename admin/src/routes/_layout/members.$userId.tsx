@@ -7,10 +7,10 @@ import {
   Ban,
   Check,
   Crown,
-  Ticket,
   MapPin,
   Pencil,
   ShieldCheck,
+  Ticket,
   X,
   Zap,
 } from "lucide-react"
@@ -20,13 +20,13 @@ import { toast } from "sonner"
 import { type AdminMemberFull, AdminService } from "@/client"
 import { AssignStoreDialog } from "@/components/Members/AssignStoreDialog"
 import { ContactCard } from "@/components/Members/ContactCard"
+import { CouponGrantDialog } from "@/components/Members/CouponGrantDialog"
 import {
   AuditBadge,
   MemberBadge,
   memberDisplayName,
   VerifiedBadge,
 } from "@/components/Members/columns"
-import { CouponGrantDialog } from "@/components/Members/CouponGrantDialog"
 import { GrantDialog } from "@/components/Members/GrantDialog"
 import { AuditDialog } from "@/components/Profiles/AuditDialog"
 import { EditCriteriaDialog } from "@/components/Profiles/EditCriteriaDialog"

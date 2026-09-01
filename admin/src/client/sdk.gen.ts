@@ -2074,6 +2074,7 @@ export class ProfilesService {
      *
      * 用户首次进入小程序的强引导, 必须填齐基本信息才能浏览会员资料.
      * 幂等: 已存在 Profile 也会更新这几项 (老用户补填走同一端点).
+     * 限流: 每次调用扇出微信 msg_sec_check, 按写接口限频.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns ProfileWithContact Successful Response

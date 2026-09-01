@@ -7,6 +7,7 @@ import type { MembershipRedeemCodePublic } from "@/client"
 import { AdminService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -149,6 +150,21 @@ function RedeemCodesPage() {
             <Plus className="size-4" /> 批量生成
           </Button>
         )}
+      </div>
+
+      <div className="mb-3 grid grid-cols-3 gap-3">
+        {[
+          ["未兑换 (可转发)", listQuery.data?.total_unused ?? 0],
+          ["已兑换", listQuery.data?.total_used ?? 0],
+          ["已作废", listQuery.data?.total_void ?? 0],
+        ].map(([label, value]) => (
+          <Card key={label as string}>
+            <CardContent className="py-3">
+              <div className="text-muted-foreground text-xs">{label}</div>
+              <div className="text-xl font-semibold">{value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="mb-3 w-44">
