@@ -237,7 +237,7 @@ def test_membership_me_endpoint(client: TestClient, db: Session) -> None:
     body = r.json()
     assert body["is_member"] is True
     assert body["plan_code"] == "monthly_30d"
-    assert body["quota"]["limit"] == 20
+    assert body["quota"]["limit"] == 2  # 2026-09 调低防骚扰 (默认额度)
     # 到期时间展示为北京时间日期串 (YYYY-MM-DD), 不再是 UTC ISO 原始串
     assert body["expires_at"] is not None
     assert len(body["expires_at"]) == 10

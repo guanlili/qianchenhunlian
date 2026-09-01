@@ -4,7 +4,7 @@ import { Trash2, Upload } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import { SiteService, UploadsService } from "@/client"
+import { AdminService, SiteService, UploadsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -105,6 +105,7 @@ function QualificationsPage() {
         <TabsList>
           <TabsTrigger value="qualifications">资质图片</TabsTrigger>
           <TabsTrigger value="contents">协议文案 / 公告</TabsTrigger>
+          <TabsTrigger value="membership">会员配置</TabsTrigger>
         </TabsList>
         <TabsContent value="qualifications">
           <Card>
@@ -188,6 +189,9 @@ function QualificationsPage() {
         </TabsContent>
         <TabsContent value="contents">
           <SiteContentEditor />
+        </TabsContent>
+        <TabsContent value="membership">
+          <MembershipConfigSection />
         </TabsContent>
       </Tabs>
     </div>
@@ -295,6 +299,75 @@ function SiteContentEditor() {
             </div>
           </>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** 会员配置: 每日额度后台可调 (2026-09 防骚扰调低会员额度) */
+function MembershipConfigSection() {
+  const qc = useQueryClient()
+  const [memberQuota, setMemberQuota] = useState("2")
+  const [freeQuota, setFreeQuota] = useState("5")
+  const { data } = useQuery({
+    queryFn: () => AdminService.getMembershipPlans(),
+    queryKey: ["membership-plans-admin"],
+  })
+  useEffect(() => {
+    if (data) {
+      setMemberQuota(String(data.member_daily_quota ?? 2))
+      setFreeQuota(String(data.free_daily_quota ?? 5))
+    }
+  }, [data])
+  const save = useMutation({
+    mutationFn: () =>
+      AdminService.updateMembershipConfig({
+        requestBody: {
+          member_daily_quota: Number(memberQuota),
+          free_daily_quota: Number(freeQuota),
+        },
+      }),
+    onSuccess: () => {
+      toast.success("会员配置已保存")
+      qc.invalidateQueries({ queryKey: ["membership-plans-admin"] })
+    },
+    onError: () => toast.error("保存失败"),
+  })
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>会员配置</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid max-w-md grid-cols-2 gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="mq">会员每日申请额度</Label>
+            <Input
+              id="mq"
+              type="number"
+              min={0}
+              value={memberQuota}
+              onChange={(e) => setMemberQuota(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="fq">游客每日免费额度</Label>
+            <Input
+              id="fq"
+              type="number"
+              min={0}
+              value={freeQuota}
+              onChange={(e) => setFreeQuota(e.target.value)}
+            />
+          </div>
+        </div>
+        <Button
+          size="sm"
+          disabled={save.isPending}
+          onClick={() => save.mutate()}
+        >
+          {save.isPending ? "保存中..." : "保存"}
+        </Button>
       </CardContent>
     </Card>
   )

@@ -63,6 +63,23 @@ class MatchBrief(SQLModel):
     hot: int = 0
     starred: bool = False  # 调用者是否已收藏此人
     verified: str = "none"  # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
+    marriage: str | None = None
+    job: str | None = None
+
+
+class BlurredItem(SQLModel):
+    """每日推荐模糊条目: 只给性别/年龄段/城市, 吸引注册但不泄露信息."""
+
+    gender: str | None = None
+    age_range: str  # 后端算好, 如 "2X岁"
+    location: str | None = None
+
+
+class MatchPreviewResponse(SQLModel):
+    """游客每日推荐: 前 limit 位详细 + 模糊条目 (剩余资料模糊处理)."""
+
+    items: list[MatchBrief] = []
+    blurred: list[BlurredItem] = []
 
 
 class MatchListResponse(SQLModel):
@@ -138,6 +155,8 @@ def _to_brief(
         hot=profile.hot,
         starred=starred,
         verified=(user.verified if user else "none") or "none",
+        marriage=profile.marriage,
+        job=profile.job,
     )
 
 
@@ -200,19 +219,21 @@ def _is_starred(session: Session, viewer_id: uuid.UUID, target_id: uuid.UUID) ->
 # ---------------- Routes ----------------
 
 
-@router.get("/preview", response_model=MatchListResponse)
+@router.get("/preview", response_model=MatchPreviewResponse)
 def get_guest_preview(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
     limit: int = Query(5, ge=1, le=5),
-) -> MatchListResponse:
-    """游客匹配预览 (转化钩子): 未开通会员先看 5 个与自己相配的会员资料.
+) -> MatchPreviewResponse:
+    """游客每日推荐 (转化钩子): 前 5 位相配会员出详细资料, 其余模糊处理.
 
     - 前置: 自己资料须已填 性别/出生年份/城市 (游客三问), 缺 → 403 BASIC_INFO_REQUIRED
     - 匹配口径: 异性 + 山东 + 在期会员 + 审核通过 + 活跃账号;
       同城优先, 同城不足时放宽到全省补齐; 年龄接近优先, 活跃优先
-    - 只出列表概要 (头像/基础信息), 完整浏览/详情/联系仍为会员专享
+    - 前 limit 位出详细资料 (头像/基础信息/简介); blurred 为剩余模糊条目,
+      只含 性别/年龄段/城市, 不泄露照片/简介/缘分号
+    - 完整浏览/详情/联系仍为会员专享
     """
     me = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
     if (
@@ -270,7 +291,28 @@ def get_guest_preview(
 
     starred = _starred_set(session, current_user.id, [p.user_id for p, _ in rows])
     items = [_to_brief(p, u, starred=p.user_id in starred) for p, u in rows]
-    return MatchListResponse(items=items, next_cursor=None)
+
+    # 剩余资料模糊处理: 同口径再取一批, 只留 性别/年龄段/城市
+    seen = {p.user_id for p, _ in rows}
+    blurred: list[BlurredItem] = []
+    now_year = datetime.utcnow().year
+    for p, _u in session.exec(_query([]).offset(limit).limit(10)).all():
+        if p.user_id in seen:
+            continue
+        if not p.year:
+            continue
+        age = now_year - p.year
+        blurred.append(
+            BlurredItem(
+                gender=p.gender,
+                age_range=f"{age // 10 * 10}+岁"
+                if age >= 40
+                else f"{age // 10 * 10}-{age // 10 * 10 + 9}岁",
+                location=(p.location or p.origin or "")[:12] or None,
+            )
+        )
+
+    return MatchPreviewResponse(items=items, blurred=blurred)
 
 
 @router.get("/daily", response_model=MatchListResponse)

@@ -2,6 +2,8 @@ const feedbackSvc = require('../../services/feedback');
 
 Page({
   data: {
+    history: [],
+    historyLoaded: false,
     content: '',
     contact: '',
     submitting: false,
@@ -9,6 +11,7 @@ Page({
   },
 
   onLoad(query) {
+    this.loadHistory();
     // 详情页举报入口: 带 about=寻缘号 预填举报模板
     const about = query && query.about ? decodeURIComponent(query.about) : '';
     if (about) {
@@ -18,6 +21,23 @@ Page({
       });
     }
   },
+
+  /** 我的反馈历史 (含官方回复) */
+  loadHistory() {
+    feedbackSvc
+      .mine()
+      .then((res) => {
+        this.setData({
+          history: (res.items || []).map((it) => ({
+            ...it,
+            createdText: it.created_at ? it.created_at.slice(0, 10) : '',
+          })),
+          historyLoaded: true,
+        });
+      })
+      .catch(() => this.setData({ historyLoaded: true }));
+  },
+
   onContentInput(e) {
     this.setData({ content: (e.detail.value || '').slice(0, 1000) });
   },
@@ -33,9 +53,9 @@ Page({
     this.setData({ submitting: true });
     try {
       await feedbackSvc.submit({ content: this.data.content, contact: this.data.contact });
-      wx.showToast({ title: '感谢反馈, 我们会尽快处理', icon: 'success', duration: 2000 });
       this.setData({ content: '', contact: '', submitting: false });
-      setTimeout(() => wx.navigateBack(), 1500);
+      wx.showToast({ title: '感谢反馈, 我们会尽快处理', icon: 'success', duration: 2000 });
+      this.loadHistory(); // 刷新历史 (留在本页可看到官方回复)
     } catch (e) {
       this.setData({ submitting: false });
       wx.showToast({ title: (e && e.detail) || '提交失败', icon: 'none' });

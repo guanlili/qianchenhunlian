@@ -16,14 +16,14 @@
           <view class="member-lock-crown">✦</view>
         </view>
         <view class="member-lock-title" wx:if="{{previewGate}}">{{guestStep === 1 ? '先做个小测试' : guestStep === 2 ? '欢迎你, 先完善基本信息' : guestStep === 3 ? '完善基本条件' : guestStep === 4 ? '工作与资产' : '确认缴费'}}</view>
-        <view class="member-lock-title" wx:else>为你精选 5 位会员</view>
+        <view class="member-lock-title" wx:else>每日推荐</view>
         <view class="member-lock-sub" wx:if="{{previewGate}}">
           <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传真实头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、学历、婚姻与收入' : guestStep === 4 ? '职业、婚房、车与联系方式' : '微信支付年费, 或填体验码直接开通'}}</text>
           <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 5 步)</text>
         </view>
         <view class="member-lock-sub" wx:else>
           <text>按你的性别、年龄、城市相配而来</text>
-          <text>开通会员可查看全部严选资料</text>
+          <text>注册会员可查看全部严选资料</text>
         </view>
       </view>
 
@@ -53,7 +53,7 @@
           </picker>
           <view wx:if="{{!guestCities.length}}" class="guest-retry" bindtap="loadGuestCities">重新加载城市列表</view>
         </view>
-        <button class="member-lock-btn" bindtap="submitGuestBasics">下一步</button>
+        <button class="member-lock-btn" bindtap="submitGuestBasics">进入每日推荐</button>
       </view>
       <!-- 注册页: 头像 + 昵称 + 协议 -->
       <view class="member-lock-card" wx:if="{{previewGate && guestStep === 2}}">
@@ -107,6 +107,18 @@
             <view class="guest-picker {{!guestForm.income ? 'placeholder' : ''}}">{{guestForm.income || '请选择年收入'}}</view>
           </picker>
         </view>
+        <view class="guest-row">
+          <view class="guest-label">户籍地</view>
+          <picker mode="selector" range="{{regions}}" bindchange="onGuestFormPick" data-field="origin">
+            <view class="guest-picker {{!guestForm.origin ? 'placeholder' : ''}}">{{guestForm.origin || '请选择户籍地'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">家乡</view>
+          <picker mode="selector" range="{{regions}}" bindchange="onGuestFormPick" data-field="hometown">
+            <view class="guest-picker {{!guestForm.hometown ? 'placeholder' : ''}}">{{guestForm.hometown || '请选择家乡'}}</view>
+          </picker>
+        </view>
         <button class="member-lock-btn" bindtap="submitGuestStep2">下一步</button>
       </view>
 
@@ -116,6 +128,12 @@
           <view class="guest-label">职业<text class="req">*</text></view>
           <picker mode="selector" range="{{jobOptions}}" bindchange="onGuestFormPick" data-field="job">
             <view class="guest-picker {{!guestForm.job ? 'placeholder' : ''}}">{{guestForm.job || '请选择职业'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">体型</view>
+          <picker mode="selector" range="{{bodyOptions}}" bindchange="onGuestFormPick" data-field="body_type">
+            <view class="guest-picker {{!guestForm.body_type ? 'placeholder' : ''}}">{{guestForm.body_type || '请选择体型'}}</view>
           </picker>
         </view>
         <view class="guest-row">
@@ -152,7 +170,7 @@
           <text class="pay-price-unit">/ 年会员</text>
         </view>
         <view class="pay-priv">
-          <text>· 每日申请联系 {{memberQuota ? memberQuota.limit : 20}} 次</text>
+          <text>· 每日申请联系 {{guestDailyQuota}} 次</text>
           <text>· 红娘一对一撮合, 优先推荐</text>
           <text>· 全年资料展示, 不限查阅</text>
         </view>
@@ -171,25 +189,44 @@
         <view class="member-lock-alt" bindtap="skipGuestPay">暂不缴费, 先看看相配的会员 ›</view>
       </view>
 
-      <!-- 预览资料卡 × 5 -->
+      <!-- 每日推荐 (游客态): 显著注册横幅 + 前 5 详细 + 剩余模糊 -->
       <block wx:if="{{!previewGate && previewLoaded}}">
-        <!-- 注册中途退出的续填入口 -->
-        <view class="resume-bar" wx:if="{{resumeToStep}}" bindtap="resumeWizard">
-          <text class="resume-txt">继续完善资料, 解锁完整权益</text>
-          <text class="resume-go">去完善 ›</text>
+        <!-- 注册会员横幅 (要明显) -->
+        <view class="register-banner" wx:if="{{!isWelcomed}}" bindtap="goRegister">
+          <view class="rb-main">
+            <text class="rb-title">注册会员</text>
+            <text class="rb-sub">查看全部严选资料 · 红娘一对一撮合</text>
+          </view>
+          <text class="rb-go">立即注册 ›</text>
         </view>
-        <view class="preview-card {{index === 0 ? (resumeToStep ? 'after-resume' : 'first') : ''}}" wx:for="{{previewList}}" wx:key="user_id" bindtap="onPreviewCardTap">
+        <view class="register-banner" wx:elif="{{resumeToStep}}" bindtap="goRegister">
+          <view class="rb-main">
+            <text class="rb-title">继续完善资料</text>
+            <text class="rb-sub">完成后即可开通会员</text>
+          </view>
+          <text class="rb-go">去完善 ›</text>
+        </view>
+        <view class="register-banner paid" wx:elif="{{myHomeStore}}" bindtap="goRegister">
+          <view class="rb-main">
+            <text class="rb-title">开通会员</text>
+            <text class="rb-sub">到店办理或联系红娘, 现场开通</text>
+          </view>
+          <text class="rb-go">去开通 ›</text>
+        </view>
+
+        <view class="preview-card {{index === 0 ? (resumeToStep || !isWelcomed ? 'after-resume' : 'first') : ''}}" wx:for="{{previewList}}" wx:key="user_id" bindtap="onPreviewCardTap">
           <view class="preview-top">
             <text class="preview-code">{{item.xy_code || '严选会员'}}</text>
-            <text class="preview-lock">🔒 会员可见</text>
+            <text class="preview-lock">🔒 会员可联系</text>
           </view>
           <view class="preview-body">
             <image wx:if="{{item.photo}}" class="preview-avatar" src="{{item.photo}}" mode="aspectFill" />
             <view wx:else class="preview-avatar placeholder"><text>缘</text></view>
             <view class="preview-main">
               <view class="preview-line big">{{item.gender || ''}} · {{item.year}}年<text wx:if="{{item.ageNow}}"> ({{item.ageNow}}岁)</text></view>
-              <view class="preview-line">📍 {{item.location || '山东'}}</view>
-              <view class="preview-line">{{item.edu || '学历未填'}}<text wx:if="{{item.height}}"> · {{item.height}}cm</text></view>
+              <view class="preview-line">📍 {{item.location || '山东'}}<text wx:if="{{item.origin}}"> · 籍贯{{item.origin}}</text></view>
+              <view class="preview-line">{{item.edu || '学历未填'}}<text wx:if="{{item.height}}"> · {{item.height}}cm</text><text wx:if="{{item.marriage}}"> · {{item.marriage}}</text></view>
+              <view class="preview-line">{{item.job || '职业未填'}}<text wx:if="{{item.income}}"> · 年收入{{item.income}}</text></view>
             </view>
           </view>
           <view class="preview-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
@@ -201,6 +238,12 @@
           <view class="member-lock-phone">可先到店登记, 红娘优先为你物色</view>
         </view>
 
+        <!-- 剩余资料模糊处理: 吸引注册 -->
+        <view class="blurred-card" wx:for="{{blurredList}}" wx:key="index" bindtap="goRegister">
+          <view class="blurred-line">{{item.gender || '会员'}} · {{item.age_range}} · {{item.location}}</view>
+          <view class="blurred-lock">🔒 注册会员可见全部资料</view>
+        </view>
+
         <view class="member-lock-card tight" wx:if="{{myHomeStore && myHomeStore.phone}}">
           <view class="member-lock-store">
             <text class="pin">📍</text>
@@ -210,6 +253,9 @@
           <button class="member-lock-btn" bindtap="callHomeStore">
             <text class="ico">☎</text>
             <text>拨打门店电话 · 现场开通</text>
+          </button>
+          <button wx:if="{{myHomeStore.contact_qr}}" class="member-lock-btn ghost" bindtap="showStoreQr">
+            <text>加红娘微信</text>
           </button>
           <view class="member-lock-phone">客服电话 <text class="num">{{myHomeStore.phone}}</text></view>
           <view class="member-lock-divide"></view>
@@ -251,6 +297,11 @@
         <button class="member-lock-btn" bindtap="retryPreview">
           <text>重新加载</text>
         </button>
+      </view>
+      <view class="qualify-links">
+        <text bindtap="goQualifications">平台资质</text>
+        <text bindtap="goAgreement">用户协议</text>
+        <text bindtap="goPrivacy">隐私政策</text>
       </view>
       <view class="member-lock-foot">乾缘婚恋 · 真诚严选</view>
       <template is="icp-footer" />

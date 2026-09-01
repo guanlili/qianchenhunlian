@@ -105,8 +105,11 @@ def test_preview_matches_opposite_gender_same_city_nearest_age(
 
     r = client.get(f"{API}/matches/preview", headers=headers)
     assert r.status_code == 200, r.text
-    items = r.json()["items"]
+    body = r.json()
+    items = body["items"]
     assert len(items) == 3
+    # 详细卡补字段 (婚姻/职业) 已下发
+    assert "marriage" in items[0] and "job" in items[0]
     # 全部为女性
     assert all(it["gender"] == "女" for it in items)
     # 同城 (济南) 排前 2, 且其中年龄接近的排最前
@@ -133,6 +136,30 @@ def test_preview_fills_up_from_province_when_city_runs_out(
     items = r.json()["items"]
     assert len(items) == 4  # 1 同城 + 3 全省补齐
     assert items[0]["location"] == "山东 威海"  # 同城排最前
+
+
+def test_preview_blurred_items_beyond_five(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """超过 5 位后走模糊条目: 只含 性别/年龄段/城市, 不泄露照片/简介/缘分号."""
+    from datetime import timedelta
+
+    email = _mk_guest(db)
+    headers = authentication_token_from_email(client=client, email=email, db=db)
+    _set_basics(client, headers, gender="男", year=1992, city="济南")
+    for i in range(7):
+        u = _mk_member(db, gender="女", year=1990 + i, location="山东 济南")
+        # 手动补 marriage/job 验证 blurred 不含这些信息
+        db.refresh(u)
+
+    r = client.get(f"{API}/matches/preview", headers=headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["items"]) == 5
+    assert len(body["blurred"]) >= 1
+    for b in body["blurred"]:
+        assert set(b.keys()) == {"gender", "age_range", "location"}
+        assert b["gender"] == "女"
 
 
 def test_preview_excludes_expired_members(client: TestClient, db: Session) -> None:
@@ -191,3 +218,38 @@ def test_guest_stats_today_and_months(
     assert body["guest_today"] >= 1
     assert body["guest_this_month"] == body["guest_today"]  # 上月游客不计入本月
     assert body["guest_last_month"] >= 1
+
+
+# ---------------- 意见反馈回复通道 ----------------
+
+
+def test_feedback_mine_with_reply(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """用户提交反馈 → 后台回复 (admin_note) → 用户在 /feedback/mine 可见."""
+    email = _mk_guest(db)
+    headers = authentication_token_from_email(client=client, email=email, db=db)
+    r = client.post(
+        f"{API}/feedback",
+        json={"content": "希望增加筛选条件", "contact": "wx-abc"},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    fb_id = r.json()["id"]
+
+    # 后台回复 (FEEDBACK_HANDLE 权限, 超管可用)
+    r2 = client.post(
+        f"{API}/admin/feedback/{fb_id}/handle",
+        json={"note": "已记录, 下版本增加"},
+        headers=superuser_token_headers,
+    )
+    assert r2.status_code == 200, r2.text
+
+    r3 = client.get(f"{API}/feedback/mine", headers=headers)
+    assert r3.status_code == 200, r3.text
+    body = r3.json()
+    assert body["total"] == 1
+    item = body["items"][0]
+    assert item["content"] == "希望增加筛选条件"
+    assert item["status"] == "handled"
+    assert item["admin_note"] == "已记录, 下版本增加"

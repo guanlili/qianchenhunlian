@@ -15,6 +15,8 @@ engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 # (table, column, ddl) - 给已存在的表加列, 保留现有数据 (替代正式 alembic 迁移)
 _PENDING_ADD_COLUMNS: list[tuple[str, str, str]] = [
+    # — 门店红娘二维码 (2026-09 体验码模式配套) —
+    ("store", "contact_qr", "VARCHAR(500)"),
     # — 早期已合并 —
     ("profile", "nickname", "VARCHAR(64)"),
     ("profile", "avatar_url", "VARCHAR(500)"),
