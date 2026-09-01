@@ -136,6 +136,10 @@ def test_dashboard_store_admin_scoped(client, db: Session) -> None:
             email=random_email(), password=random_lower_string() + "Aa1!"
         ),
     )
+    # 在期会员 (total_users 为在期会员口径, 游客不计入)
+    from datetime import datetime, timedelta as _td
+
+    user.membership_expires_at = datetime.utcnow() + _td(days=30)
     db.add(
         Profile(
             user_id=user.id,
