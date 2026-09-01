@@ -1049,6 +1049,8 @@ def stores_overview(
     return StoreOverviewList(
         items=items,
         total=len(items),
+        # 与「未归属处理」列表同口径: 只统计未绑店的游客 (非会员);
+        # 会员归属由体验码兑换回填, 不应堆积在此
         unassigned_members=(
             session.exec(
                 select(func.count())
@@ -1056,6 +1058,12 @@ def stores_overview(
                 .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
                 .where(User.openid.is_not(None))  # type: ignore[union-attr]
                 .where(Profile.home_store_id.is_(None))  # type: ignore[union-attr]
+                .where(
+                    or_(
+                        User.membership_expires_at.is_(None),  # type: ignore[union-attr]
+                        User.membership_expires_at < datetime.utcnow(),  # type: ignore[operator]
+                    )
+                )
             ).one()
             or 0
         ),
