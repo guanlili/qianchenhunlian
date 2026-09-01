@@ -5,6 +5,7 @@ from pathlib import Path
 
 import sentry_sdk
 from fastapi import FastAPI, HTTPException, Response, status
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
@@ -31,6 +32,9 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
 )
+
+# API 响应 gzip 压缩 (>1KB): 会员列表/资料详情等 JSON 传输量约降到 1/5
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:
