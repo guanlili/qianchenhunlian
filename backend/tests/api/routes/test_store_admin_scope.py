@@ -493,6 +493,18 @@ def test_stores_overview_badges(client, db: Session, superuser_token_headers) ->
     assert body["unassigned_tickets"] == 1
     assert body["open_feedback"] == 1
 
+    # 再造一个未绑店但已开通会员的用户 → 不计入未归属 (只统计游客)
+    from datetime import datetime, timedelta as _td2
+
+    m2 = _wx_member(db)
+    m2.membership_expires_at = datetime.utcnow() + _td2(days=30)
+    db.commit()
+    r1b = client.get(
+        f"{settings.API_V1_STR}/admin/stores/overview",
+        headers=superuser_token_headers,
+    )
+    assert r1b.json()["unassigned_members"] == 1  # 会员不进未归属计数
+
     # 门店管理员: 只看到本店卡片
     headers, own = _setup_store_admin(client, db)
     r2 = client.get(f"{settings.API_V1_STR}/admin/stores/overview", headers=headers)
