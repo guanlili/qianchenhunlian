@@ -310,6 +310,7 @@ function RedeemCodesPage() {
                   ["30", "一个月"],
                   ["60", "两个月"],
                   ["90", "一季度"],
+                  ["365", "一年"],
                 ].map(([v, label]) => (
                   <Button
                     key={v}
