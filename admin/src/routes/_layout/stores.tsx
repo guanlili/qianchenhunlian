@@ -217,17 +217,24 @@ function StoresPage() {
                 })
               }
               onDelete={() => {
-                if (
-                  confirm(
-                    `确定关闭门店 "${s.name}" 吗?\n关闭后小程序内不可见, 数据保留, 可随时重新启用。`,
-                  )
-                )
-                  del.mutate(s.id)
+                const msg =
+                  s.status === "closed"
+                    ? `重新启用门店 "${s.name}"?\n启用后小程序内恢复可见。`
+                    : `确定关闭门店 "${s.name}" 吗?\n关闭后小程序内不可见, 数据保留, 可随时重新启用。`
+                if (confirm(msg)) del.mutate(s.id)
               }}
               onHardDelete={() => {
-                const name = prompt(
-                  `⚠️ 彻底删除 "${s.name}"\n\n将永久删除: 归属会员 ${s.member_count} 人及其账号资料、全部工单、店长账号。\n此操作不可恢复!\n\n如确认, 请输入门店名称:`,
-                )
+                if (s.status !== "closed") {
+                  toast.error("请先关闭门店, 确认无误后再彻底删除")
+                  return
+                }
+                const warn =
+                  `⚠️ 危险操作: 彻底删除 "${s.name}"\n\n` +
+                  `将永久删除以下数据, 不可恢复:\n` +
+                  `· 归属会员 ${s.member_count} 人 (账号及全部资料/发放记录)\n` +
+                  `· 本店全部工单\n· 店长登录账号\n· 门店信息本身\n\n` +
+                  `如确认风险, 请输入门店名称以继续:`
+                const name = prompt(warn)
                 if (name === null) return
                 if (name !== s.name) {
                   toast.error("门店名称不匹配, 已取消")
@@ -387,19 +394,29 @@ function StoreCard({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="关闭门店"
+                aria-label={
+                  item.status === "closed" ? "重新启用门店" : "关闭门店"
+                }
                 onClick={onDelete}
               >
-                <Ban className="text-amber-500" />
+                <Ban
+                  className={
+                    item.status === "closed"
+                      ? "text-emerald-500"
+                      : "text-amber-500"
+                  }
+                />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="彻底删除 (连会员/工单/店长一并删除, 不可恢复)"
-                onClick={onHardDelete}
-              >
-                <Trash2 className="text-destructive" />
-              </Button>
+              {item.status === "closed" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="彻底删除 (连会员/工单/店长一并删除, 不可恢复)"
+                  onClick={onHardDelete}
+                >
+                  <Trash2 className="text-destructive" />
+                </Button>
+              )}
             </>
           )}
         </div>

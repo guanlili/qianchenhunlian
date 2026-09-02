@@ -819,6 +819,21 @@ def test_store_hard_delete_removes_everything(
     member_id = member.id
     db.commit()
 
+    # 风险控制: 未关闭的门店不能直接硬删
+    r_active = client.post(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/hard-delete",
+        headers=superuser_token_headers,
+    )
+    assert r_active.status_code == 400
+    assert "关闭" in r_active.json()["detail"]
+
+    # 先关闭 (软删), 再硬删
+    r_close = client.delete(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}",
+        headers=superuser_token_headers,
+    )
+    assert r_close.status_code == 200, r_close.text
+
     r = client.post(
         f"{settings.API_V1_STR}/admin/stores/{store.id}/hard-delete",
         headers=superuser_token_headers,
