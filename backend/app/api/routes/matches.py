@@ -319,13 +319,10 @@ def get_guest_preview(
     starred = _starred_set(session, current_user.id, [p.user_id for p, _ in rows])
     items = [_to_brief(p, u, starred=p.user_id in starred) for p, u in rows]
 
-    # 剩余资料模糊处理: 同口径再取一批, 只留 性别/年龄段/城市
-    seen = {p.user_id for p, _ in rows}
+    # 剩余资料模糊处理: 直接取打分序的后 10 位 (与详细位同序, 不重不漏)
     blurred: list[BlurredItem] = []
     now_year = datetime.utcnow().year
-    for p, _u in session.exec(_query([]).offset(limit).limit(10)).all():
-        if p.user_id in seen:
-            continue
+    for p, _u in scored[limit : limit + 10]:
         if not p.year:
             continue
         age = now_year - p.year
@@ -379,7 +376,22 @@ def get_daily_recommendations(
         my_criteria = session.exec(
             select(Criteria).where(Criteria.user_id == current_user.id)
         ).first()
-        pool = session.exec(stmt.limit(500)).all()
+        # 兜底: 极少数会员无 Profile (缴费未建资料) — 无 profile 无法打分, 退化为原排序
+        if me_profile is None:
+            stmt = stmt.order_by(Profile.updated_at.desc())  # type: ignore
+            rows = list(session.exec(stmt.offset(offset).limit(limit + 1)).all())
+            has_more = len(rows) > limit
+            rows = rows[:limit]
+            starred = _starred_set(
+                session, current_user.id, [p.user_id for p, _ in rows]
+            )
+            items = [_to_brief(p, u, starred=p.user_id in starred) for p, u in rows]
+            return MatchListResponse(
+                items=items, next_cursor=_encode_cursor(offset + limit, has_more)
+            )
+        pool = session.exec(
+            stmt.order_by(User.id)  # type: ignore[arg-type]
+        ).all()
         cand_ids = [p.user_id for p, _ in pool]
         cand_criteria_map: dict[Any, Any] = (
             {
