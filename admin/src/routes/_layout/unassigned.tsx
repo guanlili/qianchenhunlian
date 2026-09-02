@@ -76,7 +76,7 @@ function UnassignedMembersTab() {
   if (isLoading) return <Skeleton className="h-48 w-full" />
   const items = data?.items ?? []
   if (!items.length)
-    return <EmptyHint text="没有未归属的会员, 全部会员都已指定门店 ✅" />
+    return <EmptyHint text="没有未归属的游客, 已开通会员均自动归属门店 ✅" />
 
   return (
     <Card>
