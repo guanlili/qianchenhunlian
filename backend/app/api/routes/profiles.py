@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, SQLModel, select
 
 from app.api.deps import ApiWriteLimited, CurrentUser, SessionDep
@@ -341,7 +342,24 @@ def upsert_my_criteria(
     criteria.progress = _calc_criteria_progress(criteria)
     criteria.updated_at = datetime.utcnow()
     session.add(criteria)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发首存撞 user_id 唯一约束: 回滚后改为更新已有行
+        session.rollback()
+        existing = session.exec(
+            select(Criteria).where(Criteria.user_id == current_user.id)
+        ).first()
+        if existing is None:
+            raise
+        for k, v in data.items():
+            setattr(existing, k, v)
+        existing.progress = _calc_criteria_progress(existing)
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+        session.commit()
+        session.refresh(existing)
+        return CriteriaPublic.model_validate(existing, from_attributes=True)
     session.refresh(criteria)
     return CriteriaPublic.model_validate(criteria, from_attributes=True)
 

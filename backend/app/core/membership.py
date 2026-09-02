@@ -161,7 +161,7 @@ def quota_status(
     member = is_member(user)
     bucket = "member" if member else "free"
     limit = (
-        int(cfg.get("member_daily_quota", 20))
+        int(cfg.get("member_daily_quota") or 2)
         if member
         else int(cfg.get("free_daily_quota", 5))
     )
@@ -195,7 +195,7 @@ def consume(
     member = is_member(user)
     bucket = "member" if member else "free"
     limit = (
-        int(cfg.get("member_daily_quota", 20))
+        int(cfg.get("member_daily_quota") or 2)
         if member
         else int(cfg.get("free_daily_quota", 5))
     )

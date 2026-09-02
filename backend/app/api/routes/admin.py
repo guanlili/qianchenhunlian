@@ -11,6 +11,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import Response
+from sqlalchemy import update as sa_update
 from sqlalchemy.orm import aliased
 from sqlmodel import Field, SQLModel, and_, func, or_, select
 
@@ -1423,12 +1424,26 @@ def hard_delete_store(
             detail="请先关闭门店 (关闭后数据保留), 确认无误再彻底删除",
         )
 
+    # 0) 体验码: 本店生成的码直接删除; FK (store_id/used_by_user_id) 无 CASCADE,
+    #    引用必须先于会员/门店删除清理, 否则 PG 上 FK 违规 500
+    from app.models import MembershipRedeemCode as _MRC
+
+    for rc in session.exec(select(_MRC).where(_MRC.store_id == store_id)).all():
+        session.delete(rc)
     # 1) 归属本店的会员账号 (User 级联删除 Profile/发放记录/收藏等)
     member_rows = session.exec(
         select(User)
         .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
         .where(Profile.home_store_id == store_id)
     ).all()
+    member_ids = [u.id for u in member_rows]
+    if member_ids:
+        # 别店发的码被本店会员兑换过: 解除引用 (FK 无 CASCADE)
+        session.execute(
+            sa_update(_MRC)
+            .where(_MRC.used_by_user_id.in_(member_ids))  # type: ignore[union-attr]
+            .values(used_by_user_id=None)
+        )
     for u in member_rows:
         session.delete(u)
 
@@ -1443,6 +1458,13 @@ def hard_delete_store(
 
     for st in session.exec(select(_Staff).where(_Staff.store_id == store_id)).all():
         session.delete(st)
+
+    # 发放记录 (MembershipGrant.store_id) 无 CASCADE: 置 NULL 保留对账追溯
+    session.execute(
+        sa_update(MembershipGrant)
+        .where(MembershipGrant.store_id == store_id)  # type: ignore[arg-type]
+        .values(store_id=None)
+    )
 
     # 4) 门店本身
     session.delete(store)

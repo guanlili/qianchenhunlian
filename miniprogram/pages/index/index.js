@@ -1511,7 +1511,7 @@ Page({
   openContact() {
     if (!this._gateCompleteProfile()) return;
     // 实名门槛: 安排相亲须先到店核验 (与后端 NOT_VERIFIED 门槛一致)
-    if (this.data.meVerified !== 'passed') {
+    if (!this.data.meVerified) {
       const that = this;
       const hasPhone = !!(this.data.myHomeStore && this.data.myHomeStore.phone);
       wx.showModal({
@@ -2683,10 +2683,6 @@ Page({
       .catch(() => {});
   },
 
-  /** 回到向导继续填 (从缺失的那一步开始) */
-  resumeWizard() {
-    this.setData({ previewGate: true, guestStep: this.data.resumeToStep });
-  },
 
   /** 三问表单: 出生年份候选 (2015→1950) + 有门店的城市列表 */
   loadGuestCities() {
@@ -2800,13 +2796,14 @@ Page({
   /** 第 2 步: 基本条件 (身高/学历/婚姻/收入) → 第 3 步 */
   async submitGuestStep2() {
     const f = this.data.guestForm;
-    if (!f.height || Number(f.height) < 100 || Number(f.height) > 250) {
+    if (!f.height || Number(f.height) < 100 || Number(f.height) > 220) {
       return wx.showToast({ title: '请填写正确身高', icon: 'none' });
     }
     if (!f.weight || Number(f.weight) < 30 || Number(f.weight) > 200) {
       return wx.showToast({ title: '请填写正确体重 (kg)', icon: 'none' });
     }
     if (!f.ethnicity) return wx.showToast({ title: '请选择民族', icon: 'none' });
+    if (!f.job) return wx.showToast({ title: '请选择职业', icon: 'none' });
     if (!f.marriage) return wx.showToast({ title: '请选择婚姻状况', icon: 'none' });
     if (!f.income) return wx.showToast({ title: '请选择月收入', icon: 'none' });
     try {
@@ -2833,6 +2830,13 @@ Page({
     try {
       await profileSvc.saveProfile({
         job: f.job,
+        edu: f.edu || undefined,
+        employer_type: f.employer_type || undefined,
+        has_social_insurance: f.has_social_insurance || undefined,
+        health_status: f.health_status || undefined,
+        hobbies: f.hobbies || undefined,
+        origin: f.origin || undefined,
+        hometown: f.hometown || undefined,
         has_house: f.has_house,
         has_car: f.has_car,
         body_type: f.body_type || undefined,
@@ -2863,8 +2867,8 @@ Page({
     if (!f.cYearMin || !f.cYearMax) {
       return wx.showToast({ title: '请选择对方年份范围', icon: 'none' });
     }
-    if (Number(f.cYearMin) < Number(f.cYearMax)) {
-      return wx.showToast({ title: '年份范围: 起始年份应晚于截止年份', icon: 'none' });
+    if (Number(f.cYearMin) > Number(f.cYearMax)) {
+      return wx.showToast({ title: '年份范围: 起始年份应早于截止年份', icon: 'none' });
     }
     if (!f.cHeightMin || !f.cHeightMax) {
       return wx.showToast({ title: '请填写对方身高范围', icon: 'none' });

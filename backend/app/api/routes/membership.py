@@ -42,7 +42,7 @@ class MembershipPlansOut(SQLModel):
     pay_mode: str
     # 权益数字动态化: 页面文案与后台配置保持一致 (后台可调, 前端不再写死)
     free_daily_quota: int = 5
-    member_daily_quota: int = 20
+    member_daily_quota: int = 2
     plans: list[PlanItem] = []
 
 
@@ -92,7 +92,7 @@ def get_my_membership(
 
 @router.get("/plans", response_model=MembershipPlansOut)
 def list_plans(
-    session: SessionDep, current_user: CurrentUser, _lim: ApiReadLimited
+    session: SessionDep, _current_user: CurrentUser, _lim: ApiReadLimited
 ) -> MembershipPlansOut:
     """可购套餐 + 线上购买开关 (小程序会员页渲染依据).
 

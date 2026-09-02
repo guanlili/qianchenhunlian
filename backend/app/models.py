@@ -553,6 +553,7 @@ class StoreUpdate(SQLModel):
     address: str | None = Field(default=None, max_length=255)
     lng: float | None = None
     lat: float | None = None
+    contact_qr: str | None = Field(default=None, max_length=500)  # 红娘微信二维码
     phone: str | None = Field(default=None, max_length=32)
     photo: str | None = Field(default=None, max_length=500)
     fees_desc: str | None = Field(default=None, max_length=500)
