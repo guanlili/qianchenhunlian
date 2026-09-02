@@ -603,6 +603,7 @@ Page({
     myAvatar: '',       // 我的页门面: 真实头像
     myNickname: '',     // 昵称 (空则显示用户编号)
     memberExpiresAt: '',// 会员到期时间 (我的页徽章)
+    memberDaysLeft: null, // 距到期天数 (<=7 时首页提醒条)
   },
 
   // ============================================================
@@ -2553,10 +2554,23 @@ Page({
       if (!m) return;
       const wasMember = this.data.isMember;
       const isMember = !!m.is_member;
+      // 到期提醒: 后端下发北京日期串 (YYYY-MM-DD), 按 +08:00 计算剩余天数
+      let memberDaysLeft = null;
+      const exp = m && m.expires_at;
+      if (isMember && exp) {
+        memberDaysLeft = Math.max(
+          0,
+          Math.ceil(
+            (new Date(`${exp}T23:59:59+08:00`).getTime() - Date.now()) / 86400000,
+          ),
+        );
+        if (memberDaysLeft > 7) memberDaysLeft = null; // 超 7 天不打扰
+      }
       this.setData({
         isMember,
         memberQuota: m.quota || null,
         memberExpiresAt: (m && m.expires_at) || '',
+        memberDaysLeft,
       });
       // 仅在身份刚切换 (首次判定 / 红娘刚开通 / 支付刚成功) 时拉推荐,
       // 避免每次切前台都重打推荐接口; 未完成首启引导先不拉 (见 welcomed-gate)

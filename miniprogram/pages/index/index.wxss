@@ -3501,3 +3501,28 @@ page {
 .affinity-lock-btn:active {
   opacity: 0.85;
 }
+
+/* 会员到期提醒条 */
+.renew-bar {
+  margin: 0 28rpx 20rpx;
+  padding: 20rpx 26rpx;
+  border-radius: 14rpx;
+  background: #fdf3e0;
+  border: 1rpx solid #f0d9ae;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.renew-txt {
+  color: #a1651c;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.renew-btn {
+  color: #c93434;
+  font-size: 24rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+}

@@ -21,6 +21,7 @@ from app.api.deps import (
 # 山东省限制: 只推荐山东省下的用户, 子句实现见 app.api.shandong
 from app.api.shandong import shandong_clause as _shandong_clause
 from app.core import membership
+from app.core.match_score import pair_score, sort_key
 from app.models import (
     Criteria,
     Favorite,
@@ -274,20 +275,47 @@ def get_guest_preview(
             .order_by(age_rank.asc(), Profile.updated_at.desc())  # type: ignore
         )
 
-    # 先同城精确匹配, 不足 limit 个再放宽到全省补齐 (小城市游客不至于只看到一两条)
+    # 候选池: 同城优先 + 全省兜底 (打分需要较大池子, 上限 60 内择优)
     rows: list[tuple[Profile, User]] = list(
-        session.exec(_query([city_like]).limit(limit)).all()
+        session.exec(_query([city_like]).limit(30)).all()
     )
     seen = {p.user_id for p, _ in rows}
-    if len(rows) < limit:
-        for p, u in session.exec(_query([]).limit(limit * 4)).all():
-            if p.user_id in seen:
-                continue
-            rows.append((p, u))
-            seen.add(p.user_id)
-            if len(rows) >= limit:
-                break
-    rows = rows[:limit]
+    for p, u in session.exec(_query([]).limit(60)).all():
+        if p.user_id in seen:
+            continue
+        rows.append((p, u))
+        seen.add(p.user_id)
+
+    # 双向匹配打分: 对方符合我的择偶要求 + 我符合对方的要求 (详见 core/match_score)
+    my_criteria = session.exec(
+        select(Criteria).where(Criteria.user_id == current_user.id)
+    ).first()
+    cand_ids = [p.user_id for p, _ in rows]
+    cand_criteria_map: dict[Any, Any] = (
+        {
+            c.user_id: c
+            for c in session.exec(
+                select(Criteria).where(Criteria.user_id.in_(cand_ids))  # type: ignore[attr-defined]
+            ).all()
+        }
+        if cand_ids
+        else {}
+    )
+    scored = sorted(
+        rows,
+        key=lambda pu: sort_key(
+            pair_score(
+                my_criteria,
+                me,
+                pu[0],
+                cand_criteria_map.get(pu[0].user_id),
+            ),
+            pu[0],
+            me,
+        ),
+    )
+
+    rows = scored[:limit]
 
     starred = _starred_set(session, current_user.id, [p.user_id for p, _ in rows])
     items = [_to_brief(p, u, starred=p.user_id in starred) for p, u in rows]
@@ -345,9 +373,49 @@ def get_daily_recommendations(
     )
 
     if tab == "today":
-        # 一期简单: 最近活跃的资料
-        stmt = stmt.order_by(Profile.updated_at.desc())  # type: ignore
-    elif tab == "new":
+        # 每日推荐主路径: 双向匹配打分 (候选池前 500 内择优, 日内顺序稳定支持 offset 翻页)
+        me_profile = session.exec(
+            select(Profile).where(Profile.user_id == current_user.id)
+        ).first()
+        my_criteria = session.exec(
+            select(Criteria).where(Criteria.user_id == current_user.id)
+        ).first()
+        pool = session.exec(stmt.limit(500)).all()
+        cand_ids = [p.user_id for p, _ in pool]
+        cand_criteria_map: dict[Any, Any] = (
+            {
+                c.user_id: c
+                for c in session.exec(
+                    select(Criteria).where(Criteria.user_id.in_(cand_ids))  # type: ignore[attr-defined]
+                ).all()
+            }
+            if cand_ids
+            else {}
+        )
+        scored = sorted(
+            pool,
+            key=lambda pu: sort_key(
+                pair_score(
+                    my_criteria,
+                    me_profile,
+                    pu[0],
+                    cand_criteria_map.get(pu[0].user_id),
+                ),
+                pu[0],
+                me_profile,
+            ),
+        )
+        rows = list(scored[offset : offset + limit + 1])
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+
+        starred = _starred_set(session, current_user.id, [p.user_id for p, _ in rows])
+        items = [_to_brief(p, u, starred=p.user_id in starred) for p, u in rows]
+        return MatchListResponse(
+            items=items, next_cursor=_encode_cursor(offset + limit, has_more)
+        )
+
+    if tab == "new":
         # 7 天内新建的
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
         stmt = stmt.where(Profile.created_at >= seven_days_ago).order_by(
@@ -367,7 +435,7 @@ def get_daily_recommendations(
             .order_by(Profile.updated_at.desc())  # type: ignore
         )
 
-    rows = session.exec(stmt.offset(offset).limit(limit + 1)).all()
+    rows = list(session.exec(stmt.offset(offset).limit(limit + 1)).all())
     has_more = len(rows) > limit
     rows = rows[:limit]
 
