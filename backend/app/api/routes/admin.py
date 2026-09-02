@@ -1416,6 +1416,12 @@ def hard_delete_store(
     store = session.get(Store, store_id)
     if not store:
         raise HTTPException(status_code=404, detail="门店不存在")
+    # 风险控制: 只有已关闭的门店才能彻底删除 (先关闭 → 再删除, 两步操作)
+    if store.status != "closed":
+        raise HTTPException(
+            status_code=400,
+            detail="请先关闭门店 (关闭后数据保留), 确认无误再彻底删除",
+        )
 
     # 1) 归属本店的会员账号 (User 级联删除 Profile/发放记录/收藏等)
     member_rows = session.exec(
