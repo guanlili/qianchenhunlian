@@ -434,6 +434,12 @@
         </view>
       </view>
 
+      <!-- 会员到期提醒 (7 天内) -->
+      <view class="renew-bar" wx:if="{{isMember && memberDaysLeft !== null}}" bindtap="goMembership">
+        <text class="renew-txt">会员将于 {{memberDaysLeft === 0 ? '今天' : memberDaysLeft + ' 天后'}} 到期 ({{memberExpiresAt}})</text>
+        <text class="renew-btn">续费 ›</text>
+      </view>
+
       <view class="quick-grid">
         <view class="quick-tile warm" bindtap="openVisitors">
           <view class="quick-icon">看</view>
