@@ -158,7 +158,7 @@ function StoresPage() {
           className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100"
         >
           <span>
-            ⚠ 全平台未归属: 会员 {overview?.unassigned_members ?? 0} ·
+            ⚠ 全平台未归属: 游客 {overview?.unassigned_members ?? 0} ·
             待处理工单 {overview?.unassigned_tickets ?? 0} · 未处理反馈{" "}
             {overview?.open_feedback ?? 0}
           </span>
