@@ -1511,6 +1511,12 @@ export type AdminAdminDeleteStoreData = {
 
 export type AdminAdminDeleteStoreResponse = (Message);
 
+export type AdminHardDeleteStoreData = {
+    storeId: string;
+};
+
+export type AdminHardDeleteStoreResponse = (Message);
+
 export type AdminAdminListFeedbackData = {
     limit?: number;
     skip?: number;

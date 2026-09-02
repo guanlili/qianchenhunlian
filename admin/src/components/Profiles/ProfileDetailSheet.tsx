@@ -105,7 +105,7 @@ export function ProfileDetailSheet({ item, trigger }: Props) {
                 value={data.profile.height ? `${data.profile.height} cm` : null}
               />
               <Row label="学历" value={data.profile.edu} />
-              <Row label="年收入" value={data.profile.income} />
+              <Row label="月收入" value={data.profile.income} />
               <Row label="婚姻状况" value={data.profile.marriage} />
               <Row label="户籍地" value={data.profile.origin} />
               <Row label="居住地" value={data.profile.location} />

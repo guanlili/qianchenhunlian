@@ -1398,6 +1398,63 @@ def admin_delete_store(
     return Message(message="门店已关闭")
 
 
+@router.post(
+    "/stores/{store_id}/hard-delete",
+    response_model=Message,
+    dependencies=[Depends(require_perm(Perm.STORE_MANAGE))],
+)
+def hard_delete_store(
+    session: SessionDep,
+    store_id: uuid.UUID,
+    actor: CurrentActor,
+) -> Message:
+    """彻底删除门店及全部关联数据 (不可恢复, 与「关闭门店」区分).
+
+    删除范围: 归属本店的会员账号 (级联资料/发放记录等) + 本店工单 +
+    本店店长账号 + 门店记录本身。发放历史中指向本店的孤儿记录保留 (对账追溯)。
+    """
+    store = session.get(Store, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="门店不存在")
+
+    # 1) 归属本店的会员账号 (User 级联删除 Profile/发放记录/收藏等)
+    member_rows = session.exec(
+        select(User)
+        .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+        .where(Profile.home_store_id == store_id)
+    ).all()
+    for u in member_rows:
+        session.delete(u)
+
+    # 2) 本店工单 (含无主待处理单)
+    from app.models import ContactRequest as _CR
+
+    for t in session.exec(select(_CR).where(_CR.store_id == store_id)).all():
+        session.delete(t)
+
+    # 3) 本店店长账号
+    from app.models import Staff as _Staff
+
+    for st in session.exec(select(_Staff).where(_Staff.store_id == store_id)).all():
+        session.delete(st)
+
+    # 4) 门店本身
+    session.delete(store)
+    _audit(
+        session,
+        actor,
+        "hard_delete_store",
+        detail={
+            "store": store.name,
+            "members_removed": len(member_rows),
+        },
+    )
+    session.commit()
+    return Message(
+        message=f"门店已彻底删除 (含会员 {len(member_rows)} 人、店长账号与工单)"
+    )
+
+
 # ---------------- 反馈列表 ----------------
 
 
