@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.models import (
     MembershipGrant,
     Profile,
+    Staff,
     StaffCreate,
     Store,
     User,
@@ -780,3 +781,67 @@ def test_store_qrcode(
         headers=superuser_token_headers,
     )
     assert gone.status_code == 404
+
+
+def test_store_hard_delete_removes_everything(
+    client, db: Session, superuser_token_headers
+) -> None:
+    """彻底删除: 门店 + 归属会员 + 工单 + 店长账号全部移除 (区别于软删闭店)."""
+    import uuid as _uuid
+
+    from sqlmodel import select as _select
+
+    from app.models import ContactRequest, Profile as ProfileModel, User as UserModel
+
+    store = Store(name="待硬删门店", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+
+    member = _wx_member(db, home_store_id=store.id, member_days=30)
+    orphan = _wx_member(db, home_store_id=None)  # 别店/无主用户不受影响
+    db.add(
+        ContactRequest(from_user_id=member.id, to_user_id=orphan.id, store_id=store.id)
+    )
+
+    email = random_email()
+    pwd = random_lower_string() + "Aa1!"
+    crud.create_staff(
+        session=db,
+        staff_create=StaffCreate(
+            email=email,
+            name="硬删店长",
+            password=pwd,
+            role="store_admin",
+            store_id=store.id,
+        ),
+    )
+    member_id = member.id
+    db.commit()
+
+    r = client.post(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}/hard-delete",
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
+
+    # 会员账号已删除 (级联 Profile)
+    assert db.get(UserModel, member_id) is None
+    assert (
+        db.exec(_select(ProfileModel).where(ProfileModel.user_id == member_id)).first()
+        is None
+    )
+    # 工单已删除
+    assert (
+        db.exec(
+            _select(ContactRequest).where(ContactRequest.store_id == store.id)
+        ).first()
+        is None
+    )
+    # 店长账号已删除
+    assert db.exec(_select(Staff).where(Staff.store_id == store.id)).first() is None
+    # 门店已删除
+    assert db.get(Store, store.id) is None
+    # 无主用户不受影响
+    assert db.get(UserModel, orphan.id) is not None
+    del _uuid

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router"
 import {
   ArrowRight,
+  Ban,
   MapPin,
   Pencil,
   Phone,
@@ -100,6 +101,18 @@ function StoresPage() {
       qc.invalidateQueries({ queryKey: ["stores-overview"] })
       toast.success("门店已关闭")
     },
+    onError: () => toast.error("关闭门店失败, 请重试"),
+  })
+
+  // 彻底删除: 连同归属会员/工单/店长账号一并移除 (不可恢复)
+  const hardDel = useMutation({
+    mutationFn: (id: string) => AdminService.hardDeleteStore({ storeId: id }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-stores"] })
+      qc.invalidateQueries({ queryKey: ["stores-overview"] })
+      toast.success("门店已彻底删除")
+    },
+    onError: () => toast.error("彻底删除失败, 请重试"),
   })
 
   const cities = [
@@ -204,7 +217,23 @@ function StoresPage() {
                 })
               }
               onDelete={() => {
-                if (confirm(`确定关闭门店 "${s.name}" 吗?`)) del.mutate(s.id)
+                if (
+                  confirm(
+                    `确定关闭门店 "${s.name}" 吗?\n关闭后小程序内不可见, 数据保留, 可随时重新启用。`,
+                  )
+                )
+                  del.mutate(s.id)
+              }}
+              onHardDelete={() => {
+                const name = prompt(
+                  `⚠️ 彻底删除 "${s.name}"\n\n将永久删除: 归属会员 ${s.member_count} 人及其账号资料、全部工单、店长账号。\n此操作不可恢复!\n\n如确认, 请输入门店名称:`,
+                )
+                if (name === null) return
+                if (name !== s.name) {
+                  toast.error("门店名称不匹配, 已取消")
+                  return
+                }
+                hardDel.mutate(s.id)
               }}
             />
           ))}
@@ -220,12 +249,14 @@ function StoreCard({
   isSuperuser,
   onEnter,
   onDelete,
+  onHardDelete,
 }: {
   item: StoreOverviewItem
   full?: StorePublic
   isSuperuser: boolean
   onEnter: () => void
   onDelete: () => void
+  onHardDelete: () => void
 }) {
   const pending = [
     {
@@ -359,7 +390,15 @@ function StoreCard({
                 aria-label="关闭门店"
                 onClick={onDelete}
               >
-                <Trash2 className="text-rose-500" />
+                <Ban className="text-amber-500" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="彻底删除 (连会员/工单/店长一并删除, 不可恢复)"
+                onClick={onHardDelete}
+              >
+                <Trash2 className="text-destructive" />
               </Button>
             </>
           )}

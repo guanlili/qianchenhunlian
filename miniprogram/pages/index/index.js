@@ -288,7 +288,7 @@ const buildProfileFields = (form) => [
   { key: 'origin',    label: '户籍地',   value: form.origin, editable: true, type: 'region' },
   { key: 'location',  label: '居住地',   value: form.location, editable: true, type: 'region' },
   { key: 'hometown',  label: '家乡',     value: form.hometown, editable: true, type: 'region' },
-  { key: 'income',    label: '年收入',   value: form.income, editable: true, options: incomeOptions.filter((it) => it !== '不限') },
+  { key: 'income',    label: '月收入',   value: form.income, editable: true, options: incomeOptions.filter((it) => it !== '不限') },
   { key: 'marriage',  label: '婚姻状况', value: form.marriage, editable: true, options: ['未婚', '离异未育', '离异已育', '其他'] },
   { key: 'house',     label: '是否有婚房', value: form.house, editable: true, options: houseOptions.filter((it) => it !== '不限') },
   { key: 'has_car',   label: '是否有车', value: form.has_car, editable: true, options: ['有车', '无车'] },
@@ -304,7 +304,7 @@ const buildMyProfileRows = (form) => [
   { label: '户籍地', value: '淄博桓台县' },
   { label: '居住地', value: '北京东城区' },
   { label: '婚姻', value: form.marriage },
-  { label: '年收入', value: form.income },
+  { label: '月收入', value: form.income },
   { label: '是否有房', value: form.house },
   { label: '是否有车', value: '未填写' },
 ];
@@ -314,12 +314,12 @@ const buildCriteriaFields = (values) => [
   { key: 'year', label: '年份要求', value: values.year, options: ['不限', '1982年-1987年', '1987年-1992年', '1990年-1996年', '1995年-2000年'] },
   { key: 'height', label: '身高要求', value: values.height, options: ['不限', '140cm-156cm', '158cm-170cm', '170cm-183cm', '172cm-188cm'] },
   { key: 'edu', label: '学历要求', value: values.edu, options: ['不限', '小学/初中 至 大专', '大专及以上', '本科及以上', '硕士及以上'] },
-  { key: 'income', label: '年收入要求', value: values.income, options: incomeOptions },
+  { key: 'income', label: '月收入要求', value: values.income, options: incomeOptions },
   { key: 'house', label: '婚房要求', value: values.house, options: houseOptions },
   { key: 'marriage', label: '婚姻要求', value: values.marriage, options: marriageOptions },
 ];
 
-// 注: 年龄/身高/年收入 改 slider 区间; 户籍地用 picker 多选; 职业去掉
+// 注: 年龄/身高/月收入 改 slider 区间; 户籍地用 picker 多选; 职业去掉
 const createFilterSteps = () => [
   { key: 'gender', title: '性别', multiple: false, columns: 'two', options: makeOptions(['不限', '男', '女']) },
   { key: 'marriage', title: '婚姻', multiple: true, columns: 'two', options: makeOptions(marriageOptions.filter((m) => m !== '不限')) },
@@ -499,7 +499,7 @@ Page({
     filterHasNext: true,
     activeFilter: null,        // 当前生效的筛选条件 (null = 走每日推荐)
     activeFilterCount: 0,      // 命中类别数 (按组算, 0~7)
-    // 年龄/身高/年收入 range state (slider 双端选择)
+    // 年龄/身高/月收入 range state (slider 双端选择)
     ageRange: { min: 25, max: 35, unlimited: true },
     heightRange: { min: 160, max: 175, unlimited: true },
     incomeRange: { minIdx: 0, maxIdx: 9, unlimited: true },
@@ -572,8 +572,16 @@ Page({
       height: '', edu: '', marriage: '', income: '',
       job: '', has_house: '', has_car: '', desc: '',
       phone: '', wechat: '', origin: '', hometown: '', body_type: '',
+      weight: '', ethnicity: '', employer_type: '', has_social_insurance: '',
+      health_status: '', hobbies: '',
+      cYearMin: '', cYearMax: '', cHeightMin: '', cHeightMax: '',
+      cIncome: '', cLocation: '', cHouse: '', cEdu: '', cMarriage: '', cOrigin: '',
     },
     bodyOptions: ['偏瘦', '苗条', '匀称', '适中', '中等', '偏胖'],
+    ethnicityOptions: ['汉族', '回族', '满族', '蒙古族', '壮族', '藏族', '苗族', '彝族', '朝鲜族', '土家族', '其他'],
+    employerOptions: ['国企', '央企', '民企', '事业单位', '政府机关', '外企', '个体经营', '自由职业', '其他'],
+    socialOptions: ['有', '无'],
+    healthOptions: ['健康', '良好', '一般', '其他'],
     guestAvatarPath: '',  // 注册页 (头像/昵称/协议)
     guestAvatarUrl: '',
     guestNickname: '',
@@ -1151,7 +1159,7 @@ Page({
     // 1) 类别选项 (gender/marriage/edu/region/job) → req
     const req = filterStepsToRequest(this.data.filterSteps);
 
-    // 2) range slider (年龄/身高/年收入) 合并到 req
+    // 2) range slider (年龄/身高/月收入) 合并到 req
     if (!this.data.ageRange.unlimited) {
       // 年龄 → 出生年范围. 当前年 - 年龄上限 = year_min, 当前年 - 年龄下限 = year_max
       req.year_min = _CURRENT_YEAR - this.data.ageRange.max;
@@ -2624,8 +2632,11 @@ Page({
         const p = res && res.profile;
         if (!p) return;
         let step = 0;
-        if (!p.height || !p.edu || !p.marriage || !p.income) step = 3;
-        else if (!p.job || !p.has_house || !p.has_car || !p.body_type) step = 4;
+        if (!p.height || !p.weight || !p.ethnicity || !p.marriage || !p.job || !p.income) {
+          step = 3;
+        } else if (!p.criteria || !p.criteria.year_min || !p.criteria.income) {
+          step = 5; // 择偶要求未填
+        }
         // 已填字段预填进表单, 续填时只补缺的
         const gf = {
           ...this.data.guestForm,
@@ -2640,6 +2651,16 @@ Page({
           origin: p.origin || '',
           hometown: p.hometown || '',
           body_type: p.body_type || '',
+          cYearMin: p.criteria ? String(p.criteria.year_min || '') : '',
+          cYearMax: p.criteria ? String(p.criteria.year_max || '') : '',
+          cHeightMin: p.criteria ? String(p.criteria.height_min || '') : '',
+          cHeightMax: p.criteria ? String(p.criteria.height_max || '') : '',
+          cIncome: p.criteria ? p.criteria.income || '' : '',
+          cLocation: p.criteria && p.criteria.locations && p.criteria.locations[0] ? p.criteria.locations[0] : '',
+          cHouse: p.criteria ? p.criteria.house || '' : '',
+          cEdu: p.criteria ? p.criteria.edu || '' : '',
+          cMarriage: p.criteria ? p.criteria.marriage || '' : '',
+          cOrigin: p.criteria && p.criteria.origins && p.criteria.origins[0] ? p.criteria.origins[0] : '',
           phone: p.contact_phone || this.data.guestForm.phone,
           wechat: p.contact_wechat || this.data.guestForm.wechat,
         };
@@ -2708,8 +2729,28 @@ Page({
                   ? this.data.jobOptions[idx]
                   : field === 'body_type'
                     ? this.data.bodyOptions[idx]
-                    : field === 'origin' || field === 'hometown'
-                      ? regions[idx]
+                  : field === 'ethnicity'
+                    ? this.data.ethnicityOptions[idx]
+                    : field === 'employer_type'
+                      ? this.data.employerOptions[idx]
+                      : field === 'has_social_insurance'
+                        ? this.data.socialOptions[idx]
+                        : field === 'health_status'
+                          ? this.data.healthOptions[idx]
+                          : field === 'c_income'
+                            ? this.data.incomeOptions[idx]
+                            : field === 'c_location'
+                              ? guestCities[idx]
+                              : field === 'c_house'
+                                ? this.data.houseOptions[idx]
+                                : field === 'c_edu'
+                                  ? this.data.eduOptions[idx]
+                                  : field === 'c_marriage'
+                                    ? this.data.marriageOptions[idx]
+                                    : field === 'c_origin'
+                                      ? regions[idx]
+                                      : field === 'origin' || field === 'hometown'
+                                        ? regions[idx]
                       : field === 'year'
                         ? guestYears[idx]
                         : field === 'location'
@@ -2723,6 +2764,21 @@ Page({
     this.setData({ guestForm: { ...this.data.guestForm, height: v } });
   },
 
+  /** 通用数字输入 (data-field: weight/cHeightMin/cHeightMax) */
+  onGuestNumInput(e) {
+    const field = e.currentTarget.dataset.field;
+    const v = (e.detail.value || '').replace(/[^0-9]/g, '').slice(0, 3);
+    this.setData({ guestForm: { ...this.data.guestForm, [field]: v } });
+  },
+
+  /** 通用文本输入 (data-field: hobbies) */
+  onGuestTextInput(e) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({
+      guestForm: { ...this.data.guestForm, [field]: (e.detail.value || '').slice(0, 120) },
+    });
+  },
+
   onGuestDescInput(e) {
     this.setData({ guestForm: { ...this.data.guestForm, desc: (e.detail.value || '').slice(0, 200) } });
   },
@@ -2733,17 +2789,20 @@ Page({
     if (!f.height || Number(f.height) < 100 || Number(f.height) > 250) {
       return wx.showToast({ title: '请填写正确身高', icon: 'none' });
     }
-    if (!f.edu) return wx.showToast({ title: '请选择学历', icon: 'none' });
+    if (!f.weight || Number(f.weight) < 30 || Number(f.weight) > 200) {
+      return wx.showToast({ title: '请填写正确体重 (kg)', icon: 'none' });
+    }
+    if (!f.ethnicity) return wx.showToast({ title: '请选择民族', icon: 'none' });
     if (!f.marriage) return wx.showToast({ title: '请选择婚姻状况', icon: 'none' });
-    if (!f.income) return wx.showToast({ title: '请选择年收入', icon: 'none' });
+    if (!f.income) return wx.showToast({ title: '请选择月收入', icon: 'none' });
     try {
       await profileSvc.saveProfile({
         height: Number(f.height),
-        edu: f.edu,
+        weight: Number(f.weight),
+        ethnicity: f.ethnicity,
         marriage: f.marriage,
+        job: f.job,
         income: f.income,
-        origin: f.origin || undefined,
-        hometown: f.hometown || undefined,
       });
       this.setData({ guestStep: 4 });
     } catch (err) {
@@ -2773,7 +2832,6 @@ Page({
         });
       }
       this.setData({ guestStep: 5 });
-      this.loadGuestPlans();
     } catch (err) {
       wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
     }
@@ -2783,6 +2841,43 @@ Page({
     const field = e.currentTarget.dataset.field;
     const v = (e.detail.value || '').slice(0, 32);
     this.setData({ guestForm: { ...this.data.guestForm, [field]: v } });
+  },
+
+  /** 择偶要求 (必填: 年份/身高/月收入/居住要求) → 缴费页 */
+  async submitGuestCriteria() {
+    const f = this.data.guestForm;
+    if (!f.cYearMin || !f.cYearMax) {
+      return wx.showToast({ title: '请选择对方年份范围', icon: 'none' });
+    }
+    if (Number(f.cYearMin) < Number(f.cYearMax)) {
+      return wx.showToast({ title: '年份范围: 起始年份应晚于截止年份', icon: 'none' });
+    }
+    if (!f.cHeightMin || !f.cHeightMax) {
+      return wx.showToast({ title: '请填写对方身高范围', icon: 'none' });
+    }
+    if (Number(f.cHeightMin) > Number(f.cHeightMax)) {
+      return wx.showToast({ title: '身高范围: 下限应小于上限', icon: 'none' });
+    }
+    if (!f.cIncome) return wx.showToast({ title: '请选择对方月收入要求', icon: 'none' });
+    if (!f.cLocation) return wx.showToast({ title: '请选择居住地要求', icon: 'none' });
+    try {
+      await profileSvc.saveCriteria({
+        year_min: Number(f.cYearMin),
+        year_max: Number(f.cYearMax),
+        height_min: Number(f.cHeightMin),
+        height_max: Number(f.cHeightMax),
+        income: f.cIncome,
+        locations: [f.cLocation],
+        house: f.cHouse || undefined,
+        edu: f.cEdu || undefined,
+        marriage: f.cMarriage || undefined,
+        origins: f.cOrigin ? [f.cOrigin] : undefined,
+      });
+      this.setData({ guestStep: 6 });
+      this.loadGuestPlans();
+    } catch (err) {
+      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
+    }
   },
 
   // ---- 缴费页: 微信支付年卡 / 体验码开通 / 暂不缴费 ----
@@ -3030,7 +3125,7 @@ Page({
   goRegister() {
     const app = getApp();
     const step = app.globalData.isWelcomed
-      ? this.data.resumeToStep || 5
+      ? this.data.resumeToStep || 6
       : 2;
     this.setData({ previewGate: true, guestStep: step });
     if (step === 2) this.initGuestNickname();

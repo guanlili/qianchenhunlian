@@ -15,11 +15,11 @@
         <view class="member-lock-crown-wrap">
           <view class="member-lock-crown">✦</view>
         </view>
-        <view class="member-lock-title" wx:if="{{previewGate}}">{{guestStep === 1 ? '先做个小测试' : guestStep === 2 ? '欢迎你, 先完善基本信息' : guestStep === 3 ? '完善基本条件' : guestStep === 4 ? '工作与资产' : '确认缴费'}}</view>
+        <view class="member-lock-title" wx:if="{{previewGate}}">{{guestStep === 1 ? '先做个小测试' : guestStep === 2 ? '欢迎你, 先完善基本信息' : guestStep === 3 ? '完善基本条件' : guestStep === 4 ? '更多资料 (选填)' : guestStep === 5 ? '择偶要求' : '确认缴费'}}</view>
         <view class="member-lock-title" wx:else>每日推荐</view>
         <view class="member-lock-sub" wx:if="{{previewGate}}">
-          <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传真实头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、学历、婚姻与收入' : guestStep === 4 ? '职业、婚房、车与联系方式' : '微信支付年费, 或填体验码直接开通'}}</text>
-          <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 5 步)</text>
+          <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传真实头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、体重、民族、婚姻、职业与月收入' : guestStep === 4 ? '学历、工作、资产等, 均为选填' : guestStep === 5 ? '告诉我们你期待什么样的另一半' : '微信支付年费, 或填体验码直接开通'}}</text>
+          <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 6 步)</text>
         </view>
         <view class="member-lock-sub" wx:else>
           <text>按你的性别、年龄、城市相配而来</text>
@@ -90,9 +90,13 @@
           <input class="guest-input" type="number" placeholder="如 165" value="{{guestForm.height}}" bindinput="onGuestHeightInput" maxlength="3" />
         </view>
         <view class="guest-row">
-          <view class="guest-label">学历<text class="req">*</text></view>
-          <picker mode="selector" range="{{eduOptions}}" bindchange="onGuestFormPick" data-field="edu">
-            <view class="guest-picker {{!guestForm.edu ? 'placeholder' : ''}}">{{guestForm.edu || '请选择学历'}}</view>
+          <view class="guest-label">体重 (kg)<text class="req">*</text></view>
+          <input class="guest-input" type="number" placeholder="如 55" value="{{guestForm.weight}}" bindinput="onGuestNumInput" data-field="weight" maxlength="3" />
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">民族<text class="req">*</text></view>
+          <picker mode="selector" range="{{ethnicityOptions}}" bindchange="onGuestFormPick" data-field="ethnicity">
+            <view class="guest-picker {{!guestForm.ethnicity ? 'placeholder' : ''}}">{{guestForm.ethnicity || '请选择民族'}}</view>
           </picker>
         </view>
         <view class="guest-row">
@@ -102,10 +106,49 @@
           </picker>
         </view>
         <view class="guest-row">
-          <view class="guest-label">年收入<text class="req">*</text></view>
-          <picker mode="selector" range="{{incomeOptions}}" bindchange="onGuestFormPick" data-field="income">
-            <view class="guest-picker {{!guestForm.income ? 'placeholder' : ''}}">{{guestForm.income || '请选择年收入'}}</view>
+          <view class="guest-label">职业<text class="req">*</text></view>
+          <picker mode="selector" range="{{jobOptions}}" bindchange="onGuestFormPick" data-field="job">
+            <view class="guest-picker {{!guestForm.job ? 'placeholder' : ''}}">{{guestForm.job || '请选择职业'}}</view>
           </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">月收入<text class="req">*</text></view>
+          <picker mode="selector" range="{{incomeOptions}}" bindchange="onGuestFormPick" data-field="income">
+            <view class="guest-picker {{!guestForm.income ? 'placeholder' : ''}}">{{guestForm.income || '请选择月收入'}}</view>
+          </picker>
+        </view>
+        <button class="member-lock-btn" bindtap="submitGuestStep2">下一步</button>
+      </view>
+
+      <!-- 填写资料 · 工作与资产 + 联系方式 -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 4}}">
+        <view class="guest-row">
+          <view class="guest-label">学历</view>
+          <picker mode="selector" range="{{eduOptions}}" bindchange="onGuestFormPick" data-field="edu">
+            <view class="guest-picker {{!guestForm.edu ? 'placeholder' : ''}}">{{guestForm.edu || '请选择学历'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">工作单位性质</view>
+          <picker mode="selector" range="{{employerOptions}}" bindchange="onGuestFormPick" data-field="employer_type">
+            <view class="guest-picker {{!guestForm.employer_type ? 'placeholder' : ''}}">{{guestForm.employer_type || '请选择'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">是否有社保</view>
+          <picker mode="selector" range="{{socialOptions}}" bindchange="onGuestFormPick" data-field="has_social_insurance">
+            <view class="guest-picker {{!guestForm.has_social_insurance ? 'placeholder' : ''}}">{{guestForm.has_social_insurance || '请选择'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">身体状况</view>
+          <picker mode="selector" range="{{healthOptions}}" bindchange="onGuestFormPick" data-field="health_status">
+            <view class="guest-picker {{!guestForm.health_status ? 'placeholder' : ''}}">{{guestForm.health_status || '请选择'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">兴趣爱好</view>
+          <input class="guest-input" type="text" placeholder="如 旅行/烹饪/运动 (选填)" value="{{guestForm.hobbies}}" bindinput="onGuestTextInput" data-field="hobbies" maxlength="120" />
         </view>
         <view class="guest-row">
           <view class="guest-label">户籍地</view>
@@ -119,17 +162,6 @@
             <view class="guest-picker {{!guestForm.hometown ? 'placeholder' : ''}}">{{guestForm.hometown || '请选择家乡'}}</view>
           </picker>
         </view>
-        <button class="member-lock-btn" bindtap="submitGuestStep2">下一步</button>
-      </view>
-
-      <!-- 填写资料 · 工作与资产 + 联系方式 -->
-      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 4}}">
-        <view class="guest-row">
-          <view class="guest-label">职业<text class="req">*</text></view>
-          <picker mode="selector" range="{{jobOptions}}" bindchange="onGuestFormPick" data-field="job">
-            <view class="guest-picker {{!guestForm.job ? 'placeholder' : ''}}">{{guestForm.job || '请选择职业'}}</view>
-          </picker>
-        </view>
         <view class="guest-row">
           <view class="guest-label">体型</view>
           <picker mode="selector" range="{{bodyOptions}}" bindchange="onGuestFormPick" data-field="body_type">
@@ -137,13 +169,13 @@
           </picker>
         </view>
         <view class="guest-row">
-          <view class="guest-label">是否有婚房<text class="req">*</text></view>
+          <view class="guest-label">是否有婚房</view>
           <picker mode="selector" range="{{houseOptions}}" bindchange="onGuestFormPick" data-field="has_house">
             <view class="guest-picker {{!guestForm.has_house ? 'placeholder' : ''}}">{{guestForm.has_house || '请选择婚房情况'}}</view>
           </picker>
         </view>
         <view class="guest-row">
-          <view class="guest-label">是否有车<text class="req">*</text></view>
+          <view class="guest-label">是否有车</view>
           <picker mode="selector" range="{{carOptions}}" bindchange="onGuestFormPick" data-field="has_car">
             <view class="guest-picker {{!guestForm.has_car ? 'placeholder' : ''}}">{{guestForm.has_car || '请选择'}}</view>
           </picker>
@@ -161,6 +193,67 @@
           <input class="guest-input" type="text" placeholder="填微信号即可" value="{{guestForm.wechat}}" bindinput="onGuestContactInput" data-field="wechat" maxlength="32" />
         </view>
         <button class="member-lock-btn" bindtap="submitGuestStep3">下一步</button>
+
+      <!-- 择偶要求 (必填: 年份/身高/月收入/居住要求) -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 5}}">
+        <view class="guest-row">
+          <view class="guest-label">对方出生年份<text class="req">*</text></view>
+          <view class="criteria-range">
+            <picker mode="selector" range="{{guestYears}}" bindchange="onGuestFormPick" data-field="cYearMin">
+              <view class="guest-picker {{!guestForm.cYearMin ? 'placeholder' : ''}}">{{guestForm.cYearMin || '起始'}}</view>
+            </picker>
+            <text class="range-sep">至</text>
+            <picker mode="selector" range="{{guestYears}}" bindchange="onGuestFormPick" data-field="cYearMax">
+              <view class="guest-picker {{!guestForm.cYearMax ? 'placeholder' : ''}}">{{guestForm.cYearMax || '截止'}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">对方身高 (cm)<text class="req">*</text></view>
+          <view class="criteria-range">
+            <input class="guest-input" type="number" placeholder="下限" value="{{guestForm.cHeightMin}}" bindinput="onGuestNumInput" data-field="cHeightMin" maxlength="3" />
+            <text class="range-sep">至</text>
+            <input class="guest-input" type="number" placeholder="上限" value="{{guestForm.cHeightMax}}" bindinput="onGuestNumInput" data-field="cHeightMax" maxlength="3" />
+          </view>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">对方月收入<text class="req">*</text></view>
+          <picker mode="selector" range="{{incomeOptions}}" bindchange="onGuestFormPick" data-field="c_income">
+            <view class="guest-picker {{!guestForm.cIncome ? 'placeholder' : ''}}">{{guestForm.cIncome || '请选择月收入要求'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">居住的要求<text class="req">*</text></view>
+          <picker mode="selector" range="{{guestCities}}" bindchange="onGuestFormPick" data-field="c_location">
+            <view class="guest-picker {{!guestForm.cLocation ? 'placeholder' : ''}}">{{guestForm.cLocation || '请选择居住城市要求'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">对方是否有房</view>
+          <picker mode="selector" range="{{houseOptions}}" bindchange="onGuestFormPick" data-field="c_house">
+            <view class="guest-picker {{!guestForm.cHouse ? 'placeholder' : ''}}">{{guestForm.cHouse || '不限, 可选填'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">对方学历要求</view>
+          <picker mode="selector" range="{{eduOptions}}" bindchange="onGuestFormPick" data-field="c_edu">
+            <view class="guest-picker {{!guestForm.cEdu ? 'placeholder' : ''}}">{{guestForm.cEdu || '不限, 可选填'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">对方婚姻状况</view>
+          <picker mode="selector" range="{{marriageOptions}}" bindchange="onGuestFormPick" data-field="c_marriage">
+            <view class="guest-picker {{!guestForm.cMarriage ? 'placeholder' : ''}}">{{guestForm.cMarriage || '不限, 可选填'}}</view>
+          </picker>
+        </view>
+        <view class="guest-row">
+          <view class="guest-label">对方户籍地要求</view>
+          <picker mode="selector" range="{{regions}}" bindchange="onGuestFormPick" data-field="c_origin">
+            <view class="guest-picker {{!guestForm.cOrigin ? 'placeholder' : ''}}">{{guestForm.cOrigin || '不限, 可选填'}}</view>
+          </picker>
+        </view>
+        <button class="member-lock-btn" bindtap="submitGuestCriteria">下一步</button>
+      </view>
       </view>
 
       <!-- 缴费页: 微信支付年费 / 体验码开通 / 暂不缴费 -->
@@ -226,7 +319,7 @@
               <view class="preview-line big">{{item.gender || ''}} · {{item.year}}年<text wx:if="{{item.ageNow}}"> ({{item.ageNow}}岁)</text></view>
               <view class="preview-line">📍 {{item.location || '山东'}}<text wx:if="{{item.origin}}"> · 籍贯{{item.origin}}</text></view>
               <view class="preview-line">{{item.edu || '学历未填'}}<text wx:if="{{item.height}}"> · {{item.height}}cm</text><text wx:if="{{item.marriage}}"> · {{item.marriage}}</text></view>
-              <view class="preview-line">{{item.job || '职业未填'}}<text wx:if="{{item.income}}"> · 年收入{{item.income}}</text></view>
+              <view class="preview-line">{{item.job || '职业未填'}}<text wx:if="{{item.income}}"> · 月收入{{item.income}}</text></view>
             </view>
           </view>
           <view class="preview-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
@@ -545,7 +638,7 @@
         <view class="section-title"><text></text>择偶要求</view>
         <view class="section-card">
           <view class="pref-row"><text>年份</text><text>{{selectedProfile.wants.year}}</text></view>
-          <view class="pref-row"><text>年收入</text><text>{{selectedProfile.wants.income}}</text></view>
+          <view class="pref-row"><text>月收入</text><text>{{selectedProfile.wants.income}}</text></view>
           <view class="pref-row"><text>身高</text><text>{{selectedProfile.wants.height}}</text></view>
           <view class="pref-row"><text>婚房</text><text>{{selectedProfile.wants.house}}</text></view>
           <view class="pref-row"><text>学历要求</text><text>{{selectedProfile.wants.edu}}</text></view>
@@ -649,7 +742,7 @@
           </view>
           <view class="pref-row"><text>年份</text><text>{{criteriaValues.year}}</text></view>
           <view class="pref-row"><text>身高</text><text>{{criteriaValues.height}}</text></view>
-          <view class="pref-row"><text>年收入</text><text>{{criteriaValues.income}}</text></view>
+          <view class="pref-row"><text>月收入</text><text>{{criteriaValues.income}}</text></view>
           <view class="pref-row"><text>是否有房</text><text>{{criteriaValues.house}}</text></view>
           <view class="pref-row"><text>学历要求</text><text>{{criteriaValues.edu}}</text></view>
           <view class="pref-row"><text>婚姻要求</text><text>{{criteriaValues.marriage}}</text></view>
@@ -1189,10 +1282,10 @@
           </view>
         </view>
 
-        <!-- 6. 年收入 -->
+        <!-- 6. 月收入 -->
         <view class="filter-group">
           <view class="filter-group-row">
-            <view class="filter-group-title">年收入</view>
+            <view class="filter-group-title">月收入</view>
             <text class="filter-no-limit-toggle {{incomeRange.unlimited ? 'on' : ''}}" bindtap="toggleIncomeRange">
               {{incomeRange.unlimited ? '✓ 不限' : '设为不限'}}
             </text>
