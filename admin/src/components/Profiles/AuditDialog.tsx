@@ -18,12 +18,12 @@ import { Label } from "@/components/ui/label"
 
 interface AuditDialogProps {
   item: AdminProfileItem
-  approve: boolean // true = 通过, false = 驳回
+  approve: boolean // true = 通过, false = 下架
   trigger: React.ReactNode
   onClose?: () => void
 }
 
-// 常见驳回原因快捷模板 (点击填充输入框, 仍可手改; 口径对齐审核规范)
+// 常见下架原因快捷模板 (点击填充输入框, 仍可手改; 口径对齐平台规范)
 const REJECT_TEMPLATES = [
   "照片模糊或无法辨认",
   "照片与资料明显不符",
@@ -56,7 +56,7 @@ export function AuditDialog({
       qc.invalidateQueries({ queryKey: ["admin-members"] })
       qc.invalidateQueries({ queryKey: ["member-full"] })
       qc.invalidateQueries({ queryKey: ["admin-stats"] })
-      toast.success(approve ? "已通过审核" : "已驳回")
+      toast.success(approve ? "已通过审核" : "已下架")
       setOpen(false)
       setReason("")
       onClose?.()
@@ -71,7 +71,7 @@ export function AuditDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{approve ? "通过审核" : "驳回资料"}</DialogTitle>
+          <DialogTitle>{approve ? "通过审核" : "下架资料"}</DialogTitle>
           <DialogDescription>
             寻缘号 {item.xy_code || "—"} · {item.gender || ""}{" "}
             {item.year ? `${item.year}年` : ""} {item.location || ""}
@@ -79,7 +79,7 @@ export function AuditDialog({
         </DialogHeader>
         {!approve && (
           <div className="space-y-2 py-2">
-            <Label htmlFor="reason">驳回原因 (选填)</Label>
+            <Label htmlFor="reason">下架原因 (选填)</Label>
             <div className="flex flex-wrap gap-1.5">
               {REJECT_TEMPLATES.map((t) => (
                 <button
@@ -114,7 +114,7 @@ export function AuditDialog({
               ? "处理中..."
               : approve
                 ? "确认通过"
-                : "确认驳回"}
+                : "确认下架"}
           </Button>
         </DialogFooter>
       </DialogContent>

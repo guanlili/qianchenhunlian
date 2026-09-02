@@ -80,9 +80,9 @@ export function MembersList() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">审核: 全部</SelectItem>
-            <SelectItem value="pending">审核中</SelectItem>
+            <SelectItem value="pending">待生效</SelectItem>
             <SelectItem value="approved">已通过</SelectItem>
-            <SelectItem value="rejected">已驳回</SelectItem>
+            <SelectItem value="rejected">已下架</SelectItem>
             <SelectItem value="none">未填资料</SelectItem>
           </SelectContent>
         </Select>

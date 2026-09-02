@@ -11,7 +11,7 @@ Page({
   data: {
     loading: true,
     status: null,      // /membership/me: is_member/expires_at/quota
-    memberDailyQuota: 20, // 权益文案动态化 (后台可配)
+    memberDailyQuota: 2, // 权益文案动态化 (后台可配)
     freeDailyQuota: 5,
     plans: [],         // 可购套餐
     payMode: 'off',    // online (真实微信支付) / mock (模拟支付联调) / off (仅门店线下)
@@ -60,7 +60,7 @@ Page({
       this.setData({
         status,
         plans: plansRes.plans || [],
-        memberDailyQuota: plansRes.member_daily_quota || 20,
+        memberDailyQuota: plansRes.member_daily_quota || 2,
         freeDailyQuota: plansRes.free_daily_quota || 5,
         payMode: plansRes.pay_mode || 'off',
         latestOrder: latestOrder
@@ -185,7 +185,7 @@ Page({
     if (this.data.redeeming) return;
     const code = (this.data.redeemCode || '').trim();
     if (!code) {
-      wx.showToast({ title: '请输入会员码', icon: 'none' });
+      wx.showToast({ title: '请输入体验码', icon: 'none' });
       return;
     }
     this.setData({ redeeming: true });
@@ -200,7 +200,7 @@ Page({
       this.setData({ redeemCode: '' });
       this.refresh({ quiet: true });
     } catch (err) {
-      const detail = err && typeof err.detail === 'string' ? err.detail : '兑换失败, 请核对会员码';
+      const detail = err && typeof err.detail === 'string' ? err.detail : '兑换失败, 请核对体验码';
       wx.showToast({ title: detail, icon: 'none' });
     } finally {
       this.setData({ redeeming: false });

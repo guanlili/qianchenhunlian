@@ -19,9 +19,9 @@ export function AuditBadge({ status }: { status: string | null | undefined }) {
     rejected: "destructive",
   }
   const label: Record<string, string> = {
-    pending: "审核中",
+    pending: "待生效",
     approved: "已通过",
-    rejected: "已驳回",
+    rejected: "已下架",
   }
   return (
     <Badge variant={variant[status] || "secondary"}>

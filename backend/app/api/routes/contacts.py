@@ -102,7 +102,7 @@ def submit_contact_request(
         # 非在期会员的资料不对外 (与推荐池口径一致), 也不可作为撮合目标
         raise HTTPException(status_code=404, detail="对方资料不可见")
     if target_profile.audit_status != "approved":
-        raise HTTPException(status_code=404, detail="对方资料未通过审核")
+        raise HTTPException(status_code=404, detail="对方资料暂时不可见")
 
     # 留言内容审核 (fail-fast: 在扣额度/建单之前, 避免扣了额度又因违规 400)
     message = (body.message or "").strip()[:200] or None

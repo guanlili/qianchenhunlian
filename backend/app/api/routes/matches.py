@@ -301,18 +301,17 @@ def get_guest_preview(
         if cand_ids
         else {}
     )
+
+    def _preview_total(p: Profile) -> int:
+        total = pair_score(my_criteria, me, p, cand_criteria_map.get(p.user_id))
+        # 同城匹配加分 (与最低维度同权)
+        if city in (p.location or "") or city in (p.origin or ""):
+            total += 10
+        return total
+
     scored = sorted(
         rows,
-        key=lambda pu: sort_key(
-            pair_score(
-                my_criteria,
-                me,
-                pu[0],
-                cand_criteria_map.get(pu[0].user_id),
-            ),
-            pu[0],
-            me,
-        ),
+        key=lambda pu: sort_key(_preview_total(pu[0]), pu[0], me),
     )
 
     rows = scored[:limit]
@@ -392,18 +391,27 @@ def get_daily_recommendations(
             if cand_ids
             else {}
         )
+        my_city = (me_profile.location or "").strip() if me_profile else ""
+        if my_city:
+
+            def _daily_total(p: Profile) -> int:
+                total = pair_score(
+                    my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
+                )
+                if my_city in (p.location or "") or my_city in (p.origin or ""):
+                    total += 10  # 同城匹配加分
+                return total
+
+        else:
+
+            def _daily_total(p: Profile) -> int:
+                return pair_score(
+                    my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
+                )
+
         scored = sorted(
             pool,
-            key=lambda pu: sort_key(
-                pair_score(
-                    my_criteria,
-                    me_profile,
-                    pu[0],
-                    cand_criteria_map.get(pu[0].user_id),
-                ),
-                pu[0],
-                me_profile,
-            ),
+            key=lambda pu: sort_key(_daily_total(pu[0]), pu[0], me_profile),
         )
         rows = list(scored[offset : offset + limit + 1])
         has_more = len(rows) > limit

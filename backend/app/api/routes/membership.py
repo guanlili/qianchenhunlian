@@ -112,7 +112,7 @@ def list_plans(
     return MembershipPlansOut(
         pay_mode=membership.purchase_mode(session),
         free_daily_quota=int(cfg.get("free_daily_quota", 5)),
-        member_daily_quota=int(cfg.get("member_daily_quota", 20)),
+        member_daily_quota=int(cfg.get("member_daily_quota", 2)),
         plans=plans,
     )
 
@@ -433,7 +433,7 @@ def redeem_code(
     # 不存在/已用/作废统一文案防码枚举; 过期单独提示 (用户可找门店换新码)
     if not code or code.status != "unused":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="兑换码无效或已被使用"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="体验码无效或已被使用"
         )
     if code.expires_at and code.expires_at < datetime.utcnow():
         raise HTTPException(
@@ -455,7 +455,7 @@ def redeem_code(
     )
     if int(result.rowcount or 0) != 1:  # type: ignore[attr-defined]
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="兑换码无效或已被使用"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="体验码无效或已被使用"
         )
 
     grant = membership.grant_membership(

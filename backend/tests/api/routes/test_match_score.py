@@ -95,10 +95,22 @@ class _C:
 
 def test_criteria_score_dimensions() -> None:
     """年份/身高/收入/居住/婚姻 逐维命中; 要求缺失的维度不评分."""
-    c = _C(year_min=1990, year_max=1995, height_min=160, height_max=165, income="3-5万", locations=["济南"], marriage="未婚")
-    full = _P(year=1992, height=163, income="3-5万", location="山东 济南", marriage="未婚")
+    c = _C(
+        year_min=1990,
+        year_max=1995,
+        height_min=160,
+        height_max=165,
+        income="3-5万",
+        locations=["济南"],
+        marriage="未婚",
+    )
+    full = _P(
+        year=1992, height=163, income="3-5万", location="山东 济南", marriage="未婚"
+    )
     assert criteria_score(c, full) == 100
-    partial = _P(year=1992, height=170, income="5-7万", location="山东 青岛", marriage="离异未育")
+    partial = _P(
+        year=1992, height=170, income="5-7万", location="山东 青岛", marriage="离异未育"
+    )
     assert criteria_score(c, partial) == 30  # 仅年份命中
 
 
@@ -107,10 +119,18 @@ def test_criteria_score_none_criteria() -> None:
 
 
 def test_pair_score_symmetric() -> None:
-    me_p = _P(year=1992, height=163, income="3-5万", location="山东 济南", marriage="未婚")
-    cand_p = _P(year=1993, height=178, income="7-10万", location="山东 济南", marriage="未婚")
-    my_c = _C(year_min=1990, year_max=1995, height_min=175, height_max=185, locations=["济南"])
-    cand_c = _C(year_min=1990, year_max=1995, height_min=160, height_max=165, locations=["济南"])
+    me_p = _P(
+        year=1992, height=163, income="3-5万", location="山东 济南", marriage="未婚"
+    )
+    cand_p = _P(
+        year=1993, height=178, income="7-10万", location="山东 济南", marriage="未婚"
+    )
+    my_c = _C(
+        year_min=1990, year_max=1995, height_min=175, height_max=185, locations=["济南"]
+    )
+    cand_c = _C(
+        year_min=1990, year_max=1995, height_min=160, height_max=165, locations=["济南"]
+    )
     forward = criteria_score(my_c, cand_p)  # 我选她: 年份30+身高25+居住15 = 70
     backward = criteria_score(cand_c, me_p)  # 她选我: 年份30+身高25+居住15 = 70
     assert forward == 70 and backward == 70
@@ -123,20 +143,54 @@ def test_pair_score_symmetric() -> None:
 def test_daily_ranks_by_mutual_match(client: TestClient, db: Session) -> None:
     """择偶要求互相满足的会员排最前 (旧序按活跃度, 不达标者年龄再近也靠后)."""
     me = _mk_user(db)
-    _set_profile(db, me, gender="男", year=1992, location="山东 济南", audit_status="approved")
-    _set_criteria(db, me, year_min=1990, year_max=1995, height_min=160, height_max=165, locations=["济南"])
+    _set_profile(
+        db, me, gender="男", year=1992, location="山东 济南", audit_status="approved"
+    )
+    _set_criteria(
+        db,
+        me,
+        year_min=1990,
+        year_max=1995,
+        height_min=160,
+        height_max=165,
+        locations=["济南"],
+    )
     _mk_member(db, me)
     me_headers = authentication_token_from_email(client=client, email=me.email, db=db)
 
     # 双向命中: 女会员既符合我的要求, 我也符合她的要求
     good = _mk_user(db)
-    _set_profile(db, good, gender="女", year=1993, height=163, location="山东 济南", audit_status="approved")
-    _set_criteria(db, good, year_min=1990, year_max=1995, height_min=175, height_max=185, locations=["济南"])
+    _set_profile(
+        db,
+        good,
+        gender="女",
+        year=1993,
+        height=163,
+        location="山东 济南",
+        audit_status="approved",
+    )
+    _set_criteria(
+        db,
+        good,
+        year_min=1990,
+        year_max=1995,
+        height_min=175,
+        height_max=185,
+        locations=["济南"],
+    )
     _mk_member(db, good)
 
     # 年龄最近但不满足我的身高要求 → 应排在双向命中者之后
     near_age = _mk_user(db)
-    _set_profile(db, near_age, gender="女", year=1992, height=170, location="山东 济南", audit_status="approved")
+    _set_profile(
+        db,
+        near_age,
+        gender="女",
+        year=1992,
+        height=170,
+        location="山东 济南",
+        audit_status="approved",
+    )
     _mk_member(db, near_age)
 
     r = client.get(f"{API}/matches/daily", headers=me_headers)
@@ -150,17 +204,41 @@ def test_guest_preview_ranks_by_mutual_match(client: TestClient, db: Session) ->
     guest_email = None
     guest = _mk_user(db, openid=False)
     _set_profile(db, guest, gender="男", year=1992, location="山东 济南")
-    _set_criteria(db, guest, year_min=1990, year_max=1995, height_min=160, height_max=165, locations=["济南"])
+    _set_criteria(
+        db,
+        guest,
+        year_min=1990,
+        year_max=1995,
+        height_min=160,
+        height_max=165,
+        locations=["济南"],
+    )
     _mk_member(db, guest)
     guest_email = guest.email
     headers = authentication_token_from_email(client=client, email=guest_email, db=db)
 
     good = _mk_user(db)
-    _set_profile(db, good, gender="女", year=1993, height=163, location="山东 济南", audit_status="approved")
+    _set_profile(
+        db,
+        good,
+        gender="女",
+        year=1993,
+        height=163,
+        location="山东 济南",
+        audit_status="approved",
+    )
     _mk_member(db, good)
 
     near_age = _mk_user(db)
-    _set_profile(db, near_age, gender="女", year=1992, height=170, location="山东 济南", audit_status="approved")
+    _set_profile(
+        db,
+        near_age,
+        gender="女",
+        year=1992,
+        height=170,
+        location="山东 济南",
+        audit_status="approved",
+    )
     _mk_member(db, near_age)
 
     r = client.get(f"{API}/matches/preview", headers=headers)

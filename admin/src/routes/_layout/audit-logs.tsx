@@ -27,7 +27,7 @@ const ACTION_OPTIONS = [
   ["view_contact", "查看联系方式"],
   ["grant_balance", "赠送额度"],
   ["block", "封禁 / 解封"],
-  ["audit_pass", "资料审核"],
+  ["audit_pass", "资料审核 (历史)"],
   ["verify", "实名认证"],
   ["handle_ticket", "工单处理"],
   ["create_admin", "管理员账号"],

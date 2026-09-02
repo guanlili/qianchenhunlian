@@ -82,7 +82,7 @@ export function CouponGrantDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>发放门店优惠券</DialogTitle>
+          <DialogTitle>发放优惠券 (仅总部)</DialogTitle>
           <DialogDescription>
             寻缘号 {xyCode || "—"} · 到账立即生效; 每位会员 30 天内限领,
             超限会被拒绝
@@ -107,7 +107,7 @@ export function CouponGrantDialog({
               )}
             </div>
             <div className="text-muted-foreground text-xs">
-              加 N 天会员期 (每日 20 次申请额度), 到期日自动顺延
+              加 N 天会员期 (每日额度以后台配置为准), 到期日自动顺延
             </div>
             {kind === "member_days" && (
               <div className="mt-2 flex items-center gap-2">

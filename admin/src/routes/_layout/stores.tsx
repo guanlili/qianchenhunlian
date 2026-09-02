@@ -593,7 +593,7 @@ function StoreFormDialog({
               value={form.fees_desc}
               maxLength={500}
               onChange={(e) => update("fees_desc")(e.target.value)}
-              placeholder="基础服务 199 元起, 含资料初审 + 红娘对接 3 次"
+              placeholder="基础服务 199 元起, 含资料建档 + 红娘对接 3 次"
             />
           </div>
         </div>
