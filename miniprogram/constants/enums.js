@@ -101,19 +101,6 @@ const requirements = [
   '孝顺父母',
 ];
 
-const verifyStatus = {
-  none: '未认证',
-  pending: '审核中',
-  passed: '已认证',
-  rejected: '认证未通过',
-};
-
-const auditStatus = {
-  pending: '审核中',
-  approved: '已通过',
-  rejected: '审核未通过',
-};
-
 module.exports = {
   eduOptions,
   incomeOptions,
@@ -126,6 +113,4 @@ module.exports = {
   traits,
   advantages,
   requirements,
-  verifyStatus,
-  auditStatus,
 };

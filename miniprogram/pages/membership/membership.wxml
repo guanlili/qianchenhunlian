@@ -45,13 +45,13 @@
 
   <!-- 会员码兑换: 门店线下收款后发码, 输码自助开通 -->
   <view class="mp-card">
-    <view class="mp-card-title">会员码开通</view>
-    <view class="mp-tip">在门店现场缴费后, 输入红娘提供的会员码即可自助开通。</view>
+    <view class="mp-card-title">体验码开通</view>
+    <view class="mp-tip">在门店现场缴费后, 输入红娘提供的体验码即可自助开通。</view>
     <view class="redeem-row">
       <input
         class="redeem-input"
         type="text"
-        placeholder="请输入会员码"
+        placeholder="请输入体验码"
         value="{{redeemCode}}"
         bindinput="onRedeemInput"
         maxlength="32"

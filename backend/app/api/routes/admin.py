@@ -2761,7 +2761,7 @@ def _plans_response(
 ) -> MembershipPlansResponse:
     return MembershipPlansResponse(
         free_daily_quota=int(cfg.get("free_daily_quota", 5)),
-        member_daily_quota=int(cfg.get("member_daily_quota", 20)),
+        member_daily_quota=int(cfg.get("member_daily_quota", 2)),
         trial_once_per_user=bool(cfg.get("trial_once_per_user", True)),
         pay_enabled=bool(cfg.get("pay_enabled", False)),
         pay_mock=bool(cfg.get("pay_mock", False)),
@@ -2781,7 +2781,7 @@ def grant_coupon_endpoint(
     actor: CurrentActor,
     body: CouponGrantRequest = Body(),
 ) -> CouponGrantResponse:
-    """发放门店优惠券 (店长促活工具): 会员体验券 (N 天) / 申请次数券 (N 次).
+    """发放优惠券 (总部专属): 会员体验券 (N 天) / 申请次数券 (N 次).
 
     - 门店管理员限本店会员; 记录 source=store_coupon (可统计/审计)
     - 限领: 每会员每 30 天 coupon_monthly_limit 张 (两类合计, 0 = 不限)
@@ -2938,7 +2938,7 @@ def create_redeem_codes(
             if clash is None:
                 break
         else:  # pragma: no cover - 5 次全撞概率可忽略
-            raise HTTPException(status_code=500, detail="兑换码生成冲突, 请重试")
+            raise HTTPException(status_code=500, detail="体验码生成冲突, 请重试")
         created.append(
             MembershipRedeemCode(
                 code=display,
@@ -3031,12 +3031,12 @@ def void_redeem_code(
     """作废未使用的兑换码 (已兑换/已作废的不能再作废)."""
     code = session.get(MembershipRedeemCode, code_id)
     if not code:
-        raise HTTPException(status_code=404, detail="兑换码不存在")
+        raise HTTPException(status_code=404, detail="体验码不存在")
     owner_sid = _store_owner_id(actor)
     if owner_sid and code.store_id != owner_sid:
-        raise HTTPException(status_code=403, detail="只能操作本店的兑换码")
+        raise HTTPException(status_code=403, detail="只能操作本店的体验码")
     if code.status != "unused":
-        raise HTTPException(status_code=400, detail="该兑换码已被使用或已作废")
+        raise HTTPException(status_code=400, detail="该体验码已被使用或已作废")
     code.status = "void"
     code.updated_at = datetime.utcnow()
     _audit(

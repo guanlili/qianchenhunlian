@@ -288,7 +288,7 @@
         <view class="register-banner" wx:if="{{!isWelcomed}}" bindtap="goRegister">
           <view class="rb-main">
             <text class="rb-title">注册会员</text>
-            <text class="rb-sub">查看全部严选资料 · 红娘一对一撮合</text>
+            <text class="rb-sub">注册并开通, 解锁全部严选资料 · 红娘撮合</text>
           </view>
           <text class="rb-go">立即注册 ›</text>
         </view>
@@ -334,7 +334,7 @@
         <!-- 剩余资料模糊处理: 吸引注册 -->
         <view class="blurred-card" wx:for="{{blurredList}}" wx:key="index" bindtap="goRegister">
           <view class="blurred-line">{{item.gender || '会员'}} · {{item.age_range}} · {{item.location}}</view>
-          <view class="blurred-lock">🔒 注册会员可见全部资料</view>
+          <view class="blurred-lock">🔒 开通会员可见全部资料</view>
         </view>
 
         <view class="member-lock-card tight" wx:if="{{myHomeStore && myHomeStore.phone}}">
@@ -712,7 +712,7 @@
 
         <view class="section-card list-card">
           <view class="card-head">
-            <view><text class="head-icon">资</text>我的资料 <text class="status-tag">审核中</text></view>
+            <view><text class="head-icon">资</text>我的资料</view>
           </view>
           <view class="detail-grid self-grid">
             <view wx:for="{{myProfileRows}}" wx:key="label">

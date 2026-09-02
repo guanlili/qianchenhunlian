@@ -5,7 +5,6 @@ import {
   BadgeCheck,
   BadgeMinus,
   Ban,
-  Check,
   Crown,
   MapPin,
   Pencil,
@@ -96,8 +95,8 @@ const TXN_SOURCE_LABEL: Record<string, string> = {
 }
 
 const ACTION_LABEL: Record<string, string> = {
-  audit_pass: "通过审核",
-  audit_reject: "驳回资料",
+  audit_pass: "资料通过 (历史)",
+  audit_reject: "下架资料",
   verify: "实名认证",
   unverify: "撤销认证",
   block: "封禁",
@@ -246,15 +245,7 @@ function MemberDetail() {
           <div className="flex flex-wrap gap-2">
             {canWrite && (
               <>
-                <AuditDialog
-                  item={p}
-                  approve={true}
-                  trigger={
-                    <Button size="sm" disabled={p.audit_status === "approved"}>
-                      <Check /> 通过审核
-                    </Button>
-                  }
-                />
+                {/* 资料审核已下线 (先发后审); 保留「下架资料」用于违规内容 */}
                 <AuditDialog
                   item={p}
                   approve={false}
@@ -264,7 +255,7 @@ function MemberDetail() {
                       variant="outline"
                       disabled={p.audit_status === "rejected"}
                     >
-                      <X /> 驳回
+                      <X /> 下架资料
                     </Button>
                   }
                 />
@@ -472,7 +463,7 @@ function ProfileTab({ full }: { full: AdminMemberFull }) {
         <CardContent>
           {p.audit_reason && (
             <div className="mb-2 text-xs text-rose-600">
-              驳回原因: {p.audit_reason}
+              下架原因: {p.audit_reason}
             </div>
           )}
           <Row label="资料人" value={p.relation} />
@@ -610,7 +601,7 @@ function CriteriaTab({ full }: { full: AdminMemberFull }) {
                 value={rangeLabel(c.weight_min, c.weight_max, "kg")}
               />
               <Row label="学历" value={c.edu} />
-              <Row label="收入" value={c.income} />
+              <Row label="月收入要求" value={c.income} />
               <Row label="婚况" value={c.marriage} />
               <Row label="婚房" value={c.house} />
               <Row label="车" value={c.car} />
