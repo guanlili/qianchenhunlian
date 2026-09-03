@@ -2789,6 +2789,8 @@ Page({
                         ? this.data.socialOptions[idx]
                         : field === 'health_status'
                           ? this.data.healthOptions[idx]
+                          : field === 'cYearMin' || field === 'cYearMax'
+                          ? guestYears[idx]
                           : field === 'c_income'
                             ? this.data.incomeOptions[idx]
                             : field === 'c_location'
@@ -2921,6 +2923,11 @@ Page({
     const field = e.currentTarget.dataset.field;
     const v = (e.detail.value || '').slice(0, 32);
     this.setData({ guestForm: { ...this.data.guestForm, [field]: v } });
+  },
+
+  /** 向导上一步 (各步通用, 首步到底) */
+  goWizardPrev() {
+    this.setData({ guestStep: Math.max(1, this.data.guestStep - 1) });
   },
 
   /** 择偶要求 (必填: 年份/身高/月收入/居住要求) → 缴费页 */

@@ -3540,3 +3540,30 @@ page {
   font-weight: 700;
   border: none;
 }
+
+/* 向导按钮行: 上一步 + 下一步 */
+.wizard-btn-row {
+  width: 100%;
+  display: flex;
+  gap: 20rpx;
+}
+
+.wizard-btn-row .member-lock-btn {
+  flex: 1;
+  margin-top: 32rpx;
+}
+
+.member-lock-btn.ghost-prev {
+  background: transparent;
+  border: 2rpx solid #d9c9b4;
+  color: #8d8175;
+  box-shadow: none;
+}
+
+.member-lock-btn.ghost-prev:active {
+  opacity: 0.85;
+}
+
+.pay-prev {
+  margin-bottom: 20rpx;
+}

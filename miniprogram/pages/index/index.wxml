@@ -77,9 +77,12 @@
             <text class="link" catchtap="goRefund">《线上报名退费协议》</text>
           </text>
         </view>
-        <button class="member-lock-btn" bindtap="submitGuestRegister" disabled="{{guestSubmitting}}">
-          {{guestSubmitting ? '提交中...' : '开始使用'}}
-        </button>
+        <view class="wizard-btn-row">
+          <button class="member-lock-btn ghost-prev" bindtap="goWizardPrev">上一步</button>
+          <button class="member-lock-btn" bindtap="submitGuestRegister" disabled="{{guestSubmitting}}">
+            {{guestSubmitting ? '提交中...' : '开始使用'}}
+          </button>
+        </view>
       </view>
 
 
@@ -117,7 +120,10 @@
             <view class="guest-picker {{!guestForm.income ? 'placeholder' : ''}}">{{guestForm.income || '请选择月收入'}}</view>
           </picker>
         </view>
-        <button class="member-lock-btn" bindtap="submitGuestStep2">下一步</button>
+        <view class="wizard-btn-row">
+          <button class="member-lock-btn ghost-prev" bindtap="goWizardPrev">上一步</button>
+          <button class="member-lock-btn" bindtap="submitGuestStep2">下一步</button>
+        </view>
       </view>
 
       <!-- 填写资料 · 工作与资产 + 联系方式 -->
@@ -192,7 +198,10 @@
           <view class="guest-label">微信号</view>
           <input class="guest-input" type="text" placeholder="填微信号即可" value="{{guestForm.wechat}}" bindinput="onGuestContactInput" data-field="wechat" maxlength="32" />
         </view>
-        <button class="member-lock-btn" bindtap="submitGuestStep3">下一步</button>
+        <view class="wizard-btn-row">
+          <button class="member-lock-btn ghost-prev" bindtap="goWizardPrev">上一步</button>
+          <button class="member-lock-btn" bindtap="submitGuestStep3">下一步</button>
+        </view>
       </view>
 
       <!-- 择偶要求 (必填: 年份/身高/月收入/居住要求) -->
@@ -253,11 +262,15 @@
             <view class="guest-picker {{!guestForm.cOrigin ? 'placeholder' : ''}}">{{guestForm.cOrigin || '不限, 可选填'}}</view>
           </picker>
         </view>
-        <button class="member-lock-btn" bindtap="submitGuestCriteria">下一步</button>
+        <view class="wizard-btn-row">
+          <button class="member-lock-btn ghost-prev" bindtap="goWizardPrev">上一步</button>
+          <button class="member-lock-btn" bindtap="submitGuestCriteria">下一步</button>
+        </view>
       </view>
 
       <!-- 缴费页: 微信支付年费 / 体验码开通 / 暂不缴费 -->
       <view class="member-lock-card" wx:if="{{previewGate && guestStep === 6}}">
+        <button class="member-lock-btn ghost-prev pay-prev" bindtap="goWizardPrev">‹ 上一步</button>
         <view class="pay-price-row">
           <text class="pay-price-num">¥{{guestYearPrice}}</text>
           <text class="pay-price-unit">/ 年会员</text>
