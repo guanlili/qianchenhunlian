@@ -48,10 +48,9 @@
           <view class="guest-label">所在城市<text class="req">*</text></view>
           <picker mode="selector" range="{{guestCities}}" value="{{guestCityIndex < 0 ? 0 : guestCityIndex}}" bindchange="onGuestCityPick">
             <view class="guest-picker {{guestCityIndex < 0 ? 'placeholder' : ''}}">
-              {{guestCityIndex < 0 ? (guestCities.length ? '请选择所在城市' : '城市加载失败, 点此重试') : guestCities[guestCityIndex]}}
+              {{guestCityIndex < 0 ? '请选择所在城市' : guestCities[guestCityIndex]}}
             </view>
           </picker>
-          <view wx:if="{{!guestCities.length}}" class="guest-retry" bindtap="loadGuestCities">重新加载城市列表</view>
         </view>
         <button class="member-lock-btn" bindtap="submitGuestBasics">进入每日推荐</button>
       </view>
@@ -163,18 +162,6 @@
           </picker>
         </view>
         <view class="guest-row">
-          <view class="guest-label">家乡</view>
-          <picker mode="selector" range="{{regions}}" bindchange="onGuestFormPick" data-field="hometown">
-            <view class="guest-picker {{!guestForm.hometown ? 'placeholder' : ''}}">{{guestForm.hometown || '请选择家乡'}}</view>
-          </picker>
-        </view>
-        <view class="guest-row">
-          <view class="guest-label">体型</view>
-          <picker mode="selector" range="{{bodyOptions}}" bindchange="onGuestFormPick" data-field="body_type">
-            <view class="guest-picker {{!guestForm.body_type ? 'placeholder' : ''}}">{{guestForm.body_type || '请选择体型'}}</view>
-          </picker>
-        </view>
-        <view class="guest-row">
           <view class="guest-label">是否有婚房</view>
           <picker mode="selector" range="{{houseOptions}}" bindchange="onGuestFormPick" data-field="has_house">
             <view class="guest-picker {{!guestForm.has_house ? 'placeholder' : ''}}">{{guestForm.has_house || '请选择婚房情况'}}</view>
@@ -235,7 +222,7 @@
         <view class="guest-row">
           <view class="guest-label">居住的要求<text class="req">*</text></view>
           <picker mode="selector" range="{{guestCities}}" bindchange="onGuestFormPick" data-field="c_location">
-            <view class="guest-picker {{!guestForm.cLocation ? 'placeholder' : ''}}">{{guestForm.cLocation || '请选择居住城市要求'}}</view>
+            <view class="guest-picker {{!guestForm.cLocation ? 'placeholder' : ''}}">{{guestForm.cLocation || '请选择居住城市 (全国)'}}</view>
           </picker>
         </view>
         <view class="guest-row">
