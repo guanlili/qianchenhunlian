@@ -117,14 +117,15 @@ function request(options, _retry = false) {
   }
 
   const finalHeader = { 'Content-Type': 'application/json', ...header };
-  if (auth) {
-    const token = getToken();
-    if (token) {
-      finalHeader.Authorization = `Bearer ${token}`;
-    }
-  }
 
-  return new Promise((resolve, reject) => {
+  function send() {
+    if (auth) {
+      const token = getToken();
+      if (token) {
+        finalHeader.Authorization = `Bearer ${token}`;
+      }
+    }
+    return new Promise((resolve, reject) => {
     wx.request({
       url: `${BASE_URL}${path}`,
       method,
@@ -163,12 +164,28 @@ function request(options, _retry = false) {
         reject({ statusCode: res.statusCode, ...(res.data || {}) });
       },
       fail: (err) => {
-        if (loading) wx.hideLoading();
-        if (!silent) wx.showToast({ title: '网络异常', icon: 'none' });
-        reject(err);
-      },
+          if (loading) wx.hideLoading();
+          if (!silent) wx.showToast({ title: '网络异常', icon: 'none' });
+          reject(err);
+        },
+      });
     });
-  });
+  }
+
+  // 首启动竞态防护: 登录未完成时 auth 请求先等登录 (单飞, 并发安全),
+  // 杜绝「空 token → 401 → 重登风暴 → 请重新登录」, 以及新用户首进时
+  // 预览请求 401 导致三问卡不出现的问题
+  if (auth && !getToken()) {
+    return loginAndGetToken()
+      .then(doSend)
+      .catch((e) => {
+        if (loading) wx.hideLoading();
+        if (!silent) wx.showToast({ title: '请重新登录', icon: 'none' });
+        throw e;
+      });
+  }
+
+  return doSend();
 }
 
 const get = (path, opts = {}) => request({ ...opts, path, method: 'GET' });

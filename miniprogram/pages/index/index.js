@@ -754,6 +754,11 @@ Page({
     this._pendingTargetId = null;
   },
 
+  /** 登录失败重试: 重载首页 (app.loginReady 已置空, 会重新登录) */
+  retryLaunch() {
+    wx.reLaunch({ url: '/pages/index/index' });
+  },
+
   /** 门店码参数解析: scene (32位hex → UUID) 或 store (UUID 直链) */
   _parseStoreParam(options) {
     if (!options) return null;
