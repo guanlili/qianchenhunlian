@@ -616,6 +616,7 @@ Page({
     houseOptions: houseOptions.filter((it) => it !== '不限'),
     carOptions: ['有车', '无车'],
     jobOptionsWithOther: [...jobOptions, '其他'],
+    regions,
     jobOptions,
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
     profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
