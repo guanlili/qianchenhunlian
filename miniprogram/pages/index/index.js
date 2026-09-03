@@ -20,6 +20,11 @@ const affinitySvc = require('../../services/affinity');
 const storeSvc = require('../../services/store');
 const membershipSvc = require('../../services/membership');
 const { resolveFileUrl } = require('../../utils/config');
+const { ALL_CITIES } = require('../../constants/cities');
+
+// 出生年份候选: 2015→1950 倒序 (静态, 全流程共用)
+const GUEST_YEARS = [];
+for (let y = 2015; y >= 1950; y--) GUEST_YEARS.push(String(y));
 
 const _resolveList = (arr) =>
   Array.isArray(arr) ? arr.map(resolveFileUrl).filter(Boolean) : [];
@@ -301,12 +306,10 @@ const buildProfileFields = (form) => [
   { key: 'edu',       label: '学历',     value: form.edu, editable: true, options: eduOptions.filter((it) => it !== '不限') },
   { key: 'origin',    label: '户籍地',   value: form.origin, editable: true, type: 'region' },
   { key: 'location',  label: '居住地',   value: form.location, editable: true, type: 'region' },
-  { key: 'hometown',  label: '家乡',     value: form.hometown, editable: true, type: 'region' },
   { key: 'income',    label: '月收入',   value: form.income, editable: true, options: incomeOptions.filter((it) => it !== '不限') },
   { key: 'marriage',  label: '婚姻状况', value: form.marriage, editable: true, options: ['未婚', '离异未育', '离异已育', '其他'] },
   { key: 'house',     label: '是否有婚房', value: form.house, editable: true, options: houseOptions.filter((it) => it !== '不限') },
   { key: 'has_car',   label: '是否有车', value: form.has_car, editable: true, options: ['有车', '无车'] },
-  { key: 'body_type', label: '体型',     value: form.body_type, editable: true, options: ['偏瘦', '苗条', '匀称', '适中', '中等', '偏胖'] },
   { key: 'job',       label: '职业',     value: form.job, editable: true, options: jobOptions },
   { key: 'employer_type',       label: '工作单位性质', value: form.employer_type, editable: true, options: employerOptions },
   { key: 'has_social_insurance', label: '是否有社保', value: form.has_social_insurance, editable: true, options: socialOptions },
@@ -581,9 +584,9 @@ Page({
     previewError: false,
     resumeToStep: 0,    // 注册中途退出的续填入口: 3/4=待续步骤, 0=不显示
     guestGender: '',    // 三问表单
-    guestYears: [],
+    guestYears: GUEST_YEARS,
     guestYearIndex: -1,
-    guestCities: [],
+    guestCities: ALL_CITIES,
     guestCityIndex: -1,
     guestStep: 1,       // 注册向导: 1=三问 2=基本条件 3=工作与资产 → 预览
     guestForm: {
@@ -2665,7 +2668,6 @@ Page({
         typeof detail === 'string' && detail.startsWith('BASIC_INFO_REQUIRED')
       ) {
         this.setData({ previewGate: true });
-        this.loadGuestCities();
       } else {
         this.setData({ previewError: true });
       }
@@ -2704,7 +2706,6 @@ Page({
           desc: p.desc || '',
           origin: p.origin || '',
           hometown: p.hometown || '',
-          body_type: p.body_type || '',
           cYearMin: p.criteria ? String(p.criteria.year_min || '') : '',
           cYearMax: p.criteria ? String(p.criteria.year_max || '') : '',
           cHeightMin: p.criteria ? String(p.criteria.height_min || '') : '',
@@ -2724,491 +2725,6 @@ Page({
   },
 
 
-  /** 三问表单: 出生年份候选 (2015→1950) + 有门店的城市列表 (幂等, 可重复调用) */
-  loadGuestCities() {
-    if (!this.data.guestYears.length) {
-      const years = [];
-      for (let y = 2015; y >= 1950; y--) years.push(String(y));
-      this.setData({ guestYears: years });
-    }
-    if (this.data.guestCities.length) return;
-    storeSvc
-      .listCities()
-      .then((res) => {
-        // /stores/cities 返回 {items: [{city, count}]}, 取城市名字符串数组
-        const list = ((res && res.items) || []).map((c) => c.city || c);
-        this.setData({ guestCities: list });
-        if (!list.length) this.loadGuestCitiesFallback();
-      })
-      .catch(() => this.loadGuestCitiesFallback());
-  },
-
-  /** 城市接口兜底: 直接拉门店列表取城市去重 (防 cities 接口异常卡死三问) */
-  loadGuestCitiesFallback() {
-    storeSvc
-      .listStores({ limit: 100 })
-      .then((res) => {
-        const set = new Set(
-          ((res && res.items) || []).map((it) => it.city).filter(Boolean)
-        );
-        this.setData({ guestCities: [...set] });
-      })
-      .catch(() => this.setData({ guestCities: [] }));
-  },
-
-  onGuestGenderTap(e) {
-    this.setData({ guestGender: e.currentTarget.dataset.gender || '' });
-  },
-
-  /** 注册向导: 通用 picker (data-field 指定字段) */
-  onGuestFormPick(e) {
-    const field = e.currentTarget.dataset.field;
-    const { guestForm, guestYears, guestCities } = this.data;
-    const idx = Number(e.detail.value) || 0;
-    const value =
-      field === 'edu'
-        ? this.data.eduOptions[idx]
-        : field === 'marriage'
-          ? this.data.marriageOptions[idx]
-          : field === 'income'
-            ? this.data.incomeOptions[idx]
-            : field === 'has_house'
-              ? this.data.houseOptions[idx]
-              : field === 'has_car'
-                ? this.data.carOptions[idx]
-                : field === 'job'
-                  ? this.data.jobOptionsWithOther[idx] === '其他'
-                    ? '__custom__'
-                    : this.data.jobOptionsWithOther[idx]
-                  : field === 'body_type'
-                    ? this.data.bodyOptions[idx]
-                  : field === 'ethnicity'
-                    ? this.data.ethnicityOptions[idx]
-                    : field === 'employer_type'
-                      ? this.data.employerOptions[idx]
-                      : field === 'has_social_insurance'
-                        ? this.data.socialOptions[idx]
-                        : field === 'health_status'
-                          ? this.data.healthOptions[idx]
-                          : field === 'cYearMin' || field === 'cYearMax'
-                          ? guestYears[idx]
-                          : field === 'c_income'
-                            ? this.data.incomeOptions[idx]
-                            : field === 'c_location'
-                              ? guestCities[idx]
-                              : field === 'c_house'
-                                ? this.data.houseOptions[idx]
-                                : field === 'c_edu'
-                                  ? this.data.eduOptions[idx]
-                                  : field === 'c_marriage'
-                                    ? this.data.marriageOptions[idx]
-                                    : field === 'c_origin'
-                                      ? regions[idx]
-                                      : field === 'origin' || field === 'hometown'
-                                        ? regions[idx]
-                      : field === 'year'
-                        ? guestYears[idx]
-                        : field === 'location'
-                          ? guestCities[idx]
-                      : '';
-    if (value === '__custom__') {
-      this._handleCustomJob();
-      return;
-    }
-    this.setData({ guestForm: { ...guestForm, [field]: value } });
-  },
-
-  onGuestHeightInput(e) {
-    const v = (e.detail.value || '').replace(/[^0-9]/g, '').slice(0, 3);
-    this.setData({ guestForm: { ...this.data.guestForm, height: v } });
-  },
-
-  /** 通用数字输入 (data-field: weight/cHeightMin/cHeightMax) */
-  /** 职业「其他」: 弹输入框自定义 */
-  _handleCustomJob() {
-    const that = this;
-    wx.showModal({
-      title: '请填写职业',
-      editable: true,
-      placeholderText: '如 宠物医生 / 调酒师',
-      success(res) {
-        if (!res.confirm) return;
-        const v = (res.content || '').trim();
-        if (!v) return;
-        that.setData({ guestForm: { ...that.data.guestForm, job: v } });
-      },
-    });
-  },
-
-  onGuestNumInput(e) {
-    const field = e.currentTarget.dataset.field;
-    const v = (e.detail.value || '').replace(/[^0-9]/g, '').slice(0, 3);
-    this.setData({ guestForm: { ...this.data.guestForm, [field]: v } });
-  },
-
-  /** 通用文本输入 (data-field: hobbies) */
-  onGuestTextInput(e) {
-    const field = e.currentTarget.dataset.field;
-    this.setData({
-      guestForm: { ...this.data.guestForm, [field]: (e.detail.value || '').slice(0, 120) },
-    });
-  },
-
-  onGuestDescInput(e) {
-    this.setData({ guestForm: { ...this.data.guestForm, desc: (e.detail.value || '').slice(0, 200) } });
-  },
-
-  /** 第 2 步: 基本条件 (身高/学历/婚姻/收入) → 第 3 步 */
-  async submitGuestStep2() {
-    const f = this.data.guestForm;
-    if (!f.height || Number(f.height) < 100 || Number(f.height) > 220) {
-      return wx.showToast({ title: '请填写正确身高', icon: 'none' });
-    }
-    if (!f.weight || Number(f.weight) < 30 || Number(f.weight) > 200) {
-      return wx.showToast({ title: '请填写正确体重 (kg)', icon: 'none' });
-    }
-    if (!f.ethnicity) return wx.showToast({ title: '请选择民族', icon: 'none' });
-    if (!f.job) return wx.showToast({ title: '请选择职业', icon: 'none' });
-    if (!f.marriage) return wx.showToast({ title: '请选择婚姻状况', icon: 'none' });
-    if (!f.income) return wx.showToast({ title: '请选择月收入', icon: 'none' });
-    try {
-      await profileSvc.saveProfile({
-        height: Number(f.height),
-        weight: Number(f.weight),
-        ethnicity: f.ethnicity,
-        marriage: f.marriage,
-        job: f.job,
-        income: f.income,
-      });
-      this.setData({ guestStep: 4 });
-    } catch (err) {
-      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
-    }
-  },
-
-  /** 填写资料页 · 工作与资产 + 联系方式 → 缴费页 */
-  async submitGuestStep3() {
-    const f = this.data.guestForm;
-    if (!f.job) return wx.showToast({ title: '请选择职业', icon: 'none' });
-    if (!f.has_house) return wx.showToast({ title: '请选择婚房情况', icon: 'none' });
-    if (!f.has_car) return wx.showToast({ title: '请选择是否有车', icon: 'none' });
-    try {
-      await profileSvc.saveProfile({
-        job: f.job,
-        edu: f.edu || undefined,
-        employer_type: f.employer_type || undefined,
-        has_social_insurance: f.has_social_insurance || undefined,
-        health_status: f.health_status || undefined,
-        hobbies: f.hobbies || undefined,
-        origin: f.origin || undefined,
-        hometown: f.hometown || undefined,
-        has_house: f.has_house,
-        has_car: f.has_car,
-        body_type: f.body_type || undefined,
-        desc: f.desc || undefined,
-      });
-      // 联系方式 (红娘联系你撮合用; 微信号即可)
-      if (f.phone || f.wechat) {
-        await profileSvc.saveContact({
-          phone: f.phone || undefined,
-          wechat: f.wechat || undefined,
-        });
-      }
-      this.setData({ guestStep: 5 });
-    } catch (err) {
-      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
-    }
-  },
-
-  onGuestContactInput(e) {
-    const field = e.currentTarget.dataset.field;
-    const v = (e.detail.value || '').slice(0, 32);
-    this.setData({ guestForm: { ...this.data.guestForm, [field]: v } });
-  },
-
-  /** 向导上一步 (各步通用, 首步到底) */
-  goWizardPrev() {
-    this.setData({ guestStep: Math.max(1, this.data.guestStep - 1) });
-  },
-
-  /** 择偶要求 (必填: 年份/身高/月收入/居住要求) → 缴费页 */
-  async submitGuestCriteria() {
-    const f = this.data.guestForm;
-    if (!f.cYearMin || !f.cYearMax) {
-      return wx.showToast({ title: '请选择对方年份范围', icon: 'none' });
-    }
-    if (Number(f.cYearMin) > Number(f.cYearMax)) {
-      return wx.showToast({ title: '年份范围: 起始年份应早于截止年份', icon: 'none' });
-    }
-    if (!f.cHeightMin || !f.cHeightMax) {
-      return wx.showToast({ title: '请填写对方身高范围', icon: 'none' });
-    }
-    if (Number(f.cHeightMin) > Number(f.cHeightMax)) {
-      return wx.showToast({ title: '身高范围: 下限应小于上限', icon: 'none' });
-    }
-    if (!f.cIncome) return wx.showToast({ title: '请选择对方月收入要求', icon: 'none' });
-    if (!f.cLocation) return wx.showToast({ title: '请选择居住地要求', icon: 'none' });
-    try {
-      await profileSvc.saveCriteria({
-        year_min: Number(f.cYearMin),
-        year_max: Number(f.cYearMax),
-        height_min: Number(f.cHeightMin),
-        height_max: Number(f.cHeightMax),
-        income: f.cIncome,
-        locations: [f.cLocation],
-        house: f.cHouse || undefined,
-        edu: f.cEdu || undefined,
-        marriage: f.cMarriage || undefined,
-        origins: f.cOrigin ? [f.cOrigin] : undefined,
-      });
-      this.setData({ guestStep: 6 });
-      this.loadGuestPlans();
-    } catch (err) {
-      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
-    }
-  },
-
-  // ---- 缴费页: 微信支付年卡 / 体验码开通 / 暂不缴费 ----
-
-  /** 缴费完成 (或跳过) 后收口: 会员则进完整资料流, 否则回预览 */
-  finishGuestOnboarding() {
-    this.setData({
-      previewLoaded: false,
-      previewGate: false,
-      guestStep: 1,
-      guestRedeemCode: '',
-    });
-    this.refreshMembership(); // isMember 翻转 → 自动 loadHome; 否则回预览
-  },
-
-  /** 确定缴费: 微信支付年卡 (mock 模式走模拟支付) */
-  async onGuestPay() {
-    if (this.data.guestPaying) return;
-    const mode = this.data.guestPayMode;
-    if (mode === 'off') {
-      // 线上支付未开启: 引导到店办理或用体验码
-      return wx.showModal({
-        title: '线上支付暂未开启',
-        content: '可到门店现场缴费开通, 或填体验码直接开通会员。',
-        showCancel: false,
-        confirmText: '知道了',
-      });
-    }
-    this.setData({ guestPaying: true });
-    try {
-      const order = await membershipSvc.createOrder('yearly_365d');
-      if (mode === 'mock') {
-        // 与会员页一致: 模拟支付需二次确认, 防误触
-        const that = this;
-        wx.showModal({
-          title: '模拟支付',
-          content: `确认支付 ¥${this.data.guestYearPrice} 开通会员? (模拟支付, 不真实扣款)`,
-          success: async (res) => {
-            if (!res.confirm) {
-              that.setData({ guestPaying: false });
-              return;
-            }
-            try {
-              const paid = await membershipSvc.mockPay(order.order_id);
-              wx.showToast({
-                title: paid.status === 'paid' ? '开通成功' : '支付未完成',
-                icon: paid.status === 'paid' ? 'success' : 'none',
-              });
-              that.finishGuestOnboarding();
-            } catch (err) {
-              wx.showToast({
-                title: (err && err.detail) || '支付未完成',
-                icon: 'none',
-              });
-            } finally {
-              that.setData({ guestPaying: false });
-            }
-          },
-        });
-        return;
-      }
-      await new Promise((resolve, reject) => {
-        wx.requestPayment({
-          ...order.pay_params,
-          success: resolve,
-          fail: reject,
-        });
-      });
-      wx.showToast({ title: '开通成功', icon: 'success' });
-      // 微信回调 /pay/notify 常晚于客户端 success: 延迟后再刷新会员状态
-      setTimeout(() => this.finishGuestOnboarding(), 1500);
-    } catch (err) {
-      const detail = err && typeof err.detail === 'string' ? err.detail : '';
-      if (detail.includes('PAY_NOT_ENABLED')) {
-        wx.showModal({
-          title: '线上支付暂未开启',
-          content: '可到门店现场缴费开通, 或填体验码直接开通会员。',
-          showCancel: false,
-          confirmText: '知道了',
-        });
-      } else if (
-        detail.includes('取消') ||
-        (err && err.errMsg && err.errMsg.includes('cancel'))
-      ) {
-        wx.showToast({ title: '已取消支付', icon: 'none' });
-      } else {
-        wx.showToast({ title: detail || '支付未完成, 可稍后在会员页重试', icon: 'none' });
-      }
-    } finally {
-      this.setData({ guestPaying: false });
-    }
-  },
-
-  /** 缴费页: 体验码直接开通 */
-  async onGuestRedeemPay() {
-    const code = (this.data.guestRedeemCode || '').trim();
-    if (!code) return wx.showToast({ title: '请输入体验码', icon: 'none' });
-    if (this.data.guestPaying) return;
-    this.setData({ guestPaying: true });
-    try {
-      const r = await membershipSvc.redeemCode(code);
-      const exp = r.member_expires_at ? r.member_expires_at.slice(0, 10) : '';
-      wx.showToast({
-        title: exp ? `会员已开通 · 至 ${exp}` : '会员已开通',
-        icon: 'none',
-        duration: 3000,
-      });
-      this.finishGuestOnboarding();
-    } catch (err) {
-      wx.showToast({
-        title: (err && err.detail) || '体验码无效, 请核对后重试',
-        icon: 'none',
-      });
-    } finally {
-      this.setData({ guestPaying: false });
-    }
-  },
-
-  /** 暂不缴费: 先逛逛 (未会员, 回预览流) */
-  skipGuestPay() {
-    this.finishGuestOnboarding();
-  },
-
-  // ---- 第 4 步: 头像 + 昵称 + 协议 (与 welcome 页同一接口, 一次注册到位) ----
-
-  initGuestNickname() {
-    if (this.data.guestNickname) return;
-    const app = getApp();
-    const seed =
-      (app.globalData && app.globalData.user && app.globalData.user.xy_code) || '';
-    if (seed) this.setData({ guestNickname: `用户${seed.slice(-4)}` });
-  },
-
-  onGuestAvatarPick() {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
-      success: async ({ tempFiles }) => {
-        if (!tempFiles || !tempFiles.length) return;
-        const tempPath = tempFiles[0].tempFilePath;
-        this.setData({ guestAvatarPath: tempPath, guestAvatarUrl: '' });
-        wx.showLoading({ title: '上传头像', mask: true });
-        try {
-          const url = await profileSvc.uploadAvatar(tempPath);
-          this.setData({ guestAvatarUrl: url });
-          wx.hideLoading();
-        } catch (err) {
-          wx.hideLoading();
-          wx.showToast({ title: '头像上传失败, 请重试', icon: 'none' });
-          this.setData({ guestAvatarPath: '' });
-        }
-      },
-    });
-  },
-
-  onGuestNicknameInput(e) {
-    this.setData({ guestNickname: (e.detail.value || '').slice(0, 20) });
-  },
-
-  onGuestRedeemInput(e) {
-    this.setData({ guestRedeemCode: (e.detail.value || '').slice(0, 32) });
-  },
-
-  toggleGuestAgreed() {
-    this.setData({ guestAgreed: !this.data.guestAgreed });
-  },
-
-  goAgreement() {
-    wx.navigateTo({ url: '/pages/agreement/agreement' });
-  },
-
-  goPrivacy() {
-    wx.navigateTo({ url: '/pages/privacy/privacy' });
-  },
-
-  goRefund() {
-    wx.navigateTo({ url: '/pages/refund-protocol/refund-protocol' });
-  },
-
-  /** 注册页提交: 走 /profiles/me/welcome → 进入填写资料 */
-  async submitGuestRegister() {
-    if (this.data.guestSubmitting) return;
-    if (!this.data.guestAvatarUrl) {
-      return wx.showToast({
-        title: this.data.guestAvatarPath ? '头像上传中, 请稍候' : '请上传真实头像',
-        icon: 'none',
-      });
-    }
-    if (!(this.data.guestNickname || '').trim()) {
-      return wx.showToast({ title: '请填写昵称', icon: 'none' });
-    }
-    if (!this.data.guestAgreed) {
-      return wx.showToast({ title: '请先勾选用户协议', icon: 'none' });
-    }
-    this.setData({ guestSubmitting: true });
-    const app = getApp();
-    try {
-      await profileSvc.submitWelcome({
-        nickname: (this.data.guestNickname || '').trim(),
-        avatar_url: this.data.guestAvatarUrl,
-      });
-      wx.setStorageSync('qy_welcomed', true);
-      app.globalData.isWelcomed = true;
-      app.globalData.hasProfile = true;
-      this.setData({ guestSubmitting: false, guestStep: 3 });
-    } catch (err) {
-      this.setData({ guestSubmitting: false });
-      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
-    }
-  },
-
-  onGuestYearPick(e) {
-    this.setData({ guestYearIndex: Number(e.detail.value) || 0 });
-  },
-
-  onGuestCityPick(e) {
-    this.setData({ guestCityIndex: Number(e.detail.value) || 0 });
-  },
-
-  /** 提交三问: 落到自己的 Profile (与会员资料同源), 成功后重拉预览 */
-  async submitGuestBasics() {
-    const { guestGender: g, guestYears: ys, guestYearIndex: yi, guestCities: cs, guestCityIndex: ci } =
-      this.data;
-    if (!g) return wx.showToast({ title: '请选择性别', icon: 'none' });
-    if (yi < 0) return wx.showToast({ title: '请选择出生年份', icon: 'none' });
-    if (ci < 0) return wx.showToast({ title: '请选择所在城市', icon: 'none' });
-    try {
-      await profileSvc.saveProfile({ gender: g, year: Number(ys[yi]), location: cs[ci] });
-      // 三问完成 → 直接进每日推荐 (游客态); 注册由推荐页「注册会员」入口进入
-      this.setData({
-        previewLoaded: false,
-        previewGate: false,
-        guestStep: 1,
-        resumeToStep: 0,
-      });
-      this.loadPreview();
-    } catch (err) {
-      wx.showToast({ title: (err && err.detail) || '提交失败', icon: 'none' });
-    }
-  },
-
   /** 推荐页注册横幅: 未注册进注册页, 已注册未缴费进缴费页 */
   goRegister() {
     const app = getApp();
@@ -3217,7 +2733,6 @@ Page({
       : 2;
     this.setData({ previewGate: true, guestStep: step });
     if (step === 2) this.initGuestNickname();
-    this.loadGuestCities(); // 年份候选/城市列表 (择偶步的 picker 依赖)
     this.loadGuestPlans();
   },
 
