@@ -177,7 +177,7 @@ function request(options, _retry = false) {
   // 预览请求 401 导致三问卡不出现的问题
   if (auth && !getToken()) {
     return loginAndGetToken()
-      .then(doSend)
+      .then(send)
       .catch((e) => {
         if (loading) wx.hideLoading();
         if (!silent) wx.showToast({ title: '请重新登录', icon: 'none' });
@@ -185,7 +185,7 @@ function request(options, _retry = false) {
       });
   }
 
-  return doSend();
+  return send();
 }
 
 const get = (path, opts = {}) => request({ ...opts, path, method: 'GET' });
