@@ -2725,6 +2725,26 @@ Page({
   },
 
 
+  /** 注册向导收口: 回到每日推荐/会员流 (缴费/体验码/跳过缴费共用) */
+  finishGuestOnboarding() {
+    this.setData({
+      previewLoaded: false,
+      previewGate: false,
+      guestStep: 1,
+      guestRedeemCode: '',
+    });
+    this.refreshMembership(); // isMember 翻转 → loadHome; 否则回预览
+  },
+
+  /** 注册页昵称默认值: 用户编号后 4 位 */
+  initGuestNickname() {
+    if (this.data.guestNickname) return;
+    const app = getApp();
+    const seed =
+      (app.globalData && app.globalData.user && app.globalData.user.xy_code) || '';
+    if (seed) this.setData({ guestNickname: `用户${seed.slice(-4)}` });
+  },
+
   /** 推荐页注册横幅: 未注册进注册页, 已注册未缴费进缴费页 */
   goRegister() {
     const app = getApp();
