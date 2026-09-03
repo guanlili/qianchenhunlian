@@ -252,6 +252,12 @@ const defaultProfileForm = {
   has_car: '',
   body_type: '',
   desc: '',
+  weight: '',
+  ethnicity: '',
+  employer_type: '',
+  has_social_insurance: '',
+  health_status: '',
+  hobbies: '',
 };
 
 const defaultCriteriaValues = {
@@ -284,6 +290,8 @@ const buildProfileFields = (form) => [
   { key: 'gender',    label: '性别',     value: form.gender,    editable: true, options: ['男', '女'] },
   { key: 'year',      label: '出生年份', value: form.year ? form.year + '年' : '', rawValue: form.year, editable: true, type: 'number', placeholder: '如 1990' },
   { key: 'height',    label: '身高',     value: form.height ? form.height + ' cm' : '', rawValue: form.height, editable: true, type: 'number', placeholder: '如 165' },
+  { key: 'weight',    label: '体重',     value: form.weight ? form.weight + ' kg' : '', rawValue: form.weight, editable: true, type: 'number', placeholder: '如 55' },
+  { key: 'ethnicity', label: '民族',     value: form.ethnicity, editable: true, options: ethnicityOptions },
   { key: 'edu',       label: '学历',     value: form.edu, editable: true, options: eduOptions.filter((it) => it !== '不限') },
   { key: 'origin',    label: '户籍地',   value: form.origin, editable: true, type: 'region' },
   { key: 'location',  label: '居住地',   value: form.location, editable: true, type: 'region' },
@@ -294,6 +302,10 @@ const buildProfileFields = (form) => [
   { key: 'has_car',   label: '是否有车', value: form.has_car, editable: true, options: ['有车', '无车'] },
   { key: 'body_type', label: '体型',     value: form.body_type, editable: true, options: ['偏瘦', '苗条', '匀称', '适中', '中等', '偏胖'] },
   { key: 'job',       label: '职业',     value: form.job, editable: true, options: jobOptions },
+  { key: 'employer_type',       label: '工作单位性质', value: form.employer_type, editable: true, options: employerOptions },
+  { key: 'has_social_insurance', label: '是否有社保', value: form.has_social_insurance, editable: true, options: socialOptions },
+  { key: 'health_status', label: '身体状况', value: form.health_status, editable: true, options: healthOptions },
+  { key: 'hobbies',   label: '兴趣爱好', value: form.hobbies, editable: true, type: 'text', placeholder: '如 旅行/烹饪/运动' },
 ];
 
 const buildMyProfileRows = (form) => [
@@ -870,6 +882,12 @@ Page({
           house:     p.has_house || this.data.profileForm.house,
           has_car:   p.has_car   || this.data.profileForm.has_car,
           body_type: p.body_type || this.data.profileForm.body_type,
+          weight:    p.weight    || this.data.profileForm.weight,
+          ethnicity: p.ethnicity || this.data.profileForm.ethnicity,
+          employer_type: p.employer_type || this.data.profileForm.employer_type,
+          has_social_insurance: p.has_social_insurance || this.data.profileForm.has_social_insurance,
+          health_status: p.health_status || this.data.profileForm.health_status,
+          hobbies:   p.hobbies   || this.data.profileForm.hobbies,
           desc:      p.desc      || this.data.profileForm.desc,
         };
         updates.profileFields = buildProfileFields(updates.profileForm);
@@ -1767,6 +1785,12 @@ Page({
         has_house: _v(form.house),
         has_car: _v(form.has_car),
         body_type: _v(form.body_type),
+        weight: _n(form.weight),
+        ethnicity: _v(form.ethnicity),
+        employer_type: _v(form.employer_type),
+        has_social_insurance: _v(form.has_social_insurance),
+        health_status: _v(form.health_status),
+        hobbies: _v(form.hobbies),
         desc: _v(form.desc),
       };
       if (this.data.relation) payload.relation = this.data.relation;
@@ -1911,7 +1935,27 @@ Page({
             wx.showToast({ title: '身高应在 100-220 cm', icon: 'none' });
             return;
           }
+          if (key === 'weight' && (num < 30 || num > 200)) {
+              wx.showToast({ title: '体重应在 30-200 kg', icon: 'none' });
+              return;
+          }
           that._updateProfileField(key, num);
+        },
+      });
+      return;
+    }
+
+    // 文本字段 (兴趣爱好等): 弹输入框
+    if (field.type === 'text') {
+      const that = this;
+      wx.showModal({
+        title: '请填写' + field.label,
+        editable: true,
+        placeholderText: field.placeholder || '',
+        content: field.value || '',
+        success(res) {
+          if (!res.confirm) return;
+          that._updateProfileField(key, (res.content || '').trim());
         },
       });
       return;
@@ -2486,23 +2530,6 @@ Page({
     } else {
       this.setData({ screen: 'me', activeTab: 'me' });
     }
-  },
-
-  /** 红娘代录模式: 用户点 "修改资料" 时提示去联系门店 */
-  onAskModifyProfile() {
-    wx.showModal({
-      title: '如需修改资料',
-      content: '资料由红娘代录, 请联系您的当地门店, 或通过"意见反馈"提交修改意向, 我们会尽快处理.',
-      confirmText: '知道了',
-      cancelText: '取消',
-      showCancel: true,
-      success: (res) => {
-        if (res.confirm) {
-          // 默认进意见反馈, 让用户写改动需求
-          wx.navigateTo({ url: '/pages/feedback/feedback' });
-        }
-      },
-    });
   },
 
   shareProfile() {

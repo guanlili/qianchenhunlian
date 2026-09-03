@@ -745,6 +745,7 @@
         <view class="section-card list-card">
           <view class="card-head">
             <view><text class="head-icon">择</text>择偶要求</view>
+            <button class="btn outline" bindtap="openCriteriaEdit" data-return="my-profile">编辑</button>
           </view>
           <view class="pref-row"><text>年份</text><text>{{criteriaValues.year}}</text></view>
           <view class="pref-row"><text>身高</text><text>{{criteriaValues.height}}</text></view>
@@ -757,7 +758,7 @@
         </view>
 
         <view class="share-actions">
-          <button class="btn outline" bindtap="onAskModifyProfile">修改资料</button>
+          <button class="btn outline" bindtap="openProfileEdit" data-return="my-profile">修改资料</button>
           <button class="btn primary" bindtap="shareProfile">分享到群或好友 ›</button>
         </view>
       </scroll-view>
