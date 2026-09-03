@@ -107,7 +107,7 @@
         </view>
         <view class="guest-row">
           <view class="guest-label">职业<text class="req">*</text></view>
-          <picker mode="selector" range="{{jobOptions}}" bindchange="onGuestFormPick" data-field="job">
+          <picker mode="selector" range="{{jobOptionsWithOther}}" bindchange="onGuestFormPick" data-field="job">
             <view class="guest-picker {{!guestForm.job ? 'placeholder' : ''}}">{{guestForm.job || '请选择职业'}}</view>
           </picker>
         </view>
