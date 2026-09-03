@@ -294,10 +294,10 @@
         </view>
         <view class="register-banner" wx:elif="{{resumeToStep}}" bindtap="goRegister">
           <view class="rb-main">
-            <text class="rb-title">继续完善资料</text>
-            <text class="rb-sub">完成后即可开通会员</text>
+            <text class="rb-title">注册会员</text>
+            <text class="rb-sub">完善资料并开通, 解锁全部严选资料</text>
           </view>
-          <text class="rb-go">去完善 ›</text>
+          <text class="rb-go">去注册 ›</text>
         </view>
         <view class="register-banner paid" wx:else bindtap="goRegister">
           <view class="rb-main">

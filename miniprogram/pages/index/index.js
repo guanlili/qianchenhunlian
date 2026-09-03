@@ -2722,13 +2722,14 @@ Page({
   },
 
 
-  /** 三问表单: 出生年份候选 (2015→1950) + 有门店的城市列表 */
+  /** 三问表单: 出生年份候选 (2015→1950) + 有门店的城市列表 (幂等, 可重复调用) */
   loadGuestCities() {
     if (!this.data.guestYears.length) {
       const years = [];
       for (let y = 2015; y >= 1950; y--) years.push(String(y));
       this.setData({ guestYears: years });
     }
+    if (this.data.guestCities.length) return;
     storeSvc
       .listCities()
       .then((res) => {
@@ -3185,6 +3186,7 @@ Page({
       : 2;
     this.setData({ previewGate: true, guestStep: step });
     if (step === 2) this.initGuestNickname();
+    this.loadGuestCities(); // 年份候选/城市列表 (择偶步的 picker 依赖)
     this.loadGuestPlans();
   },
 
