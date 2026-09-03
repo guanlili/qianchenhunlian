@@ -615,6 +615,7 @@ Page({
     incomeOptions: incomeOptions.filter((it) => it !== '不限'),
     houseOptions: houseOptions.filter((it) => it !== '不限'),
     carOptions: ['有车', '无车'],
+    jobOptionsWithOther: [...jobOptions, '其他'],
     jobOptions,
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
     profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
@@ -2775,7 +2776,9 @@ Page({
               : field === 'has_car'
                 ? this.data.carOptions[idx]
                 : field === 'job'
-                  ? this.data.jobOptions[idx]
+                  ? this.data.jobOptionsWithOther[idx] === '其他'
+                    ? '__custom__'
+                    : this.data.jobOptionsWithOther[idx]
                   : field === 'body_type'
                     ? this.data.bodyOptions[idx]
                   : field === 'ethnicity'
@@ -2805,6 +2808,10 @@ Page({
                         : field === 'location'
                           ? guestCities[idx]
                       : '';
+    if (value === '__custom__') {
+      this._handleCustomJob();
+      return;
+    }
     this.setData({ guestForm: { ...guestForm, [field]: value } });
   },
 
@@ -2814,6 +2821,22 @@ Page({
   },
 
   /** 通用数字输入 (data-field: weight/cHeightMin/cHeightMax) */
+  /** 职业「其他」: 弹输入框自定义 */
+  _handleCustomJob() {
+    const that = this;
+    wx.showModal({
+      title: '请填写职业',
+      editable: true,
+      placeholderText: '如 宠物医生 / 调酒师',
+      success(res) {
+        if (!res.confirm) return;
+        const v = (res.content || '').trim();
+        if (!v) return;
+        that.setData({ guestForm: { ...that.data.guestForm, job: v } });
+      },
+    });
+  },
+
   onGuestNumInput(e) {
     const field = e.currentTarget.dataset.field;
     const v = (e.detail.value || '').replace(/[^0-9]/g, '').slice(0, 3);
