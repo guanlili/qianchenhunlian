@@ -31,7 +31,11 @@ rsync -az --delete \
   -e ssh "$TMP/" "$HOST:$REMOTE_PATH/" || { echo "✗ rsync 失败, 中止"; exit 1; }
 echo "✓ 代码已同步"
 
-# 4) 服务器构建 + 健康检查 (deploy.sh build 自带回滚)
+# 4) 清理 compose 重建残留的孤儿容器 (hash 前缀 rename 容器, 防容器名冲突
+#    导致 Recreate 失败/服务中断; 精确匹配 _qianyuan- 前缀, 不碰运行中容器)
+$REMOTE_CMD "docker ps -aq --filter 'name=_qianyuan-' | xargs -r docker rm -f" >/dev/null 2>&1 || true
+
+# 5) 服务器构建 + 健康检查 (deploy.sh build 自带回滚)
 $REMOTE_CMD "cd $REMOTE_PATH && rm -f /tmp/deploy.log && \
   setsid nohup bash ./deploy.sh build > /tmp/deploy.log 2>&1 < /dev/null & \
   echo '⏳ 构建已启动, 日志: /tmp/deploy.log (约 2-3 分钟)'"
