@@ -502,7 +502,10 @@
 
       <view class="profile-list">
         <view wx:if="{{profiles.length === 0}}" class="list-empty">
-          <text wx:if="{{loginFailed}}">登录失败, 暂时无法加载真实资料。请检查网络后重新进入小程序。</text>
+          <block wx:if="{{loginFailed}}">
+            <text>登录失败, 暂时无法加载真实资料。</text>
+            <button class="list-retry-btn" bindtap="retryLaunch">重新加载</button>
+          </block>
           <text wx:else>暂无可推荐的资料, 试试调整筛选条件</text>
         </view>
         <view class="empty-feed" wx:if="{{apiReady && isMember && !profiles.length}}">

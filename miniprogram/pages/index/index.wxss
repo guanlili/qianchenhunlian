@@ -3526,3 +3526,17 @@ page {
   font-weight: 700;
   flex-shrink: 0;
 }
+
+/* 登录失败重试 */
+.list-retry-btn {
+  margin-top: 24rpx;
+  width: 320rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 999rpx;
+  background: #f9e5e0;
+  color: #c93434;
+  font-size: 26rpx;
+  font-weight: 700;
+  border: none;
+}

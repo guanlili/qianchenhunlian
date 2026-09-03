@@ -28,6 +28,8 @@ App({
       })
       .catch((err) => {
         console.error('[app] 登录失败:', err);
+        // 置空允许用户点「重试」后重新登录 (否则缓存的失败 promise 永远拒绝)
+        this.globalData.loginReady = null;
         const msg =
           (err && (err.errMsg || err.message)) ||
           '登录失败, 请稍后重试';
