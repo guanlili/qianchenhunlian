@@ -285,6 +285,12 @@ const calcProfileProgress = (form, photos) => {
   return Math.max(39, Math.round((filled / 6) * 100));
 };
 
+// 编辑页选项 (模块级, buildProfileFields 与 Page data 共用)
+const ethnicityOptions = ['汉族', '回族', '满族', '蒙古族', '壮族', '藏族', '苗族', '彝族', '朝鲜族', '土家族', '其他'];
+const employerOptions = ['国企', '央企', '民企', '事业单位', '政府机关', '外企', '个体经营', '自由职业', '其他'];
+const socialOptions = ['有', '无'];
+const healthOptions = ['健康', '良好', '一般', '其他'];
+
 const buildProfileFields = (form) => [
   { key: 'nickname', label: '昵称', value: form.nickname, required: true, editable: false },
   { key: 'gender',    label: '性别',     value: form.gender,    editable: true, options: ['男', '女'] },
@@ -590,10 +596,10 @@ Page({
       cIncome: '', cLocation: '', cHouse: '', cEdu: '', cMarriage: '', cOrigin: '',
     },
     bodyOptions: ['偏瘦', '苗条', '匀称', '适中', '中等', '偏胖'],
-    ethnicityOptions: ['汉族', '回族', '满族', '蒙古族', '壮族', '藏族', '苗族', '彝族', '朝鲜族', '土家族', '其他'],
-    employerOptions: ['国企', '央企', '民企', '事业单位', '政府机关', '外企', '个体经营', '自由职业', '其他'],
-    socialOptions: ['有', '无'],
-    healthOptions: ['健康', '良好', '一般', '其他'],
+    ethnicityOptions,
+    employerOptions,
+    socialOptions,
+    healthOptions,
     guestAvatarPath: '',  // 注册页 (头像/昵称/协议)
     guestAvatarUrl: '',
     guestNickname: '',
