@@ -40,3 +40,24 @@ $REMOTE_CMD "cd $REMOTE_PATH && rm -f /tmp/deploy.log && \
   setsid nohup bash ./deploy.sh build > /tmp/deploy.log 2>&1 < /dev/null & \
   echo '⏳ 构建已启动, 日志: /tmp/deploy.log (约 2-3 分钟)'"
 echo "→ 轮询确认: $REMOTE_CMD \"grep -c '✓ backend healthy' /tmp/deploy.log\""
+
+# 6) 自愈: 等构建完成; 若容器名冲突导致服务未起 (compose Recreate 竞态,
+#    docker daemon 偶发), 清理孤儿容器后强制重建并再次健康检查
+echo "⏳ 等待构建与健康检查 (约 3 分钟)..."
+sleep 150
+HEALTHY=$($REMOTE_CMD "curl -sf http://127.0.0.1:8000/api/v1/utils/health-check/ >/dev/null && echo ok" 2>/dev/null || echo fail)
+if [ "$HEALTHY" != "ok" ]; then
+  echo "⚠ 首次检查未通过, 清理孤儿容器后强制重建..."
+  $REMOTE_CMD "docker ps -aq --filter 'name=_qianyuan-' | xargs -r docker rm -f; \
+    cd $REMOTE_PATH && docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --force-recreate" \
+    >/dev/null 2>&1 || true
+  sleep 25
+  HEALTHY=$($REMOTE_CMD "curl -sf http://127.0.0.1:8000/api/v1/utils/health-check/ >/dev/null && echo ok" 2>/dev/null || echo fail)
+  if [ "$HEALTHY" = "ok" ]; then
+    echo "✓ 自愈重建成功"
+  else
+    echo "✗ 自愈后仍未健康, 请手动检查: $REMOTE_CMD \"docker ps -a | grep qianyuan; tail -20 /tmp/deploy.log\""
+    exit 1
+  fi
+fi
+$REMOTE_CMD "curl -sf -o /dev/null -w 'admin %{http_code}\n' http://127.0.0.1:5173/" || true
