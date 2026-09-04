@@ -221,8 +221,8 @@
         </view>
         <view class="guest-row">
           <view class="guest-label">居住的要求<text class="req">*</text></view>
-          <picker mode="selector" range="{{guestCities}}" bindchange="onGuestFormPick" data-field="c_location">
-            <view class="guest-picker {{!guestForm.cLocation ? 'placeholder' : ''}}">{{guestForm.cLocation || '请选择居住城市 (全国)'}}</view>
+          <picker mode="region" bindchange="onGuestRegionPick" data-field="c_location">
+            <view class="guest-picker {{!guestForm.cLocation ? 'placeholder' : ''}}">{{guestForm.cLocation || '请选择居住地要求'}}</view>
           </picker>
         </view>
         <view class="guest-row">
