@@ -2958,6 +2958,15 @@ Page({
     }
   },
 
+  /** 微信原生省市区选择 (户籍地/居住地要求等, 与「我的资料」编辑一致) */
+  onGuestRegionPick(e) {
+    const field = e.currentTarget.dataset.field;
+    const arr = e.detail.value || [];
+    const label = arr.filter(Boolean).join('');
+    if (!label) return;
+    this.setData({ guestForm: { ...this.data.guestForm, [field]: label } });
+  },
+
   /** 注册向导: 通用 picker (data-field 指定字段) */
   onGuestFormPick(e) {
     const field = e.currentTarget.dataset.field;
