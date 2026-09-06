@@ -219,10 +219,8 @@ test.describe("非法密码被拦截", () => {
     await page.getByTestId("new-password-input").fill(password)
     await page.getByTestId("confirm-password-input").fill(password)
     await page.getByRole("button", { name: "更新密码" }).click()
-    // toast 展示后端 detail（该错误信息暂为英文）
-    await expect(
-      page.getByText("New password cannot be the same as the current one"),
-    ).toBeVisible()
+    // toast 展示后端 detail
+    await expect(page.getByText("新密码不能与当前密码相同")).toBeVisible()
   })
 })
 

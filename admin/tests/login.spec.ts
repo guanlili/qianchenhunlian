@@ -62,8 +62,8 @@ test("密码错误提示", async ({ page }) => {
   await fillForm(page, firstSuperuser, password)
   await page.getByRole("button", { name: "登录" }).click()
 
-  // toast 展示后端 detail（后端该错误信息暂为英文）
-  await expect(page.getByText("Incorrect email or password")).toBeVisible()
+  // toast 展示后端 detail
+  await expect(page.getByText("邮箱或密码不正确")).toBeVisible()
 })
 
 // 退出登录
