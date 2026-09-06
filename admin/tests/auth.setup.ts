@@ -7,7 +7,8 @@ setup("authenticate", async ({ page }) => {
   await page.goto("/login")
   await page.getByTestId("email-input").fill(firstSuperuser)
   await page.getByTestId("password-input").fill(firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
-  await page.waitForURL("/")
+  await page.getByRole("button", { name: "登录" }).click()
+  // 超管登录后落门店总览
+  await page.waitForURL("**/stores**")
   await page.context().storageState({ path: authFile })
 })
