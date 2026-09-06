@@ -783,6 +783,45 @@ def test_store_qrcode(
     assert gone.status_code == 404
 
 
+def test_store_qrcode_cached_second_hit(
+    client, db: Session, superuser_token_headers, monkeypatch
+) -> None:
+    """门店码进程内缓存: 同一门店第二次下载命中缓存不再打微信接口;
+    改门店 (写路径) 后缓存失效, 再取会重新生成。"""
+    store = Store(name="码店B", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+
+    calls: list[str] = []
+
+    async def _fake_code(*, scene: str, page: str) -> bytes:
+        assert page == "pages/index/index"
+        calls.append(scene)
+        return b"\x89PNG-fake-bytes"
+
+    monkeypatch.setattr("app.api.routes.admin.wechat.get_wxacode_unlimit", _fake_code)
+
+    url = f"{settings.API_V1_STR}/admin/stores/{store.id}/qrcode"
+    for _ in range(2):
+        r = client.get(url, headers=superuser_token_headers)
+        assert r.status_code == 200
+        assert r.content == b"\x89PNG-fake-bytes"
+    # 第二次命中缓存: 微信接口只被调了一次
+    assert calls == [store.id.hex]
+
+    # 改门店名 → 缓存失效, 第三次请求重新生成
+    r = client.put(
+        f"{settings.API_V1_STR}/admin/stores/{store.id}",
+        headers=superuser_token_headers,
+        json={"name": "码店B改名"},
+    )
+    assert r.status_code == 200, r.text
+    r = client.get(url, headers=superuser_token_headers)
+    assert r.status_code == 200
+    assert calls == [store.id.hex, store.id.hex]
+
+
 def test_store_hard_delete_removes_everything(
     client, db: Session, superuser_token_headers
 ) -> None:

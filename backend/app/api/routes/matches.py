@@ -24,6 +24,7 @@ from app.api.shandong import shandong_clause as _shandong_clause
 from app.core import membership, view_cleanup
 from app.core.match_score import pair_score, sort_key
 from app.models import (
+    ContactRequest,
     Criteria,
     DailyRecommendation,
     Favorite,
@@ -145,6 +146,9 @@ class MatchDetailResponse(SQLModel):
     starred: bool = False
     verified: str = "none"  # 实名认证 ('none' | 'passed' | 'pending' | 'rejected')
     criteria: MatchCriteriaBrief | None = None  # 对方择偶要求 (没填过为 None)
+    # 调用者 24h 内是否已向该资料人提交过申请 (pending/accepted) —
+    # 端上据此显示「已申请」, 不必再拉 my-requests 列表 (>50 条会漏判)
+    has_requested_recent: bool = False
 
 
 # ---------------- Helpers ----------------
@@ -676,6 +680,24 @@ def get_profile_detail(
 
     starred = _is_starred(session, current_user.id, user_id)
 
+    # 24h 内是否已申请过该资料人 (与 contacts 提交侧 24h 去重同一口径,
+    # 只认 pending/accepted —— rejected 的单子不算「申请中」); 单条查询, 无工单时走索引即止
+    has_requested_recent = (
+        session.exec(
+            select(ContactRequest.id)
+            .where(
+                and_(
+                    ContactRequest.from_user_id == current_user.id,
+                    ContactRequest.to_user_id == user_id,
+                    ContactRequest.status.in_(["pending", "accepted"]),  # type: ignore
+                    ContactRequest.created_at >= one_day_ago,
+                )
+            )
+            .limit(1)
+        ).first()
+        is not None
+    )
+
     # 红娘撮合方案: 联系方式永远不下发给小程序客户端
     # 客户端的 unlocked 字段始终 False (兼容旧字段, 等小程序新版上线后移除)
     public = ProfilePublic.model_validate(profile, from_attributes=True)
@@ -709,6 +731,7 @@ def get_profile_detail(
         starred=starred,
         verified=(target_user.verified or "none"),
         criteria=criteria_brief,
+        has_requested_recent=has_requested_recent,
     )
 
 

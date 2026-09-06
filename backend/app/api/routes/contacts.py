@@ -16,7 +16,7 @@ from sqlmodel import Field, SQLModel, and_, func, select
 from app.api.deps import (
     ApiReadLimited,
     ApiWriteLimited,
-    CompleteProfileUser,
+    CompleteProfileUserWithProfile,
     CurrentUser,
     SessionDep,
 )
@@ -73,28 +73,29 @@ class ContactRequestList(SQLModel):
 @router.post("/requests", response_model=ContactRequestResult)
 def submit_contact_request(
     session: SessionDep,
-    current_user: CompleteProfileUser,
+    current_user: CompleteProfileUserWithProfile,
     _write: ApiWriteLimited,
     body: ContactRequestBody,
 ) -> ContactRequestResult:
     """提交"想联系 X"工单. 红娘后台看到后人工撮合.
 
     - 必须已到店实名核验 (verified=passed), 否则 403 NOT_VERIFIED 引导到店
-    - 必须自己资料完善度 >= 60% (CompleteProfileUser)
+    - 必须自己资料完善度 >= 60% (CompleteProfileUserWithProfile)
     - 消耗 1 次申请额度 (docs/13 三桶: 会员日额度/每日免费/永久余额)
     - 同一目标 24h 内不允许重复申请 (避免骚扰红娘)
     - 三桶全空 → 402
     - 目标已封禁 / 未审核 / 非在期会员 → 404
     """
+    user = current_user.user
     # 实名门槛: 安排相亲必须先到所属门店线下实名核验 (红娘当面核验后后台标通过)
-    if (current_user.verified or "none") != "passed":
+    if (user.verified or "none") != "passed":
         raise HTTPException(
             status_code=403,
             detail="NOT_VERIFIED|请先到所属门店完成实名核验, 再申请安排相亲",
         )
 
     target_id = body.target_user_id
-    if target_id == current_user.id:
+    if target_id == user.id:
         raise HTTPException(status_code=400, detail="不能向自己发起申请")
 
     target_user = session.get(User, target_id)
@@ -113,7 +114,7 @@ def submit_contact_request(
 
     # 留言内容审核 (fail-fast: 在扣额度/建单之前, 避免扣了额度又因违规 400)
     message = (body.message or "").strip()[:200] or None
-    assert_text_safe(message, current_user.openid, scene=2)
+    assert_text_safe(message, user.openid, scene=2)
 
     # 24h 重复申请防护 (同一对) - 不论之前 status 如何, 都禁止
     from datetime import timedelta as _td
@@ -122,7 +123,7 @@ def submit_contact_request(
     recent = session.exec(
         select(ContactRequest).where(
             and_(
-                ContactRequest.from_user_id == current_user.id,
+                ContactRequest.from_user_id == user.id,
                 ContactRequest.to_user_id == target_id,
                 ContactRequest.created_at >= one_day_ago,
             )
@@ -134,23 +135,20 @@ def submit_contact_request(
             detail="DUPLICATE|24 小时内已申请过, 请耐心等待红娘处理",
         )
 
-    from_profile = session.exec(
-        select(Profile).where(Profile.user_id == current_user.id)
-    ).first()
-
+    # home_store_id 直接取依赖已带出的本人 Profile, 不再重复查询
     req = ContactRequest(
-        from_user_id=current_user.id,
+        from_user_id=user.id,
         to_user_id=target_id,
         message=message,
         status="pending",
-        store_id=from_profile.home_store_id if from_profile else None,
+        store_id=current_user.profile.home_store_id,
     )
     session.add(req)
 
     # 三桶额度扣减 (docs/13): 会员日额度 → 每日免费 → 永久余额; 同事务提交
     bucket = membership.consume(
         session,
-        current_user,
+        user,
         ref_id=req.id,
         note=f"申请联系 {target_user.xy_code or ''}".strip() or None,
     )
@@ -161,12 +159,12 @@ def submit_contact_request(
         )
     session.commit()
     session.refresh(req)
-    session.refresh(current_user)
+    session.refresh(user)
 
-    quota = membership.quota_status(session, current_user)
+    quota = membership.quota_status(session, user)
     return ContactRequestResult(
         request_id=req.id,
-        balance=current_user.unlock_balance,
+        balance=user.unlock_balance,
         status=req.status,
         created_at=req.created_at,
         bucket=bucket,

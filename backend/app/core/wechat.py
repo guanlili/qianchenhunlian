@@ -62,6 +62,45 @@ async def get_wxacode_unlimit(*, scene: str, page: str) -> bytes:
     return resp.content
 
 
+# ---------------- 小程序码缓存 (进程内 TTL 24h, key 含 scene/page) ----------------
+# getwxacodeunlimit 对同一 (scene, page) 生成的码内容稳定 (scene 码不随门店
+# 名称等元数据变化)。admin 反复点「下载门店码」会打爆微信接口配额,
+# 故按 key 缓存 PNG bytes: 门店写路径 (admin 改/关门店) 主动失效, 其余 24h TTL 兜底。
+_WXACODE_CACHE_TTL = 24 * 3600.0
+_wxacode_cache: OrderedDict[tuple[str, str], tuple[float, bytes]] = OrderedDict()
+_wxacode_cache_lock = threading.Lock()
+
+
+def clear_wxacode_cache() -> None:
+    """清空小程序码缓存 (tests/conftest.py 每测试调用, 保证测试间隔离)."""
+    with _wxacode_cache_lock:
+        _wxacode_cache.clear()
+
+
+def invalidate_wxacode_cache(scene: str) -> None:
+    """按 scene 失效缓存条目 (admin 门店写路径调用; scene=门店ID hex)."""
+    with _wxacode_cache_lock:
+        for key in [k for k in _wxacode_cache if k[0] == scene]:
+            _wxacode_cache.pop(key, None)
+
+
+async def get_wxacode_unlimit_cached(*, scene: str, page: str) -> bytes:
+    """get_wxacode_unlimit 的带缓存版本 (进程内, TTL 24h)。只缓存成功结果,
+    WechatError / 网络异常不进缓存 → 失败永远走真实重试。"""
+    key = (scene, page)
+    with _wxacode_cache_lock:
+        item = _wxacode_cache.get(key)
+        if item is not None:
+            ts, png = item
+            if time.monotonic() - ts <= _WXACODE_CACHE_TTL:
+                return png
+            _wxacode_cache.pop(key, None)
+    png = await get_wxacode_unlimit(scene=scene, page=page)
+    with _wxacode_cache_lock:
+        _wxacode_cache[key] = (time.monotonic(), png)
+    return png
+
+
 async def jscode2session(code: str) -> dict[str, str]:
     """用 code 换取 openid + session_key.
 

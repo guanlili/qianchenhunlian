@@ -91,9 +91,9 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
         raise HTTPException(status_code=403, detail="此 token 不能调用业务接口")
     user = session.get(User, data.sub)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户不存在")
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail="账号已停用")
     return user
 
 
@@ -183,9 +183,9 @@ def get_current_actor(session: SessionDep, token: TokenDep) -> Actor:
     # user (含 superuser/wx_user)
     user = session.get(User, data.sub)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户不存在")
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail="账号已停用")
     return Actor(
         id=str(user.id),
         actor_type="user",
@@ -201,9 +201,7 @@ CurrentActor = Annotated[Actor, Depends(get_current_actor)]
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:
     if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
-        )
+        raise HTTPException(status_code=403, detail="当前用户权限不足")
     return current_user
 
 
@@ -228,11 +226,20 @@ def require_admin(actor: CurrentActor) -> Actor:
 MIN_PROFILE_PROGRESS = 60
 
 
-def get_user_with_complete_profile(
-    session: SessionDep,
-    current_user: CurrentUser,
-) -> User:
-    """要求调用者已建 Profile 且 progress 达标. 用于解锁/发意向等关键操作."""
+@dataclass
+class UserWithProfile:
+    """「调用者 + 已达标资料」二元组。
+
+    依赖内一次查询带出 Profile, 需要 home_store_id 等字段的路由
+    (如 contacts) 复用即可, 不必再查一遍。
+    """
+
+    user: User
+    profile: Profile
+
+
+def _require_complete_profile(session: Session, current_user: User) -> UserWithProfile:
+    """校验调用者已建 Profile 且 progress 达标, 返回 (user, profile)。"""
     profile = session.exec(
         select(Profile).where(Profile.user_id == current_user.id)
     ).first()
@@ -246,7 +253,29 @@ def get_user_with_complete_profile(
             status_code=403,
             detail=f"LOW_PROGRESS|资料完善度需达到 {MIN_PROFILE_PROGRESS}% (当前 {profile.progress}%)",
         )
-    return current_user
+    return UserWithProfile(user=current_user, profile=profile)
+
+
+def get_user_with_complete_profile(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> User:
+    """要求调用者已建 Profile 且 progress 达标. 用于解锁/发意向等关键操作."""
+    return _require_complete_profile(session, current_user).user
 
 
 CompleteProfileUser = Annotated[User, Depends(get_user_with_complete_profile)]
+
+
+def get_complete_user_with_profile(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> UserWithProfile:
+    """同 CompleteProfileUser 的门槛校验, 但把已查出的 Profile 一并返回,
+    供需要本人资料字段的路由复用 (省一次重复 SELECT)。"""
+    return _require_complete_profile(session, current_user)
+
+
+CompleteProfileUserWithProfile = Annotated[
+    UserWithProfile, Depends(get_complete_user_with_profile)
+]
