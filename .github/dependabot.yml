@@ -1,0 +1,47 @@
+# Dependabot 依赖自动更新配置
+# 文档: https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+#
+# commit-message 统一走 Conventional Commits 的 chore 类型（依赖更新不属于功能修复；
+# 安全修复类 PR 以 GitHub 侧 Security Advisory 标题为准，合并时按需手改 fix 前缀）。
+version: 2
+
+updates:
+  # GitHub Actions workflow 依赖（ci.yml / deploy.yml / pr-review.yml 里的 actions/*）
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps-actions)"
+      include: scope
+    groups:
+      actions-minor:
+        update-types: ["minor", "patch"]
+
+  # Docker 镜像依赖（各 Dockerfile FROM 与 docker-compose*.yml 的 image）
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps-docker)"
+      include: scope
+    groups:
+      docker-minor:
+        update-types: ["minor", "patch"]
+
+  # admin 前端 npm 依赖（backend 用 uv 管理，pipa 生态暂不接入）
+  - package-ecosystem: npm
+    directory: /admin
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps-npm)"
+      prefix-development: "chore(deps-npm-dev)"
+      include: scope
+    groups:
+      npm-minor:
+        update-types: ["minor", "patch"]

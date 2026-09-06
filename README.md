@@ -19,26 +19,29 @@ qianchenhunlian/
 │   ├── postgres/                  PG 数据
 │   └── uploads/                   FastAPI 自托管的用户上传图片
 ├── logs/                        运行日志 (gitignored)
-├── docs/                        规划与设计文档 (含本部署说明的细化版)
-├── docker-compose.yml           生产基础 compose
-├── docker-compose.override.yml  dev 默认覆盖 (HMR / bind mount / 端口绑 0.0.0.0)
-├── docker-compose.traefik.yml   生产追加 (HTTPS / 多域名)
+├── docs/                        规划与设计文档
+├── docker-compose.yml           基础 compose (服务定义, 所有组合共用)
+├── docker-compose.override.yml  dev 默认覆盖 (HMR / bind mount, `docker compose up` 自动加载)
+├── docker-compose.local.yml     本机预览端口覆盖 (127.0.0.1, 避开常用端口)
+├── docker-compose.server.yml    生产覆盖 (1Panel + OpenResty 反代 127.0.0.1 端口)
+├── deploy.sh                    服务器端部署入口 (构建 + 健康检查 + 自动回滚)
 ├── .env / .env.example          环境变量 (.env gitignored)
-└── scripts/                     check-prereqs.sh / backup.sh / scripts-server/
+├── scripts/                     manual-deploy.sh (CI 不可用时的手动部署兜底)
+└── scripts-server/              服务器侧运维脚本 (备份 / 清理 / 前置检查)
 ```
 
 > 整体架构、技术选型、决策过程见 [docs/09-后端框架选型.md](docs/09-后端框架选型.md)。
 
 ---
 
-## 快速开始（dev 机已就绪）
+## 快速开始（任何新机器可复现）
 
-当前 dev 机 IP：`10.129.209.249`，所有服务都已绑 `0.0.0.0`。
+需要：Docker + docker compose v2 插件（`docker compose version` 能出版本号即可）。
 
 ```bash
-cd /data/gzl/project/qianchenhunlian
-docker compose up -d --build
-docker compose logs -f backend       # 看后端启动日志
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.local.yml logs -f backend
 ```
 
 第一次启动 prestart 容器会自动：
@@ -46,31 +49,36 @@ docker compose logs -f backend       # 看后端启动日志
 2. 跑 alembic 迁移
 3. 调 `init_db`：建所有业务表 + 创建首个 superuser + 灌种子数据
 
-启动后的端口：
+启动后各服务地址（对应 `docker-compose.local.yml` / `docker-compose.override.yml` 的实际端口映射）：
 
-| 服务 | URL | 说明 |
+| 服务 | URL / 端口 | 说明 |
 | --- | --- | --- |
-| FastAPI | <http://10.129.209.249:8000> | 小程序与 admin 共用的 API |
-| FastAPI Swagger | <http://10.129.209.249:8000/docs> | 在线 API 文档 |
-| Admin 后台 | <http://10.129.209.249:5173> | 浏览器开 |
-| Adminer | <http://10.129.209.249:18081> | 数据库 Web UI |
-| Mailcatcher | <http://10.129.209.249:11180> | 收发测试邮件 |
-| PostgreSQL | `10.129.209.249:5432` | 仅内网 |
-| 生产 Admin (Nginx) | <http://10.129.209.249:28080> | 启用 traefik 才用 |
-| 生产 Traefik | <http://10.129.209.249:28090> | 同上 |
+| Admin 后台 (Vite dev) | <http://localhost:5173> | 浏览器打开 |
+| FastAPI | <http://localhost:18000> | 小程序与 admin 共用的 API（绑 127.0.0.1） |
+| FastAPI Swagger | <http://localhost:18000/docs> | 在线 API 文档 |
+| PostgreSQL | `127.0.0.1:15432` | 避开本机 5432，用 psql 等工具直连 |
+| Adminer | <http://localhost:18081> | 数据库 Web UI，需 `--profile tools` 启用 |
+| Mailcatcher | <http://localhost:11180> | 测试邮件收件箱，需 `--profile tools` 启用 |
 
-默认管理员账号（生产**务必**改）：
+tools 类服务默认不启动，需要时：
 
+```bash
+docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.local.yml --profile tools up -d adminer mailcatcher
 ```
-账号: admin@qianyuan.cn
-密码: changeme123
-```
+
+管理员默认凭据不在本文档罗列：见 `.env.example` 的 `FIRST_SUPERUSER` / `FIRST_SUPERUSER_PASSWORD`，**首次启动后立即在后台改掉**。
+
+> 不加 `docker-compose.local.yml` 的裸 `docker compose up -d --build`（自动加载 override）也可跑，端口为 5432 / 8000 / 5173 且绑 `0.0.0.0`，适合局域网联调；本机 5432 / 8000 被占用时用上面的 local 组合。
+
+### 原作者开发机备忘
+
+原作者 dev 机（IP `10.129.209.249`，路径 `/data/gzl/project/qianchenhunlian`）已把这些值写进其本地 `.env`（`HOST_IP`、`DOMAIN`、`FRONTEND_HOST` 等，供小程序真机直连 dev 后端）。新机器上小程序真机联调时，把 `.env` 里 `HOST_IP` 改成你本机的局域网 IP 即可，其余配置不受影响。
 
 ---
 
 ## 小程序
 
-**微信开发者工具** → "导入项目" → 路径选 **`/data/gzl/project/qianchenhunlian/miniprogram`**（不是仓库根）。
+**微信开发者工具** → 「导入项目」→ 路径选仓库根下的 **`miniprogram/`** 目录（不是仓库根）。
 AppID 已经写在 `miniprogram/project.config.json`：`wx13929d522db7fa5a`。
 
 第一次跑：
@@ -108,70 +116,121 @@ WECHAT_APP_SECRET=32位真Secret
 
 ## 数据备份与迁移
 
-### 全量备份
+### 数据库每日备份（生产 crontab）
 
-```bash
-cd /data/gzl/project
-# 关掉容器再打包, 保证 PG 数据一致
-docker compose -f qianchenhunlian/docker-compose.yml down
+服务器上由 root crontab 每日执行 `scripts-server/pg-backup.sh`（`docker exec pg_dump` + gzip，本地滚动保留 14 天；配置了 `BACKUP_OSS_TARGET` 且装有 rclone 时会同步推送 OSS，见脚本头注释）：
 
-tar czf /tmp/qianyuan_$(date +%Y%m%d).tar.gz \
-    --exclude='node_modules' --exclude='__pycache__' --exclude='.venv' \
-    qianchenhunlian/
-
-docker compose -f qianchenhunlian/docker-compose.yml up -d
+```cron
+17 3 * * * /root/qianchenhunlian/scripts-server/pg-backup.sh >> /var/log/pg-backup.log 2>&1
 ```
 
-### 仅备份数据库（小巧、定期）
+### 手动备份数据库（一次性）
 
 ```bash
 docker compose exec db pg_dump -U qianyuan qianyuan | gzip > /tmp/db_$(date +%Y%m%d).sql.gz
 ```
 
+### 全量备份（含数据整仓迁移）
+
+`scripts-server/backup.sh` 会停掉容器（保证 PG 一致性）后把整仓（含 `data/`）打成 tar.gz：
+
+```bash
+bash scripts-server/backup.sh /tmp/qianyuan_full.tar.gz
+```
+
 ### 迁移到新服务器
 
 ```bash
-# 旧机器
-cd /data/gzl/project
-docker compose -f qianchenhunlian/docker-compose.yml down
-tar czf qianyuan_full.tar.gz --exclude='node_modules' --exclude='__pycache__' --exclude='.venv' qianchenhunlian/
-
-# scp 到新机器, 同样位置 (路径无所谓, 容器内全是相对路径)
-scp qianyuan_full.tar.gz user@new-host:/data/
+# 旧机器：打全量包（同上）
+# 传到新机器
+scp /tmp/qianyuan_full.tar.gz user@new-host:/data/
 
 # 新机器
 ssh user@new-host
-cd /data
-tar xzf qianyuan_full.tar.gz
+cd /data && tar xzf qianyuan_full.tar.gz
 cd qianchenhunlian
 # 装 docker compose 插件 (如果新机器没有)
 sudo apt install -y docker-compose-v2
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
 ```
 
-数据库 / 上传图片 都随 `data/` 一并跟着 tar 走，开箱即用。
+数据库 / 上传图片都随 `data/` 一并跟着 tar 走，开箱即用。
 
 ---
 
-## 部署到生产服务器（备案后启用）
+## 部署到生产服务器
 
-dev 用的是 `docker-compose.yml + docker-compose.override.yml`（自动加载）。
-生产用 `docker-compose.yml + docker-compose.traefik.yml`：
+实际生产链路：**GitHub Actions（push main 触发）→ rsync 推代码 → 服务器本地构建**。服务器在大陆、连不上 GitHub，所以代码由 Actions 推过去、在服务器上构建镜像（不用 git pull、不依赖 Docker Hub）。反向代理由服务器上已有的 **1Panel + OpenResty** 承担，容器端口只绑 `127.0.0.1`，不直接对外。
 
-1. 先在云服务商建一个名为 `traefik-public` 的 Docker network
-2. 改 `.env` 配置：
-   - 将 `DOMAIN=你的域名.com`、`ENVIRONMENT=production`
-   - `SECRET_KEY` 重新生成、`FIRST_SUPERUSER_PASSWORD` 换强密码（生产环境会强校验拒绝弱密码）
-   - 补充 Traefik 和构建参数：`EMAIL`（证书申请邮箱）、`USERNAME` 与 `HASHED_PASSWORD`（看板 Basic Auth 看板认证，其中 `$` 需双写 `$$` 转义）、`VITE_API_URL=https://api.你的域名.com`（参见 `.env.example` 末尾）
-3. 跑：
+### 服务器前置要求
 
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d --build
-   ```
+- Docker + docker compose v2 插件
+- 1Panel 面板，用其 OpenResty 做反代并申请 HTTPS 证书，两条转发规则：
+  - `api.<域名>` → `http://127.0.0.1:8000`（FastAPI）
+  - `dashboard.<域名>` / `<域名>` / `www.<域名>` → `http://127.0.0.1:5173`（admin 生产构建，nginx 静态站）
+- 仓库部署在 `/root/qianchenhunlian`（即 GitHub secrets 里的 `DEPLOY_PATH`）
+- 服务器上已有 `.env`（首次手动放一份；rsync 明确排除 `.env` / `data/`，不会被覆盖或删除），关键项：`ENVIRONMENT=production`、`SECRET_KEY` 重新生成、`FIRST_SUPERUSER_PASSWORD` 强密码、`VITE_API_URL`、`BACKEND_CORS_ORIGINS` 包含 admin 来源域名
 
-4. Traefik 自动签 Let's Encrypt 证书；`api.<DOMAIN>` → FastAPI，`dashboard.<DOMAIN>`、`<DOMAIN>` 和 `www.<DOMAIN>` → admin (含落地页)。
+### GitHub secrets 清单（仓库 Settings → Secrets → Actions）
 
-详细 traefik 配置请看 [docs/09-后端框架选型.md](docs/09-后端框架选型.md) 第 5 节"部署架构"。
+| Secret | 说明 |
+| --- | --- |
+| `DEPLOY_HOST` | 服务器 IP |
+| `DEPLOY_USER` | SSH 用户（root） |
+| `DEPLOY_PORT` | SSH 端口 |
+| `DEPLOY_PATH` | 服务器上仓库路径（`/root/qianchenhunlian`） |
+| `DEPLOY_SSH_KEY` | SSH 私钥（公钥放服务器 `authorized_keys`） |
+
+### 日常发布：push 到 main
+
+合并 PR / push 到 `main` 自动触发 `.github/workflows/deploy.yml`（部署串行、不并发）：
+
+1. rsync 全量同步代码到 `$DEPLOY_PATH`（排除 `.git/`、`.env`、`data/`、`admin/node_modules/` 等；`--delete` 清理仓库中已删文件）
+2. SSH 到服务器执行 `./deploy.sh build`：
+   - 先把当前 `:latest` 镜像打 `:prev` 标签（回滚点）
+   - `docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build` 本地构建并启动
+   - 轮询 `http://127.0.0.1:8000/api/v1/utils/health-check/`（最多 60 秒），未就绪则自动把 `:prev` 重新打成 `:latest` 并强制重建（回滚），部署标红
+
+也可在 GitHub 页面手动触发（workflow_dispatch）。
+
+### 手动部署（CI 不可用时兜底）
+
+本机执行 `scripts/manual-deploy.sh`（依赖 `~/.ssh/config` 里名为 `qianyuan` 的主机别名，服务器路径 `/root/qianchenhunlian`）：
+
+```bash
+bash scripts/manual-deploy.sh qianyuan
+```
+
+流程与 CI 相同（归档校验 → 部署前先跑一次 pg-backup → rsync → 服务器 `deploy.sh build`），并自带「孤儿容器清理 + 健康检查自愈」。已在服务器上时直接：
+
+```bash
+cd /root/qianchenhunlian
+./deploy.sh          # 用现有镜像更新启动
+./deploy.sh build    # 重新构建镜像并启动（健康检查失败自动回滚）
+```
+
+⚠️ 服务器上**不要**裸 `docker compose up` —— 会自动加载 `docker-compose.override.yml`（dev），把 backend 打回 `--reload`。生产一律走 `deploy.sh` 或显式 `-f docker-compose.yml -f docker-compose.server.yml`。
+
+### 回滚
+
+- 自动：`deploy.sh build` 健康检查失败时回滚到 `:prev` 镜像（见上）
+- 手动：上次部署的镜像一直以 `:prev` 保留在服务器上
+
+  ```bash
+  cd /root/qianchenhunlian
+  docker tag qianyuan-backend:prev qianyuan-backend:latest
+  docker tag qianyuan-admin:prev qianyuan-admin:latest
+  docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --force-recreate
+  ```
+
+### 服务器 crontab 建议
+
+```cron
+# 每日 3:17 备份 PostgreSQL（本地保留 14 天；配置 BACKUP_OSS_TARGET 后同步推 OSS，见脚本头注释）
+17 3 * * * /root/qianchenhunlian/scripts-server/pg-backup.sh >> /var/log/pg-backup.log 2>&1
+# 每周日 4:17 清理 Docker 构建缓存/悬空镜像/停止容器（不动 :prev 回滚镜像与数据卷）
+17 4 * * 0 /root/qianchenhunlian/scripts-server/docker-cleanup.sh >> /var/log/docker-cleanup.log 2>&1
+```
 
 ---
 
@@ -183,29 +242,39 @@ dev 用的是 `docker-compose.yml + docker-compose.override.yml`（自动加载�
 bash scripts-server/check-prereqs.sh
 ```
 
-会检查 Docker / docker compose 插件 / .env 存在 / 端口空闲 8 项。
+会检查 Docker / docker compose 插件 / .env 存在 / 端口空闲等。
 
 ---
 
 ## 常用操作
 
+以下命令默认在 dev 组合（`docker-compose.yml + override + local`）下；为了可复制执行，统一写全 `-f` 参数：
+
 ```bash
+# 定义别名（可选，后文直接用 dcc）
+alias dcc='docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.local.yml'
+
+# 启动 / 停止
+dcc up -d --build
+dcc down
+
 # 看某个服务日志
-docker compose logs -f backend
-docker compose logs -f admin
+dcc logs -f backend
+dcc logs -f admin
 
 # 重启某个服务 (代码变了)
-docker compose up -d --build backend
-docker compose restart admin
+dcc up -d --build backend
+dcc restart admin
 
 # 进 PostgreSQL shell
-docker compose exec db psql -U qianyuan qianyuan
+dcc exec db psql -U qianyuan qianyuan
 
 # 重新生成前端 OpenAPI client (改了后端 API schema 后)
-cd admin && curl -s http://10.129.209.249:8000/api/v1/openapi.json > openapi.json && npm run generate-client
+curl -s http://localhost:18000/api/v1/openapi.json > admin/openapi.json
+cd admin && npm run generate-client
 
 # 看后端 API 路由清单
-curl -s http://10.129.209.249:8000/api/v1/openapi.json | python3 -c "
+curl -s http://localhost:18000/api/v1/openapi.json | python3 -c "
 import json, sys
 d=json.load(sys.stdin)
 for p in sorted(d['paths']):
@@ -234,13 +303,16 @@ for p in sorted(d['paths']):
 
 ---
 
-## 默认凭证（dev 用，**生产改**）
+## 默认凭据说明
 
-| 用途 | 值 |
+所有账号口令**不在 README 明文罗列**：
+
+| 用途 | 值的位置 |
 | --- | --- |
-| Admin 登录 | `admin@qianyuan.cn` / `changeme123` |
-| 内置员工账号（演示用） | `staff1@qianyuan.cn` / `staff_pass_123` |
-| Postgres | user `qianyuan` / 密码见 `.env` `POSTGRES_PASSWORD` |
-| JWT SECRET_KEY | `.env` 里有，prod 务必 `openssl rand -hex 32` 重新生成 |
+| Admin 初始超管 | `.env.example` 的 `FIRST_SUPERUSER` / `FIRST_SUPERUSER_PASSWORD`，首次启动后立即在后台修改 |
+| Postgres | `.env` 的 `POSTGRES_USER` / `POSTGRES_PASSWORD` |
+| JWT SECRET_KEY | `.env`；生产务必 `openssl rand -hex 32` 重新生成 |
+
+（数据库初始只创建 `FIRST_SUPERUSER` 一个超管账号，无其它内置账号；demo 资料仅在 local 环境注入。）
 
 种子数据：6 个 demo 资料（寻缘号 `53366922 / 31821616 / 47291038 / 68402957 / 29475861 / 81937465`），全部已通过审核，含联系方式。
