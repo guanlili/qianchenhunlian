@@ -301,6 +301,9 @@ const defaultCriteriaValues = {
   note: '',
 };
 
+// 仅编辑期即时反馈用: 资料编辑屏输入 / 未登录离线操作时让进度环跟着动;
+// 落库后一律以后端 profile.progress 为准 (loadMyProfile 与各保存接口响应),
+// 不再用此函数兜底, 也不再保留 39% 起步的下限
 const calcProfileProgress = (form, photos) => {
   const filled = [
     form.nickname,
@@ -311,7 +314,7 @@ const calcProfileProgress = (form, photos) => {
     photos.some((photo) => photo.url),
   ].filter(Boolean).length;
 
-  return Math.max(39, Math.round((filled / 6) * 100));
+  return Math.round((filled / 6) * 100);
 };
 
 // 编辑页选项 (模块级, buildProfileFields 与 Page data 共用)
@@ -535,7 +538,7 @@ Page({
     // ===== 我点过好感的人 (my-likes) =====
     myLikesList: [],
     myLikesTotal: 0,
-    profileProgress: 39,
+    profileProgress: 0,     // 后端 loadMyProfile 拉到 profile.progress 前按 0 (跟随后端口径, 不再前端 39 起步)
     formReturnScreen: 'my-profile',
     criteriaValues: defaultCriteriaValues,
     criteriaFields: buildCriteriaFields(defaultCriteriaValues),
@@ -1398,29 +1401,16 @@ Page({
     });
     if (this.data.apiReady) {
       try {
-        // 详情与「我的申请」列表无依赖, 并行拉取缩短进详情耗时 (好感状态仍异步 fire-and-forget)
-        const [resp, my] = await Promise.all([
-          matchSvc.getDetail(id),
-          // 已知限制: requestSubmitted 依赖前 50 条申请判断 24h 内是否已申请,
-          // 申请总数超过 50 时旧申请会漏判误报「未申请」; 后续方案是 detail 接口直接带 has_requested_recent
-          contactSvc.listMyRequests({ limit: 50 }).catch(() => null),
-        ]);
+        const resp = await matchSvc.getDetail(id);
         const adapted = adaptDetail(resp);
         if (adapted) {
-          let alreadyRequested = false;
-          if (my && Array.isArray(my.items)) {
-            const cutoff = Date.now() - 24 * 3600 * 1000;
-            alreadyRequested = my.items.some((r) => {
-              if (r.to_user_id !== id) return false;
-              const t = new Date(r.created_at).getTime();
-              return !Number.isNaN(t) && t >= cutoff;
-            });
-          }
           this.setData({
             selectedProfile: adapted,
             detailStarred: !!resp.starred,
             detailUnlocked: false,
-            requestSubmitted: alreadyRequested,
+            // 24h 内是否已申请过对方: 取 detail 响应的 has_requested_recent (与 starred/unlocked 同级);
+            // 依赖后端下发该字段, 暂未就绪时为 undefined → 按 false 处理, 不额外发请求兜底
+            requestSubmitted: !!resp.has_requested_recent,
             detailLiked: false,
             detailMutual: false,
           });
@@ -1490,6 +1480,8 @@ Page({
           selectedProfile: adapted,
           detailStarred: !!detailResp.starred,
           detailUnlocked: !!detailResp.unlocked,
+          // 翻页同样取 detail 响应的 has_requested_recent, 避免上一条的申请状态串页
+          requestSubmitted: !!detailResp.has_requested_recent,
           detailToast: true,
           detailLiked: false,
           detailMutual: false,
@@ -1966,7 +1958,7 @@ Page({
       const updated = await profileSvc.saveProfile({ desc: desc || null });
       this.setData({
         profileDesc: updated.desc || desc,
-        profileProgress: updated.progress || this.data.profileProgress,
+        profileProgress: updated.progress || 0, // 保存响应必带 progress, 直接采用后端口径
       });
       wx.showToast({ title: '介绍已保存', icon: 'success' });
       this.closeIntroEdit();
@@ -2158,7 +2150,7 @@ Page({
       this.setData({
         photos,
         myPhotos: _resolveList(updated.photos),
-        profileProgress: updated.progress || calcProfileProgress(this.data.profileForm, photos),
+        profileProgress: updated.progress || 0, // 上传响应必带 progress, 采用后端口径
       });
     } catch (e) {
       console.warn('[index] uploadPhoto', e);
@@ -2569,7 +2561,12 @@ Page({
       };
       const items = (r.items || []).map((it) => {
         const s = _STATUS[it.status] || { label: it.status, tone: 'muted' };
-        return { ...it, statusLabel: s.label, statusTone: s.tone };
+        return {
+          ...it,
+          statusLabel: s.label,
+          statusTone: s.tone,
+          createdText: formatDate(it.created_at), // 提交时间走 formatDate, 不裸显后端 ISO 串
+        };
       });
       this.setData({
         requestList: items,
