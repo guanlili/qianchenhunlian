@@ -84,8 +84,8 @@ test("无效或过期重置链接", async ({ page }) => {
   await page.getByTestId("confirm-password-input").fill(password)
   await page.getByRole("button", { name: "重置密码" }).click()
 
-  // toast 展示后端 detail（该错误信息暂为英文）
-  await expect(page.getByText("Invalid token")).toBeVisible()
+  // toast 展示后端 detail
+  await expect(page.getByText("重置链接无效或已过期")).toBeVisible()
 })
 
 test("弱密码被前端校验拦截", async ({ page, request }) => {
