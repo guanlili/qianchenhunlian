@@ -11,8 +11,9 @@ Page({
 
   /** 加红娘微信: 展示二维码大图, 长按识别添加 */
   showContactQr() {
-    if (!this.data.store.contactQr) return;
-    wx.previewImage({ urls: [this.data.store.contactQr] });
+    const s = this.data.store;
+    if (!s || !s.contactQr) return;
+    wx.previewImage({ urls: [s.contactQr] });
   },
 
   async onLoad(query) {
@@ -71,7 +72,11 @@ Page({
       await storeSvc.setHomeStore(s.id);
       this.setData({ isCurrent: true, binding: false });
       wx.showToast({ title: '已选定此门店', icon: 'success' });
-      setTimeout(() => wx.navigateBack({ delta: 2 }), 800);
+      // 按页面栈深度回退: 从「城市→门店列表」进本页 (栈深 3) 回两层到城市页,
+      // 从「我的-当地门店」直达 (栈深 2) 只回一层, 避免 delta 超栈导航失败
+      const depth = getCurrentPages().length;
+      const delta = Math.min(2, Math.max(1, depth - 1));
+      setTimeout(() => wx.navigateBack({ delta }), 800);
     } catch (e) {
       this.setData({ binding: false });
       wx.showToast({ title: (e && e.detail) || '操作失败', icon: 'none' });

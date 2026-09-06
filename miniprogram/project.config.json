@@ -1,6 +1,5 @@
 {
   "miniprogramRoot": "./",
-  "cloudfunctionRoot": "",
   "setting": {
     "urlCheck": true,
     "es6": true,
@@ -47,7 +46,6 @@
   "appid": "wx13929d522db7fa5a",
   "projectname": "qianyuan-mp",
   "libVersion": "3.15.2",
-  "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "condition": {
     "search": {
       "list": []
@@ -62,13 +60,7 @@
       "list": []
     },
     "miniprogram": {
-      "list": [
-        {
-          "id": -1,
-          "name": "db guide",
-          "pathName": "pages/databaseGuide/databaseGuide"
-        }
-      ]
+      "list": []
     }
   },
   "compileType": "miniprogram",

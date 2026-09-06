@@ -22,8 +22,8 @@ function daily({ tab = 'today', cursor = null, limit = 10 } = {}) {
  * 前置要求自己已填 性别/出生年份/城市, 缺则 403 BASIC_INFO_REQUIRED
  */
 function preview({ limit = 5 } = {}) {
-  // silent: 游客未填三问时后端 403 属预期流程, 不弹全局错误 toast
-  return get(`/matches/preview?limit=${limit}`, { silent: true });
+  // silent + 不 showLoading: 游客未填三问时后端 403 属预期流程, 不弹全局错误 toast / 不闪 loading
+  return get(`/matches/preview?limit=${limit}`, { silent: true, loading: false });
 }
 
 /**

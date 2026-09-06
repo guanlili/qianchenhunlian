@@ -37,6 +37,9 @@ const bodyTypeOptions = ['不限', '偏瘦', '苗条', '匀称', '适中', '中�
 
 const relationOptions = ['父母', '本人', '朋友', '亲戚'];
 
+// 户籍地/籍贯候选 (注册向导与择偶要求 picker 用)
+const regions = ['北京', '天津', '山东', '河北', '江苏', '上海', '济南', '德州', '青岛', '徐州', '苏州', '杭州'];
+
 const jobOptions = [
   '公务员',
   '会计',
@@ -109,6 +112,7 @@ module.exports = {
   carOptions,
   bodyTypeOptions,
   relationOptions,
+  regions,
   jobOptions,
   traits,
   advantages,

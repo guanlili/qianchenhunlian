@@ -3567,3 +3567,11 @@ page {
 .pay-prev {
   margin-bottom: 20rpx;
 }
+
+/* 首页推荐列表翻页提示 (上拉加载 / 已到末页) */
+.load-more-hint {
+  padding: 32rpx 0 48rpx;
+  text-align: center;
+  color: #b0a698;
+  font-size: 24rpx;
+}
