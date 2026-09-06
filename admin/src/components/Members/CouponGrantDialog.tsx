@@ -62,7 +62,8 @@ export function CouponGrantDialog({
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["admin-members"] })
       qc.invalidateQueries({ queryKey: ["member-full"] })
-      qc.invalidateQueries({ queryKey: ["membership-grants"] })
+      // 真实 key 为 ["member-grants", userId] (会员详情发放记录), 用前缀匹配
+      qc.invalidateQueries({ queryKey: ["member-grants"] })
       qc.invalidateQueries({ queryKey: ["admin-stats"] })
       if (res.kind === "member_days") {
         toast.success(`已发放 ${res.days} 天会员体验券, 会员期自动顺延`)

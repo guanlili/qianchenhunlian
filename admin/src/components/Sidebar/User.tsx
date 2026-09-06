@@ -1,6 +1,7 @@
 import { Link as RouterLink } from "@tanstack/react-router"
 import { ChevronsUpDown, LogOut, Settings } from "lucide-react"
 
+import type { WhoAmI } from "@/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -29,7 +30,7 @@ function UserInfo({ fullName, email }: UserInfoProps) {
     <div className="flex items-center gap-2.5 w-full min-w-0">
       <Avatar className="size-8">
         <AvatarFallback className="bg-zinc-600 text-white">
-          {getInitials(fullName || "User")}
+          {getInitials(fullName || "用户")}
         </AvatarFallback>
       </Avatar>
       <div className="flex flex-col items-start min-w-0">
@@ -40,7 +41,7 @@ function UserInfo({ fullName, email }: UserInfoProps) {
   )
 }
 
-export function User({ user }: { user: any }) {
+export function User({ user }: { user: WhoAmI | null | undefined }) {
   const { logout } = useAuth()
   const { isMobile, setOpenMobile } = useSidebar()
 
@@ -66,8 +67,8 @@ export function User({ user }: { user: any }) {
               data-testid="user-menu"
             >
               <UserInfo
-                fullName={user?.name ?? user?.full_name}
-                email={user?.email}
+                fullName={user.name ?? undefined}
+                email={user.email ?? undefined}
               />
               <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
             </SidebarMenuButton>
@@ -80,15 +81,15 @@ export function User({ user }: { user: any }) {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <UserInfo
-                fullName={user?.name ?? user?.full_name}
-                email={user?.email}
+                fullName={user.name ?? undefined}
+                email={user.email ?? undefined}
               />
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <RouterLink to="/settings" onClick={handleMenuClick}>
               <DropdownMenuItem>
                 <Settings />
-                User Settings
+                用户设置
               </DropdownMenuItem>
             </RouterLink>
             <DropdownMenuItem onClick={handleLogout}>

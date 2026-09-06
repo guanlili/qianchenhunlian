@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 
 import {
@@ -14,14 +14,23 @@ const isLoggedIn = () => {
   return localStorage.getItem("refresh_token") !== null
 }
 
+/** 当前登录人查询 (唯一 key 定义): 路由 beforeLoad 与组件 useQuery 共用同一份缓存 */
+export function currentUserQueryOptions() {
+  return {
+    // 用 /login/whoami: 同时兼容 superuser 和 staff
+    queryKey: ["currentUser"],
+    queryFn: () => LoginService.whoami(),
+  }
+}
+
 const useAuth = () => {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const { showErrorToast } = useCustomToast()
 
-  // 用 /login/whoami: 同时兼容 superuser 和 staff
+  // 命中 _layout beforeLoad ensureQueryData 的缓存, 登录后不再重复请求 whoami
   const { data: user } = useQuery<WhoAmI | null, Error>({
-    queryKey: ["currentUser"],
-    queryFn: LoginService.whoami,
+    ...currentUserQueryOptions(),
     enabled: isLoggedIn(),
   })
 
@@ -30,10 +39,9 @@ const useAuth = () => {
       formData: data,
     })
     localStorage.setItem("access_token", response.access_token)
-    // refresh_token 字段需重新生成 client 后才有类型; 暂用兼容取法
-    const refresh = (response as unknown as { refresh_token?: string })
-      .refresh_token
-    if (refresh) localStorage.setItem("refresh_token", refresh)
+    if (response.refresh_token) {
+      localStorage.setItem("refresh_token", response.refresh_token)
+    }
   }
 
   const loginMutation = useMutation({
@@ -41,7 +49,8 @@ const useAuth = () => {
     onSuccess: async () => {
       // 以门店为主体: 门店管理员直达本店工作台, 总部落门店总览卡片墙
       try {
-        const me = await LoginService.whoami()
+        // ensureQueryData 会写入 ["currentUser"] 缓存, 侧边栏/守卫直接复用
+        const me = await qc.ensureQueryData(currentUserQueryOptions())
         if (me.actor_type === "staff" && me.store_id) {
           navigate({ to: "/stores/$storeId", params: { storeId: me.store_id } })
           return

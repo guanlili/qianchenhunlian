@@ -5,6 +5,16 @@ import { useState } from "react"
 import { toast } from "sonner"
 import type { MembershipRedeemCodePublic } from "@/client"
 import { AdminService } from "@/client"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -69,6 +79,9 @@ function RedeemCodesPage() {
   const [lastCreated, setLastCreated] = useState<
     MembershipRedeemCodePublic[] | null
   >(null)
+  // 作废为不可恢复操作, 记录目标码经 AlertDialog 二次确认
+  const [voidTarget, setVoidTarget] =
+    useState<MembershipRedeemCodePublic | null>(null)
 
   const listQuery = useQuery({
     queryKey: ["redeem-codes", statusFilter],
@@ -115,6 +128,7 @@ function RedeemCodesPage() {
     mutationFn: (codeId: string) => AdminService.voidRedeemCode({ codeId }),
     onSuccess: () => {
       toast.success("已作废")
+      setVoidTarget(null)
       queryClient.invalidateQueries({ queryKey: ["redeem-codes"] })
     },
     onError: () => toast.error("作废失败 (可能已被使用)"),
@@ -214,6 +228,19 @@ function RedeemCodesPage() {
                 <TableRow key={it.id}>
                   <TableCell className="font-mono text-sm">{it.code}</TableCell>
                   <TableCell>{it.days} 天</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        it.status === "unused"
+                          ? "default"
+                          : it.status === "used"
+                            ? "secondary"
+                            : "outline"
+                      }
+                    >
+                      {STATUS_LABEL[it.status] ?? it.status}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-sm">
                     {it.expires_at ? (
                       <span
@@ -229,19 +256,6 @@ function RedeemCodesPage() {
                     ) : (
                       "长期"
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        it.status === "unused"
-                          ? "default"
-                          : it.status === "used"
-                            ? "secondary"
-                            : "outline"
-                      }
-                    >
-                      {STATUS_LABEL[it.status] ?? it.status}
-                    </Badge>
                   </TableCell>
                   <TableCell className="max-w-40 truncate text-sm">
                     {it.used_by_email || "-"}
@@ -268,14 +282,7 @@ function RedeemCodesPage() {
                           variant="ghost"
                           size="sm"
                           disabled={voidMutation.isPending}
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `确认作废 ${it.code}? 作废后不可恢复`,
-                              )
-                            )
-                              voidMutation.mutate(it.id)
-                          }}
+                          onClick={() => setVoidTarget(it)}
                         >
                           <TicketX className="size-3.5" />
                         </Button>
@@ -424,6 +431,37 @@ function RedeemCodesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* 作废二次确认 (替代原生 confirm, 与删除员工等危险操作统一交互) */}
+      <AlertDialog
+        open={!!voidTarget}
+        onOpenChange={(open) => {
+          if (!open) setVoidTarget(null)
+        }}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认作废该会员码？</AlertDialogTitle>
+            <AlertDialogDescription>
+              即将作废 {voidTarget?.code}
+              ，作废后不可恢复，用户将无法再用此码开通会员。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={voidMutation.isPending}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={voidMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                if (voidTarget) voidMutation.mutate(voidTarget.id)
+              }}
+            >
+              {voidMutation.isPending ? "作废中..." : "确认作废"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

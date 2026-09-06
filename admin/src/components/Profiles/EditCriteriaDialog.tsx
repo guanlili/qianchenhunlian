@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { type ReactNode, useEffect, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { type AdminProfileItem, AdminService } from "@/client"
@@ -71,31 +71,36 @@ export function EditCriteriaDialog({ item, trigger }: EditCriteriaDialogProps) {
     enabled: open,
   })
 
+  // 每个打开会话只同步一次: 列表 item 不含择偶要求, 首次打开若详情未到则等本会话
+  // 第一份数据到达再回填; 同步过之后任何 refetch 都不再覆盖用户输入 (修编辑被冲掉的 bug)
+  const syncedRef = useRef(false)
   useEffect(() => {
-    if (!open) return
-    const c = detailQuery.data?.criteria
-    if (c) {
-      setForm({
-        year_min: c.year_min ? String(c.year_min) : "",
-        year_max: c.year_max ? String(c.year_max) : "",
-        height_min: c.height_min ? String(c.height_min) : "",
-        height_max: c.height_max ? String(c.height_max) : "",
-        weight_min: c.weight_min ? String(c.weight_min) : "",
-        weight_max: c.weight_max ? String(c.weight_max) : "",
-        income: c.income || "",
-        edu: c.edu || "",
-        marriage: c.marriage || "",
-        house: c.house || "",
-        car: c.car || "",
-        job: c.job || "",
-        social_insurance: c.social_insurance || "",
-        note: c.note || "",
-        origins: (c.origins || []).join(", "),
-        locations: (c.locations || []).join(", "),
-      })
-    } else {
-      setForm(EMPTY_FORM)
+    if (!open) {
+      syncedRef.current = false
+      return
     }
+    if (syncedRef.current) return
+    const c = detailQuery.data?.criteria
+    if (!c) return
+    setForm({
+      year_min: c.year_min ? String(c.year_min) : "",
+      year_max: c.year_max ? String(c.year_max) : "",
+      height_min: c.height_min ? String(c.height_min) : "",
+      height_max: c.height_max ? String(c.height_max) : "",
+      weight_min: c.weight_min ? String(c.weight_min) : "",
+      weight_max: c.weight_max ? String(c.weight_max) : "",
+      income: c.income || "",
+      edu: c.edu || "",
+      marriage: c.marriage || "",
+      house: c.house || "",
+      car: c.car || "",
+      job: c.job || "",
+      social_insurance: c.social_insurance || "",
+      note: c.note || "",
+      origins: (c.origins || []).join(", "),
+      locations: (c.locations || []).join(", "),
+    })
+    syncedRef.current = true
   }, [open, detailQuery.data])
 
   const update = (k: keyof FormState) => (v: string) =>

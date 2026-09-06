@@ -7,10 +7,12 @@ import {
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
+import { toast } from "sonner"
 import { ApiError, OpenAPI } from "./client"
 import { ThemeProvider } from "./components/theme-provider"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
+import { jwtExpMs } from "./lib/jwt"
 import { routeTree } from "./routeTree.gen"
 
 OpenAPI.BASE = import.meta.env.VITE_API_URL
@@ -19,20 +21,6 @@ OpenAPI.BASE = import.meta.env.VITE_API_URL
 // 并发锁 (refreshPromise): N 个并发请求只触发 1 次 /login/refresh。
 const ACCESS_SKEW_MS = 60_000
 let refreshPromise: Promise<string> | null = null
-
-function jwtExpMs(token: string): number {
-  try {
-    // JWT payload 是 base64url 编码; atob 只吃标准 base64, 需转换 + 补 padding
-    const b64 = (token.split(".")[1] ?? "")
-      .replace(/-/g, "+")
-      .replace(/_/g, "/")
-    const raw = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4))
-    const payload = JSON.parse(raw) as { exp?: number }
-    return (payload.exp ?? 0) * 1000
-  } catch {
-    return 0
-  }
-}
 
 async function doRefresh(): Promise<string> {
   const refresh = localStorage.getItem("refresh_token")
@@ -73,10 +61,17 @@ OpenAPI.TOKEN = async (): Promise<string> => {
 }
 
 const handleApiError = (error: Error) => {
-  if (error instanceof ApiError && [401, 403].includes(error.status)) {
+  if (!(error instanceof ApiError)) return
+  // 401: 会话失效, 清 token 硬跳登录 (refresh 失败的兜底出口)
+  if (error.status === 401) {
     localStorage.removeItem("access_token")
     localStorage.removeItem("refresh_token")
     window.location.href = "/login"
+    return
+  }
+  // 403: 仅无权限提示, 不清 token 不跳转 (账号本身还有效, 多为角色/门店越权)
+  if (error.status === 403) {
+    toast.error("无权限执行此操作")
   }
 }
 const queryClient = new QueryClient({
@@ -96,7 +91,9 @@ const queryClient = new QueryClient({
   }),
 })
 
-const router = createRouter({ routeTree })
+// queryClient 放进 router context: 路由 beforeLoad 可用 ensureQueryData 预取鉴权数据,
+// 组件内的 useQuery 直接命中缓存 (消除 whoami 双请求 + 权限判断后置)
+const router = createRouter({ routeTree, context: { queryClient } })
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router

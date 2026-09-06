@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { type ReactNode, useEffect, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { type AdminProfileItem, AdminService } from "@/client"
@@ -47,19 +47,24 @@ export function EditParentsDialog({ item, trigger }: EditParentsDialogProps) {
     enabled: open,
   })
 
+  // 每个打开会话只同步一次 (与 EditCriteriaDialog 同款修法): 首份数据到达回填一次,
+  // 之后 refetch 不再覆盖用户输入; 列表 item 不含父母信息, 留空等详情
+  const syncedRef = useRef(false)
   useEffect(() => {
-    if (!open) return
-    const p = detailQuery.data?.parents_info
-    if (p) {
-      setForm({
-        parents_health: p.parents_health || "",
-        parents_job: p.parents_job || "",
-        parents_pension: p.parents_pension || "",
-        siblings: p.siblings || "",
-      })
-    } else {
-      setForm(EMPTY)
+    if (!open) {
+      syncedRef.current = false
+      return
     }
+    if (syncedRef.current) return
+    const p = detailQuery.data?.parents_info
+    if (!p) return
+    setForm({
+      parents_health: p.parents_health || "",
+      parents_job: p.parents_job || "",
+      parents_pension: p.parents_pension || "",
+      siblings: p.siblings || "",
+    })
+    syncedRef.current = true
   }, [open, detailQuery.data])
 
   const update = (k: keyof FormState) => (v: string) =>
