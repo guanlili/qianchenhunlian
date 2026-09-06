@@ -136,8 +136,11 @@ class Settings(BaseSettings):
     # 公网 endpoint 带 https:// 前缀: 签名 URL 会继承该协议, 小程序/https 页面要求图片链接为 https.
     OSS_INTERNAL_ENDPOINT: str = "https://oss-cn-beijing-internal.aliyuncs.com"
     OSS_PUBLIC_ENDPOINT: str = "https://oss-cn-beijing.aliyuncs.com"
-    # 私有读签名 URL 有效期 (秒), 默认 1 小时.
-    OSS_SIGNED_URL_EXPIRE_SECONDS: int = 3600
+    # 私有读签名 URL 有效期 (秒), 默认 15 分钟.
+    # 取舍: 有效期越长, 链接被截图/转发出去后被长期白嫖的窗口越大; 越短则
+    # 客户端需要更频繁地回源重签 (列表每次渲染都会拿新 URL, 重签成本只是
+    # 一次本地 HMAC 计算, 可忽略)。15 分钟覆盖一次完整浏览会话, 兼顾两者。
+    OSS_SIGNED_URL_EXPIRE_SECONDS: int = 15 * 60
 
     # 常见弱默认值 (含模板占位符与运维图省事的口令). 命中即视为"未真正配置".
     _WEAK_SECRETS = frozenset(
@@ -176,6 +179,21 @@ class Settings(BaseSettings):
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
         )
 
+        return self
+
+    @model_validator(mode="after")
+    def _warn_missing_sentry_dsn(self) -> Self:
+        """production 未配 SENTRY_DSN 时打 UserWarning (模式同弱密码告警).
+
+        只告警不 raise —— 现有部署可能尚未接入 Sentry, 直接拒绝启动会破坏它们;
+        但线上无异常上报会显著拖慢排障, 值得在启动日志里提示一次。
+        """
+        if self.ENVIRONMENT == "production" and not self.SENTRY_DSN:
+            warnings.warn(
+                "生产环境未配置 SENTRY_DSN, 线上异常将无法上报 Sentry, "
+                "排障能力受损 (仅告警, 不阻断启动).",
+                stacklevel=1,
+            )
         return self
 
 

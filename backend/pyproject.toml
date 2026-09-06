@@ -67,6 +67,12 @@ ignore = [
     "B904",  # Allow raising exceptions without from e, for HTTPException
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# 冒烟脚本: 以 print 输出人工核对结果, 是脚本的本体行为
+"tests/smoke_contact_requests.py" = ["T201"]
+# pay_env fixture 参数仅为注入支付凭证副作用 (mock settings), 不消费返回值
+"tests/api/routes/test_membership_pay.py" = ["ARG001"]
+
 [tool.ruff.lint.pyupgrade]
 # Preserve types, even if a file imports `from __future__ import annotations`.
 keep-runtime-typing = true
@@ -78,6 +84,8 @@ dynamic_context = "test_function"
 [tool.coverage.report]
 show_missing = true
 sort = "-Cover"
+# 覆盖率门槛: 当前 77%, 留 7 个点余量防波动; 只允许往上抬, 不允许往下调
+fail_under = 70
 
 [tool.coverage.html]
 show_contexts = true

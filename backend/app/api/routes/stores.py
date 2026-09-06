@@ -5,6 +5,8 @@
 - 门店账号 (store_owner) 可登录, 看自己门店的用户 (走 admin 路由的限权机制)
 """
 
+import threading
+import time
 import uuid
 
 from fastapi import APIRouter, HTTPException, Query
@@ -39,23 +41,65 @@ class StoreList(SQLModel):
     total: int = 0
 
 
+# ---------------- 门店地域聚合读缓存 (进程内 TTL 60s) ----------------
+# cities / districts 聚合只在 admin 改门店 (增/改/关/删) 时变化; 小程序每次
+# 启动都会拉取, 短缓存吸收读放大。写路径调 invalidate_store_geo_cache(),
+# tests/conftest.py 每测试清理。
+_GEO_CACHE_TTL = 60.0
+_geo_cache_lock = threading.Lock()
+_cities_cache: CityList | None = None
+_cities_cached_at: float = 0.0
+_districts_cache: dict[str, DistrictList] = {}
+_districts_cached_at: dict[str, float] = {}
+
+
+def invalidate_store_geo_cache() -> None:
+    """失效门店城市/区县聚合缓存 (admin 门店写路径调用)."""
+    global _cities_cache
+    with _geo_cache_lock:
+        _cities_cache = None
+        _districts_cache.clear()
+        _districts_cached_at.clear()
+
+
+def clear_store_geo_cache() -> None:
+    """清空门店地域聚合缓存 (tests/conftest.py 每测试调用, 保证隔离)."""
+    invalidate_store_geo_cache()
+
+
 @router.get("/cities", response_model=CityList)
 def list_cities(session: SessionDep) -> CityList:
-    """有门店的城市 distinct 列表 (按 active 状态过滤)"""
+    """有门店的城市 distinct 列表 (按 active 状态过滤), 带 60s 读缓存."""
+    global _cities_cache, _cities_cached_at
+    with _geo_cache_lock:
+        if (
+            _cities_cache is not None
+            and time.monotonic() - _cities_cached_at < _GEO_CACHE_TTL
+        ):
+            return _cities_cache
     rows = session.exec(
         select(Store.city, func.count(Store.id))  # type: ignore
         .where(Store.status == "active")
         .group_by(Store.city)
         .order_by(Store.city)
     ).all()
-    return CityList(items=[CityItem(city=r[0], count=r[1]) for r in rows])
+    result = CityList(items=[CityItem(city=r[0], count=r[1]) for r in rows])
+    with _geo_cache_lock:
+        _cities_cache = result
+        _cities_cached_at = time.monotonic()
+    return result
 
 
 @router.get("/districts", response_model=DistrictList)
 def list_districts(
     session: SessionDep, city: str = Query(min_length=1)
 ) -> DistrictList:
-    """某城市有门店的区/县 distinct 列表 (active 口径, 小程序筛选条用)."""
+    """某城市有门店的区/县 distinct 列表 (active 口径, 小程序筛选条用), 带 60s 读缓存."""
+    with _geo_cache_lock:
+        cached = _districts_cache.get(city)
+        cached_at = _districts_cached_at.get(city, 0.0)
+        if cached is not None and time.monotonic() - cached_at < _GEO_CACHE_TTL:
+            return cached
     rows = session.exec(
         select(Store.district, func.count(Store.id))  # type: ignore
         .where(Store.status == "active")
@@ -65,9 +109,13 @@ def list_districts(
         .order_by(Store.district)
     ).all()
     # district 为空字符串的脏数据不进筛选项
-    return DistrictList(
+    result = DistrictList(
         items=[DistrictItem(district=r[0], count=r[1]) for r in rows if r[0]]
     )
+    with _geo_cache_lock:
+        _districts_cache[city] = result
+        _districts_cached_at[city] = time.monotonic()
+    return result
 
 
 @router.get("", response_model=StoreList)

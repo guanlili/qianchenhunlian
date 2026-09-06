@@ -12,6 +12,7 @@ from sqlmodel import Field, SQLModel, select
 
 from app.api.deps import SessionDep
 from app.api.permissions import Perm, require_perm
+from app.core.membership import invalidate_membership_config
 from app.models import SiteSetting
 
 router = APIRouter(prefix="/site", tags=["site"])
@@ -65,6 +66,8 @@ def put_qualifications(
         row.updated_at = datetime.utcnow()
     session.add(row)
     session.commit()
+    # SiteSetting 写路径统一失效套餐配置读缓存 (同表写入, 保持口径一致)
+    invalidate_membership_config()
     return body
 
 
@@ -142,4 +145,6 @@ def put_content(
         row.updated_at = datetime.utcnow()
     session.add(row)
     session.commit()
+    # SiteSetting 写路径统一失效套餐配置读缓存 (同表写入, 保持口径一致)
+    invalidate_membership_config()
     return body

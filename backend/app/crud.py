@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
@@ -77,7 +78,10 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
 
 
 def get_user_by_email(*, session: Session, email: str) -> User | None:
-    return session.exec(select(User).where(User.email == email)).first()
+    """邮箱大小写归一化查询: 邮箱本地域部分大小写不敏感, 防注册变体绕过查重."""
+    return session.exec(
+        select(User).where(func.lower(User.email) == email.strip().lower())
+    ).first()
 
 
 def authenticate(*, session: Session, email: str, password: str) -> User | None:

@@ -138,11 +138,8 @@ def test_preview_fills_up_from_province_when_city_runs_out(
     assert items[0]["location"] == "山东 威海"  # 同城排最前
 
 
-def test_preview_blurred_items_beyond_five(
-    client: TestClient, db: Session, superuser_token_headers: dict
-) -> None:
+def test_preview_blurred_items_beyond_five(client: TestClient, db: Session) -> None:
     """超过 5 位后走模糊条目: 只含 性别/年龄段/城市, 不泄露照片/简介/缘分号."""
-    from datetime import timedelta
 
     email = _mk_guest(db)
     headers = authentication_token_from_email(client=client, email=email, db=db)

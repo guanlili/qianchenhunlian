@@ -54,6 +54,8 @@ def _set_cfg(db: Session, **overrides) -> None:
         row = SiteSetting(key=membership.CONFIG_KEY, value=cfg)
     db.add(row)
     db.commit()
+    # 直改 DB 绕过了 admin 写路径, 手动失效 get_config 读缓存
+    membership.invalidate_membership_config()
 
 
 def _grant(
@@ -574,3 +576,38 @@ def test_plans_return_quota_config(client, db: Session) -> None:
     assert r.status_code == 200
     assert r.json()["free_daily_quota"] == 7
     assert r.json()["member_daily_quota"] == 25
+
+
+def test_member_full_membership_typed_payload(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """会员 360° 详情: membership 字段完整建模 (OpenAPI 可生成类型), 结构不变.
+
+    响应字段与 membership.quota_status() 一一对应, 前端从 any 消费切换到
+    生成类型时以这组 key 为准。
+    """
+    user = _make_user(db, unlock_balance=4)
+    _grant(db, user, days=30)
+
+    r = client.get(
+        f"{API}/admin/members/{user.id}/full", headers=superuser_token_headers
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    m = body["membership"]
+    assert set(m.keys()) == {
+        "date",
+        "is_member",
+        "bucket",
+        "limit",
+        "used",
+        "remaining",
+        "balance",
+    }
+    assert m["is_member"] is True
+    assert m["bucket"] == "member"
+    assert m["balance"] == 4
+    assert m["remaining"] == m["limit"] - m["used"]
+    # 建模同时校验 OpenAPI schema 已带上 $ref (不再是 object/any)
+    spec = client.get(f"{API}/openapi.json").json()
+    assert "MemberQuotaStatus" in spec["components"]["schemas"]
