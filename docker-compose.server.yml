@@ -5,7 +5,8 @@
 #   docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
 #
 # 与 docker-compose.override.yml(dev) 的区别:
-#   - 不启动 Traefik；由宿主机 1Panel 的 OpenResty 做反向代理
+#   - 无外部反代容器；由宿主机 1Panel 的 OpenResty 做反向代理
+#     （历史上曾用 docker-compose.traefik.yml + base 里的 traefik labels 方案，已移除）
 #   - admin 走生产构建(多阶段 node 编译 -> nginx 托管静态 dist), 不跑 Vite dev server
 #   - backend/admin/db 端口只绑 127.0.0.1, 仅本机 OpenResty 可达, 不直接对外
 #     OpenResty 反代: api.qianyuan.website     -> 127.0.0.1:8000
@@ -32,8 +33,3 @@ services:
     restart: always
     ports:
       - "127.0.0.1:5173:80"        # OpenResty: dashboard/www.qianyuan.website -> 5173
-
-networks:
-  traefik-public:
-    # 服务器无外部 Traefik；建一个空网络，让 base 里的 traefik labels 不报错
-    external: false

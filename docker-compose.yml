@@ -1,8 +1,16 @@
 services:
 
   db:
+    # 只 pin major（17.x）：digest/精确 patch pin 会导致离线/弱网服务器无法拉取，
+    # major 内 patch 漂移可接受（PG minor 版本向后兼容，且数据目录 bind mount 在宿主机）
     image: postgres:17
     restart: always
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -21,38 +29,24 @@ services:
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
   adminer:
-    image: adminer
+    # 当前稳定大版本为 4.x，pin major 防意外拉到不兼容大版本
+    image: adminer:4
     profiles: ["tools"]   # 默认不启动, 需要看库时 `docker compose --profile tools up -d adminer`
     restart: always
-    networks:
-      - traefik-public
-      - default
     depends_on:
       - db
     environment:
       - ADMINER_DESIGN=pepa-linha-dark
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.constraint-label=traefik-public
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.rule=Host(`adminer.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.entrypoints=http
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.middlewares=https-redirect
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.rule=Host(`adminer.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls=true
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls.certresolver=le
-      # 强制 Basic Auth, 与 traefik 看板同一组凭据 (USERNAME/HASHED_PASSWORD)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.middlewares=admin-auth
-      - traefik.http.services.${STACK_NAME?Variable not set}-adminer.loadbalancer.server.port=8080
 
   prestart:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     build:
       context: ./backend
-    networks:
-      - traefik-public
-      - default
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
     depends_on:
       db:
         condition: service_healthy
@@ -69,6 +63,9 @@ services:
       - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
       - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
       - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_TLS=${SMTP_TLS}
+      - SMTP_SSL=${SMTP_SSL}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
@@ -78,18 +75,18 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
+      - LOGIN_IP_MAX=${LOGIN_IP_MAX}
+      - SENSITIVE_MAX=${SENSITIVE_MAX}
 
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     restart: always
+    mem_limit: 1g
     logging:
       driver: json-file
       options:
         max-size: "50m"
         max-file: "5"
-    networks:
-      - traefik-public
-      - default
     depends_on:
       db:
         condition: service_healthy
@@ -107,6 +104,9 @@ services:
       - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
       - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
       - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_TLS=${SMTP_TLS}
+      - SMTP_SSL=${SMTP_SSL}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
@@ -116,6 +116,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
+      - LOGIN_IP_MAX=${LOGIN_IP_MAX}
+      - SENSITIVE_MAX=${SENSITIVE_MAX}
 
     healthcheck:
       # slim 镜像没有 curl, 用 venv 里的 python 探测 (PATH 首位是 /app/.venv/bin)
@@ -127,24 +129,6 @@ services:
 
     build:
       context: ./backend
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.constraint-label=traefik-public
-
-      - traefik.http.services.${STACK_NAME?Variable not set}-backend.loadbalancer.server.port=8000
-
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.rule=Host(`api.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.entrypoints=http
-
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.rule=Host(`api.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.tls=true
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.tls.certresolver=le
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-https.middlewares=security-headers
-
-      # Enable redirection for HTTP and HTTPS
-      - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.middlewares=https-redirect,security-headers
 
   admin:
     image: '${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}'
@@ -154,34 +138,16 @@ services:
       options:
         max-size: "20m"
         max-file: "3"
-    networks:
-      - traefik-public
-      - default
     build:
       context: ./admin
       args:
         - VITE_API_URL=${VITE_API_URL:-https://api.${DOMAIN:-qianyuan.website}}
         - NODE_ENV=production
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.constraint-label=traefik-public
-
-      - traefik.http.services.${STACK_NAME?Variable not set}-admin.loadbalancer.server.port=80
-
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-http.rule=Host(`dashboard.${DOMAIN?Variable not set}`) || Host(`${DOMAIN?Variable not set}`) || Host(`www.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-http.entrypoints=http
-
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.rule=Host(`dashboard.${DOMAIN?Variable not set}`) || Host(`${DOMAIN?Variable not set}`) || Host(`www.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.tls=true
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.tls.certresolver=le
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-https.middlewares=security-headers
-
-      # Enable redirection for HTTP and HTTPS
-      - traefik.http.routers.${STACK_NAME?Variable not set}-admin-http.middlewares=https-redirect,security-headers
-
-networks:
-  traefik-public:
-    # Allow setting it to false for testing
-    external: true
+    healthcheck:
+      # 生产镜像为 nginx:1 (Debian 基底), 实测内置 curl、无 wget;
+      # 若未来镜像移除 curl, 可退回 bash 内置 /dev/tcp 探测
+      test: ["CMD-SHELL", "curl -sf -o /dev/null http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

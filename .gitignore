@@ -6,6 +6,7 @@
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 
 # --- 持久化数据 / 日志 (不入 git, 整目录 tar 迁移) ---
 data/

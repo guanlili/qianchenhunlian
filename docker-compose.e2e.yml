@@ -1,0 +1,19 @@
+# 本地 e2e 专用 override：
+# - 命名卷替换 ./data/postgres bind mount（target 路径必须与 base 完全一致才能覆盖），
+#   不污染本机 data 目录
+# - backend 只绑 127.0.0.1:18000，避开本机可能占用的 8000
+# 用法见 admin/README 或根 README「本地 e2e」一节：
+#   docker compose -p qy-e2e --env-file .env.e2e \
+#     -f docker-compose.yml -f docker-compose.e2e.yml up -d --build backend
+services:
+  db:
+    volumes:
+      # 与 base 的 target（PGDATA 实际路径）一致，命名卷覆盖 bind mount
+      - e2e_pgdata:/var/lib/postgresql/data/pgdata
+
+  backend:
+    ports:
+      - "127.0.0.1:18000:8000"
+
+volumes:
+  e2e_pgdata:

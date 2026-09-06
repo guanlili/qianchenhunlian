@@ -1,7 +1,7 @@
 # ============================================================
 # Dev override（docker compose up 默认加载）
-# 所有端口绑 0.0.0.0，从外部 IP 10.129.209.249 直连
-# Dev 模式不启用 Traefik（生产用 docker-compose.traefik.yml）
+# 所有端口绑 0.0.0.0，可从局域网 IP 直连
+# Dev 模式不启用反代（生产用 docker-compose.server.yml，1Panel + OpenResty）
 # ============================================================
 services:
 
@@ -46,6 +46,8 @@ services:
       EMAILS_FROM_EMAIL: "noreply@qianyuan.cn"
 
   mailcatcher:
+    # schickling/mailcatcher 无官方语义版本 tag 体系（长期只有 latest），
+    # 无法 pin major，保持 latest；仅 dev profile 使用，不进生产
     image: schickling/mailcatcher
     profiles: ["tools"]   # 默认不启动, 需要测邮件时 `docker compose --profile tools up -d mailcatcher`
     ports:
@@ -66,14 +68,12 @@ services:
       - NODE_ENV=development
     ports:
       - "0.0.0.0:5173:80"
-    # dev 模式不需要 build context, 也不挂 traefik 标签
+    # dev 模式不需要 build context
     build: !reset null
+    # dev 的 admin 是 Vite dev server（首次需 npm install，可能数分钟），
+    # 关掉 base 里的 nginx healthcheck，避免长时间显示 unhealthy 误报
+    healthcheck: !reset null
 
 volumes:
 
   admin_node_modules:
-
-networks:
-  traefik-public:
-    # dev 模式无外部 traefik 网络，本地建一个空的让 labels 不报错
-    external: false
