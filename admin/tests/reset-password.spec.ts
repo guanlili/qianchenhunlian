@@ -6,15 +6,22 @@ import { logInUser } from "./utils/user"
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
-test("Password Recovery title is visible", async ({ page }) => {
+// 邮件里的重置链接以后端配置的 FRONTEND_HOST 生成，本地 e2e 端口可能不同，
+// 统一改写到当前 dev server 地址再访问
+const normalizeResetUrl = (href: string) => {
+  const port = process.env.E2E_PORT ?? "5173"
+  const u = new URL(href)
+  u.host = `localhost:${port}`
+  return u.toString()
+}
+
+test("找回密码标题可见", async ({ page }) => {
   await page.goto("/recover-password")
 
-  await expect(
-    page.getByRole("heading", { name: "Password Recovery" }),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "找回密码" })).toBeVisible()
 })
 
-test("Input is visible, empty and editable", async ({ page }) => {
+test("输入框可见且可编辑", async ({ page }) => {
   await page.goto("/recover-password")
 
   await expect(page.getByTestId("email-input")).toBeVisible()
@@ -22,16 +29,13 @@ test("Input is visible, empty and editable", async ({ page }) => {
   await expect(page.getByTestId("email-input")).toBeEditable()
 })
 
-test("Continue button is visible", async ({ page }) => {
+test("继续按钮可见", async ({ page }) => {
   await page.goto("/recover-password")
 
-  await expect(page.getByRole("button", { name: "Continue" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "继续" })).toBeVisible()
 })
 
-test("User can reset password successfully using the link", async ({
-  page,
-  request,
-}) => {
+test("通过邮件链接成功重置密码", async ({ page, request }) => {
   const email = randomEmail()
   const password = randomPassword()
   const newPassword = randomPassword()
@@ -41,7 +45,7 @@ test("User can reset password successfully using the link", async ({
   await page.goto("/recover-password")
   await page.getByTestId("email-input").fill(email)
 
-  await page.getByRole("button", { name: "Continue" }).click()
+  await page.getByRole("button", { name: "继续" }).click()
 
   const emailData = await findLastEmail({
     request,
@@ -55,24 +59,22 @@ test("User can reset password successfully using the link", async ({
 
   const selector = 'a[href*="/reset-password?token="]'
 
-  let url = await page.getAttribute(selector, "href")
+  const href = await page.getAttribute(selector, "href")
+  const url = normalizeResetUrl(href!)
 
-  // TODO: update var instead of doing a replace
-  url = url!.replace("http://localhost/", "http://localhost:5173/")
-
-  // Set the new password and confirm it
+  // 设置新密码并确认
   await page.goto(url)
 
   await page.getByTestId("new-password-input").fill(newPassword)
   await page.getByTestId("confirm-password-input").fill(newPassword)
-  await page.getByRole("button", { name: "Reset Password" }).click()
-  await expect(page.getByText("Password updated successfully")).toBeVisible()
+  await page.getByRole("button", { name: "重置密码" }).click()
+  await expect(page.getByText("密码已更新, 请使用新密码登录")).toBeVisible()
 
-  // Check if the user is able to login with the new password
+  // 用新密码能重新登录
   await logInUser(page, email, newPassword)
 })
 
-test("Expired or invalid reset link", async ({ page }) => {
+test("无效或过期重置链接", async ({ page }) => {
   const password = randomPassword()
   const invalidUrl = "/reset-password?token=invalidtoken"
 
@@ -80,12 +82,13 @@ test("Expired or invalid reset link", async ({ page }) => {
 
   await page.getByTestId("new-password-input").fill(password)
   await page.getByTestId("confirm-password-input").fill(password)
-  await page.getByRole("button", { name: "Reset Password" }).click()
+  await page.getByRole("button", { name: "重置密码" }).click()
 
+  // toast 展示后端 detail（该错误信息暂为英文）
   await expect(page.getByText("Invalid token")).toBeVisible()
 })
 
-test("Weak new password validation", async ({ page, request }) => {
+test("弱密码被前端校验拦截", async ({ page, request }) => {
   const email = randomEmail()
   const password = randomPassword()
   const weakPassword = "123"
@@ -94,7 +97,7 @@ test("Weak new password validation", async ({ page, request }) => {
 
   await page.goto("/recover-password")
   await page.getByTestId("email-input").fill(email)
-  await page.getByRole("button", { name: "Continue" }).click()
+  await page.getByRole("button", { name: "继续" }).click()
 
   const emailData = await findLastEmail({
     request,
@@ -107,16 +110,15 @@ test("Weak new password validation", async ({ page, request }) => {
   )
 
   const selector = 'a[href*="/reset-password?token="]'
-  let url = await page.getAttribute(selector, "href")
-  url = url!.replace("http://localhost/", "http://localhost:5173/")
 
-  // Set a weak new password
+  const href = await page.getAttribute(selector, "href")
+  const url = normalizeResetUrl(href!)
+
+  // 填弱密码提交
   await page.goto(url)
   await page.getByTestId("new-password-input").fill(weakPassword)
   await page.getByTestId("confirm-password-input").fill(weakPassword)
-  await page.getByRole("button", { name: "Reset Password" }).click()
+  await page.getByRole("button", { name: "重置密码" }).click()
 
-  await expect(
-    page.getByText("Password must be at least 8 characters"),
-  ).toBeVisible()
+  await expect(page.getByText("密码至少需要 8 个字符")).toBeVisible()
 })

@@ -4,191 +4,187 @@ import { createUser } from "./utils/privateApi.ts"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser, logOutUser } from "./utils/user"
 
-const tabs = ["My profile", "Password", "Danger zone"]
+const tabs = ["个人资料", "修改密码", "危险操作"]
 
-// User Information
+// 个人资料
 
-test("My profile tab is active by default", async ({ page }) => {
+test("个人资料 tab 默认选中", async ({ page }) => {
   await page.goto("/settings")
-  await expect(page.getByRole("tab", { name: "My profile" })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "个人资料" })).toHaveAttribute(
     "aria-selected",
     "true",
   )
 })
 
-test("All tabs are visible", async ({ page }) => {
+test("全部 tab 可见", async ({ page }) => {
   await page.goto("/settings")
   for (const tab of tabs) {
     await expect(page.getByRole("tab", { name: tab })).toBeVisible()
   }
 })
 
-test.describe("Edit user full name and email successfully", () => {
+test.describe("成功编辑姓名与邮箱", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Edit user name with a valid name", async ({ page }) => {
+  test("修改姓名为合法值", async ({ page }) => {
     const email = randomEmail()
-    const updatedName = "Test User 2"
+    const updatedName = "测试用户 2"
     const password = randomPassword()
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "My profile" }).click()
-    await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Full name").fill(updatedName)
-    await page.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByText("User updated successfully")).toBeVisible()
-    // Check if the new name is displayed on the page
+    await page.getByRole("tab", { name: "个人资料" }).click()
+    await page.getByRole("button", { name: "编辑" }).click()
+    await page.getByLabel("姓名").fill(updatedName)
+    await page.getByRole("button", { name: "保存" }).click()
+    await expect(page.getByText("资料已保存")).toBeVisible()
+    // 页面上展示新姓名
     await expect(
       page.locator("form").getByText(updatedName, { exact: true }),
     ).toBeVisible()
   })
 
-  test("Edit user email with a valid email", async ({ page }) => {
+  test("修改邮箱为合法值", async ({ page }) => {
     const email = randomEmail()
     const updatedEmail = randomEmail()
     const password = randomPassword()
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "My profile" }).click()
-    await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Email").fill(updatedEmail)
-    await page.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByText("User updated successfully")).toBeVisible()
+    await page.getByRole("tab", { name: "个人资料" }).click()
+    await page.getByRole("button", { name: "编辑" }).click()
+    await page.getByLabel("邮箱").fill(updatedEmail)
+    await page.getByRole("button", { name: "保存" }).click()
+    await expect(page.getByText("资料已保存")).toBeVisible()
     await expect(
       page.locator("form").getByText(updatedEmail, { exact: true }),
     ).toBeVisible()
   })
 })
 
-test.describe("Edit user with invalid data", () => {
+test.describe("非法输入被拦截", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Edit user email with an invalid email", async ({ page }) => {
+  test("邮箱格式不合法", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
     const invalidEmail = ""
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "My profile" }).click()
-    await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Email").fill(invalidEmail)
+    await page.getByRole("tab", { name: "个人资料" }).click()
+    await page.getByRole("button", { name: "编辑" }).click()
+    await page.getByLabel("邮箱").fill(invalidEmail)
     await page.locator("body").click()
-    await expect(page.getByText("Invalid email address")).toBeVisible()
+    await expect(page.getByText("邮箱格式不正确")).toBeVisible()
   })
 
-  test("Cancel edit action restores original name", async ({ page }) => {
+  test("取消编辑恢复原姓名", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
-    const updatedName = "Test User"
+    const updatedName = "测试用户"
 
     const user = await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "My profile" }).click()
-    await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Full name").fill(updatedName)
-    await page.getByRole("button", { name: "Cancel" }).first().click()
+    await page.getByRole("tab", { name: "个人资料" }).click()
+    await page.getByRole("button", { name: "编辑" }).click()
+    await page.getByLabel("姓名").fill(updatedName)
+    await page.getByRole("button", { name: "取消" }).first().click()
     await expect(
       page.locator("form").getByText(user.full_name as string, { exact: true }),
     ).toBeVisible()
   })
 
-  test("Cancel edit action restores original email", async ({ page }) => {
+  test("取消编辑恢复原邮箱", async ({ page }) => {
     const email = randomEmail()
-    const password = randomPassword()
     const updatedEmail = randomEmail()
+    const password = randomPassword()
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "My profile" }).click()
-    await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Email").fill(updatedEmail)
-    await page.getByRole("button", { name: "Cancel" }).first().click()
+    await page.getByRole("tab", { name: "个人资料" }).click()
+    await page.getByRole("button", { name: "编辑" }).click()
+    await page.getByLabel("邮箱").fill(updatedEmail)
+    await page.getByRole("button", { name: "取消" }).first().click()
     await expect(
       page.locator("form").getByText(email, { exact: true }),
     ).toBeVisible()
   })
 })
 
-// Change Password
+// 修改密码
 
-test.describe("Change password successfully", () => {
+test.describe("成功修改密码", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Update password successfully", async ({ page }) => {
+  test("更新密码成功且可用新密码登录", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
     const NewPassword = randomPassword()
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "Password" }).click()
+    await page.getByRole("tab", { name: "修改密码" }).click()
     await page.getByTestId("current-password-input").fill(password)
     await page.getByTestId("new-password-input").fill(NewPassword)
     await page.getByTestId("confirm-password-input").fill(NewPassword)
-    await page.getByRole("button", { name: "Update Password" }).click()
-    await expect(page.getByText("Password updated successfully")).toBeVisible()
+    await page.getByRole("button", { name: "更新密码" }).click()
+    await expect(page.getByText("密码已更新")).toBeVisible()
 
     await logOutUser(page)
 
-    // Check if the user can log in with the new password
+    // 新密码能登录
     await logInUser(page, email, NewPassword)
   })
 })
 
-test.describe("Change password with invalid data", () => {
+test.describe("非法密码被拦截", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Update password with weak passwords", async ({ page }) => {
+  test("弱密码被前端校验拦截", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
     const weakPassword = "weak"
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "Password" }).click()
+    await page.getByRole("tab", { name: "修改密码" }).click()
     await page.getByTestId("current-password-input").fill(password)
     await page.getByTestId("new-password-input").fill(weakPassword)
     await page.getByTestId("confirm-password-input").fill(weakPassword)
-    await page.getByRole("button", { name: "Update Password" }).click()
-    await expect(
-      page.getByText("Password must be at least 8 characters"),
-    ).toBeVisible()
+    await page.getByRole("button", { name: "更新密码" }).click()
+    await expect(page.getByText("密码至少需要 8 个字符")).toBeVisible()
   })
 
-  test("New password and confirmation password do not match", async ({
-    page,
-  }) => {
+  test("两次输入的新密码不一致", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
     const newPassword = randomPassword()
@@ -196,54 +192,55 @@ test.describe("Change password with invalid data", () => {
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "Password" }).click()
+    await page.getByRole("tab", { name: "修改密码" }).click()
     await page.getByTestId("current-password-input").fill(password)
     await page.getByTestId("new-password-input").fill(newPassword)
     await page.getByTestId("confirm-password-input").fill(confirmPassword)
-    await page.getByRole("button", { name: "Update Password" }).click()
-    await expect(page.getByText("The passwords don't match")).toBeVisible()
+    await page.getByRole("button", { name: "更新密码" }).click()
+    await expect(page.getByText("两次输入的密码不一致")).toBeVisible()
   })
 
-  test("Current password and new password are the same", async ({ page }) => {
+  test("新密码与当前密码相同", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
 
     await createUser({ email, password })
 
-    // Log in the user
+    // 登录该用户
     await logInUser(page, email, password)
 
     await page.goto("/settings")
-    await page.getByRole("tab", { name: "Password" }).click()
+    await page.getByRole("tab", { name: "修改密码" }).click()
     await page.getByTestId("current-password-input").fill(password)
     await page.getByTestId("new-password-input").fill(password)
     await page.getByTestId("confirm-password-input").fill(password)
-    await page.getByRole("button", { name: "Update Password" }).click()
+    await page.getByRole("button", { name: "更新密码" }).click()
+    // toast 展示后端 detail（该错误信息暂为英文）
     await expect(
       page.getByText("New password cannot be the same as the current one"),
     ).toBeVisible()
   })
 })
 
-// Appearance
+// 外观
 
-test("Appearance button is visible in sidebar", async ({ page }) => {
+test("侧边栏主题按钮可见", async ({ page }) => {
   await page.goto("/settings")
   await expect(page.getByTestId("theme-button")).toBeVisible()
 })
 
-test("User can switch between theme modes", async ({ page }) => {
+test("可在明暗主题间切换", async ({ page }) => {
   await page.goto("/settings")
 
   await page.getByTestId("theme-button").click()
   await page.getByTestId("dark-mode").click()
   await expect(page.locator("html")).toHaveClass(/dark/)
 
-  // wait for dropdown to close before reopening
+  // 等下拉关闭后再打开
   await expect(page.getByTestId("dark-mode")).not.toBeVisible()
 
   await page.getByTestId("theme-button").click()
@@ -251,7 +248,7 @@ test("User can switch between theme modes", async ({ page }) => {
   await expect(page.locator("html")).toHaveClass(/light/)
 })
 
-test("Selected mode is preserved across sessions", async ({ page }) => {
+test("主题选择跨会话保留", async ({ page }) => {
   await page.goto("/settings")
 
   await page.getByTestId("theme-button").click()

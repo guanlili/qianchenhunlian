@@ -23,97 +23,88 @@ test("Inputs are visible, empty and editable", async ({ page }) => {
   await verifyInput(page, "password-input")
 })
 
-test("Log In button is visible", async ({ page }) => {
+test("登录按钮可见", async ({ page }) => {
   await page.goto("/login")
 
-  await expect(page.getByRole("button", { name: "Log In" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "登录" })).toBeVisible()
 })
 
-test("Forgot Password link is visible", async ({ page }) => {
+test("忘记密码链接可见", async ({ page }) => {
   await page.goto("/login")
 
-  await expect(
-    page.getByRole("link", { name: "Forgot your password?" }),
-  ).toBeVisible()
+  await expect(page.getByRole("link", { name: "忘记密码？" })).toBeVisible()
 })
 
-test("Log in with valid email and password ", async ({ page }) => {
+test("正确邮箱密码登录成功", async ({ page }) => {
   await page.goto("/login")
 
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
+  await page.getByRole("button", { name: "登录" }).click()
 
-  await page.waitForURL("/")
-
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  // 超管登录后落门店总览；以用户菜单出现作为登录成功标志
+  await page.waitForURL("**/stores**")
+  await expect(page.getByTestId("user-menu")).toBeVisible()
 })
 
-test("Log in with invalid email", async ({ page }) => {
+test("邮箱格式不合法被拦截", async ({ page }) => {
   await page.goto("/login")
 
   await fillForm(page, "invalidemail", firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
+  await page.getByRole("button", { name: "登录" }).click()
 
-  await expect(page.getByText("Invalid email address")).toBeVisible()
+  await expect(page.getByText("邮箱格式不正确")).toBeVisible()
 })
 
-test("Log in with invalid password", async ({ page }) => {
+test("密码错误提示", async ({ page }) => {
   const password = randomPassword()
 
   await page.goto("/login")
   await fillForm(page, firstSuperuser, password)
-  await page.getByRole("button", { name: "Log In" }).click()
+  await page.getByRole("button", { name: "登录" }).click()
 
+  // toast 展示后端 detail（后端该错误信息暂为英文）
   await expect(page.getByText("Incorrect email or password")).toBeVisible()
 })
 
-// Log out
+// 退出登录
 
-test("Successful log out", async ({ page }) => {
+test("退出登录成功", async ({ page }) => {
   await page.goto("/login")
 
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
+  await page.getByRole("button", { name: "登录" }).click()
+  await page.waitForURL("**/stores**")
 
-  await page.waitForURL("/")
-
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  await expect(page.getByTestId("user-menu")).toBeVisible()
 
   await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
-  await page.waitForURL("/login")
+  await page.getByRole("menuitem", { name: "退出登录" }).click()
+  await page.waitForURL("**/login")
 })
 
-test("Logged-out user cannot access protected routes", async ({ page }) => {
+test("未登录用户访问受保护路由被重定向", async ({ page }) => {
   await page.goto("/login")
 
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
+  await page.getByRole("button", { name: "登录" }).click()
+  await page.waitForURL("**/stores**")
 
-  await page.waitForURL("/")
-
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  await expect(page.getByTestId("user-menu")).toBeVisible()
 
   await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
-  await page.waitForURL("/login")
+  await page.getByRole("menuitem", { name: "退出登录" }).click()
+  await page.waitForURL("**/login")
 
   await page.goto("/settings")
-  await page.waitForURL("/login")
+  await page.waitForURL("**/login")
 })
 
-test("Redirects to /login when token is wrong", async ({ page }) => {
+test("token 无效时重定向到登录页", async ({ page }) => {
   await page.goto("/settings")
   await page.evaluate(() => {
     localStorage.setItem("access_token", "invalid_token")
   })
   await page.goto("/settings")
-  await page.waitForURL("/login")
-  await expect(page).toHaveURL("/login")
+  await page.waitForURL("**/login")
+  await expect(page).toHaveURL(/\/login/)
 })

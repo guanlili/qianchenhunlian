@@ -3,8 +3,11 @@ import 'dotenv/config'
 
 /**
  * Read environment variables from file.
- * https://github.com/motdotla/dotenv
+ * https://www.npmjs.com/package/dotenv
  */
+
+// 本地与 CI 共用：默认 5173，本机端口被占时 E2E_PORT=5175 之类覆盖
+const port = process.env.E2E_PORT ?? '5173'
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -17,16 +20,16 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
+  /* Opt out of parallel tests on CI */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  /* Reporter to use on reporting. See https://playwright.dev/docs/test-reporters. */
   reporter: process.env.CI ? 'blob' : 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  /* Shared settings for all the projects below. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    baseURL: `http://localhost:${port}`,
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    /* Collect trace when retrying the failed test. */
     trace: 'on-first-retry',
   },
 
@@ -84,8 +87,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    command: `npm run dev -- --port ${port}`,
+    url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
   },
 });
