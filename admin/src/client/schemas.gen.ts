@@ -1181,10 +1181,16 @@ export const AdminMemberFullSchema = {
             default: false
         },
         membership: {
-            additionalProperties: true,
-            type: 'object',
-            title: 'Membership',
-            default: {}
+            '$ref': '#/components/schemas/MemberQuotaStatus',
+            default: {
+                date: '',
+                is_member: false,
+                bucket: 'free',
+                limit: 0,
+                used: 0,
+                remaining: 0,
+                balance: 0
+            }
         }
     },
     type: 'object',
@@ -4890,6 +4896,53 @@ export const MemberCountsSchema = {
     title: 'MemberCounts'
 } as const;
 
+export const MemberQuotaStatusSchema = {
+    properties: {
+        date: {
+            type: 'string',
+            title: 'Date',
+            default: ''
+        },
+        is_member: {
+            type: 'boolean',
+            title: 'Is Member',
+            default: false
+        },
+        bucket: {
+            type: 'string',
+            title: 'Bucket',
+            default: 'free'
+        },
+        limit: {
+            type: 'integer',
+            title: 'Limit',
+            default: 0
+        },
+        used: {
+            type: 'integer',
+            title: 'Used',
+            default: 0
+        },
+        remaining: {
+            type: 'integer',
+            title: 'Remaining',
+            default: 0
+        },
+        balance: {
+            type: 'integer',
+            title: 'Balance',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'MemberQuotaStatus',
+    description: `docs/13 三桶额度快照 —— membership.quota_status() 返回的完整建模.
+
+之前 AdminMemberFull.membership 是 dict[str, Any], OpenAPI 生成不出类型,
+前端只能 any 消费; 这里按实际返回字段补齐建模 (响应数据本身不变,
+端点始终传完整字典, 默认值只为字段默认实例可构造).`
+} as const;
+
 export const MembershipConfigUpdateSchema = {
     properties: {
         pay_enabled: {
@@ -5170,7 +5223,7 @@ export const MembershipPlansOutSchema = {
         member_daily_quota: {
             type: 'integer',
             title: 'Member Daily Quota',
-            default: 20
+            default: 2
         },
         plans: {
             items: {
@@ -5657,6 +5710,32 @@ export const PlanItemSchema = {
     type: 'object',
     required: ['code', 'name', 'days', 'price'],
     title: 'PlanItem'
+} as const;
+
+export const ProfileAuditModeResponseSchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            title: 'Mode'
+        }
+    },
+    type: 'object',
+    required: ['mode'],
+    title: 'ProfileAuditModeResponse',
+    description: '当前审核模式: post=先发后审 (默认) / pre=先审后发.'
+} as const;
+
+export const ProfileAuditModeUpdateSchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            enum: ['post', 'pre'],
+            title: 'Mode'
+        }
+    },
+    type: 'object',
+    required: ['mode'],
+    title: 'ProfileAuditModeUpdate'
 } as const;
 
 export const ProfileMeResponseSchema = {
@@ -8044,6 +8123,18 @@ export const StoreUpdateSchema = {
                 }
             ],
             title: 'Lat'
+        },
+        contact_qr: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Contact Qr'
         },
         phone: {
             anyOf: [

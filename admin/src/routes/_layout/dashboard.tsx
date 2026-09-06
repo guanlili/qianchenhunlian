@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 
 const VALID_TABS = ["overview", "members", "review", "tickets", "activities"]
 
@@ -32,14 +33,6 @@ export const Route = createFileRoute("/_layout/dashboard")({
     meta: [{ title: "跨店看板 - 乾缘婚恋后台" }],
   }),
 })
-
-const REQUEST_STATUS: Record<string, string> = {
-  pending: "待处理",
-  accepted: "已同意",
-  rejected: "已拒绝",
-  contacted: "已建群",
-  closed: "已关闭",
-}
 
 function Dashboard() {
   const { user } = useAuth()
@@ -246,7 +239,7 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
           rows={(data?.recent_requests ?? []).map((r) => ({
             key: r.id,
             main: `${r.from_xy_code || "..."} → ${r.to_xy_code || "..."}`,
-            sub: REQUEST_STATUS[r.status] ?? r.status,
+            sub: REQUEST_STATUS_LABEL[r.status] ?? r.status,
           }))}
           footer={{ label: "去工单面板", to: "/dashboard?tab=tickets" }}
         />

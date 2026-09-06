@@ -165,9 +165,7 @@ export type AdminMemberFull = {
     verified_at?: (string | null);
     counts?: MemberCounts;
     can_view_contact?: boolean;
-    membership?: {
-        [key: string]: unknown;
-    };
+    membership?: MemberQuotaStatus;
 };
 
 /**
@@ -752,6 +750,23 @@ export type MemberCounts = {
 };
 
 /**
+ * docs/13 三桶额度快照 —— membership.quota_status() 返回的完整建模.
+ *
+ * 之前 AdminMemberFull.membership 是 dict[str, Any], OpenAPI 生成不出类型,
+ * 前端只能 any 消费; 这里按实际返回字段补齐建模 (响应数据本身不变,
+ * 端点始终传完整字典, 默认值只为字段默认实例可构造).
+ */
+export type MemberQuotaStatus = {
+    date?: string;
+    is_member?: boolean;
+    bucket?: string;
+    limit?: number;
+    used?: number;
+    remaining?: number;
+    balance?: number;
+};
+
+/**
  * 支付开关 + 优惠券限领 + 每日额度 (后台可调).
  */
 export type MembershipConfigUpdate = {
@@ -909,6 +924,19 @@ export type PlanItem = {
     days: number;
     price: number;
 };
+
+/**
+ * 当前审核模式: post=先发后审 (默认) / pre=先审后发.
+ */
+export type ProfileAuditModeResponse = {
+    mode: string;
+};
+
+export type ProfileAuditModeUpdate = {
+    mode: 'post' | 'pre';
+};
+
+export type mode = 'post' | 'pre';
 
 export type ProfileMeResponse = {
     profile?: (ProfileWithContact | null);
@@ -1261,6 +1289,7 @@ export type StoreUpdate = {
     address?: (string | null);
     lng?: (number | null);
     lat?: (number | null);
+    contact_qr?: (string | null);
     phone?: (string | null);
     photo?: (string | null);
     fees_desc?: (string | null);
@@ -1661,6 +1690,14 @@ export type AdminUpdateMembershipConfigData = {
 };
 
 export type AdminUpdateMembershipConfigResponse = (MembershipPlansResponse);
+
+export type AdminGetProfileAuditModeEndpointResponse = (ProfileAuditModeResponse);
+
+export type AdminUpdateProfileAuditModeData = {
+    requestBody: ProfileAuditModeUpdate;
+};
+
+export type AdminUpdateProfileAuditModeResponse = (ProfileAuditModeResponse);
 
 export type AdminGrantCouponEndpointData = {
     requestBody: CouponGrantRequest;

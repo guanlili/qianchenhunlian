@@ -16,7 +16,11 @@ import {
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { type AdminMemberFull, AdminService } from "@/client"
+import {
+  type AdminMemberFull,
+  type MemberQuotaStatus,
+  AdminService,
+} from "@/client"
 import { AssignStoreDialog } from "@/components/Members/AssignStoreDialog"
 import { ContactCard } from "@/components/Members/ContactCard"
 import { CouponGrantDialog } from "@/components/Members/CouponGrantDialog"
@@ -45,6 +49,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import {
+  ACTION_LABEL,
+  GRANT_SOURCE_LABEL,
+  REQUEST_STATUS_LABEL,
+} from "@/lib/labels"
 import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/members/$userId")({
@@ -73,14 +82,14 @@ function rangeLabel(
   return `${min || max}${suffix}`
 }
 
-/** full.membership (dict) → 三桶额度快照 */
-function quotaSnapshot(m?: { [key: string]: unknown } | null) {
+/** full.membership → 三桶额度快照（后端已建模 MemberQuotaStatus） */
+function quotaSnapshot(m?: MemberQuotaStatus | null) {
   return {
-    bucket: (m?.bucket as string) || "free",
-    limit: Number(m?.limit ?? 0),
-    used: Number(m?.used ?? 0),
-    remaining: Number(m?.remaining ?? 0),
-    balance: Number(m?.balance ?? 0),
+    bucket: m?.bucket || "free",
+    limit: m?.limit ?? 0,
+    used: m?.used ?? 0,
+    remaining: m?.remaining ?? 0,
+    balance: m?.balance ?? 0,
   }
 }
 
@@ -94,28 +103,8 @@ const TXN_SOURCE_LABEL: Record<string, string> = {
   member_daily_cost: "会员日额度",
 }
 
-const ACTION_LABEL: Record<string, string> = {
-  audit_pass: "资料通过 (历史)",
-  audit_reject: "下架资料",
-  verify: "实名认证",
-  unverify: "撤销认证",
-  block: "封禁",
-  unblock: "解封",
-  grant_balance: "调整次数",
-  view_contact: "查看联系方式",
-  update_profile: "代录资料",
-  assign_store: "指定门店",
-  grant_membership: "开通/续费会员",
-  revoke_membership: "撤销会员",
-}
-
-const REQ_STATUS_LABEL: Record<string, string> = {
-  pending: "待处理",
-  accepted: "对方同意",
-  rejected: "对方拒绝",
-  contacted: "已建群",
-  closed: "已关闭",
-}
+// 后台操作动作 / 会员发放来源 / 工单状态统一走 lib/labels
+const REQ_STATUS_LABEL = REQUEST_STATUS_LABEL
 
 function MemberDetail() {
   const { userId } = Route.useParams()
@@ -753,16 +742,6 @@ const GRANT_PLAN_LABEL: Record<string, string> = {
   redeem_30d: "体验码 30天",
   redeem_60d: "体验码 60天",
   redeem_90d: "体验码 90天",
-}
-
-const GRANT_SOURCE_LABEL: Record<string, string> = {
-  admin_recharge: "线下收款",
-  admin_trial: "体验发放",
-  admin_compensate: "补偿",
-  // 线上支付回调自动写入 (docs/13 P3), 管理员不可手动选
-  wx_pay: "线上支付",
-  // 体验码开通 (总部生码, 用户自助兑换)
-  redeem_code: "体验码",
 }
 
 function MembershipTab({

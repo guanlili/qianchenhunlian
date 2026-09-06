@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { ShieldAlert, Store } from "lucide-react"
 import { Suspense } from "react"
 
@@ -9,7 +9,7 @@ import { columns } from "@/components/AdminAccounts/columns"
 import { DataTable } from "@/components/Common/DataTable"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import useAuth from "@/hooks/useAuth"
+import { currentUserQueryOptions } from "@/hooks/useAuth"
 
 function adminAccountsQueryOptions() {
   return {
@@ -20,6 +20,15 @@ function adminAccountsQueryOptions() {
 
 export const Route = createFileRoute("/_layout/admins")({
   component: AdminsPage,
+  // 权限前置: 非超管进不了页面 (原 render 期判断有闪屏且请求已发出)
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient.ensureQueryData(
+      currentUserQueryOptions(),
+    )
+    if (!user?.is_superuser) {
+      throw redirect({ to: "/stores" })
+    }
+  },
   head: () => ({ meta: [{ title: "管理员账号 - 乾缘后台" }] }),
 })
 
@@ -36,17 +45,6 @@ function AdminsTableContent() {
 }
 
 function AdminsPage() {
-  const { user } = useAuth()
-
-  if (user && !user.is_superuser) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="text-2xl font-semibold mb-2">无权限</div>
-        <div className="text-muted-foreground">管理员账号仅总部管理员可见</div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">

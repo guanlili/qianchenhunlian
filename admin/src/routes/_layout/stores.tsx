@@ -80,12 +80,13 @@ function StoresPage() {
   const [keyword, setKeyword] = useState("")
 
   // 卡片墙数据: 每店待办徽标 + 未归属计数 (门店管理员后端自动限本店)
+  // city key 用 "all" 哨兵, 与侧边栏 ["stores-overview", "all"] 共用缓存共享轮询
   const { data: overview, isLoading } = useQuery({
     queryFn: () =>
       AdminService.storesOverview({
         city: city === "__all__" ? undefined : city,
       }),
-    queryKey: ["stores-overview", city],
+    queryKey: ["stores-overview", city === "__all__" ? "all" : city],
   })
   // 完整门店数据 (编辑对话框初始化需要全部字段, overview 只有摘要)
   const { data: fullStores } = useQuery({
@@ -619,8 +620,9 @@ function PhotoField({
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const upload = useMutation({
+    // Body_uploads_upload_image.file 类型为 Blob | File, 直接传无需 cast
     mutationFn: (file: File) =>
-      UploadsService.uploadImage({ formData: { file } as any }),
+      UploadsService.uploadImage({ formData: { file } }),
     onSuccess: (res) => {
       onChange(res.url)
       toast.success("已上传，保存门店后生效")

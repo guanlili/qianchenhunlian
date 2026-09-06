@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { ArrowLeft, ArrowRight, Eye, Heart, Star } from "lucide-react"
 import { useState } from "react"
@@ -49,7 +49,10 @@ export function ActivityFeedList() {
         skip: page * PAGE_SIZE,
         limit: PAGE_SIZE,
       }),
+    // 与门店工作台行为动态共用 ["activity-feed"] 前缀
     queryKey: ["activity-feed", kind, storeFilter, page],
+    // 翻页/切筛选时保留上一页数据, 避免列表闪空
+    placeholderData: keepPreviousData,
   })
 
   const total = data?.total ?? 0
