@@ -25,7 +25,12 @@ def upgrade():
     from app.models import MembershipOrder
 
     inspector = sa.inspect(engine)
-    if "membershiporder" not in {t.lower() for t in inspector.get_table_names()}:
+    tables = {t.lower() for t in inspector.get_table_names()}
+    if "user" not in tables:
+        # 全新库: user 等基础表尚未建 (由链尾基线迁移统一创建),
+        # 本表带 user 外键, 缺父表会 UndefinedTable, 跳过
+        return
+    if "membershiporder" not in tables:
         MembershipOrder.__table__.create(bind=engine, checkfirst=True)
 
 

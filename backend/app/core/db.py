@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 
-# (table, column, ddl) - 给已存在的表加列, 保留现有数据 (替代正式 alembic 迁移)
+# (table, column, ddl) - 给已存在的表加列, 保留现有数据
+#
+# ⚠️ 本清单已冻结 (2026-09-05): 仅服务 2026-09 之前的历史库, 新库由 alembic
+# 基线迁移 (f0a1b2c3d4e5) 统一建表。此后新增字段/索引必须附 alembic 迁移,
+# 不允许再往这里追加条目 (由 tests/test_alembic_parity.py 守门)。
 _PENDING_ADD_COLUMNS: list[tuple[str, str, str]] = [
     # — 门店红娘二维码 (2026-09 体验码模式配套) —
     ("store", "contact_qr", "VARCHAR(500)"),
