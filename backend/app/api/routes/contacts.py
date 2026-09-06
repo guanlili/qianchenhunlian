@@ -13,7 +13,13 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Field, SQLModel, and_, func, select
 
-from app.api.deps import CompleteProfileUser, CurrentUser, SessionDep
+from app.api.deps import (
+    ApiReadLimited,
+    ApiWriteLimited,
+    CompleteProfileUser,
+    CurrentUser,
+    SessionDep,
+)
 from app.api.shandong import shandong_clause
 from app.core import membership
 from app.core.wechat import assert_text_safe
@@ -68,6 +74,7 @@ class ContactRequestList(SQLModel):
 def submit_contact_request(
     session: SessionDep,
     current_user: CompleteProfileUser,
+    _write: ApiWriteLimited,
     body: ContactRequestBody,
 ) -> ContactRequestResult:
     """提交"想联系 X"工单. 红娘后台看到后人工撮合.
@@ -109,7 +116,6 @@ def submit_contact_request(
     assert_text_safe(message, current_user.openid, scene=2)
 
     # 24h 重复申请防护 (同一对) - 不论之前 status 如何, 都禁止
-    one_day_ago = datetime.utcnow().replace(microsecond=0)
     from datetime import timedelta as _td
 
     one_day_ago = datetime.utcnow() - _td(hours=24)
@@ -174,6 +180,7 @@ def submit_contact_request(
 def list_my_contact_requests(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
     skip: int = 0,
     limit: int = 20,
 ) -> ContactRequestList:

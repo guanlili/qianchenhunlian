@@ -7,6 +7,7 @@
   POSTGRES_SERVER=localhost POSTGRES_PORT=15432 UPLOAD_DIR=/tmp/uploads \
   uv run --python 3.12 python tests/smoke_contact_requests.py
 """
+
 import sys
 import time
 from datetime import datetime, timedelta
@@ -77,25 +78,58 @@ def main():
         session.refresh(storeB)
 
         # ---- 员工 ----
-        hq = Staff(email=f"{PREFIX}hq@test.cn", hashed_password=get_password_hash(PW),
-                   name="HQ", is_active=True, role="hq_staff", store_id=None)
-        mmA = Staff(email=f"{PREFIX}mma@test.cn", hashed_password=get_password_hash(PW),
-                    name="MM-A", is_active=True, role="matchmaker", store_id=storeA.id)
-        mmB = Staff(email=f"{PREFIX}mmb@test.cn", hashed_password=get_password_hash(PW),
-                    name="MM-B", is_active=True, role="matchmaker", store_id=storeB.id)
+        hq = Staff(
+            email=f"{PREFIX}hq@test.cn",
+            hashed_password=get_password_hash(PW),
+            name="HQ",
+            is_active=True,
+            role="hq_staff",
+            store_id=None,
+        )
+        mmA = Staff(
+            email=f"{PREFIX}mma@test.cn",
+            hashed_password=get_password_hash(PW),
+            name="MM-A",
+            is_active=True,
+            role="matchmaker",
+            store_id=storeA.id,
+        )
+        mmB = Staff(
+            email=f"{PREFIX}mmb@test.cn",
+            hashed_password=get_password_hash(PW),
+            name="MM-B",
+            is_active=True,
+            role="matchmaker",
+            store_id=storeB.id,
+        )
         session.add_all([hq, mmA, mmB])
         session.commit()
 
         # ---- 工单双方用户 + 资料 ----
         def make_user(xy, store_id, wx, phone):
-            u = User(email=f"{PREFIX}{xy}@test.cn", hashed_password=get_password_hash(PW),
-                     is_superuser=False, xy_code=xy, unlock_balance=10, status="active")
+            u = User(
+                email=f"{PREFIX}{xy}@test.cn",
+                hashed_password=get_password_hash(PW),
+                is_superuser=False,
+                xy_code=xy,
+                unlock_balance=10,
+                status="active",
+            )
             session.add(u)
             session.commit()
             session.refresh(u)
-            p = Profile(user_id=u.id, home_store_id=store_id, contact_wechat=wx,
-                        contact_phone=phone, gender="男", year=1990, location="济南",
-                        audit_status="approved", progress=100, nickname=xy)
+            p = Profile(
+                user_id=u.id,
+                home_store_id=store_id,
+                contact_wechat=wx,
+                contact_phone=phone,
+                gender="男",
+                year=1990,
+                location="济南",
+                audit_status="approved",
+                progress=100,
+                nickname=xy,
+            )
             session.add(p)
             session.commit()
             return u
@@ -104,15 +138,27 @@ def main():
         u_to = make_user("SMK_T1", storeB.id, "wx_to", "13800000002")
 
         # ---- 工单 ----
-        tA = ContactRequest(from_user_id=u_from.id, to_user_id=u_to.id, status="pending",
-                            store_id=storeA.id,
-                            created_at=datetime.utcnow() - timedelta(hours=49))
-        tB = ContactRequest(from_user_id=u_from.id, to_user_id=u_to.id, status="pending",
-                            store_id=storeB.id,
-                            created_at=datetime.utcnow() - timedelta(hours=1))
-        tN = ContactRequest(from_user_id=u_from.id, to_user_id=u_to.id, status="pending",
-                            store_id=None,
-                            created_at=datetime.utcnow() - timedelta(hours=1))
+        tA = ContactRequest(
+            from_user_id=u_from.id,
+            to_user_id=u_to.id,
+            status="pending",
+            store_id=storeA.id,
+            created_at=datetime.utcnow() - timedelta(hours=49),
+        )
+        tB = ContactRequest(
+            from_user_id=u_from.id,
+            to_user_id=u_to.id,
+            status="pending",
+            store_id=storeB.id,
+            created_at=datetime.utcnow() - timedelta(hours=1),
+        )
+        tN = ContactRequest(
+            from_user_id=u_from.id,
+            to_user_id=u_to.id,
+            status="pending",
+            store_id=None,
+            created_at=datetime.utcnow() - timedelta(hours=1),
+        )
         session.add_all([tA, tB, tN])
         session.commit()
         for t in (tA, tB, tN):
@@ -133,58 +179,106 @@ def main():
 
         print("\n=== 1) GET /admin/contact-requests (可见性 + 脱敏) ===")
         totalA, itemsA = my_items(H_MA)
-        check("matchmaker-A 只看到 ticket-A", len(itemsA) == 1 and itemsA[0]["id"] == str(tA.id),
-              f"total={totalA} ids={[i['id'] for i in itemsA]}")
-        check("ticket-A overdue=true", bool(itemsA) and itemsA[0].get("overdue") is True,
-              f"overdue={itemsA[0].get('overdue') if itemsA else 'NA'}")
+        check(
+            "matchmaker-A 只看到 ticket-A",
+            len(itemsA) == 1 and itemsA[0]["id"] == str(tA.id),
+            f"total={totalA} ids={[i['id'] for i in itemsA]}",
+        )
+        check(
+            "ticket-A overdue=true",
+            bool(itemsA) and itemsA[0].get("overdue") is True,
+            f"overdue={itemsA[0].get('overdue') if itemsA else 'NA'}",
+        )
 
         totalB, itemsB = my_items(H_MB)
-        check("matchmaker-B 只看到 ticket-B", len(itemsB) == 1 and itemsB[0]["id"] == str(tB.id),
-              f"total={totalB} ids={[i['id'] for i in itemsB]}")
+        check(
+            "matchmaker-B 只看到 ticket-B",
+            len(itemsB) == 1 and itemsB[0]["id"] == str(tB.id),
+            f"total={totalB} ids={[i['id'] for i in itemsB]}",
+        )
 
         _, itemsHQ = my_items(H_HQ)
-        check("hq_staff 看到全部 3 条", len(itemsHQ) == 3, f"ids={[i['id'] for i in itemsHQ]}")
-        check("hq_staff 所有 contact 字段为 null", all(
-            i["from_contact_wechat"] is None and i["from_contact_phone"] is None
-            and i["to_contact_wechat"] is None and i["to_contact_phone"] is None
-            for i in itemsHQ))
+        check(
+            "hq_staff 看到全部 3 条",
+            len(itemsHQ) == 3,
+            f"ids={[i['id'] for i in itemsHQ]}",
+        )
+        check(
+            "hq_staff 所有 contact 字段为 null",
+            all(
+                i["from_contact_wechat"] is None
+                and i["from_contact_phone"] is None
+                and i["to_contact_wechat"] is None
+                and i["to_contact_phone"] is None
+                for i in itemsHQ
+            ),
+        )
 
         _, itemsSU = my_items(H_SU)
-        check("superuser 看到全部 3 条", len(itemsSU) == 3, f"ids={[i['id'] for i in itemsSU]}")
+        check(
+            "superuser 看到全部 3 条",
+            len(itemsSU) == 3,
+            f"ids={[i['id'] for i in itemsSU]}",
+        )
         su0 = itemsSU[0] if itemsSU else {}
-        check("superuser contact 字段有值",
-              su0.get("from_contact_wechat") == "wx_from" and su0.get("to_contact_phone") == "13800000002",
-              f"from_wx={su0.get('from_contact_wechat')} to_phone={su0.get('to_contact_phone')}")
+        check(
+            "superuser contact 字段有值",
+            su0.get("from_contact_wechat") == "wx_from"
+            and su0.get("to_contact_phone") == "13800000002",
+            f"from_wx={su0.get('from_contact_wechat')} to_phone={su0.get('to_contact_phone')}",
+        )
 
         print("\n=== 2) POST handle ticket-A (status=accepted) ===")
+
         def handle(h, tid, status="accepted"):
-            return client.post(f"/api/v1/admin/contact-requests/{tid}/handle",
-                               headers=h, json={"status": status, "admin_note": None})
+            return client.post(
+                f"/api/v1/admin/contact-requests/{tid}/handle",
+                headers=h,
+                json={"status": status, "admin_note": None},
+            )
+
         r = handle(H_MA, tA.id)
-        check("matchmaker-A → 200", r.status_code == 200, f"{r.status_code} {r.text[:100]}")
+        check(
+            "matchmaker-A → 200",
+            r.status_code == 200,
+            f"{r.status_code} {r.text[:100]}",
+        )
         r = handle(H_MB, tA.id)
         check("matchmaker-B → 403", r.status_code == 403, f"{r.status_code}")
         r = handle(H_HQ, tA.id)
         check("hq_staff → 200", r.status_code == 200, f"{r.status_code} {r.text[:100]}")
         if r.status_code == 200:
             b = r.json()
-            check("hq_staff handle 响应 contact 为 null",
-                  b["from_contact_wechat"] is None and b["to_contact_wechat"] is None,
-                  f"from={b.get('from_contact_wechat')} to={b.get('to_contact_wechat')}")
+            check(
+                "hq_staff handle 响应 contact 为 null",
+                b["from_contact_wechat"] is None and b["to_contact_wechat"] is None,
+                f"from={b.get('from_contact_wechat')} to={b.get('to_contact_wechat')}",
+            )
 
         print("\n=== 3) POST assign ticket-NULL (store_id=storeA) ===")
-        r = client.post(f"/api/v1/admin/contact-requests/{tN.id}/assign",
-                        headers=H_SU, json={"store_id": str(storeA.id)})
-        check("superuser → 200", r.status_code == 200, f"{r.status_code} {r.text[:100]}")
+        r = client.post(
+            f"/api/v1/admin/contact-requests/{tN.id}/assign",
+            headers=H_SU,
+            json={"store_id": str(storeA.id)},
+        )
+        check(
+            "superuser → 200", r.status_code == 200, f"{r.status_code} {r.text[:100]}"
+        )
         _, itemsMA2 = my_items(H_MA)
-        check("assign 后 matchmaker-A 可见 ticket-NULL",
-              str(tN.id) in {i["id"] for i in itemsMA2},
-              f"ids={[i['id'] for i in itemsMA2]}")
-        r = client.post(f"/api/v1/admin/contact-requests/{tN.id}/assign",
-                        headers=H_MA, json={"store_id": str(storeA.id)})
+        check(
+            "assign 后 matchmaker-A 可见 ticket-NULL",
+            str(tN.id) in {i["id"] for i in itemsMA2},
+            f"ids={[i['id'] for i in itemsMA2]}",
+        )
+        r = client.post(
+            f"/api/v1/admin/contact-requests/{tN.id}/assign",
+            headers=H_MA,
+            json={"store_id": str(storeA.id)},
+        )
         check("matchmaker-A → 403", r.status_code == 403, f"{r.status_code}")
 
         print("\n=== 4) GET /admin/audit-logs ===")
+
         def audit_items(action):
             r = client.get(
                 f"/api/v1/admin/audit-logs?action={action}&target_user_id={u_from.id}&limit=200",
@@ -192,14 +286,25 @@ def main():
             )
             assert r.status_code == 200, r.text
             return r.json()["items"]
+
         h_logs = audit_items("handle_ticket")
         a_logs = audit_items("assign_ticket")
         check("handle_ticket 出现 2 条", len(h_logs) == 2, f"got {len(h_logs)}")
-        check("handle_ticket detail.request_id = ticket-A",
-              all((l.get("detail") or {}).get("request_id") == str(tA.id) for l in h_logs))
+        check(
+            "handle_ticket detail.request_id = ticket-A",
+            all(
+                (row.get("detail") or {}).get("request_id") == str(tA.id)
+                for row in h_logs
+            ),
+        )
         check("assign_ticket 出现 1 条", len(a_logs) == 1, f"got {len(a_logs)}")
-        check("assign_ticket detail.request_id = ticket-NULL",
-              all((l.get("detail") or {}).get("request_id") == str(tN.id) for l in a_logs))
+        check(
+            "assign_ticket detail.request_id = ticket-NULL",
+            all(
+                (row.get("detail") or {}).get("request_id") == str(tN.id)
+                for row in a_logs
+            ),
+        )
 
         # ---- 清理 ----
         for t in (tA, tB, tN):

@@ -35,14 +35,22 @@ def send_email(
     email_to: str,
     subject: str = "",
     html_content: str = "",
+    timeout: int = 15,
 ) -> None:
+    """发送邮件。timeout 显式传给 emails 库 (秒), 默认 15s 防 SMTP 挂起拖死请求."""
     assert settings.emails_enabled, "no provided configuration for email variables"
     message = emails.Message(
         subject=subject,
         html=html_content,
         mail_from=(settings.EMAILS_FROM_NAME, settings.EMAILS_FROM_EMAIL),
     )
-    smtp_options = {"host": settings.SMTP_HOST, "port": settings.SMTP_PORT}
+    smtp_options: dict[str, Any] = {
+        "host": settings.SMTP_HOST,
+        "port": settings.SMTP_PORT,
+        # emails 库的 timeout 走 smtp 参数字典 (传给 SMTP 连接), 默认 15s
+        # 防 SMTP 服务挂起时请求线程被无限拖住
+        "timeout": timeout,
+    }
     if settings.SMTP_TLS:
         smtp_options["tls"] = True
     elif settings.SMTP_SSL:
@@ -52,11 +60,19 @@ def send_email(
     if settings.SMTP_PASSWORD:
         smtp_options["password"] = settings.SMTP_PASSWORD
     response = message.send(to=email_to, smtp=smtp_options)
-    logger.info(
-        "send email to %s: status=%s",
-        email_to,
-        response.status if hasattr(response, "status") else "ok",
-    )
+    # emails 库连接失败时不抛异常而是返回带 error 的 response,
+    # 必须显式检查, 否则发送失败也会打出 status=ok 的假日志
+    status_code = getattr(response, "status_code", None)
+    error = getattr(response, "error", None)
+    if error or (status_code is not None and status_code != 250):
+        logger.error(
+            "send email to %s failed: status=%s error=%s",
+            email_to,
+            status_code,
+            error,
+        )
+    else:
+        logger.info("send email to %s: status=%s", email_to, status_code or "ok")
 
 
 def generate_test_email(email_to: str) -> EmailData:

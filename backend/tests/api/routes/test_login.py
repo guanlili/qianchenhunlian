@@ -117,3 +117,45 @@ def test_reset_password_invalid_token(
     assert "detail" in response
     assert r.status_code == 400
     assert response["detail"] == "Invalid token"
+
+
+def test_login_email_case_insensitive(client: TestClient, db: Session) -> None:
+    """登录邮箱大小写归一化: 大小写变体 / 带首尾空格都能命中同一账号."""
+    email = random_email()
+    password = random_lower_string() + "Aa1!"
+    create_user(
+        session=db,
+        user_create=UserCreate(email=email, password=password, is_superuser=False),
+    )
+    local, _, domain = email.partition("@")
+    variants = [
+        f"{local.upper()}@{domain}",  # 本域全大写
+        f"{local.capitalize()}@{domain.upper()}",  # 域名大写
+        f"  {email}  ",  # 首尾空白
+    ]
+    for v in variants:
+        r = client.post(
+            f"{settings.API_V1_STR}/login/access-token",
+            data={"username": v, "password": password},
+        )
+        assert r.status_code == 200, f"邮箱变体 {v!r} 应能登录"
+        assert r.json()["access_token"]
+
+
+def test_login_email_case_still_rejects_wrong_password(
+    client: TestClient, db: Session
+) -> None:
+    """大小写归一化不影响密码校验: 密码错仍 400."""
+    email = random_email()
+    create_user(
+        session=db,
+        user_create=UserCreate(
+            email=email, password=random_lower_string() + "Aa1!", is_superuser=False
+        ),
+    )
+    local, _, domain = email.partition("@")
+    r = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": f"{local.upper()}@{domain}", "password": "wrong-pw-123"},
+    )
+    assert r.status_code == 400

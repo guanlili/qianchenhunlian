@@ -12,6 +12,9 @@
 后台改配置即时生效, 无需发版.
 """
 
+import copy
+import threading
+import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -110,14 +113,50 @@ def today_cn() -> date:
     return datetime.now(timezone.utc).astimezone(CN_TZ).date()
 
 
+# ---------------- 套餐配置读缓存 (进程内 TTL 30s) ----------------
+# get_config 在每个消耗/额度查询点都会调用, 读的是 SiteSetting 单行;
+# 短缓存吸收高频读。写路径 (admin 更新配置) 调 invalidate_membership_config()
+# 立即失效, 保证后台改配置即时生效; tests/conftest.py 每测试也会清理。
+_CONFIG_CACHE_TTL = 30.0
+_config_cache: dict[str, Any] | None = None
+_config_cached_at: float = 0.0
+_config_cache_lock = threading.Lock()
+
+
+def invalidate_membership_config() -> None:
+    """失效套餐配置缓存 (admin 写配置 / site 设置写入后调用)."""
+    global _config_cache
+    with _config_cache_lock:
+        _config_cache = None
+
+
+def clear_membership_config_cache() -> None:
+    """清空套餐配置缓存 (tests/conftest.py 每测试调用, 保证测试间隔离)."""
+    invalidate_membership_config()
+
+
 def get_config(session: Session) -> dict[str, Any]:
-    """读套餐配置: SiteSetting 覆盖默认值 (浅合并逐 key)."""
+    """读套餐配置: SiteSetting 覆盖默认值 (浅合并逐 key), 带进程内 30s TTL 缓存.
+
+    返回深拷贝, 调用方改写 (如后台更新流程) 不会污染缓存。
+    """
+    global _config_cache, _config_cached_at
+    with _config_cache_lock:
+        if (
+            _config_cache is not None
+            and time.monotonic() - _config_cached_at < _CONFIG_CACHE_TTL
+        ):
+            return copy.deepcopy(_config_cache)
     row = session.get(SiteSetting, CONFIG_KEY)
     if not row or not isinstance(row.value, dict):
-        return dict(DEFAULT_CONFIG)
-    cfg = dict(DEFAULT_CONFIG)
-    cfg.update({k: v for k, v in row.value.items() if k in DEFAULT_CONFIG})
-    return cfg
+        cfg = dict(DEFAULT_CONFIG)
+    else:
+        cfg = dict(DEFAULT_CONFIG)
+        cfg.update({k: v for k, v in row.value.items() if k in DEFAULT_CONFIG})
+    with _config_cache_lock:
+        _config_cache = cfg
+        _config_cached_at = time.monotonic()
+    return copy.deepcopy(cfg)
 
 
 def get_plan(cfg: dict[str, Any], plan_code: str) -> dict[str, Any] | None:

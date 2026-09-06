@@ -1,6 +1,6 @@
 """门店管理员 (store_admin) 数据范围测试: 会员级操作仅限本店."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sqlmodel import Session, select
 
@@ -195,7 +195,7 @@ def test_profiles_store_filter_for_superuser(
     db.refresh(store_a)
     store_b = _another_store(db)
     member_a = _member_with_store(db, home_store_id=store_a.id)
-    member_b = _member_with_store(db, home_store_id=store_b.id)
+    _member_with_store(db, home_store_id=store_b.id)
 
     r = client.get(
         f"{settings.API_V1_STR}/admin/profiles",
@@ -332,7 +332,6 @@ def test_stores_list_member_count(client, db: Session, superuser_token_headers) 
     db.add(store_a)
     db.commit()
     db.refresh(store_a)
-    from datetime import datetime, timedelta as _td
 
     for _ in range(2):
         _member_with_store(db, home_store_id=store_a.id, member_days=30)
@@ -517,7 +516,8 @@ def test_stores_overview_badges(client, db: Session, superuser_token_headers) ->
     assert body["open_feedback"] == 1
 
     # 再造一个未绑店但已开通会员的用户 → 不计入未归属 (只统计游客)
-    from datetime import datetime, timedelta as _td2
+    from datetime import datetime
+    from datetime import timedelta as _td2
 
     m2 = _wx_member(db)
     m2.membership_expires_at = datetime.utcnow() + _td2(days=30)
@@ -791,7 +791,9 @@ def test_store_hard_delete_removes_everything(
 
     from sqlmodel import select as _select
 
-    from app.models import ContactRequest, Profile as ProfileModel, User as UserModel
+    from app.models import ContactRequest
+    from app.models import Profile as ProfileModel
+    from app.models import User as UserModel
 
     store = Store(name="待硬删门店", city="济南")
     db.add(store)

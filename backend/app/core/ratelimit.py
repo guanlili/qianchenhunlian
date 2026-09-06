@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from collections import defaultdict, deque
@@ -16,10 +17,19 @@ from starlette.requests import Request
 
 from app.core.config import settings
 
+
+def _env_int(name: str, default: int) -> int:
+    """限流阈值支持环境变量覆盖 (e2e 并行登录、运维调参用), 默认保持原值."""
+    try:
+        return int(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+
+
 # ---- 登录限流策略常量 ----
 # IP 维度: 防单 IP 狂刷 (任意账号)
 LOGIN_IP_WINDOW = 60  # 秒
-LOGIN_IP_MAX = 10  # 每窗口最多 10 次后台登录请求
+LOGIN_IP_MAX = _env_int("LOGIN_IP_MAX", 10)  # 每窗口最多 10 次后台登录请求
 
 # 账号维度: 防针对单个账号的密码爆破
 LOGIN_FAIL_WINDOW = 900  # 15 分钟
@@ -31,7 +41,7 @@ WXLOGIN_IP_MAX = 60
 
 # 找回 / 重置密码等敏感操作: 按 IP 限频
 SENSITIVE_WINDOW = 3600  # 1 小时
-SENSITIVE_MAX = 10
+SENSITIVE_MAX = _env_int("SENSITIVE_MAX", 10)
 
 # ---- 业务读接口限流策略常量 (按用户维度, 防整库爬取) ----
 # 列表/推荐类: 每分钟 60 次 (正常翻页足够, 机器遍历会被压住)

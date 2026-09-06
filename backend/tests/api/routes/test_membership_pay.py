@@ -47,6 +47,8 @@ def _set_cfg(db: Session, **overrides: Any) -> None:
     else:
         db.add(SiteSetting(key=membership.CONFIG_KEY, value=cfg))
     db.commit()
+    # 直改 DB 绕过了 admin 写路径, 手动失效 get_config 读缓存
+    membership.invalidate_membership_config()
 
 
 @pytest.fixture()
@@ -77,7 +79,7 @@ def pay_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         monkeypatch.setattr(settings, name, value)
 
     # 下单不打真网络: mock 掉 HTTP 层, 返回固定 prepay_id
-    async def _fake_post(body_json: str) -> dict[str, Any]:
+    async def _fake_post(_body_json: str) -> dict[str, Any]:
         return {"prepay_id": "wx_prepay_test_123"}
 
     monkeypatch.setattr("app.core.wechat_pay._post_jsapi", _fake_post)
@@ -326,9 +328,7 @@ def test_notify_amount_mismatch_no_grant(
     assert grants == []
 
 
-def test_notify_unknown_order(
-    client: TestClient, db: Session, pay_env: dict[str, Any]
-) -> None:
+def test_notify_unknown_order(client: TestClient, pay_env: dict[str, Any]) -> None:
     data = {
         "out_trade_no": "qy209901010000000000deadbeef",
         "trade_state": "SUCCESS",
@@ -340,7 +340,7 @@ def test_notify_unknown_order(
 
 
 def test_notify_wrong_serial_rejected(
-    client: TestClient, db: Session, pay_env: dict[str, Any]
+    client: TestClient, pay_env: dict[str, Any]
 ) -> None:
     data = {
         "out_trade_no": "qyx",

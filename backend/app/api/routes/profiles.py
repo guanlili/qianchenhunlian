@@ -11,7 +11,9 @@ from fastapi import APIRouter, Body, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, SQLModel, select
 
-from app.api.deps import ApiWriteLimited, CurrentUser, SessionDep
+from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
+from app.core import profile_audit
+from app.core.progress import calc_criteria_progress, calc_profile_progress
 from app.core.wechat import assert_text_safe, assert_text_safe_fields
 from app.models import (
     Criteria,
@@ -29,74 +31,12 @@ from app.models import (
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
-# 计算资料完善度时考虑的字段 (含登记表新增字段)
-_PROFILE_FIELDS = (
-    "real_name",
-    "gender",
-    "ethnicity",
-    "year",
-    "height",
-    "weight",
-    "health_status",
-    "edu",
-    "major",
-    "hobbies",
-    "income",
-    "marriage",
-    "origin",
-    "location",
-    "hometown",
-    "job",
-    "employer_type",
-    "has_social_insurance",
-    "has_house",
-    "has_car",
-    "house_car_loan",
-    "body_type",
-    "personality_type",
-    "desc",
-)
-_CRITERIA_FIELDS = (
-    "year_min",
-    "year_max",
-    "height_min",
-    "height_max",
-    "weight_min",
-    "weight_max",
-    "income",
-    "edu",
-    "marriage",
-    "house",
-    "car",
-    "job",
-    "social_insurance",
-)
-
-
-def _calc_profile_progress(profile: Profile) -> int:
-    filled = sum(
-        1 for f in _PROFILE_FIELDS if getattr(profile, f) not in (None, "", [])
-    )
-    if profile.photos:
-        filled += 2  # 照片权重大些
-    if profile.contact_wechat or profile.contact_phone:
-        filled += 1
-    total = len(_PROFILE_FIELDS) + 3  # 字段 + 照片 + 联系方式
-    return min(100, int(filled / total * 100))
-
-
-def _calc_criteria_progress(criteria: Criteria) -> int:
-    filled = sum(1 for f in _CRITERIA_FIELDS if getattr(criteria, f) not in (None, ""))
-    if criteria.origins:
-        filled += 1
-    if criteria.locations:
-        filled += 1
-    total = len(_CRITERIA_FIELDS) + 2
-    return min(100, int(filled / total * 100))
+# 资料完善度计算统一在 app.core.progress (与 admin 后台共用同一口径)
 
 
 # UGC 自由文本字段: PUT /me 提交时过微信 msg_sec_check (合规要求)
-# 现改为遍历 body 中所有字符串/字符串列表字段, 新增字段自动纳入审核
+# 白名单 + 并行 + 短缓存在 app.core.wechat (TEXT_CHECK_FIELDS),
+# 新增自由文本字段时需同步维护白名单, 枚举/选项类字段自动跳过审核
 
 
 # ---------------- Response DTOs ----------------
@@ -133,6 +73,7 @@ class WelcomeBody(SQLModel):
 def read_my_profile(
     session: SessionDep,
     current_user: CurrentUser,
+    _lim: ApiReadLimited,
 ) -> ProfileMeResponse:
     """获取我的资料 + 择偶要求 摘要"""
     profile = session.exec(
@@ -219,7 +160,7 @@ def submit_welcome(
             profile.year = body.year
         profile.updated_at = datetime.utcnow()
 
-    profile.progress = _calc_profile_progress(profile)
+    profile.progress = calc_profile_progress(profile)
     session.add(profile)
     session.commit()
     session.refresh(profile)
@@ -235,8 +176,11 @@ def upsert_my_profile(
 ) -> ProfileWithContact:
     """新建或更新我的资料.
 
-    一期"先发后审": 保存即 audit_status='approved' (dev 阶段); progress 后端重算.
-    上线接人审/机审后, 这里改回 'pending'.
+    审核模式由站点配置切换 (后台 /admin/profile-audit-mode):
+    - post (默认, 先发后审): 保存即 approved, 保持一期行为;
+    - pre (先审后发): 保存置 pending, 管理端审核通过才对外可见;
+      被驳回 (rejected) 后再次提交仍是 pending, 不会自动翻回 approved。
+    progress 后端重算, 不信任客户端。
     """
     profile = session.exec(
         select(Profile).where(Profile.user_id == current_user.id)
@@ -250,9 +194,12 @@ def upsert_my_profile(
         for k, v in data.items():
             setattr(profile, k, v)
         profile.audit_reason = None
-    profile.audit_status = "approved"  # 先发后审, 一期默认通过
+    if profile_audit.get_profile_audit_mode(session) == profile_audit.MODE_PRE:
+        profile.audit_status = "pending"  # 先审后发: 等管理端放开
+    else:
+        profile.audit_status = "approved"  # 先发后审 (默认): 保持现行为
 
-    profile.progress = _calc_profile_progress(profile)
+    profile.progress = calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     session.commit()
@@ -284,7 +231,7 @@ def update_my_contact(
             raise HTTPException(status_code=400, detail="手机号过长")
         profile.contact_phone = phone or None
     assert_text_safe_fields({"wechat": wechat, "phone": phone}, current_user.openid)
-    profile.progress = _calc_profile_progress(profile)
+    profile.progress = calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     session.commit()
@@ -339,7 +286,7 @@ def upsert_my_criteria(
         for k, v in data.items():
             setattr(criteria, k, v)
 
-    criteria.progress = _calc_criteria_progress(criteria)
+    criteria.progress = calc_criteria_progress(criteria)
     criteria.updated_at = datetime.utcnow()
     session.add(criteria)
     try:
@@ -354,7 +301,7 @@ def upsert_my_criteria(
             raise
         for k, v in data.items():
             setattr(existing, k, v)
-        existing.progress = _calc_criteria_progress(existing)
+        existing.progress = calc_criteria_progress(existing)
         existing.updated_at = datetime.utcnow()
         session.add(existing)
         session.commit()
@@ -381,12 +328,20 @@ def add_my_photo(
     if not profile:
         raise HTTPException(status_code=404, detail="请先创建资料")
 
+    # 防 photos 注入: file_url 只能是本人经 /uploads/image 拿到的相对路径
+    # (/files/{user_id}/{uuid}.ext, 见 uploads.py), 他人前缀 / 外链 / 路径穿越一律拒绝
+    file_url = (body.file_url or "").strip()
+    if not file_url.startswith(f"/files/{current_user.id}/") or ".." in file_url:
+        raise HTTPException(
+            status_code=400, detail="照片地址不合法, 只能使用本人上传的图片"
+        )
+
     photos = list(profile.photos or [])
     if len(photos) >= 6:
         raise HTTPException(status_code=400, detail="最多只能上传 6 张照片")
-    photos.append(body.file_url)
+    photos.append(file_url)
     profile.photos = photos
-    profile.progress = _calc_profile_progress(profile)
+    profile.progress = calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     session.commit()
@@ -411,7 +366,7 @@ def remove_my_photo(
         raise HTTPException(status_code=400, detail="索引越界")
     photos.pop(index)
     profile.photos = photos
-    profile.progress = _calc_profile_progress(profile)
+    profile.progress = calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     session.commit()

@@ -1,6 +1,6 @@
 """双向匹配打分测试: 纯函数单测 + 推荐排序端到端."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session

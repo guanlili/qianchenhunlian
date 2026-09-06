@@ -7,6 +7,7 @@ from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import (
+    ApiReadLimited,
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
@@ -121,7 +122,7 @@ def update_password_me(
 
 
 @router.get("/me", response_model=UserPublic)
-def read_user_me(current_user: CurrentUser) -> Any:
+def read_user_me(current_user: CurrentUser, _lim: ApiReadLimited) -> Any:
     """
     Get current user.
     """
