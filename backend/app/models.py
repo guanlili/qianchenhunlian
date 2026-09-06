@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import EmailStr
-from sqlalchemy import JSON, Column, UniqueConstraint
+from sqlalchemy import JSON, Column, Index, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 # ------------------------------------------------------------
@@ -71,7 +71,8 @@ class User(UserBase, table=True):
     membership_expires_at: datetime | None = Field(default=None, index=True)
     membership_plan_code: str | None = Field(default=None, max_length=32)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    # 按注册时间筛看板/对账的高频查询列, 加索引 (migration 由主任务补)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # 关系 (1-to-1, 删 user 级联删 profile/criteria)
@@ -387,6 +388,13 @@ class View(SQLModel, table=True):
     )
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
+    # 24h 去重高频路径 (详情页 recent_view 查询) 走复合索引:
+    # (user_id, target_user_id, created_at) 前两列精确定位 + 第三列范围扫,
+    # 避免每次详情页都回表过滤大量历史行。
+    __table_args__ = (
+        Index("ix_view_user_target_created", "user_id", "target_user_id", "created_at"),
+    )
+
 
 # ------------------------------------------------------------
 # ContactIntent · 联系意向
@@ -412,6 +420,10 @@ class ContactIntent(SQLModel, table=True):
 
 
 class DailyRecommendation(SQLModel, table=True):
+    """每日推荐快照 (M2 落地): 用户当日首次请求 tab=today 时计算并落库,
+    当天后续请求与翻页直接按快照顺序读取 —— 翻页绝对稳定、不再每页重算打分。
+    过期按 rec_date 自然作废, 无需清理任务。"""
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
@@ -419,6 +431,13 @@ class DailyRecommendation(SQLModel, table=True):
     rec_date: str = Field(max_length=10, index=True)  # YYYY-MM-DD (北京时区)
     profile_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # 并发首请求只落一份: 撞唯一约束的一方改读已存在的那份
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "rec_date", name="daily_recommendation_user_date_uq"
+        ),
+    )
 
 
 # ------------------------------------------------------------

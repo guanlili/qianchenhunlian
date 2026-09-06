@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import update as sa_update
@@ -181,38 +182,41 @@ def list_my_favorites(
     return FavoriteList(items=items, total=total)
 
 
-@router.get("/visitors", response_model=VisitorList)
-def list_visitors(
+def _aggregate_view_list(
     session: SessionDep,
     current_user: CurrentUser,
-    _lim: ApiReadLimited,
-    _mem: MemberRequired,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    *,
+    filter_col: Any,
+    group_col: Any,
+    skip: int,
+    limit: int,
 ) -> VisitorList:
-    """看过我的人 (每个访客取最近一次)"""
-    # 聚合: 每个 viewer 最近一次
+    """浏览关系聚合分页: /visitors (看过我) 与 /seen-by-me (我看过) 共用.
+
+    两者只差两点 —— 按哪一列过滤 (target_user_id / user_id) 和按哪一端聚合
+    (group_col), 抽成 helper 复用, 避免双份 SQL 漂移。
+    """
     sub = (
         select(
-            View.user_id,
+            group_col.label("uid"),
             func.max(View.created_at).label("last_viewed_at"),
         )
-        .where(View.target_user_id == current_user.id)
-        .group_by(View.user_id)  # type: ignore[arg-type]
+        .where(filter_col == current_user.id)
+        .group_by(group_col)
         .subquery()
     )
 
     total = session.exec(
         select(func.count())
         .select_from(sub)
-        .join(User, User.id == sub.c.user_id)  # type: ignore[arg-type]
+        .join(User, User.id == sub.c.uid)  # type: ignore[arg-type]
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(shandong_clause())
     ).one()
 
     rows = session.exec(
-        select(sub.c.user_id, sub.c.last_viewed_at, User, Profile)
-        .join(User, User.id == sub.c.user_id)  # type: ignore[arg-type]
+        select(sub.c.uid, sub.c.last_viewed_at, User, Profile)
+        .join(User, User.id == sub.c.uid)  # type: ignore[arg-type]
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(shandong_clause())
         .order_by(sub.c.last_viewed_at.desc())
@@ -235,6 +239,26 @@ def list_visitors(
     return VisitorList(items=items, total=total)
 
 
+@router.get("/visitors", response_model=VisitorList)
+def list_visitors(
+    session: SessionDep,
+    current_user: CurrentUser,
+    _lim: ApiReadLimited,
+    _mem: MemberRequired,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> VisitorList:
+    """看过我的人 (每个访客取最近一次)"""
+    return _aggregate_view_list(
+        session,
+        current_user,
+        filter_col=View.target_user_id,  # 谁看过我: 按被看者过滤
+        group_col=View.user_id,  # 按访客聚合
+        skip=skip,
+        limit=limit,
+    )
+
+
 @router.get("/seen-by-me", response_model=VisitorList)
 def list_seen_by_me(
     session: SessionDep,
@@ -245,44 +269,11 @@ def list_seen_by_me(
     limit: int = Query(20, ge=1, le=100),
 ) -> VisitorList:
     """我看过的人 (每个被看的人取最近一次)"""
-    sub = (
-        select(
-            View.target_user_id,
-            func.max(View.created_at).label("last_viewed_at"),
-        )
-        .where(View.user_id == current_user.id)
-        .group_by(View.target_user_id)  # type: ignore[arg-type]
-        .subquery()
+    return _aggregate_view_list(
+        session,
+        current_user,
+        filter_col=View.user_id,  # 我看过谁: 按观看者过滤
+        group_col=View.target_user_id,  # 按被看者聚合
+        skip=skip,
+        limit=limit,
     )
-
-    total = session.exec(
-        select(func.count())
-        .select_from(sub)
-        .join(User, User.id == sub.c.target_user_id)  # type: ignore[arg-type]
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
-        .where(shandong_clause())
-    ).one()
-
-    rows = session.exec(
-        select(sub.c.target_user_id, sub.c.last_viewed_at, User, Profile)
-        .join(User, User.id == sub.c.target_user_id)  # type: ignore[arg-type]
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
-        .where(shandong_clause())
-        .order_by(sub.c.last_viewed_at.desc())
-        .offset(skip)
-        .limit(limit)
-    ).all()
-
-    items = []
-    for _tid, viewed_at, user, profile in rows:
-        items.append(
-            VisitorBrief(
-                user_id=user.id,
-                xy_code=user.xy_code,
-                gender=profile.gender if profile else None,
-                year=profile.year if profile else None,
-                photos=list(profile.photos or [])[:1] if profile else [],
-                last_viewed_at=viewed_at,
-            )
-        )
-    return VisitorList(items=items, total=total)

@@ -105,9 +105,7 @@ def test_store_admin_cannot_handle_feedback(client, db: Session) -> None:
     assert r.status_code == 403
 
 
-def test_dashboard_superuser(
-    client, db: Session, superuser_token_headers: dict[str, str]
-) -> None:
+def test_dashboard_superuser(client, superuser_token_headers: dict[str, str]) -> None:
     r = client.get(
         f"{settings.API_V1_STR}/admin/dashboard", headers=superuser_token_headers
     )
@@ -137,7 +135,8 @@ def test_dashboard_store_admin_scoped(client, db: Session) -> None:
         ),
     )
     # 在期会员 (total_users 为在期会员口径, 游客不计入)
-    from datetime import datetime, timedelta as _td
+    from datetime import datetime
+    from datetime import timedelta as _td
 
     user.membership_expires_at = datetime.utcnow() + _td(days=30)
     db.add(
@@ -178,6 +177,39 @@ def test_dashboard_store_admin_scoped(client, db: Session) -> None:
     assert body["stats"]["total_users"] >= 1
 
 
+def test_dashboard_cache_hits_within_ttl(
+    client, superuser_token_headers: dict[str, str], monkeypatch
+) -> None:
+    """30s 进程内缓存: 同一口径连续两次请求, 聚合计算只跑一次, 响应一致."""
+    from app.api.routes import admin as admin_routes
+
+    calls = {"n": 0}
+    _orig = admin_routes._compute_dashboard
+
+    def _counting(*args, **kwargs):
+        calls["n"] += 1
+        return _orig(*args, **kwargs)
+
+    monkeypatch.setattr(admin_routes, "_compute_dashboard", _counting)
+    r1 = client.get(
+        f"{settings.API_V1_STR}/admin/dashboard", headers=superuser_token_headers
+    )
+    r2 = client.get(
+        f"{settings.API_V1_STR}/admin/dashboard", headers=superuser_token_headers
+    )
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert calls["n"] == 1, "TTL 内第二次请求应命中缓存"
+    assert r1.json() == r2.json()
+
+    # 清缓存后重新计算 (conftest 每测试即此语义)
+    admin_routes.clear_dashboard_cache()
+    r3 = client.get(
+        f"{settings.API_V1_STR}/admin/dashboard", headers=superuser_token_headers
+    )
+    assert calls["n"] == 2
+    assert r3.status_code == 200
+
+
 def _site_headers(client) -> dict[str, str]:
     from app.core.config import settings as cfg
 
@@ -192,7 +224,7 @@ def _site_headers(client) -> dict[str, str]:
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def test_site_content_crud(client, db: Session) -> None:
+def test_site_content_crud(client) -> None:
     """协议文案: 写入仅白名单 key + SETTINGS_MANAGE; 读公开."""
     headers = _site_headers(client)
 
