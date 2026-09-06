@@ -18,16 +18,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 
 type StatusFilter = "pending" | "accepted" | "rejected" | "contacted" | "closed"
 
-export const STATUS_LABEL: Record<StatusFilter, string> = {
-  pending: "待处理",
-  accepted: "对方同意",
-  rejected: "对方拒绝",
-  contacted: "已建群",
-  closed: "已关闭",
-}
+// 状态中文标签统一走 lib/labels (与 dashboard / 会员详情共用一份字典)
+const STATUS_LABEL = REQUEST_STATUS_LABEL
 
 const STATUS_BADGE: Record<
   string,

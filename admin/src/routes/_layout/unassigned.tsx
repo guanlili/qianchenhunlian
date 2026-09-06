@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { Inbox } from "lucide-react"
 
 import { AdminService } from "@/client"
@@ -11,31 +11,25 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import useAuth from "@/hooks/useAuth"
+import { currentUserQueryOptions } from "@/hooks/useAuth"
 import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/unassigned")({
   component: UnassignedPage,
+  // 权限前置: 总部兜底工具仅超管可进 (原 render 期判断已删, 页面不挂载则无请求)
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient.ensureQueryData(
+      currentUserQueryOptions(),
+    )
+    if (!user?.is_superuser) {
+      throw redirect({ to: "/stores" })
+    }
+  },
   head: () => ({ meta: [{ title: "未归属处理 - 乾缘后台" }] }),
 })
 
 /** 总部兜底中心: 没有门店可进的数据都在这里 —— 分店 / 改派 / 处理. */
 function UnassignedPage() {
-  const { user } = useAuth()
-  const isSuperuser = !!user?.is_superuser
-
-  if (!isSuperuser) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Inbox className="text-muted-foreground mb-3 size-10" />
-        <div className="text-muted-foreground">
-          此页为总部兜底工具 (游客 (未归属) / 无主工单),
-          门店工作请在门店工作台内处理
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -137,6 +131,7 @@ function UnassignedMembersTab() {
 }
 
 function UnassignedTicketsTab() {
+  // 路由 beforeLoad 已确保仅超管可达, 固定按总部身份渲染 (可改派任意门店)
   const perms = {
     isSuperuser: true,
     isStaff: false,
@@ -209,7 +204,7 @@ function OpenFeedbackTab() {
             <div key={fb.id} className="py-3">
               <div className="text-sm">{fb.content}</div>
               <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
-                <Badge variant="outline">open</Badge>
+                <Badge variant="outline">未处理</Badge>
                 <span className="font-mono">{fb.user_xy_code || "匿名"}</span>
                 <span>
                   {fb.created_at

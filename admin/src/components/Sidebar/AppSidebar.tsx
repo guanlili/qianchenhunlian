@@ -65,9 +65,10 @@ export function AppSidebar() {
   const isSuperuser = !!currentUser?.is_superuser
 
   // 待办角标: 门店总览卡片接口聚合 (门店管理员后端自动限本店), 60s 轮询刷新
+  // key 与 stores.tsx 统一为 ["stores-overview", "all"], 侧边栏轮询与页面查询天然共享缓存
   const { data: overview } = useQuery({
     queryFn: () => AdminService.storesOverview(),
-    queryKey: ["stores-overview", "sidebar"],
+    queryKey: ["stores-overview", "all"],
     enabled: !!currentUser,
     refetchInterval: 60_000,
   })

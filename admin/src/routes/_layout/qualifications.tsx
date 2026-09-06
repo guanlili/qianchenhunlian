@@ -50,9 +50,8 @@ function QualificationsPage() {
   // 避免「已上传」但没点保存导致刷新后丢失
   const upload = useMutation({
     mutationFn: async (file: File) => {
-      const res = await UploadsService.uploadImage({
-        formData: { file } as any,
-      })
+      // Body_uploads_upload_image.file 类型为 Blob | File, 直接传无需 cast
+      const res = await UploadsService.uploadImage({ formData: { file } })
       const next = [...itemsRef.current, { image_url: res.url, title: null }]
       await SiteService.putQualifications({ requestBody: { items: next } })
       return next

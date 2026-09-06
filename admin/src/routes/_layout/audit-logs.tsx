@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import useAuth from "@/hooks/useAuth"
+import { currentUserQueryOptions } from "@/hooks/useAuth"
+import { downloadCsv } from "@/lib/csv"
 
 const PAGE_SIZE = 50
 
@@ -35,11 +36,19 @@ const ACTION_OPTIONS = [
 
 export const Route = createFileRoute("/_layout/audit-logs")({
   component: AuditLogsPage,
+  // 权限前置: 非超管进不了页面, 组件不挂载 → 列表/导出请求不会发出 (也无需 render 期判断)
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient.ensureQueryData(
+      currentUserQueryOptions(),
+    )
+    if (!user?.is_superuser) {
+      throw redirect({ to: "/stores" })
+    }
+  },
   head: () => ({ meta: [{ title: "操作日志 - 乾缘后台" }] }),
 })
 
 function AuditLogsPage() {
-  const { user } = useAuth()
   const [action, setAction] = useState<string>(ALL_ACTIONS)
   const [skip, setSkip] = useState(0)
   const [actorInput, setActorInput] = useState("") // 输入即时态
@@ -63,6 +72,8 @@ function AuditLogsPage() {
         skip,
         limit: PAGE_SIZE,
       }),
+    // 翻页时保留上一页数据, 避免列表闪空
+    placeholderData: keepPreviousData,
   })
 
   // 导出当前筛选下的日志 (分页拉全, 上限 2000 条防超大文件)
@@ -81,51 +92,26 @@ function AuditLogsPage() {
         rows.push(...(r.items ?? []))
         if (rows.length >= (r.total ?? 0) || (r.items ?? []).length < 200) break
       }
-      const esc = (v: unknown) => {
-        const str = v === null || v === undefined ? "" : String(v)
-        return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
-      }
       const ACTION_LABEL: Record<string, string> = Object.fromEntries(
         ACTION_OPTIONS.filter(([v]) => v !== ALL_ACTIONS),
       )
-      const lines = [
-        "时间,操作人,动作,目标用户ID,详情",
-        ...rows.map((r) =>
-          [
-            new Date(r.created_at).toLocaleString("zh-CN"),
-            r.actor_email ?? "",
-            ACTION_LABEL[r.action] ?? r.action,
-            r.target_user_id ?? "",
-            typeof r.detail === "string"
-              ? r.detail
-              : JSON.stringify(r.detail ?? {}),
-          ]
-            .map(esc)
-            .join(","),
-        ),
-      ]
-      const blob = new Blob([`\uFEFF${lines.join("\n")}`], {
-        type: "text/csv;charset=utf-8",
-      })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `操作日志_${new Date().toISOString().slice(0, 10)}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
+      downloadCsv(
+        `操作日志_${new Date().toISOString().slice(0, 10)}.csv`,
+        ["时间", "操作人", "动作", "目标用户ID", "详情"],
+        rows.map((r) => [
+          new Date(r.created_at).toLocaleString("zh-CN"),
+          r.actor_email ?? "",
+          ACTION_LABEL[r.action] ?? r.action,
+          r.target_user_id ?? "",
+          typeof r.detail === "string"
+            ? r.detail
+            : JSON.stringify(r.detail ?? {}),
+        ]),
+      )
       toast.success(`已导出 ${rows.length} 条操作日志`)
     },
     onError: (e) => toast.error(`导出失败: ${(e as Error).message}`),
   })
-
-  if (user && !user.is_superuser) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="text-2xl font-semibold mb-2">无权限</div>
-        <div className="text-muted-foreground">操作日志仅总部管理员可见</div>
-      </div>
-    )
-  }
 
   const total = data?.total ?? 0
   const page = Math.floor(skip / PAGE_SIZE) + 1

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { Search } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -52,6 +52,8 @@ export function MembersList() {
       storeFilter,
       keyword,
     ],
+    // 切筛选条件时保留上一份数据, 避免列表闪空
+    placeholderData: keepPreviousData,
   })
 
   const { data: stores } = useQuery({
