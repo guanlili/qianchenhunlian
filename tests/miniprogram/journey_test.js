@@ -53,7 +53,7 @@ global.Page = (c) => { cfg = c; };
 global.App = () => {};
 global.getCurrentPages = () => [{ setData() {} }];
 
-require('./index.js');
+require('../../miniprogram/pages/index/index.js');
 const page = cfg;
 page.setData = function(u) { Object.assign(this.data, u); };
 

@@ -1,4 +1,5 @@
 const feedbackSvc = require('../../services/feedback');
+const { formatDate } = require('../../utils/format');
 
 Page({
   data: {
@@ -30,7 +31,7 @@ Page({
         this.setData({
           history: (res.items || []).map((it) => ({
             ...it,
-            createdText: it.created_at ? it.created_at.slice(0, 10) : '',
+            createdText: formatDate(it.created_at),
           })),
           historyLoaded: true,
         });

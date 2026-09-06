@@ -13,7 +13,7 @@
     <view class="fees" wx:if="{{store.fees_desc}}">门店收费简介: {{store.fees_desc}}</view>
 
     <view class="photo" wx:if="{{store.photo}}">
-      <image src="{{store.photo}}" mode="aspectFill" class="photo-img" />
+      <image src="{{store.photo}}" mode="aspectFill" class="photo-img" lazy-load="{{true}}" />
     </view>
 
     <view class="info-row">

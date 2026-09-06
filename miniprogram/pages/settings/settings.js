@@ -1,4 +1,4 @@
-const { post } = require('../../utils/request');
+const profileSvc = require('../../services/profile');
 
 Page({
   data: {
@@ -36,12 +36,12 @@ Page({
   },
 
   _toggleActive() {
-    const that = this;
     wx.showActionSheet({
       itemList: ['相亲下线 (暂时不显示我)', '重新上线'],
       success({ tapIndex }) {
-        const path = tapIndex === 0 ? '/profiles/me/deactivate' : '/profiles/me/reactivate';
-        post(path).then((r) => {
+        // 走 services 层 (profileSvc), 不在页面里直拼 request.post
+        const req = tapIndex === 0 ? profileSvc.deactivateMe() : profileSvc.reactivateMe();
+        req.then((r) => {
           wx.showToast({ title: (r && r.message) || '已操作', icon: 'success' });
         }).catch((e) => {
           wx.showToast({ title: (e && e.detail) || '操作失败', icon: 'none' });
@@ -59,7 +59,7 @@ Page({
       confirmColor: '#c93434',
       success(res) {
         if (!res.confirm) return;
-        post('/profiles/me/cancel-account').then((r) => {
+        profileSvc.cancelAccount().then((r) => {
           wx.showModal({
             title: '已提交',
             content: (r && r.message) || '注销申请已提交, 5 工作日内处理',

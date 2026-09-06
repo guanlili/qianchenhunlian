@@ -8,7 +8,7 @@
   </view>
   <view class="image-list">
     <view wx:for="{{items}}" wx:key="image_url" class="image-card" bindtap="preview" data-url="{{item.image_url}}">
-      <image src="{{item.image_url}}" mode="widthFix" class="image-pic" />
+      <image src="{{item.image_url}}" mode="widthFix" class="image-pic" lazy-load="{{true}}" />
       <text wx:if="{{item.title}}" class="image-title">{{item.title}}</text>
     </view>
   </view>

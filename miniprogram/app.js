@@ -19,10 +19,7 @@ App({
     this.globalData.loginReady = userSvc
       .login()
       .then(({ payload }) => {
-        this.globalData.user = payload && payload.user;
-        this.globalData.hasProfile = !!(payload && payload.has_profile);
-        this.globalData.hasCriteria = !!(payload && payload.has_criteria);
-        this.globalData.isWelcomed = !!(payload && payload.is_welcomed);
+        this._applyLoginPayload(payload);
         // 引导改为用户主动触发 (见 requireWelcomed), 启动/登录时不强制跳转 —— 满足"先浏览再授权"
         return payload;
       })
@@ -43,14 +40,19 @@ App({
       });
   },
 
+  /** 把 /wechat/login 返回的 payload 灌进 globalData (onLaunch 与 ensureLogin 共用) */
+  _applyLoginPayload(payload) {
+    this.globalData.user = payload && payload.user;
+    this.globalData.hasProfile = !!(payload && payload.has_profile);
+    this.globalData.hasCriteria = !!(payload && payload.has_criteria);
+    this.globalData.isWelcomed = !!(payload && payload.is_welcomed);
+  },
+
   /** 页面 onLoad 调用, 等待登录完成 */
   async ensureLogin() {
     if (!this.globalData.loginReady) {
       this.globalData.loginReady = userSvc.login().then(({ payload }) => {
-        this.globalData.user = payload && payload.user;
-        this.globalData.hasProfile = !!(payload && payload.has_profile);
-        this.globalData.hasCriteria = !!(payload && payload.has_criteria);
-        this.globalData.isWelcomed = !!(payload && payload.is_welcomed);
+        this._applyLoginPayload(payload);
         // 引导改为用户主动触发 (见 requireWelcomed), 启动/登录时不强制跳转 —— 满足"先浏览再授权"
         return payload;
       });

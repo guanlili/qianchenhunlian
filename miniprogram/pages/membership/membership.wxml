@@ -73,7 +73,7 @@
   <view class="mp-card" wx:if="{{latestOrder}}">
     <view class="mp-card-title">最近订单</view>
     <view class="mp-kv"><text>套餐</text><text>{{latestOrder.plan_name}}</text></view>
-    <view class="mp-kv"><text>金额</text><text>¥ {{latestOrder.amount_fen / 100}}</text></view>
+    <view class="mp-kv"><text>金额</text><text>¥ {{latestOrder.amountYuan}}</text></view>
     <view class="mp-kv"><text>状态</text><text class="{{latestOrder.status === 'paid' ? 'ok' : ''}}">{{latestOrderStatusLabel}}</text></view>
   </view>
 

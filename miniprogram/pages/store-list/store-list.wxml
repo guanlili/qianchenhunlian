@@ -19,7 +19,7 @@
   <view class="store-list">
     <view wx:for="{{stores}}" wx:key="id" class="store-row" bindtap="pickStore" data-id="{{item.id}}">
       <view class="store-photo">
-        <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="photo-img" />
+        <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="photo-img" lazy-load="{{true}}" />
         <view wx:else class="photo-placeholder">乾</view>
       </view>
       <view class="store-meta">

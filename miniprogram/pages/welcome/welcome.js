@@ -1,16 +1,7 @@
 // 首启动强引导: 协议必勾 (头像 + 昵称给默认值, 用户想改再改) + 可选门店步骤
 const profileSvc = require('../../services/profile');
 const storeSvc = require('../../services/store');
-
-const _GLYPHS = ['寻', '缘', '乾', '合', '雅', '良'];
-
-function _pickGlyph(seed) {
-  let h = 0;
-  for (let i = 0; i < (seed || '').length; i++) {
-    h = (h * 31 + seed.charCodeAt(i)) | 0;
-  }
-  return _GLYPHS[Math.abs(h) % _GLYPHS.length];
-}
+const wizard = require('../../utils/wizard');
 
 Page({
   data: {
@@ -31,10 +22,8 @@ Page({
   },
 
   onLoad() {
-    // 出生年份候选: 2015→1950 倒序 (与 Profile.year 校验范围一致)
-    const years = [];
-    for (let y = 2015; y >= 1950; y--) years.push(String(y));
-    this.setData({ years });
+    // 出生年份候选: 2015→1950 倒序 (与 Profile.year 校验范围一致, utils/wizard 共用)
+    this.setData({ years: wizard.buildYears() });
 
     // 用 xy_code 后4位 拼默认昵称, 用户不主动改也能直接提交
     const app = getApp();
@@ -44,7 +33,7 @@ Page({
     if (seed) {
       this.setData({
         nickname: `用户${seed.slice(-4)}`,
-        defaultGlyph: _pickGlyph(seed),
+        defaultGlyph: wizard.pickGlyph(seed),
       });
     } else {
       // 登录还没回来时, 等到 ensureLogin 完成再补默认
@@ -55,7 +44,7 @@ Page({
         if (s && !this.data.nickname) {
           this.setData({
             nickname: `用户${s.slice(-4)}`,
-            defaultGlyph: _pickGlyph(s),
+            defaultGlyph: wizard.pickGlyph(s),
           });
         }
       }).catch(() => {});
@@ -70,28 +59,12 @@ Page({
     this.setData({ yearIndex: Number(e.detail.value) || 0 });
   },
 
-  /** 普通相册/相机选图, 不再用 chooseAvatar */
+  /** 普通相册/相机选图 (选图+上传+loading/toast 统一走 utils/wizard) */
   onPickAvatar() {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
-      success: async ({ tempFiles }) => {
-        if (!tempFiles || !tempFiles.length) return;
-        const tempPath = tempFiles[0].tempFilePath;
-        this.setData({ avatarTempPath: tempPath, avatarUploadedUrl: '' });
-        wx.showLoading({ title: '上传头像', mask: true });
-        try {
-          const url = await profileSvc.uploadAvatar(tempPath);
-          this.setData({ avatarUploadedUrl: url });
-          wx.hideLoading();
-        } catch (err) {
-          wx.hideLoading();
-          wx.showToast({ title: '头像上传失败, 请重试', icon: 'none' });
-          this.setData({ avatarTempPath: '' });
-        }
-      },
+    wizard.pickAndUploadAvatar({
+      onUploading: (tempPath) => this.setData({ avatarTempPath: tempPath, avatarUploadedUrl: '' }),
+      onUploaded: (url) => this.setData({ avatarUploadedUrl: url }),
+      onFailed: () => this.setData({ avatarTempPath: '' }),
     });
   },
 
@@ -160,7 +133,8 @@ Page({
         gender: this.data.gender,
         year: Number(this.data.years[this.data.yearIndex]),
       });
-      wx.setStorageSync('qy_welcomed', true);
+      // storage 写失败 (容量满等) 不应误报「提交失败」: globalData 已置真, 缓存标记只是加速
+      try { wx.setStorageSync('qy_welcomed', true); } catch (storageErr) { /* ignore */ }
       app.globalData.isWelcomed = true;
       app.globalData.hasProfile = true;
       this.setData({ submitting: false });
@@ -200,19 +174,17 @@ Page({
     }
   },
 
-  /** 选定门店 → 绑定后进入 */
+  /** 选定门店 → 绑定后进入 (绑定+toast 统一走 utils/wizard.bindHomeStore) */
   async onPickStore(e) {
     const id = e.currentTarget.dataset.id;
     const name = e.currentTarget.dataset.name;
     if (!id || this.data.bindingStoreId) return;
     this.setData({ bindingStoreId: id });
-    try {
-      await storeSvc.setHomeStore(id);
-      wx.showToast({ title: `已加入 ${name}`, icon: 'success' });
+    const ok = await wizard.bindHomeStore(id, `已加入 ${name}`);
+    if (ok) {
       setTimeout(() => this.enterApp(), 600);
-    } catch (err) {
+    } else {
       this.setData({ bindingStoreId: '' });
-      wx.showToast({ title: '绑定失败, 可稍后在「我的-当地门店」选择', icon: 'none' });
     }
   },
 

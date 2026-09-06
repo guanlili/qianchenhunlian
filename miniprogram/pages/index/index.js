@@ -1,5 +1,5 @@
+// 业务枚举统一取自 constants/enums.js (原 pages/index/data.js 的 mock profiles 已删除)
 const {
-  profiles,
   eduOptions,
   incomeOptions,
   houseOptions,
@@ -9,7 +9,7 @@ const {
   traits,
   advantages,
   requirements,
-} = require('./data');
+} = require('../../constants/enums');
 
 // === 后端 service ===
 const profileSvc = require('../../services/profile');
@@ -17,20 +17,19 @@ const matchSvc = require('../../services/match');
 const favoriteSvc = require('../../services/favorite');
 const contactSvc = require('../../services/contact');
 const affinitySvc = require('../../services/affinity');
-const storeSvc = require('../../services/store');
 const membershipSvc = require('../../services/membership');
 const { resolveFileUrl } = require('../../utils/config');
 const { ALL_CITIES } = require('../../constants/cities');
+const { formatDate } = require('../../utils/format');
+const wizard = require('../../utils/wizard');
 
 // 出生年份候选: 2015→1950 倒序 (静态, 全流程共用)
-const GUEST_YEARS = [];
-for (let y = 2015; y >= 1950; y--) GUEST_YEARS.push(String(y));
+const GUEST_YEARS = wizard.buildYears();
 
 const _resolveList = (arr) =>
   Array.isArray(arr) ? arr.map(resolveFileUrl).filter(Boolean) : [];
 
 const _TONES = ['rose', 'sage', 'ocean', 'indigo', 'plum', 'gold'];
-const _GLYPHS = ['寻', '缘', '乾', '合', '雅', '良'];
 
 function _hashToIndex(str, mod) {
   let h = 0;
@@ -44,9 +43,30 @@ function _pickTone(seed) {
   return _TONES[_hashToIndex(seed || '', _TONES.length)];
 }
 
-function _pickGlyph(seed) {
-  return _GLYPHS[_hashToIndex(seed || '', _GLYPHS.length)];
-}
+// 占位字取法与 welcome 页共用 (utils/wizard)
+const _pickGlyph = wizard.pickGlyph;
+
+// onShow 刷新节流: 3 秒内重复切前台不重拉会员状态+资料 (支付回流走显式刷新, 不受影响)
+const ON_SHOW_REFRESH_INTERVAL_MS = 3000;
+let _lastShowRefreshAt = 0;
+
+// 注册向导 picker 字段 → data 里的选项数组 key 映射 (表驱动, 替代逐字段 if/else)
+const GUEST_PICKER_SOURCES = {
+  edu: 'eduOptions',
+  marriage: 'marriageOptions',
+  income: 'incomeOptions',
+  has_house: 'houseOptions',
+  has_car: 'carOptions',
+  body_type: 'bodyOptions',
+  ethnicity: 'ethnicityOptions',
+  employer_type: 'employerOptions',
+  has_social_insurance: 'socialOptions',
+  health_status: 'healthOptions',
+  c_income: 'incomeOptions',
+  c_house: 'houseOptions',
+  c_edu: 'eduOptions',
+  c_marriage: 'marriageOptions',
+};
 
 /** 把 server 的 MatchBrief / Profile 适配成 WXML 期望的 mock 形态 */
 function adaptCard(item) {
@@ -129,6 +149,8 @@ function adaptDetail(detailResp) {
     isVerified: detailResp.verified === 'passed',
     tone: _pickTone(seed),
     glyph: _pickGlyph(seed),
+    // TODO(产品口径待确认): 解锁后 contact.phone/contact.wechat 目前未在详情页明文展示;
+    // 若后续要直显, 请改用 utils/format.maskPhone 脱敏 (maskPhone 已备好), 避免整段手机号裸露
     contact: detailResp.unlocked
       ? { wechat: p.contact_wechat || '', phone: p.contact_phone || '' }
       : null,
@@ -242,7 +264,8 @@ const createPhotos = (urls = []) => {
 };
 
 const defaultProfileForm = {
-  nickname: '用户编号 53652255',
+  // 昵称等默认全空: loadMyProfile 返回前不闪现假数据, 由 welcome 引导/后端补真实值
+  nickname: '',
   gender: '',
   year: '',
   height: '',
@@ -265,15 +288,16 @@ const defaultProfileForm = {
   hobbies: '',
 };
 
+// 择偶要求默认值全空: 未填项由 adaptCriteriaValues 载入后端真实值, 避免闪现「北京-东城区/30-50万」假默认
 const defaultCriteriaValues = {
-  year: '1987年-1992年',
-  height: '140cm-156cm',
-  edu: '小学/初中 至 大专',
-  income: '30-50万',
-  house: '有购房计划',
+  year: '',
+  height: '',
+  edu: '',
+  income: '',
+  house: '',
   marriage: '不限',
-  origin: '北京-北京-东城区',
-  location: '北京-北京-东城区',
+  origin: '',
+  location: '',
   note: '',
 };
 
@@ -317,17 +341,18 @@ const buildProfileFields = (form) => [
   { key: 'hobbies',   label: '兴趣爱好', value: form.hobbies, editable: true, type: 'text', placeholder: '如 旅行/烹饪/运动' },
 ];
 
+// 未登录离线兜底: 从表单值拼「我的资料」行 (不再硬编码 1987年/161cm 等假数据)
 const buildMyProfileRows = (form) => [
-  { label: '性别', value: '男' },
-  { label: '年份', value: '1987年' },
-  { label: '身高', value: '161cm' },
-  { label: '学历', value: '大专' },
-  { label: '户籍地', value: '淄博桓台县' },
-  { label: '居住地', value: '北京东城区' },
-  { label: '婚姻', value: form.marriage },
-  { label: '月收入', value: form.income },
-  { label: '是否有房', value: form.house },
-  { label: '是否有车', value: '未填写' },
+  { label: '性别', value: form.gender || '未填写' },
+  { label: '年份', value: form.year ? `${form.year}年` : '未填写' },
+  { label: '身高', value: form.height ? `${form.height}cm` : '未填写' },
+  { label: '学历', value: form.edu || '未填写' },
+  { label: '户籍地', value: form.origin || '未填写' },
+  { label: '居住地', value: form.location || '未填写' },
+  { label: '婚姻', value: form.marriage || '未填写' },
+  { label: '月收入', value: form.income || '未填写' },
+  { label: '是否有房', value: form.house || '未填写' },
+  { label: '是否有车', value: form.has_car || '未填写' },
 ];
 
 const buildCriteriaFields = (values) => [
@@ -473,6 +498,8 @@ Page({
     activeTab: 'home',
     homeTab: 'today',
     profiles: [],
+    homeNextCursor: null, // 每日推荐/筛选结果的下一页游标 (null=已到末页)
+    homeLoadingMore: false,
     selectedProfile: null,
     selectedProfileIndex: 0,
     bannerVisible: true,
@@ -512,7 +539,7 @@ Page({
     formReturnScreen: 'my-profile',
     criteriaValues: defaultCriteriaValues,
     criteriaFields: buildCriteriaFields(defaultCriteriaValues),
-    regionsSelected: ['北京-北京-东城区'],
+    regionsSelected: [],
     criteriaReturnScreen: 'my-profile',
     filterSteps: createFilterSteps(),
     filterStep: 1,
@@ -546,9 +573,10 @@ Page({
     quickHasPrev: false,
     quickNextLabel: '下一步',
     optionSheet: null,
+    // 三格统计: 值由 loadMyProfile (点赞/人气值, 后端 likes/hot) 与 loadMeStats (看过我) 实时刷新
     stats: [
       { value: 0, label: '点赞' },
-      { value: 89, label: '人气值' },
+      { value: 0, label: '人气值' },
       { value: 0, label: '看过我' },
     ],
     meItems: [
@@ -640,6 +668,11 @@ Page({
     const welcomed = this._syncWelcomed();
     if (welcomed && !this.data.isWelcomed && this.data.isMember) this.loadHome();
     if (welcomed !== this.data.isWelcomed) this.setData({ isWelcomed: welcomed });
+    // 节流: 3 秒内重复 onShow (页面间快速来回切) 不重拉会员状态+资料;
+    // 支付回流/提交申请等关键场景走 switchTab('me') 与 contact 成功后的显式刷新, 不受节流影响
+    const now = Date.now();
+    if (now - _lastShowRefreshAt < ON_SHOW_REFRESH_INTERVAL_MS) return;
+    _lastShowRefreshAt = now;
     this.refreshMembership();
     this.loadMyProfile().catch(() => {});
   },
@@ -661,8 +694,13 @@ Page({
   },
 
   async onLoad(options) {
-    // 分享带 target 参数: 登录完成后打开对应详情
+    // 分享带 target 参数: 登录完成后打开对应详情。
+    // 登录失败时暂存 storage, retryLaunch 重进时带回参数再消费 (见 catch 与 retryLaunch);
+    // 正常进入 (无 target 参数) 时清掉历史暂存, 避免误开很久以前的分享详情。
     this._pendingTargetId = options && options.target ? String(options.target) : null;
+    if (!this._pendingTargetId) {
+      try { wx.removeStorageSync('qy_pending_target'); } catch (_) { /* noop */ }
+    }
     // 门店专属码进入: scene=门店ID hex (32位, 微信小程序码) 或 store=UUID (直链/测试)
     this._pendingStoreId = this._parseStoreParam(options);
 
@@ -718,8 +756,14 @@ Page({
         if (payload.has_profile) {
           this.loadMyProfile().catch(() => {});
         }
-        // 门店会员制: 拉会员状态决定首页是否锁屏; 会员才加载推荐
-        this.refreshMembership();
+        // 门店会员制: 拉会员状态决定首页是否锁屏; 会员才加载推荐。
+        // 返回结果直接复用给 checkMembershipRenewal, 避免 onLoad 里重复请求 /membership/me;
+        // 同时标记节流时间戳, 紧随其后的首次 onShow 不再重拉一遍
+        _lastShowRefreshAt = Date.now();
+        this.refreshMembership().then((m) => {
+          if (!m) return;
+          this.checkMembershipRenewal(m).catch(() => {});
+        });
         if (payload.has_profile !== false) { /* 推荐加载由 refreshMembership 决定 */ }
         // 门店码进入且尚未绑定门店 → 自动绑定为该店会员 (不覆盖已有绑定)
         if (this._pendingStoreId) {
@@ -743,25 +787,35 @@ Page({
         confirmText: '知道了',
       });
     }
+    // 分享回流目标保留 (登录失败或返回空 payload 时): 写 storage,
+    // retryLaunch 重进 (带 target 参数) 后再消费, 不随本次加载丢弃
+    if (this._pendingTargetId && !this.data.apiReady) {
+      try { wx.setStorageSync('qy_pending_target', this._pendingTargetId); } catch (_) { /* noop */ }
+    }
     this.loadHome();
 
-    // 会员到期 → 弹续费窗口 (每天最多提示一次, 防打扰)
-    if (this.data.apiReady) {
-      this.checkMembershipRenewal().catch(() => {});
-    }
+    // 会员到期 → 弹续费窗口 (每天最多提示一次, 防打扰)。
+    // 登录成功路径已在上面 refreshMembership 回调里复用同一份 /membership/me 结果, 不再重复请求
 
-    // 分享深链: 登录完成后自动打开 target 详情
+    // 分享深链: 登录完成后自动打开 target 详情 (消费后清除暂存)
     if (this._pendingTargetId && this.data.apiReady) {
+      const targetId = this._pendingTargetId;
+      this._pendingTargetId = null;
+      try { wx.removeStorageSync('qy_pending_target'); } catch (_) { /* noop */ }
       this.openDetail({
-        currentTarget: { dataset: { id: this._pendingTargetId } },
+        currentTarget: { dataset: { id: targetId } },
       });
     }
-    this._pendingTargetId = null;
   },
 
-  /** 登录失败重试: 重载首页 (app.loginReady 已置空, 会重新登录) */
+  /** 登录失败重试: 重载首页 (app.loginReady 已置空, 会重新登录);
+   *  带回暂存的分享目标参数, 重登成功后仍能打开对方分享的详情 */
   retryLaunch() {
-    wx.reLaunch({ url: '/pages/index/index' });
+    let target = '';
+    try { target = wx.getStorageSync('qy_pending_target') || ''; } catch (_) { /* noop */ }
+    wx.reLaunch({
+      url: `/pages/index/index${target ? `?target=${encodeURIComponent(target)}` : ''}`,
+    });
   },
 
   /** 门店码参数解析: scene (32位hex → UUID) 或 store (UUID 直链) */
@@ -783,24 +837,27 @@ Page({
     try {
       const me = await profileSvc.getMe();
       if (me && me.home_store_id) return; // 已有门店, 尊重现状
-      await storeSvc.setHomeStore(storeId);
-      wx.showToast({ title: '已关联你的门店', icon: 'success', duration: 1500 });
-      this.loadMyProfile().catch(() => {});
+      const ok = await wizard.bindHomeStore(storeId, '已关联你的门店', { failToast: false });
+      if (ok) this.loadMyProfile().catch(() => {});
     } catch (e) {
       console.warn('[index] bindSceneStore', e);
     }
   },
 
-  async checkMembershipRenewal() {
-    const m = await membershipSvc.getMyMembership();
-    if (!m) return;
-    const today = new Date().toISOString().slice(0, 10);
+  /**
+   * 会员到期提醒 (每天最多一次)。
+   * @param {Object} [m] - 已拉到的 /membership/me 结果; 缺省时才自己请求 (避免与 refreshMembership 重复)
+   */
+  async checkMembershipRenewal(m) {
+    const membership = m || await membershipSvc.getMyMembership();
+    if (!membership) return;
+    const today = formatDate(new Date().toISOString());
 
     // 已到期: 每天提醒一次续费 (到期后唤回)
-    if (m.expired_at) {
+    if (membership.expired_at) {
       if (wx.getStorageSync('qy_renewal_notice_date') === today) return;
       wx.setStorageSync('qy_renewal_notice_date', today);
-      const expiredDate = String(m.expired_at).slice(0, 10);
+      const expiredDate = formatDate(membership.expired_at);
       wx.showModal({
         title: '会员已到期',
         content: `你的会员已于 ${expiredDate} 到期。续费后继续享受全年资料展示与智能匹配服务，可在线续费或前往附近门店办理。`,
@@ -816,9 +873,9 @@ Page({
     }
 
     // 即将到期 (7 天内): 每天温和提醒一次 (单独计数, 不与到期提醒混用)
-    if (m.is_member && m.expires_at) {
+    if (membership.is_member && membership.expires_at) {
       const daysLeft = Math.ceil(
-        (new Date(m.expires_at).getTime() - Date.now()) / 86400000
+        (new Date(membership.expires_at).getTime() - Date.now()) / 86400000
       );
       if (daysLeft >= 0 && daysLeft <= 7) {
         if (wx.getStorageSync('qy_expiry_soon_date') === today) return;
@@ -863,6 +920,41 @@ Page({
       });
     } catch (e) {
       console.warn('[index] loadHome', e);
+    }
+  },
+
+  /** 首页滚动到底: 按 homeNextCursor 增量拉下一页推荐 (只追加增量段, 不整包重推) */
+  async onHomeLoadMore() {
+    if (!this.data.apiReady || !this.data.isMember) return;
+    const cursor = this.data.homeNextCursor;
+    if (!cursor || this.data.homeLoadingMore) return;
+    this.setData({ homeLoadingMore: true });
+    try {
+      let r;
+      if (this.data.activeFilter) {
+        // 筛选结果模式: 沿用当前筛选条件 + 游标翻页
+        r = await matchSvc.applyFilter({ ...this.data.activeFilter, cursor });
+      } else {
+        r = await matchSvc.daily({
+          tab: this.data.homeTab,
+          limit: 10,
+          cursor,
+        });
+      }
+      const items = (r.items || []).map(adaptCard);
+      const updates = { homeNextCursor: r.next_cursor || null };
+      // 逐条路径键追加, 避免整包重推 profiles 引起全列表重渲染
+      items.forEach((item, i) => {
+        updates[`profiles[${this.data.profiles.length + i}]`] = item;
+      });
+      this.setData(updates);
+      if (!items.length || !r.next_cursor) {
+        wx.showToast({ title: '已展示全部推荐', icon: 'none' });
+      }
+    } catch (e) {
+      console.warn('[index] onHomeLoadMore', e);
+    } finally {
+      this.setData({ homeLoadingMore: false });
     }
   },
 
@@ -927,8 +1019,13 @@ Page({
           updates.criteriaFields = buildCriteriaFields(cv);
         }
       }
-      updates.myParentsRows = adaptParentsRows(data.parents_info);
-      updates.myHomeStore = data.home_store || null;
+        updates.myParentsRows = adaptParentsRows(data.parents_info);
+        updates.myHomeStore = data.home_store || null;
+        // 三格统计: 点赞/人气值取后端真实值 (ProfileWithContact.likes / hot, 被查看/收藏时自增)
+        if (data.profile) {
+          updates['stats[0].value'] = data.profile.likes || 0;
+          updates['stats[1].value'] = data.profile.hot || 0;
+        }
       // 同步 meItems 里 "我的当地门店" 的 sub
       const homeName = data.home_store ? `${data.home_store.city} · ${data.home_store.name}` : '未选择 ›';
       updates.meItems = this.data.meItems.map((it) =>
@@ -1301,20 +1398,24 @@ Page({
     });
     if (this.data.apiReady) {
       try {
-        const resp = await matchSvc.getDetail(id);
+        // 详情与「我的申请」列表无依赖, 并行拉取缩短进详情耗时 (好感状态仍异步 fire-and-forget)
+        const [resp, my] = await Promise.all([
+          matchSvc.getDetail(id),
+          // 已知限制: requestSubmitted 依赖前 50 条申请判断 24h 内是否已申请,
+          // 申请总数超过 50 时旧申请会漏判误报「未申请」; 后续方案是 detail 接口直接带 has_requested_recent
+          contactSvc.listMyRequests({ limit: 50 }).catch(() => null),
+        ]);
         const adapted = adaptDetail(resp);
         if (adapted) {
-          // 顺便查一下 24h 内是否已经申请过这个 target
           let alreadyRequested = false;
-          try {
-            const my = await contactSvc.listMyRequests({ limit: 50 });
+          if (my && Array.isArray(my.items)) {
             const cutoff = Date.now() - 24 * 3600 * 1000;
-            alreadyRequested = (my.items || []).some((r) => {
+            alreadyRequested = my.items.some((r) => {
               if (r.to_user_id !== id) return false;
               const t = new Date(r.created_at).getTime();
               return !Number.isNaN(t) && t >= cutoff;
             });
-          } catch (_) { /* 忽略 */ }
+          }
           this.setData({
             selectedProfile: adapted,
             detailStarred: !!resp.starred,
@@ -1371,19 +1472,8 @@ Page({
   /** 翻页 helper: 调后端 neighbors 拿目标 user_id, 再走 getDetail 流程 */
   async _gotoNeighbor(direction) {
     const sp = this.data.selectedProfile;
-    if (!this.data.apiReady || !sp || !sp.user_id) {
-      // mock 兜底: 在本地数组里挪
-      const cur = this.data.selectedProfileIndex || 0;
-      const idx = direction === 'prev'
-        ? Math.max(0, cur - 1)
-        : Math.min(profiles.length - 1, cur + 1);
-      this.setData({
-        selectedProfileIndex: idx,
-        selectedProfile: profiles[idx],
-        detailToast: true,
-      });
-      return;
-    }
+    // mock 数据兜底分支已删 (mock profiles 死代码清理): 游客态/无真实资料直接不响应
+    if (!this.data.apiReady || !sp || !sp.user_id) return;
     try {
       const res = await matchSvc.getNeighbor(sp.user_id, direction);
       if (!res || !res.user_id) {
@@ -1426,21 +1516,17 @@ Page({
     }
 
     if (!this.data.apiReady) {
-      const profiles = this.data.profiles.slice();
-      profiles[idx] = { ...card, starred: !card.starred };
-      this.setData({ profiles });
+      this.setData({ [`profiles[${idx}].starred`]: !card.starred });
       return;
     }
 
     try {
       const res = await favoriteSvc.toggle(card.user_id);
-      const profiles = this.data.profiles.slice();
-      profiles[idx] = {
-        ...card,
-        starred: res.starred,
-        likes: res.total_likes,
-      };
-      this.setData({ profiles });
+      // 路径键只更新这一张卡的两个字段, 不重推整个 profiles 数组
+      this.setData({
+        [`profiles[${idx}].starred`]: res.starred,
+        [`profiles[${idx}].likes`]: res.total_likes,
+      });
       wx.showToast({
         title: res.starred ? '已收藏' : '已取消收藏',
         icon: 'success',
@@ -1528,16 +1614,7 @@ Page({
       });
     } catch (err) {
       console.warn('[index] contactCandidate', err);
-      const detail = (err && err.detail) || '';
-      if (typeof detail === 'string' && detail.startsWith('DUPLICATE|')) {
-        wx.showToast({ title: '24 小时内已申请过', icon: 'none' });
-        return;
-      }
-      if (err && err.statusCode === 402) {
-        this._handleQuotaExhausted();
-        return;
-      }
-      this._handleProfileGateError(err);
+      this._handleRequestError(err, { closeSheet: false });
     }
   },
 
@@ -1546,17 +1623,7 @@ Page({
     if (!this._gateCompleteProfile()) return;
     // 实名门槛: 安排相亲须先到店核验 (与后端 NOT_VERIFIED 门槛一致)
     if (!this.data.meVerified) {
-      const that = this;
-      const hasPhone = !!(this.data.myHomeStore && this.data.myHomeStore.phone);
-      wx.showModal({
-        title: '需要实名核验',
-        content: '安排相亲前请先到所属门店完成实名核验 (红娘当面核验)。',
-        confirmText: hasPhone ? '拨打门店电话' : '知道了',
-        cancelText: '知道了',
-        success(res) {
-          if (res.confirm && hasPhone) that.callHomeStore();
-        },
-      });
+      this._showVerifyGuide();
       return;
     }
     // 必须先选门店才能发工单
@@ -1676,30 +1743,48 @@ Page({
       });
     } catch (e) {
       this.setData({ requestSubmitting: false });
-      const detail = (e && e.detail) || '';
-      if (typeof detail === 'string' && detail.startsWith('DUPLICATE|')) {
-        wx.showToast({ title: '24 小时内已申请过', icon: 'none' });
-        this.setData({ contactOpen: false });
-        return;
-      }
-      if (typeof detail === 'string' && detail.startsWith('NOT_VERIFIED|')) {
-        // 实名门槛 (后端兜底): 引导到店核验
-        this.setData({ contactOpen: false });
-        wx.showModal({
-          title: '需要实名核验',
-          content: '安排相亲前请先到所属门店完成实名核验 (红娘当面核验)。',
-          showCancel: false,
-          confirmText: '知道了',
-        });
-        return;
-      }
-      if (e && e.statusCode === 402) {
-        this.setData({ contactOpen: false });
-        this._handleQuotaExhausted();
-        return;
-      }
-      this._handleProfileGateError(e);
+      this._handleRequestError(e, { closeSheet: true });
     }
+  },
+
+  /**
+   * 联系申请错误统一处理 (首页卡片直发 / 详情页 sheet 提交共用):
+   * 重复申请 / 未实名 / 额度不足 / 资料门槛, 各分支文案与弹窗集中在此维护。
+   */
+  _handleRequestError(err, { closeSheet = false } = {}) {
+    const detail = (err && err.detail) || '';
+    if (typeof detail === 'string' && detail.startsWith('DUPLICATE|')) {
+      if (closeSheet) this.setData({ contactOpen: false });
+      wx.showToast({ title: '24 小时内已申请过', icon: 'none' });
+      return;
+    }
+    if (typeof detail === 'string' && detail.startsWith('NOT_VERIFIED|')) {
+      // 实名门槛 (后端兜底): 引导到店核验
+      if (closeSheet) this.setData({ contactOpen: false });
+      this._showVerifyGuide();
+      return;
+    }
+    if (err && err.statusCode === 402) {
+      if (closeSheet) this.setData({ contactOpen: false });
+      this._handleQuotaExhausted();
+      return;
+    }
+    this._handleProfileGateError(err);
+  },
+
+  /** 实名核验引导弹窗 (openContact 前置校验与后端 NOT_VERIFIED 兜底共用) */
+  _showVerifyGuide() {
+    const that = this;
+    const hasPhone = !!(this.data.myHomeStore && this.data.myHomeStore.phone);
+    wx.showModal({
+      title: '需要实名核验',
+      content: '安排相亲前请先到所属门店完成实名核验 (红娘当面核验)。',
+      confirmText: hasPhone ? '拨打门店电话' : '知道了',
+      cancelText: '知道了',
+      success(res) {
+        if (res.confirm && hasPhone) that.callHomeStore();
+      },
+    });
   },
 
   /** 前置检查: 关键操作要求自己资料 progress >= 60. 不达标弹窗引导, 返 false. */
@@ -1903,16 +1988,13 @@ Page({
   },
 
   onProfileDescInput(e) {
-    const profileForm = {
-      ...this.data.profileForm,
-      desc: e.detail.value,
-    };
+    const v = e.detail.value;
+    const form = { ...this.data.profileForm, desc: v };
+    // desc 不在 profileFields 列表里, 路径键只推 desc + 进度, 不整包重推 18 项 fields
     this.setData({
-      profileForm,
-      profileFields: buildProfileFields(profileForm),
-      profileProgress: calcProfileProgress(profileForm, this.data.photos),
+      'profileForm.desc': v,
+      profileProgress: calcProfileProgress(form, this.data.photos),
     });
-    this._refreshGaps();
   },
 
   openProfileOption(e) {
@@ -1992,18 +2074,41 @@ Page({
     });
   },
 
-  /** 内部: 更新 profileForm 某一项, 重建 fields */
-  _updateProfileField(key, value) {
-    const profileForm = { ...this.data.profileForm, [key]: value };
-    this.setData({
-      profileForm,
-      profileFields: buildProfileFields(profileForm),
-      profileProgress: calcProfileProgress(profileForm, this.data.photos),
-    });
-    this._refreshGaps();
+  /**
+   * 内部: 路径键方式更新 profileForm 单字段 (避免每次输入整包重推 profileForm +
+   * 18 项 profileFields 含 options 数组)。profileFields 只在打开编辑页/服务端数据
+   * 载入 (loadMyProfile) 时整体重建, 平时只同步被改字段那一行的展示值。
+   * @param {string} key              表单字段 key
+   * @param {*}      value           新值
+   * @param {Object} [extraPatches]    需并入同一次 setData 的其它补丁 (如 optionSheet: null)
+   */
+  _setProfileFieldByKey(key, value, extraPatches) {
+    const form = { ...this.data.profileForm, [key]: value };
+    // 仅在内存里重建 fields, 用于计算展示值与 gaps, 不整体 setData
+    const rebuilt = buildProfileFields(form);
+    const patches = {
+      [`profileForm.${key}`]: value,
+      profileProgress: calcProfileProgress(form, this.data.photos),
+      profileGaps: rebuilt.filter((f) => !f.value || !String(f.value).trim()).map((f) => f.label),
+    };
+    const idx = this.data.profileFields.findIndex((f) => f.key === key);
+    if (idx >= 0 && rebuilt[idx]) {
+      patches[`profileFields[${idx}].value`] = rebuilt[idx].value;
+      // 数字字段 (出生年/身高/体重) 的弹窗预填读 rawValue, 一并同步
+      if (key === 'year' || key === 'height' || key === 'weight') {
+        patches[`profileFields[${idx}].rawValue`] = value;
+      }
+    }
+    this.setData({ ...patches, ...(extraPatches || {}) });
   },
 
-  /** 资料完善差距: 未填字段标签列表 (60% 才能发起申请, 给用户明确目标) */
+  /** 内部: 更新 profileForm 某一项 (路径键写法, 见 _setProfileFieldByKey) */
+  _updateProfileField(key, value) {
+    this._setProfileFieldByKey(key, value);
+  },
+
+  /** 资料完善差距: 未填字段标签列表 (60% 才能发起申请, 给用户明确目标)。
+   *  供 loadMyProfile 等整包更新后调用; 输入路径已并入 _setProfileFieldByKey 的同一次 setData。 */
   _refreshGaps() {
     const gaps = (this.data.profileFields || [])
       .filter((f) => !f.value || !String(f.value).trim())
@@ -2294,17 +2399,8 @@ Page({
     }
 
     if (sheet.mode === 'profile') {
-      const profileForm = {
-        ...this.data.profileForm,
-        [sheet.key]: value,
-      };
-      this.setData({
-        profileForm,
-        profileFields: buildProfileFields(profileForm),
-        profileProgress: calcProfileProgress(profileForm, this.data.photos),
-        optionSheet: null,
-      });
-      this._refreshGaps();
+      // 路径键更新 + 关 sheet 并入同一次 setData
+      this._setProfileFieldByKey(sheet.key, value, { optionSheet: null });
       return;
     }
 
@@ -2410,7 +2506,11 @@ Page({
         if (it.key === 'requests')  return { ...it, sub: `${reqs.total || 0} 条` };
         return it;
       });
-      this.setData({ affinityShortcuts: shortcuts });
+      this.setData({
+        affinityShortcuts: shortcuts,
+        // 「看过我」接真实 visitorTotal (我的资料页三格统计第三格)
+        'stats[2].value': vis.total || 0,
+      });
     } catch (e) {
       console.warn('[index] loadMeStats', e);
     }
@@ -2591,10 +2691,11 @@ Page({
     };
   },
 
-  /** 拉会员状态: 决定锁屏/推荐加载, 并刷新「今日剩余次数」展示 */
+  /** 拉会员状态: 决定锁屏/推荐加载, 并刷新「今日剩余次数」展示。
+   *  返回 Promise<membership|null>: 结果供 checkMembershipRenewal 等复用, 避免重复请求 /membership/me */
   refreshMembership() {
-    membershipSvc.getMyMembership().then((m) => {
-      if (!m) return;
+    return membershipSvc.getMyMembership().then((m) => {
+      if (!m) return null;
       const wasMember = this.data.isMember;
       const isMember = !!m.is_member;
       // 到期提醒: 后端下发北京日期串 (YYYY-MM-DD), 按 +08:00 计算剩余天数
@@ -2621,7 +2722,8 @@ Page({
       else if (!isMember && !this.data.previewLoaded && !this.data.previewGate) {
         this.loadPreview(); // 游客: 拉 5 个匹配预览 (未填三问则展示三问卡)
       }
-    }).catch(() => {});
+      return m;
+    }).catch(() => null);
   },
 
   /** 详情页照片全屏预览 (左右滑动细看) */
@@ -2881,28 +2983,12 @@ Page({
     this.setData({ guestStep: Math.max(1, this.data.guestStep - 1) });
   },
 
-  /** 注册页头像: 相册/相机 → 上传 */
+  /** 注册页头像: 相册/相机 → 上传 (与 welcome 页共用 utils/wizard 流程) */
   onGuestAvatarPick() {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
-      success: async ({ tempFiles }) => {
-        if (!tempFiles || !tempFiles.length) return;
-        const tempPath = tempFiles[0].tempFilePath;
-        this.setData({ guestAvatarPath: tempPath, guestAvatarUrl: '' });
-        wx.showLoading({ title: '上传头像', mask: true });
-        try {
-          const url = await profileSvc.uploadAvatar(tempPath);
-          this.setData({ guestAvatarUrl: url });
-          wx.hideLoading();
-        } catch (err) {
-          wx.hideLoading();
-          wx.showToast({ title: '头像上传失败, 请重试', icon: 'none' });
-          this.setData({ guestAvatarPath: '' });
-        }
-      },
+    wizard.pickAndUploadAvatar({
+      onUploading: (tempPath) => this.setData({ guestAvatarPath: tempPath, guestAvatarUrl: '' }),
+      onUploaded: (url) => this.setData({ guestAvatarUrl: url }),
+      onFailed: () => this.setData({ guestAvatarPath: '' }),
     });
   },
 
@@ -2948,7 +3034,8 @@ Page({
         nickname: (this.data.guestNickname || '').trim(),
         avatar_url: this.data.guestAvatarUrl,
       });
-      wx.setStorageSync('qy_welcomed', true);
+      // storage 写失败 (容量满等) 不应误报「提交失败」: 引导标记仅是加速缓存, globalData 已置真
+      try { wx.setStorageSync('qy_welcomed', true); } catch (storageErr) { /* ignore */ }
       app.globalData.isWelcomed = true;
       app.globalData.hasProfile = true;
       this.setData({ guestSubmitting: false, guestStep: 3 });
@@ -2967,56 +3054,24 @@ Page({
     this.setData({ guestForm: { ...this.data.guestForm, [field]: label } });
   },
 
-  /** 注册向导: 通用 picker (data-field 指定字段) */
+  /** 注册向导: 通用 picker (data-field 指定字段; 选项来源见 GUEST_PICKER_SOURCES 表驱动映射) */
   onGuestFormPick(e) {
     const field = e.currentTarget.dataset.field;
     const { guestForm, guestYears, guestCities } = this.data;
     const idx = Number(e.detail.value) || 0;
     let value;
-    if (field === 'edu') {
-      value = this.data.eduOptions[idx];
-    } else if (field === 'marriage') {
-      value = this.data.marriageOptions[idx];
-    } else if (field === 'income') {
-      value = this.data.incomeOptions[idx];
-    } else if (field === 'has_house') {
-      value = this.data.houseOptions[idx];
-    } else if (field === 'has_car') {
-      value = this.data.carOptions[idx];
-    } else if (field === 'job') {
+    if (field === 'job') {
+      // 职业表尾的「其他」走自定义输入弹窗
       value = this.data.jobOptionsWithOther[idx] === '其他' ? '__custom__' : this.data.jobOptionsWithOther[idx];
-    } else if (field === 'body_type') {
-      value = this.data.bodyOptions[idx];
-    } else if (field === 'ethnicity') {
-      value = this.data.ethnicityOptions[idx];
-    } else if (field === 'employer_type') {
-      value = this.data.employerOptions[idx];
-    } else if (field === 'has_social_insurance') {
-      value = this.data.socialOptions[idx];
-    } else if (field === 'health_status') {
-      value = this.data.healthOptions[idx];
-    } else if (field === 'c_income') {
-      value = this.data.incomeOptions[idx];
-    } else if (field === 'c_location') {
+    } else if (field === 'c_location' || field === 'location') {
       value = guestCities[idx];
-    } else if (field === 'c_house') {
-      value = this.data.houseOptions[idx];
-    } else if (field === 'c_edu') {
-      value = this.data.eduOptions[idx];
-    } else if (field === 'c_marriage') {
-      value = this.data.marriageOptions[idx];
-    } else if (field === 'c_origin') {
-      value = regions[idx];
-    } else if (field === 'cYearMin' || field === 'cYearMax') {
+    } else if (field === 'cYearMin' || field === 'cYearMax' || field === 'year') {
       value = guestYears[idx];
-    } else if (field === 'origin' || field === 'hometown') {
+    } else if (field === 'c_origin' || field === 'origin' || field === 'hometown') {
       value = regions[idx];
-    } else if (field === 'year') {
-      value = guestYears[idx];
-    } else if (field === 'location') {
-      value = guestCities[idx];
     } else {
-      value = '';
+      const sourceKey = GUEST_PICKER_SOURCES[field];
+      value = sourceKey ? (this.data[sourceKey] || [])[idx] : '';
     }
 
     if (value === '__custom__') {
@@ -3181,11 +3236,10 @@ Page({
     this.setData({ guestRedeemCode: (e.detail.value || '').slice(0, 32) });
   },
 
-  /** 缴费页: 确定缴费 (微信支付年卡; mock 模式走模拟支付) */
+  /** 缴费页: 确定缴费 (下单/支付/错误文案统一走 services/membership.payYearly) */
   async onGuestPay() {
     if (this.data.guestPaying) return;
-    const mode = this.data.guestPayMode;
-    if (mode === 'off') {
+    if (this.data.guestPayMode === 'off') {
       return wx.showModal({
         title: '线上支付暂未开启',
         content: '可到门店现场缴费开通, 或填体验码直接开通会员。',
@@ -3194,86 +3248,39 @@ Page({
       });
     }
     this.setData({ guestPaying: true });
-    const finish = () => this.finishGuestOnboarding();
     try {
-      const order = await membershipSvc.createOrder('yearly_365d');
-      if (mode === 'mock') {
-        const that = this;
-        wx.showModal({
-          title: '模拟支付',
-          content: `确认支付 ¥${this.data.guestYearPrice} 开通会员? (模拟支付, 不真实扣款)`,
-          success: async (res) => {
-            if (!res.confirm) {
-              that.setData({ guestPaying: false });
-              return;
-            }
-            try {
-              const paid = await membershipSvc.mockPay(order.order_id);
-              wx.showToast({
-                title: paid.status === 'paid' ? '开通成功' : '支付未完成',
-                icon: paid.status === 'paid' ? 'success' : 'none',
-              });
-              that.finishGuestOnboarding();
-            } catch (err) {
-              wx.showToast({ title: (err && err.detail) || '支付未完成', icon: 'none' });
-            } finally {
-              that.setData({ guestPaying: false });
-            }
-          },
-        });
-        return;
-      }
-      await new Promise((resolve, reject) => {
-        wx.requestPayment({ ...order.pay_params, success: resolve, fail: reject });
+      await membershipSvc.payYearly({
+        planCode: 'yearly_365d',
+        mode: this.data.guestPayMode,
+        onGoStore: () => wx.navigateTo({ url: '/pages/store-cities/store-cities' }),
       });
-      wx.showToast({ title: '开通成功', icon: 'success' });
-      // 微信回调 /pay/notify 常晚于客户端 success: 延迟后再刷新会员状态
+      // 微信回调 /pay/notify 常晚于客户端 success: 延迟后再收口刷新会员状态
       setTimeout(() => {
-        finish();
+        this.finishGuestOnboarding();
         this.setData({ guestPaying: false });
       }, 1500);
     } catch (err) {
-      const detail = err && typeof err.detail === 'string' ? err.detail : '';
-      if (detail.includes('PAY_NOT_ENABLED')) {
-        wx.showModal({
-          title: '线上支付暂未开启',
-          content: '可到门店现场缴费开通, 或填体验码直接开通会员。',
-          showCancel: false,
-          confirmText: '知道了',
-        });
-      } else if (
-        detail.includes('取消') ||
-        (err && err.errMsg && err.errMsg.includes('cancel'))
-      ) {
-        wx.showToast({ title: '已取消支付', icon: 'none' });
-      } else {
+      // 取消支付 / PAY_NOT_ENABLED 引导弹窗已由 service 处理, 这里只兜其余失败
+      if (!(err && err.cancelled)) {
+        const detail = err && typeof err.detail === 'string' ? err.detail : '';
         wx.showToast({ title: detail || '支付未完成, 可稍后在会员页重试', icon: 'none' });
       }
       this.setData({ guestPaying: false });
     }
   },
 
-  /** 缴费页: 体验码直接开通 */
+  /** 缴费页: 体验码直接开通 (toast 文案统一走 services/membership.redeemCode) */
   async onGuestRedeemPay() {
     if (this.data.guestPaying) return;
     const code = (this.data.guestRedeemCode || '').trim();
     if (!code) return wx.showToast({ title: '请输入体验码', icon: 'none' });
     this.setData({ guestPaying: true });
     try {
-      const r = await membershipSvc.redeemCode(code);
-      const exp = r.member_expires_at ? r.member_expires_at.slice(0, 10) : '';
-      wx.showToast({
-        title: exp ? `会员已开通 · 至 ${exp}` : '会员已开通',
-        icon: 'none',
-        duration: 3000,
-      });
+      await membershipSvc.redeemCode(code);
       this.setData({ guestRedeemCode: '' });
       this.finishGuestOnboarding();
     } catch (err) {
-      wx.showToast({
-        title: (err && err.detail) || '体验码无效, 请核对后重试',
-        icon: 'none',
-      });
+      console.warn('[index] onGuestRedeemPay', err);
     } finally {
       this.setData({ guestPaying: false });
     }

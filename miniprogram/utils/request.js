@@ -14,6 +14,20 @@ const { BASE_URL, TOKEN_KEY } = require('./config');
 let _isLoggingIn = false;
 const _loginWaiters = [];
 
+// loading 引用计数: 并发请求只在第一个时 showLoading, 全部结束时才 hideLoading,
+// 避免「A 请求结束把 B 请求的 loading 提前关掉」的互相关问题
+let _loadingCount = 0;
+
+function _showLoading(title) {
+  if (_loadingCount === 0) wx.showLoading({ title, mask: true });
+  _loadingCount++;
+}
+
+function _hideLoading() {
+  if (_loadingCount > 0) _loadingCount--;
+  if (_loadingCount === 0) wx.hideLoading();
+}
+
 function getToken() {
   return wx.getStorageSync(TOKEN_KEY);
 }
@@ -30,6 +44,7 @@ function _rawRequest(opts) {
   return new Promise((resolve, reject) => {
     wx.request({
       ...opts,
+      timeout: 15000,
       success: (res) => resolve(res),
       fail: (err) => reject(err),
     });
@@ -113,7 +128,7 @@ function request(options, _retry = false) {
   } = options;
 
   if (loading) {
-    wx.showLoading({ title: loadingText, mask: true });
+    _showLoading(loadingText);
   }
 
   const finalHeader = { 'Content-Type': 'application/json', ...header };
@@ -131,8 +146,9 @@ function request(options, _retry = false) {
       method,
       data,
       header: finalHeader,
+      timeout: 15000,
       success: async (res) => {
-        if (loading) wx.hideLoading();
+        if (loading) _hideLoading();
 
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data);
@@ -148,7 +164,7 @@ function request(options, _retry = false) {
             const retryRes = await request(options, true);
             resolve(retryRes);
           } catch (e) {
-            if (loading) wx.hideLoading()
+            if (loading) _hideLoading()
             if (!silent) wx.showToast({ title: '请重新登录', icon: 'none' });
             reject(e);
           }
@@ -164,7 +180,7 @@ function request(options, _retry = false) {
         reject({ statusCode: res.statusCode, ...(res.data || {}) });
       },
       fail: (err) => {
-          if (loading) wx.hideLoading();
+          if (loading) _hideLoading();
           if (!silent) wx.showToast({ title: '网络异常', icon: 'none' });
           reject(err);
         },
@@ -179,7 +195,7 @@ function request(options, _retry = false) {
     return loginAndGetToken()
       .then(send)
       .catch((e) => {
-        if (loading) wx.hideLoading();
+        if (loading) _hideLoading();
         if (!silent) wx.showToast({ title: '请重新登录', icon: 'none' });
         throw e;
       });
@@ -192,7 +208,8 @@ const get = (path, opts = {}) => request({ ...opts, path, method: 'GET' });
 const post = (path, data, opts = {}) => request({ ...opts, path, method: 'POST', data });
 const put = (path, data, opts = {}) => request({ ...opts, path, method: 'PUT', data });
 const patch = (path, data, opts = {}) => request({ ...opts, path, method: 'PATCH', data });
-const del = (path, opts = {}) => request({ ...opts, path, method: 'DELETE' });
+// DELETE 支持可选 body (部分后端接口要求带 data), 不传时行为与旧版一致
+const del = (path, data = null, opts = {}) => request({ ...opts, path, method: 'DELETE', data });
 
 module.exports = {
   request,

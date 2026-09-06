@@ -4,7 +4,7 @@
  * 对应后端: /api/v1/profiles/*
  */
 
-const { get, put, post, del, getToken } = require('../utils/request');
+const { get, put, post, del, getToken, loginAndGetToken } = require('../utils/request');
 const { BASE_URL } = require('../utils/config');
 
 /** 获取我的资料 + 择偶要求 摘要 */
@@ -35,9 +35,46 @@ function saveCriteria(data) {
   return put('/profiles/me/criteria', data);
 }
 
-/** 追加一张照片 (调用前先用 uploadPhoto 拿到 url) */
+/** 追加一张照片 (调用前先用 uploadImage 拿到 url) */
 function addPhoto(fileUrl) {
   return post('/profiles/me/photos', { file_url: fileUrl });
+}
+
+/** wx.uploadFile 原始封装 (不做业务解析) */
+function _rawUpload(filePath, token) {
+  return new Promise((resolve, reject) => {
+    wx.uploadFile({
+      url: `${BASE_URL}/uploads/image`,
+      filePath,
+      name: 'file',
+      header: token ? { Authorization: `Bearer ${token}` } : {},
+      timeout: 15000,
+      success: (res) => resolve(res),
+      fail: (err) => reject(err),
+    });
+  });
+}
+
+/**
+ * 上传图片到 /uploads/image:
+ * statusCode===401 时先 loginAndGetToken 静默换新 token 再重试一次 (与 utils/request 口径一致),
+ * 其余情况按原逻辑解析 body; 失败抛 Error (message 带后端 detail 或状态码)。
+ * 成功返回图片 url。
+ */
+async function uploadImage(filePath, failLabel = '上传失败') {
+  let res = await _rawUpload(filePath, getToken());
+  if (res.statusCode === 401) {
+    // token 过期: 静默重登拿新 token, 只重试一次
+    await loginAndGetToken();
+    res = await _rawUpload(filePath, getToken());
+  }
+  // wx.uploadFile 不解析 JSON, 自己解
+  let body = null;
+  try { body = JSON.parse(res.data); } catch (e) { /* noop */ }
+  if (res.statusCode !== 200 || !body || !body.url) {
+    throw new Error((body && body.detail) || `${failLabel} (${res.statusCode})`);
+  }
+  return body.url;
 }
 
 /**
@@ -45,7 +82,7 @@ function addPhoto(fileUrl) {
  *
  * 内部:
  *   1) wx.chooseMedia 让用户选图
- *   2) wx.uploadFile 上传到后端 /uploads/image
+ *   2) wx.uploadFile 上传到后端 /uploads/image (401 时静默重登重试一次)
  *   3) 拿到 url 后调 /profiles/me/photos commit
  *
  * 返回最新 profile (含完整 photos 数组)
@@ -58,42 +95,24 @@ function pickAndUploadPhoto() {
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'],
-      success: ({ tempFiles }) => {
+      success: async ({ tempFiles }) => {
         if (!tempFiles || !tempFiles.length) return resolve(null);
         const tempPath = tempFiles[0].tempFilePath;
-        const token = getToken();
         wx.showLoading({ title: '上传中', mask: true });
-        wx.uploadFile({
-          url: `${BASE_URL}/uploads/image`,
-          filePath: tempPath,
-          name: 'file',
-          header: token ? { Authorization: `Bearer ${token}` } : {},
-          success: async (res) => {
-            wx.hideLoading();
-            // wx.uploadFile 不解析 JSON, 自己解
-            let body = null;
-            try { body = JSON.parse(res.data); } catch (e) { /* noop */ }
-            if (res.statusCode !== 200 || !body || !body.url) {
-              wx.showToast({
-                title: (body && body.detail) || `上传失败 (${res.statusCode})`,
-                icon: 'none',
-              });
-              reject(new Error('upload failed'));
-              return;
-            }
-            try {
-              const updated = await addPhoto(body.url);
-              resolve(updated);
-            } catch (e) {
-              reject(e);
-            }
-          },
-          fail: (err) => {
-            wx.hideLoading();
-            wx.showToast({ title: '上传失败', icon: 'none' });
-            reject(err);
-          },
-        });
+        try {
+          const url = await uploadImage(tempPath, '上传失败');
+          wx.hideLoading();
+          try {
+            const updated = await addPhoto(url);
+            resolve(updated);
+          } catch (e) {
+            reject(e);
+          }
+        } catch (e) {
+          wx.hideLoading();
+          wx.showToast({ title: (e && e.message) || '上传失败', icon: 'none' });
+          reject(e instanceof Error ? e : new Error('upload failed'));
+        }
       },
       fail: (err) => {
         // cancel 也走这里, 静默处理
@@ -116,29 +135,24 @@ function deleteMyProfile() {
   return del('/profiles/me');
 }
 
-/** 上传头像 (welcome 页用): wx.chooseAvatar 拿到 tempFilePath -> uploadFile -> 返 url */
+/** 上传头像 (welcome 页/注册向导用): 传入 tempFilePath, 返图片 url; 401 时静默重登重试一次 */
 function uploadAvatar(tempPath) {
-  const { BASE_URL } = require('../utils/config');
-  const { getToken } = require('../utils/request');
-  return new Promise((resolve, reject) => {
-    const token = getToken();
-    wx.uploadFile({
-      url: `${BASE_URL}/uploads/image`,
-      filePath: tempPath,
-      name: 'file',
-      header: token ? { Authorization: `Bearer ${token}` } : {},
-      success: (res) => {
-        let body = null;
-        try { body = JSON.parse(res.data); } catch (e) { /* noop */ }
-        if (res.statusCode !== 200 || !body || !body.url) {
-          reject(new Error((body && body.detail) || `头像上传失败 (${res.statusCode})`));
-          return;
-        }
-        resolve(body.url);
-      },
-      fail: (err) => reject(err),
-    });
-  });
+  return uploadImage(tempPath, '头像上传失败');
+}
+
+/** 相亲下线: 暂时不对外展示我的资料 */
+function deactivateMe() {
+  return post('/profiles/me/deactivate');
+}
+
+/** 相亲重新上线 */
+function reactivateMe() {
+  return post('/profiles/me/reactivate');
+}
+
+/** 提交注销账号申请 (后端 5 个工作日内处理) */
+function cancelAccount() {
+  return post('/profiles/me/cancel-account');
 }
 
 module.exports = {
@@ -147,9 +161,13 @@ module.exports = {
   saveContact,
   saveCriteria,
   addPhoto,
+  uploadImage,
   pickAndUploadPhoto,
   deletePhoto,
   deleteMyProfile,
   submitWelcome,
   uploadAvatar,
+  deactivateMe,
+  reactivateMe,
+  cancelAccount,
 };

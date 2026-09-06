@@ -313,7 +313,7 @@
             <text class="preview-lock">🔒 会员可联系</text>
           </view>
           <view class="preview-body">
-            <image wx:if="{{item.photo}}" class="preview-avatar" src="{{item.photo}}" mode="aspectFill" />
+            <image wx:if="{{item.photo}}" class="preview-avatar" src="{{item.photo}}" mode="aspectFill" lazy-load="{{true}}" />
             <view wx:else class="preview-avatar placeholder"><text>缘</text></view>
             <view class="preview-main">
               <view class="preview-line big">{{item.gender || ''}} · {{item.year}}年<text wx:if="{{item.ageNow}}"> ({{item.ageNow}}岁)</text></view>
@@ -413,7 +413,7 @@
       </view>
     </view>
 
-    <scroll-view wx:if="{{!apiReady || (isMember && isWelcomed)}}" class="screen main-screen" scroll-y>
+    <scroll-view wx:if="{{!apiReady || (isMember && isWelcomed)}}" class="screen main-screen" scroll-y bindscrolltolower="onHomeLoadMore" lower-threshold="200">
       <view class="hero-header">
         <view class="nav-row light">
           <view class="nav-placeholder"></view>
@@ -508,6 +508,7 @@
           </block>
           <text wx:else>暂无可推荐的资料, 试试调整筛选条件</text>
         </view>
+
         <view class="empty-feed" wx:if="{{apiReady && isMember && !profiles.length}}">
           <view class="empty-feed-icon">缘</view>
           <block wx:if="{{activeFilterCount > 0}}">
@@ -548,6 +549,10 @@
               <text class="card-star-text">{{item.starred ? '已收藏' : '收藏'}}</text>
             </view>
           </view>
+        </view>
+        <!-- 翻页提示: 还有下一页时上拉加载, 游标用尽提示已到底 -->
+        <view class="load-more-hint" wx:if="{{profiles.length > 0}}">
+          <text>{{homeLoadingMore ? '正在加载更多推荐…' : (homeNextCursor ? '继续下滑, 查看更多推荐' : '已展示全部推荐')}}</text>
         </view>
       </view>
 
@@ -604,6 +609,8 @@
               src="{{item}}"
               mode="aspectFill"
               class="detail-photo"
+              lazy-load="{{true}}"
+              show-menu-by-longpress="{{true}}"
               bindtap="previewDetailPhoto"
               data-index="{{index}}"
             />
@@ -693,10 +700,11 @@
 
       <scroll-view class="child-scroll" scroll-y>
         <view class="self-card">
-          <view class="self-head">
-            <view class="avatar big tone-ocean">乾</view>
-            <view class="self-main">
-              <view class="self-id">用户编号 {{myXyCode || '53652255'}}</view>
+        <view class="self-head">
+          <image wx:if="{{myAvatar}}" class="avatar big me-avatar-img" src="{{myAvatar}}" mode="aspectFill" lazy-load="{{true}}" />
+          <view wx:else class="avatar big tone-ocean">乾</view>
+          <view class="self-main">
+              <view class="self-id">用户编号 {{myXyCode || '—'}}</view>
               <view class="stat-row">
                 <view wx:for="{{stats}}" wx:key="label">
                   <view>{{item.value}}</view>
@@ -802,7 +810,7 @@
           <view class="nav-placeholder"></view>
         </view>
         <view class="me-profile">
-          <image wx:if="{{myAvatar}}" class="avatar big me-avatar-img" src="{{myAvatar}}" mode="aspectFill" />
+          <image wx:if="{{myAvatar}}" class="avatar big me-avatar-img" src="{{myAvatar}}" mode="aspectFill" lazy-load="{{true}}" />
           <view wx:else class="avatar big tone-ocean">乾</view>
           <view>
             <view class="me-nick-row">
@@ -858,7 +866,7 @@
         </view>
         <view wx:for="{{visitorList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
@@ -916,7 +924,7 @@
         </view>
         <view wx:for="{{favoriteList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
@@ -967,7 +975,7 @@
       </view>
       <view wx:for="{{affinityMutualList}}" wx:key="user_id" class="visitor-row affinity-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
         <view class="visitor-avatar">
-          <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+          <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
           <text wx:else>❤</text>
         </view>
         <view class="visitor-info">
@@ -996,7 +1004,7 @@
         </view>
         <view wx:for="{{myLikesList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
@@ -1024,7 +1032,7 @@
         </view>
         <view wx:for="{{iVisitedList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" />
+            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
@@ -1119,7 +1127,7 @@
           </view>
           <view class="photo-grid">
             <view wx:for="{{photos}}" wx:key="id" class="photo-box {{item.url ? 'filled' : ''}}" bindtap="onPhotoTap" data-index="{{index}}">
-              <image wx:if="{{item.url}}" src="{{item.url}}" mode="aspectFill" class="photo-img" />
+              <image wx:if="{{item.url}}" src="{{item.url}}" mode="aspectFill" class="photo-img" lazy-load="{{true}}" />
               <text wx:else>+</text>
               <view wx:if="{{item.url}}" class="photo-del" catchtap="onPhotoDelete" data-index="{{index}}">×</view>
             </view>
@@ -1148,7 +1156,7 @@
       <scroll-view class="child-scroll with-bottom" scroll-y>
         <view class="progress-card">
           <view><text>资料完善度：</text><text>完善度越高，匹配成功率越高</text></view>
-          <view class="progress-track"><view class="criteria"></view><text>51%</text></view>
+          <view class="progress-track"><view class="criteria" style="width: {{profileProgress}}%;"></view><text>{{profileProgress}}%</text></view>
           <text>资料越完整，越快找到有缘人</text>
         </view>
 
