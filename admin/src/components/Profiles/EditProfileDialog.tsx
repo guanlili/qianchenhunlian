@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { type ReactNode, useEffect, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { type AdminProfileItem, AdminService } from "@/client"
@@ -129,12 +129,14 @@ export function EditProfileDialog({ item, trigger }: EditProfileDialogProps) {
     enabled: open,
   })
 
+  // 仅在 open 由 false→true 时同步一次表单 (详情已在缓存则用详情, 否则用列表 item 兜底);
+  // 此后详情晚到 / 后台 refetch 都不再覆盖用户正在编辑的输入 (修表单被冲掉的 bug)
+  const prevOpenRef = useRef(false)
   useEffect(() => {
-    if (open && detailQuery.data?.profile) {
-      setForm(makeInitial(detailQuery.data.profile))
-    } else if (open) {
-      setForm(makeInitial(item))
-    }
+    const justOpened = open && !prevOpenRef.current
+    prevOpenRef.current = open
+    if (!justOpened) return
+    setForm(makeInitial(detailQuery.data?.profile ?? item))
   }, [open, detailQuery.data, item])
 
   const update = (k: keyof FormState) => (v: string) =>

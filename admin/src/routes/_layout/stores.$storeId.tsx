@@ -1,7 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router"
 import { ArrowLeft, Download, Inbox, QrCode } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { AdminService, OpenAPI, StoresService } from "@/client"
@@ -32,7 +37,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import useAuth from "@/hooks/useAuth"
+import useAuth, { currentUserQueryOptions } from "@/hooks/useAuth"
+import { downloadCsv } from "@/lib/csv"
+import { GRANT_SOURCE_LABEL } from "@/lib/labels"
 
 const VALID_TABS = [
   "overview",
@@ -54,6 +61,27 @@ export const Route = createFileRoute("/_layout/stores/$storeId")({
     tab: typeof search.tab === "string" ? search.tab : undefined,
     mfilter: typeof search.mfilter === "string" ? search.mfilter : undefined,
   }),
+  // 鉴权与归属前置: 门店管理员访问别家店 URL 直接弹回本店 (原 render 期跳转有闪屏,
+  // 且页面数据请求已发出; 数据层后端本就强制作用域, 这里修的是体验与多余请求)
+  beforeLoad: async ({ context, params }) => {
+    const user = await context.queryClient.ensureQueryData(
+      currentUserQueryOptions(),
+    )
+    const myStoreId =
+      !user?.is_superuser && user?.actor_type === "staff" ? user.store_id : null
+    if (myStoreId && myStoreId !== params.storeId) {
+      throw redirect({
+        to: "/stores/$storeId",
+        params: { storeId: myStoreId },
+        replace: true,
+      })
+    }
+    // 预取门店信息写入缓存, 组件内 useQuery 直接命中 (也顺带校验门店存在)
+    await context.queryClient.ensureQueryData({
+      queryKey: ["store", params.storeId],
+      queryFn: () => StoresService.getStore({ storeId: params.storeId }),
+    })
+  },
   component: StoreWorkspacePage,
   head: () => ({ meta: [{ title: "门店工作台 - 乾缘后台" }] }),
 })
@@ -65,31 +93,10 @@ function StoreWorkspacePage() {
   const { user } = useAuth()
   const isSuperuser = !!user?.is_superuser
 
-  // 门店管理员只能进本店: 手输/收藏别家店 URL 时弹回本店
-  // (数据层后端已强制作用域, 这里修的是「页面头显示别家店名」的误导)
-  const myStoreId =
-    !isSuperuser && user?.actor_type === "staff" ? user.store_id : null
-  const foreignStore = !!myStoreId && myStoreId !== storeId
-  useEffect(() => {
-    if (myStoreId && foreignStore) {
-      navigate({
-        to: "/stores/$storeId",
-        params: { storeId: myStoreId },
-        replace: true,
-      })
-    }
-  }, [myStoreId, foreignStore, navigate])
   const { data: store } = useQuery({
     queryFn: () => StoresService.getStore({ storeId }),
     queryKey: ["store", storeId],
   })
-  if (foreignStore) {
-    return (
-      <div className="p-10 text-center text-muted-foreground">
-        只能进入您的门店工作台, 正在跳转…
-      </div>
-    )
-  }
 
   const activeTab =
     tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : "overview"
@@ -163,13 +170,6 @@ function cnMonth(offset: 0 | 1): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
 }
 
-const GRANT_SOURCE_LABEL: Record<string, string> = {
-  wx_pay: "线上支付",
-  admin_recharge: "线下收款",
-  admin_trial: "体验发放",
-  admin_compensate: "补偿",
-}
-
 function useStatementExport(storeId: string) {
   const [monthOffset, setMonthOffset] = useState<0 | 1>(1) // 默认导出上一个自然月
   // 摘要行常驻展示 (选中月份), 导出直接复用缓存数据
@@ -184,63 +184,43 @@ function useStatementExport(storeId: string) {
         storeId,
         month: cnMonth(monthOffset),
       })
-      // CSV (带 BOM, Excel 中文不乱码): 汇总 + 两段明细
-      const esc = (v: unknown) => {
-        const s = v === null || v === undefined ? "" : String(v)
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-      }
-      const lines: string[] = []
-      lines.push(`门店对账单,${esc(st.store_name)},${st.month}`)
-      lines.push("")
-      lines.push("汇总项,数值")
-      lines.push(`当月新增会员,${st.new_members}`)
-      lines.push(`截至当月末累计会员,${st.total_members}`)
-      lines.push(`线上开通/续费 (微信支付),${st.grants_online}`)
-      lines.push(`线下开通/续费,${st.grants_offline}`)
-      lines.push(`当月新建工单,${st.tickets_created}`)
-      lines.push(`当月处理完成工单,${st.tickets_handled}`)
-      lines.push(`当月发优惠券 (张),${st.coupon_issued ?? 0}`)
-      lines.push(`当月领券用户 (人),${st.coupon_users ?? 0}`)
-      lines.push(`领券后转正式会员 (人),${st.coupon_converted ?? 0}`)
-      lines.push("")
-      lines.push("明细·当月新增会员")
-      lines.push("日期,寻缘号,昵称")
-      for (const r of st.member_rows || []) {
-        lines.push(
-          [
-            new Date(r.created_at).toLocaleString("zh-CN"),
-            r.xy_code ?? "",
-            r.nickname ?? "",
-          ]
-            .map(esc)
-            .join(","),
-        )
-      }
-      lines.push("")
-      lines.push("明细·当月会员发放")
-      lines.push("日期,套餐,天数,来源,操作人")
-      for (const r of st.grant_rows || []) {
-        lines.push(
-          [
-            new Date(r.created_at).toLocaleString("zh-CN"),
-            r.plan_code,
-            r.days,
-            GRANT_SOURCE_LABEL[r.source] ?? r.source,
-            r.granted_by_email ?? "",
-          ]
-            .map(esc)
-            .join(","),
-        )
-      }
-      const blob = new Blob([`\uFEFF${lines.join("\n")}`], {
-        type: "text/csv;charset=utf-8",
-      })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `对账单_${st.store_name}_${st.month}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
+      // 多段报表 (汇总 + 两段明细), 转义/BOM/下载统一走 lib/csv
+      const rows: (string | number | null | undefined)[][] = [
+        [],
+        ["汇总项", "数值"],
+        ["当月新增会员", st.new_members],
+        ["截至当月末累计会员", st.total_members],
+        ["线上开通/续费 (微信支付)", st.grants_online],
+        ["线下开通/续费", st.grants_offline],
+        ["当月新建工单", st.tickets_created],
+        ["当月处理完成工单", st.tickets_handled],
+        ["当月发优惠券 (张)", st.coupon_issued ?? 0],
+        ["当月领券用户 (人)", st.coupon_users ?? 0],
+        ["领券后转正式会员 (人)", st.coupon_converted ?? 0],
+        [],
+        ["明细·当月新增会员"],
+        ["日期", "寻缘号", "昵称"],
+        ...(st.member_rows || []).map((r) => [
+          new Date(r.created_at).toLocaleString("zh-CN"),
+          r.xy_code ?? "",
+          r.nickname ?? "",
+        ]),
+        [],
+        ["明细·当月会员发放"],
+        ["日期", "套餐", "天数", "来源", "操作人"],
+        ...(st.grant_rows || []).map((r) => [
+          new Date(r.created_at).toLocaleString("zh-CN"),
+          r.plan_code,
+          r.days,
+          GRANT_SOURCE_LABEL[r.source] ?? r.source,
+          r.granted_by_email ?? "",
+        ]),
+      ]
+      downloadCsv(
+        `对账单_${st.store_name}_${st.month}.csv`,
+        ["门店对账单", st.store_name, st.month],
+        rows,
+      )
       toast.success(`已导出 ${st.month} 对账单`)
     },
     onError: (e) => toast.error(`导出失败: ${(e as Error).message}`),
@@ -263,12 +243,17 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
   const downloadStoreQr = async (id: string) => {
     setQrDownloading(true)
     try {
+      // 走 OpenAPI.TOKEN (含惰性刷新): 直接读 localStorage 会拿到过期 token 401
+      // 生成类型上 TOKEN 可能为 string/undefined, 收窄成函数再调 (忽略入参)
+      const tokenResolver = OpenAPI.TOKEN
+      const token =
+        typeof tokenResolver === "function"
+          ? await tokenResolver({ method: "GET", url: "" })
+          : ""
       const resp = await fetch(
         `${OpenAPI.BASE ?? ""}/api/v1/admin/stores/${id}/qrcode`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         },
       )
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
@@ -544,7 +529,8 @@ function StoreMembersTab({ storeId }: { storeId: string }) {
 function StoreActivitiesTab({ storeId }: { storeId: string }) {
   const { data, isPending } = useQuery({
     queryFn: () => AdminService.listActivityFeed({ storeId, limit: 50 }),
-    queryKey: ["admin-activity-feed", "store", storeId],
+    // 与全局动态页 (ActivityFeedList) 共用 ["activity-feed"] 前缀, invalidate 一处生效
+    queryKey: ["activity-feed", "store", storeId],
   })
 
   if (isPending) {
