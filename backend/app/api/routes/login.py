@@ -101,7 +101,7 @@ def login_access_token(
     )
     if user:
         if not user.is_active:
-            raise HTTPException(status_code=400, detail="Inactive user")
+            raise HTTPException(status_code=400, detail="账号已停用")
         login_limiter.reset(fail_key)  # 成功登录, 清空失败计数
         return Token(
             access_token=security.create_access_token(
@@ -134,7 +134,7 @@ def login_access_token(
 
     # 密码错误: 记一次失败 (账号维度)
     login_limiter.record(fail_key, LOGIN_FAIL_WINDOW)
-    raise HTTPException(status_code=400, detail="Incorrect email or password")
+    raise HTTPException(status_code=400, detail="邮箱或密码不正确")
 
 
 class RefreshTokenBody(SQLModel):
@@ -254,20 +254,17 @@ def reset_password(session: SessionDep, request: Request, body: NewPassword) -> 
         )
     email = verify_password_reset_token(token=body.token)
     if not email:
-        raise HTTPException(status_code=400, detail="Invalid token")
+        raise HTTPException(status_code=400, detail="重置链接无效或已过期")
     user = crud.get_user_by_email(session=session, email=email)
     if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this email does not exist in the system.",
-        )
+        raise HTTPException(status_code=404, detail="该邮箱未注册")
     elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail="账号已停用")
     hashed_password = get_password_hash(password=body.new_password)
     user.hashed_password = hashed_password
     session.add(user)
     session.commit()
-    return Message(message="Password updated successfully")
+    return Message(message="密码已更新")
 
 
 @router.post(
@@ -282,10 +279,7 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
     user = crud.get_user_by_email(session=session, email=email)
 
     if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this username does not exist in the system.",
-        )
+        raise HTTPException(status_code=404, detail="该邮箱未注册")
     assert user.email is not None  # 按 email 查到, 必非 None
     password_reset_token = generate_password_reset_token(email=email)
     email_data = generate_reset_password_email(

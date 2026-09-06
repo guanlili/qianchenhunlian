@@ -57,10 +57,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system.",
-        )
+        raise HTTPException(status_code=400, detail="该邮箱已被注册")
 
     user = crud.create_user(session=session, user_create=user_in)
     session.commit()
@@ -88,9 +85,7 @@ def update_user_me(
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != current_user.id:
-            raise HTTPException(
-                status_code=409, detail="User with this email already exists"
-            )
+            raise HTTPException(status_code=409, detail="该邮箱已被注册")
     user_data = user_in.model_dump(exclude_unset=True)
     current_user.sqlmodel_update(user_data)
     session.add(current_user)
@@ -109,16 +104,14 @@ def update_password_me(
     if not current_user.hashed_password or not verify_password(
         body.current_password, current_user.hashed_password
     ):
-        raise HTTPException(status_code=400, detail="Incorrect password")
+        raise HTTPException(status_code=400, detail="当前密码不正确")
     if body.current_password == body.new_password:
-        raise HTTPException(
-            status_code=400, detail="New password cannot be the same as the current one"
-        )
+        raise HTTPException(status_code=400, detail="新密码不能与当前密码相同")
     hashed_password = get_password_hash(body.new_password)
     current_user.hashed_password = hashed_password
     session.add(current_user)
     session.commit()
-    return Message(message="Password updated successfully")
+    return Message(message="密码已更新")
 
 
 @router.get("/me", response_model=UserPublic)
@@ -135,9 +128,7 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     注销账号 (软删): status=deactivated + is_active=False, 保留审计/流水.
     """
     if current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="Super users are not allowed to delete themselves"
-        )
+        raise HTTPException(status_code=403, detail="超级管理员不允许删除自己")
     current_user.status = "deactivated"
     current_user.is_active = False
     current_user.updated_at = datetime.utcnow()
@@ -157,10 +148,7 @@ def read_user_by_id(
     if user == current_user:
         return user
     if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="The user doesn't have enough privileges",
-        )
+        raise HTTPException(status_code=403, detail="当前用户权限不足")
     return user
 
 
@@ -181,16 +169,11 @@ def update_user(
 
     db_user = session.get(User, user_id)
     if not db_user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this id does not exist in the system",
-        )
+        raise HTTPException(status_code=404, detail="用户不存在")
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != user_id:
-            raise HTTPException(
-                status_code=409, detail="User with this email already exists"
-            )
+            raise HTTPException(status_code=409, detail="该邮箱已被注册")
 
     db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
     session.commit()
@@ -207,11 +190,9 @@ def delete_user(
     """
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户不存在")
     if user == current_user:
-        raise HTTPException(
-            status_code=403, detail="Super users are not allowed to delete themselves"
-        )
+        raise HTTPException(status_code=403, detail="超级管理员不允许删除自己")
     user.status = "deleted"
     user.is_active = False
     user.updated_at = datetime.utcnow()

@@ -110,7 +110,7 @@ def test_get_existing_user_permissions_error(
         headers=normal_user_token_headers,
     )
     assert r.status_code == 403
-    assert r.json() == {"detail": "The user doesn't have enough privileges"}
+    assert r.json() == {"detail": "当前用户权限不足"}
 
 
 def test_create_user_existing_username(
@@ -206,7 +206,7 @@ def test_update_password_me(
     )
     assert r.status_code == 200
     updated_user = r.json()
-    assert updated_user["message"] == "Password updated successfully"
+    assert updated_user["message"] == "密码已更新"
 
     user_query = select(User).where(User.email == settings.FIRST_SUPERUSER)
     user_db = db.exec(user_query).first()
@@ -242,7 +242,7 @@ def test_update_password_me_incorrect_password(
     )
     assert r.status_code == 400
     updated_user = r.json()
-    assert updated_user["detail"] == "Incorrect password"
+    assert updated_user["detail"] == "当前密码不正确"
 
 
 def test_update_user_me_email_exists(
@@ -260,7 +260,7 @@ def test_update_user_me_email_exists(
         json=data,
     )
     assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
+    assert r.json()["detail"] == "该邮箱已被注册"
 
 
 def test_update_password_me_same_password_error(
@@ -277,9 +277,7 @@ def test_update_password_me_same_password_error(
     )
     assert r.status_code == 400
     updated_user = r.json()
-    assert (
-        updated_user["detail"] == "New password cannot be the same as the current one"
-    )
+    assert updated_user["detail"] == "新密码不能与当前密码相同"
 
 
 def test_update_user(
@@ -318,7 +316,7 @@ def test_update_user_not_exists(
         json=data,
     )
     assert r.status_code == 404
-    assert r.json()["detail"] == "The user with this id does not exist in the system"
+    assert r.json()["detail"] == "用户不存在"
 
 
 def test_update_user_email_exists(
@@ -341,7 +339,7 @@ def test_update_user_email_exists(
         json=data,
     )
     assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
+    assert r.json()["detail"] == "该邮箱已被注册"
 
 
 def test_delete_user_me(client: TestClient, db: Session) -> None:
@@ -373,7 +371,7 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
     assert result.status == "deactivated"
     assert result.is_active is False
 
-    # 注销后 token 应失效 (get_current_user 会返回 400 Inactive user)
+    # 注销后 token 应失效 (get_current_user 会返回 400 账号已停用)
     r2 = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
     assert r2.status_code == 400
 
@@ -387,7 +385,7 @@ def test_delete_user_me_as_superuser(
     )
     assert r.status_code == 403
     response = r.json()
-    assert response["detail"] == "Super users are not allowed to delete themselves"
+    assert response["detail"] == "超级管理员不允许删除自己"
 
 
 def test_delete_user_super_user(
@@ -420,7 +418,7 @@ def test_delete_user_not_found(
         headers=superuser_token_headers,
     )
     assert r.status_code == 404
-    assert r.json()["detail"] == "User not found"
+    assert r.json()["detail"] == "用户不存在"
 
 
 def test_delete_user_current_super_user_error(
@@ -435,7 +433,7 @@ def test_delete_user_current_super_user_error(
         headers=superuser_token_headers,
     )
     assert r.status_code == 403
-    assert r.json()["detail"] == "Super users are not allowed to delete themselves"
+    assert r.json()["detail"] == "超级管理员不允许删除自己"
 
 
 def test_delete_user_without_privileges(
@@ -451,4 +449,4 @@ def test_delete_user_without_privileges(
         headers=normal_user_token_headers,
     )
     assert r.status_code == 403
-    assert r.json()["detail"] == "The user doesn't have enough privileges"
+    assert r.json()["detail"] == "当前用户权限不足"

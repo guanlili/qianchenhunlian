@@ -1271,7 +1271,9 @@ async def store_qrcode(
     if owner_sid is not None and owner_sid != store_id:
         raise HTTPException(status_code=403, detail="只能获取您的门店码")
     try:
-        png = await wechat.get_wxacode_unlimit(
+        # 进程内缓存 (key=scene/page): 同一门店码 24h 内只打一次微信接口,
+        # 线下物料反复下载不再消耗 getwxacodeunlimit 配额; 门店写路径会失效
+        png = await wechat.get_wxacode_unlimit_cached(
             scene=store_id.hex, page="pages/index/index"
         )
     except wechat.WechatError as e:
@@ -1318,6 +1320,7 @@ def admin_update_store(
     session.commit()
     session.refresh(s)
     stores_routes.invalidate_store_geo_cache()  # 城市/区县聚合可能变了
+    wechat.invalidate_wxacode_cache(scene=store_id.hex)  # 门店码缓存一并失效
     return StorePublic.model_validate(s, from_attributes=True)
 
 
@@ -1339,6 +1342,7 @@ def admin_delete_store(
     session.add(s)
     session.commit()
     stores_routes.invalidate_store_geo_cache()  # 关闭门店会影响 active 口径聚合
+    wechat.invalidate_wxacode_cache(scene=store_id.hex)  # 门店码缓存一并失效
     return Message(message="门店已关闭")
 
 
@@ -1435,6 +1439,7 @@ def hard_delete_store(
     )
     session.commit()
     stores_routes.invalidate_store_geo_cache()  # 门店删除影响城市聚合
+    wechat.invalidate_wxacode_cache(scene=store_id.hex)  # 门店码缓存一并失效
     return Message(
         message=f"门店已彻底删除 (含会员 {len(member_ids)} 人、店长账号与工单)"
     )

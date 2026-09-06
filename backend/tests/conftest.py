@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.core.membership import clear_membership_config_cache
 from app.core.ratelimit import api_limiter, login_limiter, redeem_limiter
 from app.core.view_cleanup import reset_view_cleanup_throttle
-from app.core.wechat import clear_text_check_cache
+from app.core.wechat import clear_text_check_cache, clear_wxacode_cache
 from app.main import app
 from app.models import User, UserCreate
 from tests.utils.user import authentication_token_from_email
@@ -81,6 +81,7 @@ def _reset_login_limiter() -> Generator[None, None, None]:
     api_limiter._hits.clear()
     redeem_limiter._hits.clear()
     clear_text_check_cache()
+    clear_wxacode_cache()
     clear_membership_config_cache()
     clear_store_geo_cache()
     reset_view_cleanup_throttle()
