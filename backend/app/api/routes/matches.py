@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, Session, SQLModel, and_, func, or_, select
 
 from app.api.deps import (
@@ -20,14 +21,14 @@ from app.api.deps import (
 
 # 山东省限制: 只推荐山东省下的用户, 子句实现见 app.api.shandong
 from app.api.shandong import shandong_clause as _shandong_clause
-from app.core import membership
+from app.core import membership, view_cleanup
 from app.core.match_score import pair_score, sort_key
 from app.models import (
     Criteria,
+    DailyRecommendation,
     Favorite,
     Profile,
     ProfilePublic,
-    Unlock,
     User,
     View,
 )
@@ -41,6 +42,20 @@ def _member_only_clause() -> Any:
     会员制闭环: 付费开通会员后自己的资料才对外可见, 未续费自动退出推荐池.
     """
     return User.membership_expires_at > datetime.utcnow()  # type: ignore[operator]
+
+
+def _visible_candidates_clause(current_user: User) -> list[Any]:
+    """候选可见性统一口径 (推荐/筛选/游客预览/上下翻页共用):
+    排除自己 + active + 非超管 + 有寻缘号 + 审核通过 + 在期会员 + 山东资料。"""
+    return [
+        Profile.user_id != current_user.id,
+        User.status == "active",
+        User.is_superuser == False,  # noqa: E712  排除 admin
+        User.xy_code.is_not(None),  # type: ignore
+        Profile.audit_status == "approved",
+        _member_only_clause(),  # 仅在期会员资料对外可见
+        _shandong_clause(),  # 仅山东资料对外可见
+    ]
 
 
 # ---------------- DTOs ----------------
@@ -135,6 +150,133 @@ class MatchDetailResponse(SQLModel):
 # ---------------- Helpers ----------------
 
 
+# 每日推荐快照容量: 与打分候选池 limit(500) 一致 (打分在全量池上做,
+# 快照只截断存储, 容量对齐避免落库大小失控)
+_DAILY_SNAPSHOT_CAPACITY = 500
+
+
+def _compute_today_ranking(
+    session: Session,
+    current_user: User,
+    me_profile: Profile,
+    my_criteria: Criteria | None,
+) -> list[str]:
+    """计算当日推荐顺序 (双向匹配打分): 候选池前 500 内择优, 返回排好序的 user_id 字符串序列.
+
+    与原实时路径完全同一套打分口径 (候选池 User.id 稳定序 + pair_score + 同城加分)。
+    """
+    stmt = (
+        select(Profile, User)
+        .join(User, Profile.user_id == User.id)  # type: ignore
+        .where(*_visible_candidates_clause(current_user))
+    )
+    # 候选池前 500 内择优 (User.id 稳定序保证池子可复现; 不加 limit 会全表载入打分)
+    pool = session.exec(stmt.order_by(User.id).limit(500)).all()  # type: ignore[arg-type]
+    cand_ids = [p.user_id for p, _ in pool]
+    cand_criteria_map: dict[Any, Any] = (
+        {
+            c.user_id: c
+            for c in session.exec(
+                select(Criteria).where(Criteria.user_id.in_(cand_ids))  # type: ignore[attr-defined]
+            ).all()
+        }
+        if cand_ids
+        else {}
+    )
+    my_city = (me_profile.location or "").strip()
+
+    if my_city:
+
+        def _daily_total(p: Profile) -> int:
+            total = pair_score(
+                my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
+            )
+            if my_city in (p.location or "") or my_city in (p.origin or ""):
+                total += 10  # 同城匹配加分
+            return total
+
+    else:
+
+        def _daily_total(p: Profile) -> int:
+            return pair_score(
+                my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
+            )
+
+    scored = sorted(
+        pool,
+        key=lambda pu: sort_key(_daily_total(pu[0]), pu[0], me_profile),
+    )
+    return [str(p.user_id) for p, _ in scored[:_DAILY_SNAPSHOT_CAPACITY]]
+
+
+def _get_or_build_daily_snapshot(
+    session: Session,
+    current_user: User,
+    me_profile: Profile,
+    my_criteria: Criteria | None,
+) -> list[str]:
+    """读当日快照; 不存在则计算并落库 (M2 落地 daily_recommendations 表).
+
+    - 快照日期按北京自然日 (与额度/统计口径一致), 过期自然作废, 无清理任务;
+    - (user_id, rec_date) 唯一约束: 并发首请求撞约束的一方回读已存在的那份,
+      保证只落一份且两路看到同一顺序;
+    - 快照后资料更新/下架不影响当日顺序 (产品语义: 「今日推荐」当日固定)。
+    """
+    day = membership.today_cn().isoformat()
+    snap = session.exec(
+        select(DailyRecommendation).where(
+            DailyRecommendation.user_id == current_user.id,
+            DailyRecommendation.rec_date == day,
+        )
+    ).first()
+    if snap is not None:
+        return list(snap.profile_ids or [])
+
+    ids = _compute_today_ranking(session, current_user, me_profile, my_criteria)
+    session.add(
+        DailyRecommendation(user_id=current_user.id, rec_date=day, profile_ids=ids)
+    )
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发首请求: 另一路已落库, 改读已存在的那份
+        session.rollback()
+        existing = session.exec(
+            select(DailyRecommendation).where(
+                DailyRecommendation.user_id == current_user.id,
+                DailyRecommendation.rec_date == day,
+            )
+        ).first()
+        return list(existing.profile_ids or []) if existing else ids
+    return ids
+
+
+def _read_snapshot_page(
+    session: Session,
+    current_user: User,
+    snap_ids: list[str],
+    offset: int,
+    limit: int,
+) -> list[tuple[Profile, User]]:
+    """按快照顺序取一页 (Profile, User), 保持可见性口径.
+
+    快照内候选若已下架 (退出推荐池/被封/审核回退), 当页跳过 —— 不把失效资料
+    发给端上, 但不改动快照本身 (当日顺序保持稳定, 次日自然重算)。
+    """
+    page_ids = snap_ids[offset : offset + limit]
+    if not page_ids:
+        return []
+    id_uuids = [uuid.UUID(s) for s in page_ids]
+    rows = session.exec(
+        select(Profile, User)
+        .join(User, Profile.user_id == User.id)  # type: ignore
+        .where(*_visible_candidates_clause(current_user))
+        .where(Profile.user_id.in_(id_uuids))  # type: ignore
+    ).all()
+    by_id = {p.user_id: (p, u) for p, u in rows}
+    return [by_id[i] for i in id_uuids if i in by_id]
+
+
 def _to_brief(
     profile: Profile,
     user: User | None = None,
@@ -191,17 +333,6 @@ def _encode_cursor(offset: int, has_more: bool) -> str | None:
     return str(offset) if has_more else None
 
 
-def _is_unlocked(session: Session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
-    return (
-        session.exec(
-            select(Unlock).where(
-                and_(Unlock.user_id == viewer_id, Unlock.target_user_id == target_id)
-            )
-        ).first()
-        is not None
-    )
-
-
 def _is_starred(session: Session, viewer_id: uuid.UUID, target_id: uuid.UUID) -> bool:
     from app.models import Favorite  # 局部导入避免循环
 
@@ -255,16 +386,7 @@ def get_guest_preview(
     )
     age_rank = func.abs(Profile.year - me.year)  # type: ignore[operator]
 
-    base = [
-        Profile.user_id != current_user.id,
-        User.status == "active",
-        User.is_superuser == False,  # noqa: E712
-        User.xy_code.is_not(None),  # type: ignore
-        Profile.audit_status == "approved",
-        _member_only_clause(),
-        _shandong_clause(),
-        Profile.gender == opposite,
-    ]
+    base = _visible_candidates_clause(current_user) + [Profile.gender == opposite]
 
     def _query(extra: list[Any]) -> Any:
         return (
@@ -351,32 +473,30 @@ def get_daily_recommendations(
 ) -> MatchListResponse:
     """每日推荐列表.
 
-    一期推荐算法: 简化为按 updated_at DESC 取活跃 profile;
-    后续 M2 接 daily_recommendations 表的快照.
+    today 主路径 (M2): 当日首次请求计算快照落 daily_recommendations,
+    后续翻页直接按快照顺序读 —— 翻页绝对稳定 (翻页期间资料更新不跳页/不重复),
+    且不再每页重算打分。其它 tab (new/missed) 逻辑不变。
     """
+    # 浏览记录治理: 顺带清理 90 天前的 View (每天至多一次, 失败静默不影响本请求)
+    view_cleanup.maybe_cleanup_old_views(session)
+
     offset = _decode_cursor(cursor)
 
     stmt = (
         select(Profile, User)
         .join(User, Profile.user_id == User.id)  # type: ignore
-        .where(Profile.user_id != current_user.id)
-        .where(User.status == "active")
-        .where(User.is_superuser == False)  # noqa: E712  排除 admin
-        .where(User.xy_code.is_not(None))  # type: ignore
-        .where(Profile.audit_status == "approved")
-        .where(_member_only_clause())  # 仅在期会员资料对外可见
-        .where(_shandong_clause())  # 仅推审核通过的资料
+        .where(*_visible_candidates_clause(current_user))
     )
 
     if tab == "today":
-        # 每日推荐主路径: 双向匹配打分 (候选池前 500 内择优, 日内顺序稳定支持 offset 翻页)
         me_profile = session.exec(
             select(Profile).where(Profile.user_id == current_user.id)
         ).first()
         my_criteria = session.exec(
             select(Criteria).where(Criteria.user_id == current_user.id)
         ).first()
-        # 兜底: 极少数会员无 Profile (缴费未建资料) — 无 profile 无法打分, 退化为原排序
+        # 兜底: 极少数会员无 Profile (缴费未建资料) — 无 profile 无法打分也不进快照,
+        # 退化为原排序 (不落快照, 建好资料后的首次请求再正常走快照路径)
         if me_profile is None:
             stmt = stmt.order_by(Profile.updated_at.desc())  # type: ignore
             rows = list(session.exec(stmt.offset(offset).limit(limit + 1)).all())
@@ -389,45 +509,12 @@ def get_daily_recommendations(
             return MatchListResponse(
                 items=items, next_cursor=_encode_cursor(offset + limit, has_more)
             )
-        pool = session.exec(
-            stmt.order_by(User.id)  # type: ignore[arg-type]
-        ).all()
-        cand_ids = [p.user_id for p, _ in pool]
-        cand_criteria_map: dict[Any, Any] = (
-            {
-                c.user_id: c
-                for c in session.exec(
-                    select(Criteria).where(Criteria.user_id.in_(cand_ids))  # type: ignore[attr-defined]
-                ).all()
-            }
-            if cand_ids
-            else {}
+        snap_ids = _get_or_build_daily_snapshot(
+            session, current_user, me_profile, my_criteria
         )
-        my_city = (me_profile.location or "").strip() if me_profile else ""
-        if my_city:
-
-            def _daily_total(p: Profile) -> int:
-                total = pair_score(
-                    my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
-                )
-                if my_city in (p.location or "") or my_city in (p.origin or ""):
-                    total += 10  # 同城匹配加分
-                return total
-
-        else:
-
-            def _daily_total(p: Profile) -> int:
-                return pair_score(
-                    my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
-                )
-
-        scored = sorted(
-            pool,
-            key=lambda pu: sort_key(_daily_total(pu[0]), pu[0], me_profile),
-        )
-        rows = list(scored[offset : offset + limit + 1])
-        has_more = len(rows) > limit
-        rows = rows[:limit]
+        # 翻页游标是快照内位置: has_more 按快照总长判断, 与当页下架过滤无关
+        has_more = offset + limit < len(snap_ids)
+        rows = _read_snapshot_page(session, current_user, snap_ids, offset, limit)
 
         starred = _starred_set(session, current_user.id, [p.user_id for p, _ in rows])
         items = [_to_brief(p, u, starred=p.user_id in starred) for p, u in rows]
@@ -480,13 +567,7 @@ def apply_filter(
     stmt = (
         select(Profile, User)
         .join(User, Profile.user_id == User.id)  # type: ignore
-        .where(Profile.user_id != current_user.id)
-        .where(User.status == "active")
-        .where(User.is_superuser == False)  # noqa: E712
-        .where(User.xy_code.is_not(None))  # type: ignore
-        .where(Profile.audit_status == "approved")
-        .where(_member_only_clause())  # 仅在期会员资料对外可见
-        .where(_shandong_clause())
+        .where(*_visible_candidates_clause(current_user))
     )
 
     if body.gender:
@@ -657,13 +738,7 @@ def get_neighbor(
         stmt = (
             select(Profile.user_id)
             .join(User, Profile.user_id == User.id)  # type: ignore
-            .where(User.status == "active")
-            .where(User.is_superuser == False)  # noqa: E712
-            .where(User.xy_code.is_not(None))  # type: ignore
-            .where(Profile.audit_status == "approved")
-            .where(_member_only_clause())  # 仅在期会员资料对外可见
-            .where(_shandong_clause())
-            .where(Profile.user_id != current_user.id)
+            .where(*_visible_candidates_clause(current_user))
             .where(Profile.updated_at < current.updated_at)
             .order_by(Profile.updated_at.desc())  # type: ignore
             .limit(1)
@@ -672,13 +747,7 @@ def get_neighbor(
         stmt = (
             select(Profile.user_id)
             .join(User, Profile.user_id == User.id)  # type: ignore
-            .where(User.status == "active")
-            .where(User.is_superuser == False)  # noqa: E712
-            .where(User.xy_code.is_not(None))  # type: ignore
-            .where(Profile.audit_status == "approved")
-            .where(_member_only_clause())  # 仅在期会员资料对外可见
-            .where(_shandong_clause())
-            .where(Profile.user_id != current_user.id)
+            .where(*_visible_candidates_clause(current_user))
             .where(Profile.updated_at > current.updated_at)
             .order_by(Profile.updated_at.asc())  # type: ignore
             .limit(1)

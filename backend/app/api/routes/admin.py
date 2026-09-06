@@ -5,12 +5,15 @@
 """
 
 import logging
+import threading
+import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import Response
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import update as sa_update
 from sqlalchemy.orm import aliased
 from sqlmodel import Field, SQLModel, and_, func, or_, select
@@ -19,7 +22,9 @@ from app import crud
 from app.api.audit import write_audit as _audit
 from app.api.deps import CurrentActor, SessionDep, require_admin_or_staff
 from app.api.permissions import Perm, has_perm, require_perm
-from app.core import membership, wechat
+from app.api.routes import stores as stores_routes
+from app.core import membership, profile_audit, wechat
+from app.core.progress import calc_criteria_progress, calc_profile_progress
 from app.core.wechat import assert_text_safe_fields
 from app.models import (
     Affinity,
@@ -449,72 +454,7 @@ def audit_profile(
     return _to_admin_profile_item(profile, user)
 
 
-# 计算资料完善度时考虑的字段 (跟 profiles.py 保持同步; 可后续抽公共)
-_PROFILE_PROGRESS_FIELDS = (
-    "real_name",
-    "gender",
-    "ethnicity",
-    "year",
-    "height",
-    "weight",
-    "health_status",
-    "edu",
-    "major",
-    "hobbies",
-    "income",
-    "marriage",
-    "origin",
-    "location",
-    "hometown",
-    "job",
-    "employer_type",
-    "has_social_insurance",
-    "has_house",
-    "has_car",
-    "house_car_loan",
-    "body_type",
-    "personality_type",
-    "desc",
-)
-_CRITERIA_PROGRESS_FIELDS = (
-    "year_min",
-    "year_max",
-    "height_min",
-    "height_max",
-    "weight_min",
-    "weight_max",
-    "income",
-    "edu",
-    "marriage",
-    "house",
-    "car",
-    "job",
-    "social_insurance",
-)
-
-
-def _calc_profile_progress(profile: Profile) -> int:
-    filled = sum(
-        1 for f in _PROFILE_PROGRESS_FIELDS if getattr(profile, f) not in (None, "", [])
-    )
-    if profile.photos:
-        filled += 2
-    if profile.contact_wechat or profile.contact_phone:
-        filled += 1
-    total = len(_PROFILE_PROGRESS_FIELDS) + 3
-    return min(100, int(filled / total * 100))
-
-
-def _calc_criteria_progress(criteria: Criteria) -> int:
-    filled = sum(
-        1 for f in _CRITERIA_PROGRESS_FIELDS if getattr(criteria, f) not in (None, "")
-    )
-    if criteria.origins:
-        filled += 1
-    if criteria.locations:
-        filled += 1
-    total = len(_CRITERIA_PROGRESS_FIELDS) + 2
-    return min(100, int(filled / total * 100))
+# 资料完善度计算统一在 app.core.progress (与小程序 profiles 路由共用同一口径)
 
 
 @router.put(
@@ -553,7 +493,7 @@ def admin_update_profile(
 
     profile.audit_status = "approved"
     profile.audit_reason = None
-    profile.progress = _calc_profile_progress(profile)
+    profile.progress = calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     _audit(
@@ -596,7 +536,7 @@ def admin_update_criteria(
         for k, v in data.items():
             setattr(criteria, k, v if v != "" else None)
 
-    criteria.progress = _calc_criteria_progress(criteria)
+    criteria.progress = calc_criteria_progress(criteria)
     criteria.updated_at = datetime.utcnow()
     session.add(criteria)
     session.commit()
@@ -1353,6 +1293,7 @@ def admin_create_store(
     session.add(s)
     session.commit()
     session.refresh(s)
+    stores_routes.invalidate_store_geo_cache()  # 城市聚合变了
     return StorePublic.model_validate(s, from_attributes=True)
 
 
@@ -1376,6 +1317,7 @@ def admin_update_store(
     session.add(s)
     session.commit()
     session.refresh(s)
+    stores_routes.invalidate_store_geo_cache()  # 城市/区县聚合可能变了
     return StorePublic.model_validate(s, from_attributes=True)
 
 
@@ -1396,6 +1338,7 @@ def admin_delete_store(
     s.updated_at = datetime.utcnow()
     session.add(s)
     session.commit()
+    stores_routes.invalidate_store_geo_cache()  # 关闭门店会影响 active 口径聚合
     return Message(message="门店已关闭")
 
 
@@ -1428,15 +1371,17 @@ def hard_delete_store(
     #    引用必须先于会员/门店删除清理, 否则 PG 上 FK 违规 500
     from app.models import MembershipRedeemCode as _MRC
 
-    for rc in session.exec(select(_MRC).where(_MRC.store_id == store_id)).all():
-        session.delete(rc)
-    # 1) 归属本店的会员账号 (User 级联删除 Profile/发放记录/收藏等)
-    member_rows = session.exec(
-        select(User)
-        .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
-        .where(Profile.home_store_id == store_id)
-    ).all()
-    member_ids = [u.id for u in member_rows]
+    session.execute(
+        sa_delete(_MRC).where(_MRC.store_id == store_id)  # type: ignore[arg-type]
+    )
+    # 1) 归属本店的会员账号 (级联删除 Profile/发放记录等)
+    member_ids = list(
+        session.exec(
+            select(User.id)
+            .join(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+            .where(Profile.home_store_id == store_id)
+        ).all()
+    )
     if member_ids:
         # 别店发的码被本店会员兑换过: 解除引用 (FK 无 CASCADE)
         session.execute(
@@ -1444,20 +1389,31 @@ def hard_delete_store(
             .where(_MRC.used_by_user_id.in_(member_ids))  # type: ignore[union-attr]
             .values(used_by_user_id=None)
         )
-    for u in member_rows:
-        session.delete(u)
+        # 子表先删 (FK 顺序): Profile/Criteria 原由 ORM 级联删除, 改 bulk 后显式删,
+        # 保证 SQLite 等未开 FK 强制的环境也不留孤儿; 其余子表在 PG 上由 FK CASCADE 兜底
+        session.execute(
+            sa_delete(Profile).where(Profile.user_id.in_(member_ids))  # type: ignore[attr-defined]
+        )
+        session.execute(
+            sa_delete(Criteria).where(Criteria.user_id.in_(member_ids))  # type: ignore[attr-defined]
+        )
+        session.execute(
+            sa_delete(User).where(User.id.in_(member_ids))  # type: ignore[attr-defined]
+        )
 
     # 2) 本店工单 (含无主待处理单)
     from app.models import ContactRequest as _CR
 
-    for t in session.exec(select(_CR).where(_CR.store_id == store_id)).all():
-        session.delete(t)
+    session.execute(
+        sa_delete(_CR).where(_CR.store_id == store_id)  # type: ignore[arg-type]
+    )
 
     # 3) 本店店长账号
     from app.models import Staff as _Staff
 
-    for st in session.exec(select(_Staff).where(_Staff.store_id == store_id)).all():
-        session.delete(st)
+    session.execute(
+        sa_delete(_Staff).where(_Staff.store_id == store_id)  # type: ignore[arg-type]
+    )
 
     # 发放记录 (MembershipGrant.store_id) 无 CASCADE: 置 NULL 保留对账追溯
     session.execute(
@@ -1474,12 +1430,13 @@ def hard_delete_store(
         "hard_delete_store",
         detail={
             "store": store.name,
-            "members_removed": len(member_rows),
+            "members_removed": len(member_ids),
         },
     )
     session.commit()
+    stores_routes.invalidate_store_geo_cache()  # 门店删除影响城市聚合
     return Message(
-        message=f"门店已彻底删除 (含会员 {len(member_rows)} 人、店长账号与工单)"
+        message=f"门店已彻底删除 (含会员 {len(member_ids)} 人、店长账号与工单)"
     )
 
 
@@ -1622,6 +1579,21 @@ def handle_feedback(
     )
 
 
+def _to_user_brief(user: User) -> AdminUserBrief:
+    """User → AdminUserBrief (加余额/封禁/解封三处共用同一视角)."""
+    return AdminUserBrief(
+        id=user.id,
+        openid=user.openid,
+        xy_code=user.xy_code,
+        email=user.email,
+        is_superuser=user.is_superuser,
+        unlock_balance=user.unlock_balance,
+        status=user.status,
+        last_active_at=user.last_active_at,
+        created_at=user.created_at,
+    )
+
+
 @router.post(
     "/users/{user_id}/grant-balance",
     response_model=AdminUserBrief,
@@ -1680,17 +1652,7 @@ def grant_unlock_balance(
         },
     )
     session.commit()
-    return AdminUserBrief(
-        id=user.id,
-        openid=user.openid,
-        xy_code=user.xy_code,
-        email=user.email,
-        is_superuser=user.is_superuser,
-        unlock_balance=user.unlock_balance,
-        status=user.status,
-        last_active_at=user.last_active_at,
-        created_at=user.created_at,
-    )
+    return _to_user_brief(user)
 
 
 @router.post(
@@ -1715,17 +1677,7 @@ def block_user(
     _audit(session, actor, "block", target_user_id=user_id)
     session.commit()
     session.refresh(user)
-    return AdminUserBrief(
-        id=user.id,
-        openid=user.openid,
-        xy_code=user.xy_code,
-        email=user.email,
-        is_superuser=user.is_superuser,
-        unlock_balance=user.unlock_balance,
-        status=user.status,
-        last_active_at=user.last_active_at,
-        created_at=user.created_at,
-    )
+    return _to_user_brief(user)
 
 
 @router.post(
@@ -1750,17 +1702,7 @@ def unblock_user(
     _audit(session, actor, "unblock", target_user_id=user_id)
     session.commit()
     session.refresh(user)
-    return AdminUserBrief(
-        id=user.id,
-        openid=user.openid,
-        xy_code=user.xy_code,
-        email=user.email,
-        is_superuser=user.is_superuser,
-        unlock_balance=user.unlock_balance,
-        status=user.status,
-        last_active_at=user.last_active_at,
-        created_at=user.created_at,
-    )
+    return _to_user_brief(user)
 
 
 class StatsResponse(SQLModel):
@@ -1797,47 +1739,13 @@ def admin_stats(
     return _compute_stats(session, actor, store_id=store_id)
 
 
-def _user_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
-    """用户计数 (注册口径, 含游客); 门店口径时 join Profile 限本店.
+def _count_filter(*conds: Any) -> Any:
+    """count(*) FILTER (WHERE ...) 聚合列.
 
-    ⚠️ 统计「会员」请用 _paid_member_count — 游客与会员在全平台必须严格区分.
-    extra 为追加的 User 列条件.
+    SQLAlchemy 2.0 的类型标注对 FunctionElement.filter 的布尔列表达式推成
+    纯 bool, 逐行 ignore 噪音太大 —— 这里收宽为 Any, 换取调用点零 ignore。
     """
-    stmt = (
-        select(func.count())
-        .select_from(User)
-        .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
-    )
-    if sid is not None:
-        stmt = stmt.where(Profile.home_store_id == sid)
-    for cond in extra:
-        stmt = stmt.where(cond)
-    return session.exec(stmt).one() or 0
-
-
-def _paid_member_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
-    """在期会员计数 (membership_expires_at > now); 门店口径限本店绑定会员."""
-    return _user_count(
-        session,
-        sid,
-        User.membership_expires_at > datetime.utcnow(),  # type: ignore[operator]
-        *extra,
-    )
-
-
-def _guest_count(session: SessionDep, sid: uuid.UUID | None, *extra: Any) -> int:
-    """游客计数: 注册了但当前非会员的微信用户 (游客未绑店, 门店口径下恒 0)."""
-    return _user_count(
-        session,
-        sid,
-        User.openid.is_not(None),  # type: ignore[union-attr]
-        User.is_superuser == False,  # noqa: E712
-        or_(
-            User.membership_expires_at.is_(None),  # type: ignore[union-attr]
-            User.membership_expires_at < datetime.utcnow(),  # type: ignore[operator]
-        ),
-        *extra,
-    )
+    return func.count().filter(*conds)
 
 
 def _compute_stats(
@@ -1847,16 +1755,19 @@ def _compute_stats(
 
     口径: 门店管理员强制本店; 总部可用 store_id 查看单店 (门店工作台「概览」)。
     互相好感/营业门店/未处理反馈是平台级计数, 不随门店口径变化。
+
+    查询合并 (N+1 治理): 同表 count 用 count(*) FILTER (WHERE ...) 一条聚合
+    拿全 (SQLite 3.30+/PG 均支持), User 表 9 项 + Profile 表 2 项各一条,
+    返回 JSON 结构与逐条 count 版本完全一致 (前端零改动)。
     """
     from app.models import Affinity, ContactRequest, Store
 
     sid = _store_owner_id(actor)
     if sid is None:
         sid = store_id
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    # 会员总数/已实名: 严格按在期会员口径 (游客不计入)
-    total_users = _paid_member_count(session, sid)
-    verified_users = _paid_member_count(session, sid, User.verified == "passed")
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    soon = now + timedelta(days=7)
 
     # 上个北京自然月区间 (对账口径: 门店结算按自然月, 用北京时间切边界)
     now_cn = datetime.now(membership.CN_TZ)
@@ -1868,6 +1779,59 @@ def _compute_stats(
     )
     lm_start_utc = last_month_start.astimezone(timezone.utc).replace(tzinfo=None)
     lm_end_utc = this_month_start.astimezone(timezone.utc).replace(tzinfo=None)
+
+    # — User 表 9 项计数: 一条 FILTER 聚合 (会员/游客/注册口径见各行注释) —
+    member_cond = User.membership_expires_at > now  # type: ignore[operator]
+    guest_cond = and_(
+        User.openid.is_not(None),  # type: ignore[union-attr]
+        User.is_superuser == False,  # noqa: E712
+        or_(
+            User.membership_expires_at.is_(None),  # type: ignore[union-attr]
+            User.membership_expires_at < now,  # type: ignore[operator]
+        ),
+    )
+    # 9 列 FILTER 聚合超出 select 类型重载的形参上限, ignore 收口
+    user_stmt: Any = (
+        select(  # type: ignore[call-overload]
+            # 会员总数 (在期口径, 游客不计入)
+            _count_filter(member_cond),
+            # 已实名会员
+            _count_filter(member_cond, User.verified == "passed"),
+            # 今日注册 (全量注册口径, 含游客)
+            _count_filter(User.created_at >= today_start),
+            # 待实名核验
+            _count_filter(User.verified == "pending"),
+            # 7 天内到期会员 (续费回访名单)
+            _count_filter(User.membership_expires_at.between(now, soon)),  # type: ignore[union-attr]
+            # 上个北京自然月新增 (对账口径)
+            _count_filter(
+                User.created_at >= lm_start_utc, User.created_at < lm_end_utc
+            ),
+            # 游客三项 (注册了但当前非会员)
+            _count_filter(guest_cond, User.created_at >= today_start),
+            _count_filter(guest_cond, User.created_at >= lm_end_utc),
+            _count_filter(
+                guest_cond,
+                User.created_at >= lm_start_utc,
+                User.created_at < lm_end_utc,
+            ),
+        )
+        .select_from(User)
+        .outerjoin(Profile, Profile.user_id == User.id)
+    )
+    if sid is not None:
+        user_stmt = user_stmt.where(Profile.home_store_id == sid)
+    (
+        total_users,
+        verified_users,
+        today_signups,
+        pending_verifies,
+        expiring_members,
+        last_month_signups,
+        guest_today,
+        guest_this_month,
+        guest_last_month,
+    ) = session.exec(user_stmt).one()
 
     ticket_stmt = (
         select(func.count())
@@ -1895,56 +1859,38 @@ def _compute_stats(
     )
     mutual_pairs = int(mutual_total) // 2
 
-    # 资料数/待审数: 门店口径时按主属门店收窄 (审核已下放门店, 概览需店口径)
-    profile_stmt = select(func.count()).select_from(Profile)
-    audit_stmt = (
-        select(func.count())
-        .select_from(Profile)
-        .where(Profile.audit_status == "pending")
-    )
+    # — Profile 表 2 项计数: 一条 FILTER 聚合 (门店口径时按主属门店收窄) —
+    profile_stmt: Any = select(
+        func.count(),
+        _count_filter(Profile.audit_status == "pending"),
+    ).select_from(Profile)
     if sid is not None:
         profile_stmt = profile_stmt.where(Profile.home_store_id == sid)
-        audit_stmt = audit_stmt.where(Profile.home_store_id == sid)
+    total_profiles, pending_audits = session.exec(profile_stmt).one()
 
     return StatsResponse(
-        total_users=total_users,
-        total_profiles=session.exec(profile_stmt).one() or 0,
-        pending_audits=session.exec(audit_stmt).one() or 0,
-        today_signups=_user_count(session, sid, User.created_at >= today_start),
-        pending_tickets=pending_tickets,
+        total_users=int(total_users or 0),
+        total_profiles=int(total_profiles or 0),
+        pending_audits=int(pending_audits or 0),
+        today_signups=int(today_signups or 0),
+        pending_tickets=int(pending_tickets or 0),
         mutual_affinity_pairs=mutual_pairs,
-        verified_users=verified_users,
-        verified_ratio=int(verified_users / total_users * 100) if total_users else 0,
+        verified_users=int(verified_users or 0),
+        verified_ratio=(int(verified_users / total_users * 100) if total_users else 0),
         active_stores=session.exec(
             select(func.count()).select_from(Store).where(Store.status == "active")
         ).one()
         or 0,
-        pending_verifies=_user_count(session, sid, User.verified == "pending"),
-        expiring_members=_user_count(
-            session,
-            sid,
-            User.membership_expires_at.between(  # type: ignore[union-attr]
-                datetime.utcnow(), datetime.utcnow() + timedelta(days=7)
-            ),
-        ),
+        pending_verifies=int(pending_verifies or 0),
+        expiring_members=int(expiring_members or 0),
         open_feedback=session.exec(
             select(func.count()).select_from(Feedback).where(Feedback.status == "open")
         ).one()
         or 0,
-        last_month_signups=_user_count(
-            session,
-            sid,
-            User.created_at >= lm_start_utc,
-            User.created_at < lm_end_utc,
-        ),
-        guest_today=_guest_count(session, sid, User.created_at >= today_start),
-        guest_this_month=_guest_count(session, sid, User.created_at >= lm_end_utc),
-        guest_last_month=_guest_count(
-            session,
-            sid,
-            User.created_at >= lm_start_utc,
-            User.created_at < lm_end_utc,
-        ),
+        last_month_signups=int(last_month_signups or 0),
+        guest_today=int(guest_today or 0),
+        guest_this_month=int(guest_this_month or 0),
+        guest_last_month=int(guest_last_month or 0),
     )
 
 
@@ -2434,6 +2380,22 @@ class MemberCounts(SQLModel):
     requests_received: int = 0
 
 
+class MemberQuotaStatus(SQLModel):
+    """docs/13 三桶额度快照 —— membership.quota_status() 返回的完整建模.
+
+    之前 AdminMemberFull.membership 是 dict[str, Any], OpenAPI 生成不出类型,
+    前端只能 any 消费; 这里按实际返回字段补齐建模 (响应数据本身不变,
+    端点始终传完整字典, 默认值只为字段默认实例可构造)."""
+
+    date: str = ""  # 北京自然日 (YYYY-MM-DD), 日额度计数归属日
+    is_member: bool = False  # 是否在期会员
+    bucket: str = "free"  # 当前计费桶: "member"(会员日额度) / "free"(每日免费额度)
+    limit: int = 0  # 当前桶日限额
+    used: int = 0  # 当日已用
+    remaining: int = 0  # 当日剩余
+    balance: int = 0  # 永久余额 (三桶最后一桶)
+
+
 class AdminMemberFull(SQLModel):
     """会员 360° 聚合: 一次请求拿全 (前端详情页专用)."""
 
@@ -2446,9 +2408,7 @@ class AdminMemberFull(SQLModel):
     verified_at: datetime | None = None
     counts: MemberCounts = MemberCounts()
     can_view_contact: bool = False  # 当前操作者是否有权查看联系方式
-    membership: dict[
-        str, Any
-    ] = {}  # docs/13 三桶额度快照 (is_member/expires/limit/used/balance)
+    membership: MemberQuotaStatus = MemberQuotaStatus()
 
 
 class ContactViewResponse(SQLModel):
@@ -2585,23 +2545,50 @@ def list_members(
 
 
 def _member_counts(session: SessionDep, user_id: uuid.UUID) -> MemberCounts:
-    def _cnt(model: Any, col: Any) -> int:
-        return (
-            session.exec(
-                select(func.count()).select_from(model).where(col == user_id)
-            ).one()
-            or 0
-        )
+    """会员行为计数: 4 张表 × 收/发两列 = 8 个数, 合并为 2 条 UNION ALL + FILTER 聚合
+    (favorite/view 一条, affinity/contact_request 一条), 8 次往返 → 2 次。
+    """
+    from sqlalchemy import literal, union_all
 
+    fav_q: Any = select(
+        literal("favorite"),
+        _count_filter(Favorite.user_id == user_id),
+        _count_filter(Favorite.target_user_id == user_id),
+    ).select_from(Favorite)
+    view_q: Any = select(
+        literal("view"),
+        _count_filter(View.user_id == user_id),
+        _count_filter(View.target_user_id == user_id),
+    ).select_from(View)
+    aff_q: Any = select(
+        literal("affinity"),
+        _count_filter(Affinity.from_user_id == user_id),
+        _count_filter(Affinity.to_user_id == user_id),
+    ).select_from(Affinity)
+    req_q: Any = select(
+        literal("request"),
+        _count_filter(ContactRequest.from_user_id == user_id),
+        _count_filter(ContactRequest.to_user_id == user_id),
+    ).select_from(ContactRequest)
+
+    pairs: dict[str, tuple[int, int]] = {}
+    for stmt in (union_all(fav_q, view_q), union_all(aff_q, req_q)):
+        for row in session.execute(stmt).all():
+            pairs[str(row[0])] = (int(row[1] or 0), int(row[2] or 0))
+
+    fav = pairs.get("favorite", (0, 0))
+    view = pairs.get("view", (0, 0))
+    aff = pairs.get("affinity", (0, 0))
+    req = pairs.get("request", (0, 0))
     return MemberCounts(
-        favorites_given=_cnt(Favorite, Favorite.user_id),
-        favorites_received=_cnt(Favorite, Favorite.target_user_id),
-        views_given=_cnt(View, View.user_id),
-        views_received=_cnt(View, View.target_user_id),
-        affinity_given=_cnt(Affinity, Affinity.from_user_id),
-        affinity_received=_cnt(Affinity, Affinity.to_user_id),
-        requests_sent=_cnt(ContactRequest, ContactRequest.from_user_id),
-        requests_received=_cnt(ContactRequest, ContactRequest.to_user_id),
+        favorites_given=fav[0],
+        favorites_received=fav[1],
+        views_given=view[0],
+        views_received=view[1],
+        affinity_given=aff[0],
+        affinity_received=aff[1],
+        requests_sent=req[0],
+        requests_received=req[1],
     )
 
 
@@ -2775,6 +2762,8 @@ def update_membership_config(
     else:
         session.add(SiteSetting(key=membership.CONFIG_KEY, value=cfg))
     session.commit()
+    # 写后立即失效读缓存, 保证后台改配置即时生效 (含本次响应的回读)
+    membership.invalidate_membership_config()
     return _plans_response(session, membership.get_config(session))
 
 
@@ -2790,6 +2779,53 @@ def _plans_response(
         pay_mode=membership.purchase_mode(session),
         plans=list(cfg.get("plans", [])),
     )
+
+
+# ============================================================
+# 资料审核模式切换 (profile.audit 站点配置) · SETTINGS_MANAGE
+# ============================================================
+
+
+class ProfileAuditModeResponse(SQLModel):
+    """当前审核模式: post=先发后审 (默认) / pre=先审后发."""
+
+    mode: str
+
+
+class ProfileAuditModeUpdate(SQLModel):
+    mode: Literal["post", "pre"]
+
+
+@router.get("/profile-audit-mode", response_model=ProfileAuditModeResponse)
+def get_profile_audit_mode_endpoint(
+    session: SessionDep,
+) -> ProfileAuditModeResponse:
+    """读当前资料审核模式 (设置页展示). 登录后台即可读."""
+    return ProfileAuditModeResponse(mode=profile_audit.get_profile_audit_mode(session))
+
+
+@router.put(
+    "/profile-audit-mode",
+    response_model=ProfileAuditModeResponse,
+    dependencies=[Depends(require_perm(Perm.SETTINGS_MANAGE))],
+)
+def update_profile_audit_mode(
+    session: SessionDep, actor: CurrentActor, body: ProfileAuditModeUpdate
+) -> ProfileAuditModeResponse:
+    """切换资料审核模式 (上线开关, 敏感操作记审计).
+
+    - post: 用户提交即生效 (dev 阶段行为);
+    - pre:  提交置 pending, 由管理端审核放开 (被驳回后再次提交仍 pending)。
+    """
+    mode = profile_audit.set_profile_audit_mode(session, body.mode)
+    _audit(
+        session,
+        actor,
+        "update_profile_audit_mode",
+        detail={"mode": mode},
+    )
+    session.commit()
+    return ProfileAuditModeResponse(mode=mode)
 
 
 @router.post(
@@ -2948,35 +2984,53 @@ def create_redeem_codes(
             raise HTTPException(status_code=400, detail="门店不存在")
         owner_sid = body.store_id
     note = (body.note or "").strip()[:120] or None
+    # 批量撞库校验: 每轮一次 code_norm IN (...) 查询替代逐码 SELECT (N+1 治理),
+    # 撞库只补生成冲突的那几个; 5 轮全撞才放弃 (12 位随机段, 实际几乎不会撞)
     created: list[MembershipRedeemCode] = []
-    for _ in range(body.count):
-        for _attempt in range(5):  # 撞库重试 (12 位随机段, 实际几乎不会撞)
+    for _round in range(5):
+        if len(created) >= body.count:
+            break
+        need = body.count - len(created)
+        batch: list[tuple[str, str]] = []
+        local_norms = {c.code_norm for c in created}
+        for _ in range(need * 10):  # 局部去重安全阀 (随机撞前缀概率可忽略)
             display, norm = membership.generate_redeem_code()
-            clash = session.exec(
-                select(MembershipRedeemCode).where(
-                    MembershipRedeemCode.code_norm == norm
-                )
-            ).first()
-            if clash is None:
+            if norm in local_norms:
+                continue
+            local_norms.add(norm)
+            batch.append((display, norm))
+            if len(batch) >= need:
                 break
-        else:  # pragma: no cover - 5 次全撞概率可忽略
-            raise HTTPException(status_code=500, detail="体验码生成冲突, 请重试")
-        created.append(
-            MembershipRedeemCode(
-                code=display,
-                code_norm=norm,
-                days=body.days,
-                store_id=owner_sid,
-                note=note,
-                expires_at=(
-                    datetime.utcnow() + timedelta(days=body.valid_days)
-                    if body.valid_days
-                    else None
-                ),
-                created_by_type=actor.actor_type,
-                created_by_id=uuid.UUID(actor.id),
-            )
+        clash_norms = set(
+            session.exec(
+                select(MembershipRedeemCode.code_norm).where(
+                    MembershipRedeemCode.code_norm.in_(  # type: ignore[attr-defined]
+                        [norm for _, norm in batch]
+                    )
+                )
+            ).all()
         )
+        for display, norm in batch:
+            if norm in clash_norms:
+                continue
+            created.append(
+                MembershipRedeemCode(
+                    code=display,
+                    code_norm=norm,
+                    days=body.days,
+                    store_id=owner_sid,
+                    note=note,
+                    expires_at=(
+                        datetime.utcnow() + timedelta(days=body.valid_days)
+                        if body.valid_days
+                        else None
+                    ),
+                    created_by_type=actor.actor_type,
+                    created_by_id=uuid.UUID(actor.id),
+                )
+            )
+    if len(created) < body.count:  # pragma: no cover - 5 轮全撞概率可忽略
+        raise HTTPException(status_code=500, detail="体验码生成冲突, 请重试")
     session.add_all(created)
     _audit(
         session,
@@ -2984,13 +3038,15 @@ def create_redeem_codes(
         "create_redeem_codes",
         detail={"count": body.count, "days": body.days, "note": note},
     )
-    session.commit()
-    for c in created:
-        session.refresh(c)
-    return [
+    # flush 让唯一约束在可控位置校验; DTO 在 commit 前构造 —— 避免 commit 后
+    # 逐个 refresh (expire_on_commit=True 下每对象一条 SELECT 的隐性 N+1)
+    session.flush()
+    payload = [
         MembershipRedeemCodePublic.model_validate(c, from_attributes=True)
         for c in created
     ]
+    session.commit()
+    return payload
 
 
 @router.get(
@@ -3020,13 +3076,13 @@ def list_redeem_codes(
     total = int(session.exec(count_stmt).one() or 0)
     items = session.exec(stmt.offset(skip).limit(limit)).all()
 
-    # 状态分布 (不受 status 筛选影响, 始终全量口径)
-    def _status_count(st: str) -> int:
-        stmt_sc = select(func.count()).select_from(MembershipRedeemCode)
-        if owner_sid:
-            stmt_sc = stmt_sc.where(MembershipRedeemCode.store_id == owner_sid)
-        stmt_sc = stmt_sc.where(MembershipRedeemCode.status == st)
-        return int(session.exec(stmt_sc).one() or 0)
+    # 状态分布 (不受 status 筛选影响, 始终全量口径): 一条 group_by 拿全部状态计数
+    dist_stmt = select(MembershipRedeemCode.status, func.count()).group_by(
+        MembershipRedeemCode.status
+    )
+    if owner_sid:
+        dist_stmt = dist_stmt.where(MembershipRedeemCode.store_id == owner_sid)
+    status_counts = {row[0]: int(row[1] or 0) for row in session.exec(dist_stmt).all()}
 
     return RedeemCodeList(
         items=[
@@ -3034,9 +3090,9 @@ def list_redeem_codes(
             for i in items
         ],
         total=total,
-        total_unused=_status_count("unused"),
-        total_used=_status_count("used"),
-        total_void=_status_count("void"),
+        total_unused=status_counts.get("unused", 0),
+        total_used=status_counts.get("used", 0),
+        total_void=status_counts.get("void", 0),
     )
 
 
@@ -3573,6 +3629,23 @@ class DashboardResponse(SQLModel):
     avg_ticket_handle_hours: float | None = None
 
 
+# ---------------- dashboard 30s 进程内缓存 ----------------
+# 工作台是后台首页 (多人高频轮询), 而底层数据刷新频率低; 30s TTL 足够吸收
+# 峰值读。key 见 admin_dashboard (门店口径 + 工单联系方式可见性)。
+# tests/conftest.py 每测试调用 clear_dashboard_cache() 清理。
+_DASHBOARD_CACHE_TTL = 30.0
+_dashboard_cache: dict[tuple[uuid.UUID | None, bool], DashboardResponse] = {}
+_dashboard_cached_at: dict[tuple[uuid.UUID | None, bool], float] = {}
+_dashboard_cache_lock = threading.Lock()
+
+
+def clear_dashboard_cache() -> None:
+    """清空 dashboard 缓存 (tests/conftest.py 每测试调用, 保证测试间隔离)."""
+    with _dashboard_cache_lock:
+        _dashboard_cache.clear()
+        _dashboard_cached_at.clear()
+
+
 @router.get(
     "/dashboard",
     response_model=DashboardResponse,
@@ -3585,12 +3658,36 @@ def admin_dashboard(
 ) -> DashboardResponse:
     """工作台聚合数据: 待办数字 + 最近注册/提审/工单各 5 条 + 逾期工单数.
 
-    门店管理员自动限本店; 总部可用 store_id 查看单店 (门店工作台「概览」)。"""
-    from app.models import ContactRequest
-
+    门店管理员自动限本店; 总部可用 store_id 查看单店 (门店工作台「概览」)。
+    结果带 30s 进程内缓存 (后台数据刷新频率低, 工作台高频轮询收益大)。"""
     sid = _store_owner_id(actor)
     if sid is None:
         sid = store_id
+    # 工单联系方式可见性 (店长可见本店单明文, 超管一律脱敏) 必须进缓存 key,
+    # 防止两类 actor 的响应互相污染 —— 同 store_id 下内容并不同。
+    sees_contact = _store_owner_id(actor) is not None
+    key: tuple[uuid.UUID | None, bool] = (sid, sees_contact)
+    with _dashboard_cache_lock:
+        cached = _dashboard_cache.get(key)
+        if (
+            cached is not None
+            and time.monotonic() - _dashboard_cached_at.get(key, 0.0)
+            < _DASHBOARD_CACHE_TTL
+        ):
+            return cached.model_copy(deep=True)  # 深拷贝防调用方改写污染缓存
+    resp = _compute_dashboard(session, actor, sid)
+    with _dashboard_cache_lock:
+        _dashboard_cache[key] = resp
+        _dashboard_cached_at[key] = time.monotonic()
+    return resp
+
+
+def _compute_dashboard(
+    session: SessionDep, actor: CurrentActor, sid: uuid.UUID | None
+) -> DashboardResponse:
+    """dashboard 聚合计算 (无缓存版本, 由 admin_dashboard 套缓存调用)."""
+    from app.models import ContactRequest
+
     stats = _compute_stats(session, actor, store_id=sid)
 
     # 最近注册 (门店口径限本店)
