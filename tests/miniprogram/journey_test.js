@@ -38,6 +38,9 @@ global.wx = {
       else o.success({ statusCode: 200, data: { items: [{ user_id: 'u1', xy_code: 'A1', gender: '女', year: 1993, location: '济南', photos: [] }], blurred: [{ gender: '女', age_range: '20-29岁', location: '青岛' }] } });
     } else if (url.includes('/matches/daily')) {
       o.success({ statusCode: 200, data: { items: [{ user_id: 'u9', xy_code: 'M9', gender: '女', year: 1995, location: '济南', photos: [] }], next_cursor: null } });
+    } else if (/\/matches\/(?!daily|preview|filter)[^/?]+$/.test(url)) {
+      // GET /matches/{id} 详情: requestSubmitted 直接取响应里的 has_requested_recent
+      o.success({ statusCode: 200, data: { profile: { user_id: 'u9', xy_code: 'M9', gender: '女', birth_date: '1995-06-01', height: 165, location: '济南', photos: [] }, xy_code: 'M9', unlocked: false, starred: false, has_requested_recent: true } });
     } else if (url.includes('/stores/cities')) {
       o.success({ statusCode: 200, data: { items: [{ city: '德州', count: 1 }, { city: '济南', count: 1 }] } });
     } else {
@@ -113,8 +116,17 @@ app.ensureLogin().then(() => {
               assert('收口 (previewGate=false)', page.data.previewGate === false);
               setTimeout(() => {
                 assert('memberDaysLeft=null (新会员 365 天, 不打扰)', page.data.memberDaysLeft === null);
-                console.log('\n=== 旅程全部通过 ===');
-                process.exit(process.exitCode || 0);
+
+                console.log('【9】会员打开详情 (requestSubmitted 取后端 has_requested_recent)');
+                // 本旅程未跑 onLoad, 手动补登录成功后的页面态 (isMember 已由 refreshMembership 翻转)
+                page.data.apiReady = true;
+                page.openDetail({ currentTarget: { dataset: { id: 'u9' } } });
+                waitFor(() => page.data.screen === 'detail' && page.data.selectedProfile, () => {
+                  assert('详情已加载', !!page.data.selectedProfile);
+                  assert('requestSubmitted 取自 has_requested_recent', page.data.requestSubmitted === true);
+                  console.log('\n=== 旅程全部通过 ===');
+                  process.exit(process.exitCode || 0);
+                });
               }, 300);
             }).catch((e) => { console.log('✗ 体验码:', e && e.message); process.exit(1); });
           });

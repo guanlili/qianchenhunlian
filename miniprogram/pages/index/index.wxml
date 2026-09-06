@@ -903,7 +903,7 @@
           <view class="request-note" wx:if="{{item.admin_note}}">
             <text>红娘备注: </text>{{item.admin_note}}
           </view>
-          <text class="request-time">提交于 {{item.created_at}}</text>
+          <text class="request-time">提交于 {{item.createdText}}</text>
         </view>
       </scroll-view>
     </view>
