@@ -1,8 +1,15 @@
 name: CI
 
+# 分钟数优化 (免费额度 2000 分钟/月, 按所有 job 时长累加计费):
+# 1. push 只留 main (合并后验证 + 直推拦截) —— 功能分支 push 不再触发,
+#    由 PR 事件覆盖, 消灭「分支 push + PR」双跑 (原先每次 PR 更新跑两遍全套)
+# 2. 同一 PR 的新推送自动取消未跑完的旧 run (快速迭代不再白烧)
+# 3. 路径过滤: 只跑受影响区域的 job (改文档 ≈ 只花检测的几十秒;
+#    仅小程序的 PR 跳过后端两套测试; dependabot 的 admin PR 同理)
+# 4. 每周 schedule 只为 e2e 而设, 其余 job 在 schedule 事件下全部跳过
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
     branches: [main]
   schedule:
@@ -10,16 +17,80 @@ on:
     - cron: "0 3 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  # main 的 run 不取消 (合并后验证); PR/分支的新推送取消旧 run
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads/main') }}
+
+# 最小权限: 变更检测 (dorny/paths-filter) 需要读 PR 文件列表
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
+  guard-main:
+    # 免费版私有仓库开不了分支保护，用「CI 标红 + deploy 仅由 PR 合并触发」做门禁:
+    # main 只接受 PR 的 merge commit 合并 (提交信息以 "Merge pull request #" 开头),
+    # 其余一律视为直推 → 本 job 失败 → main 的 CI 标红, 且 deploy.yml 不会部署该提交。
+    # 因此 PR 必须用 "Create a merge commit" 方式合并, 禁 rebase/squash (它们产生的
+    # 提交无合并标记, 会被误拦); 功能分支 push 放行; PR 事件本 job 跳过。
+    name: Main 直推拦截
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 校验 main 提交来自 PR 合并
+        if: github.ref == 'refs/heads/main'
+        env:
+          HEAD_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          if [[ "$HEAD_MSG" == "Merge pull request #"* ]]; then
+            echo "来自 PR 合并, 放行"
+            exit 0
+          fi
+          echo "::error::main 只接受 PR 合并 (merge commit)。请走 分支 → PR → CI 绿 → merge commit 合并 的发布流程; 本次直推不会被部署。"
+          exit 1
+      - name: 非目标分支, 放行
+        if: github.ref != 'refs/heads/main'
+        run: echo "功能分支 push, 放行"
+
+  changes:
+    name: 变更检测
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      admin: ${{ steps.filter.outputs.admin }}
+      miniprogram: ${{ steps.filter.outputs.miniprogram }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # infra = 构建/部署骨架变化, 视为「全区域受影响」, 所有 job 都跑
+          filters: |
+            backend:
+              - 'backend/**'
+            admin:
+              - 'admin/**'
+            miniprogram:
+              - 'miniprogram/**'
+              - 'tests/**'
+            infra:
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+              - 'deploy.sh'
+
   backend-lint:
     name: Backend — Lint & Type Check
+    needs: changes
+    if: github.event_name != 'schedule' && (needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -46,13 +117,15 @@ jobs:
 
   backend-test:
     name: Backend — Tests
+    needs: changes
+    if: github.event_name != 'schedule' && (needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -68,8 +141,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev
 
+      # SQLite 套件并行跑 (243 例约 25s, 串行要 2 分钟+); 覆盖率门槛读 pyproject
       - name: Run tests
-        run: uv run coverage run -m pytest tests/ -v
+        run: uv run pytest -n auto --cov=app --cov-report=term-missing --cov-context=test
         env:
           # SQLite in-memory，无需真实数据库
           SECRET_KEY: "ci-test-secret-key-not-for-production"
@@ -80,14 +154,14 @@ jobs:
           POSTGRES_USER: "postgres"
           UPLOAD_DIR: "/tmp/ci-uploads"
 
-      - name: Coverage report
-        run: uv run coverage report
-
   backend-test-pg:
     # 生产是 PostgreSQL，SQLite 单测跑不了 PG 特有行为（_shandong_clause 正则、
     # DELETE...USING 等）。本 job 用真实 PG 跑同一套 pytest（conftest 按
     # TEST_DATABASE_URL 切换引擎），并附 alembic 迁移链与 models 的 schema 一致性守门。
+    # 串行跑: 共享同一 PG 库 + 每测试 savepoint 回滚, 并行会互相踩
     name: Backend — Tests (PostgreSQL)
+    needs: changes
+    if: github.event_name != 'schedule' && (needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -109,7 +183,7 @@ jobs:
           --health-retries 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -126,7 +200,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run tests (PostgreSQL)
-        run: uv run coverage run -m pytest tests/ -v
+        run: uv run pytest --cov=app --cov-report=term-missing
         env:
           TEST_DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/test"
           SECRET_KEY: "ci-test-secret-key-not-for-production"
@@ -137,15 +211,18 @@ jobs:
           POSTGRES_USER: "postgres"
           UPLOAD_DIR: "/tmp/ci-uploads"
 
-  admin-build:
-    name: Admin — Lint & Build
+  admin-checks:
+    # 原 Lint & Build 与 Unit Tests 两个 job 合一 (省一次 npm ci + node setup)
+    name: Admin — Lint, Test & Build
+    needs: changes
+    if: github.event_name != 'schedule' && (needs.changes.outputs.admin == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: admin
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -163,31 +240,19 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Unit tests
+        run: npm run test
+
       - name: Build
         run: npm run build
 
-  admin-test:
-    name: Admin Unit Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: admin
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: admin/package-lock.json
-      - run: npm ci
-      - run: npm test
-
   miniprogram-lint:
     name: Miniprogram Lint
+    needs: changes
+    if: github.event_name != 'schedule' && (needs.changes.outputs.miniprogram == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -197,9 +262,11 @@ jobs:
   miniprogram-journey:
     # 小程序唯一的全链路回归（登录→资料→会员→兑换→匹配），纯 Node 可跑零依赖
     name: Miniprogram Journey Test
+    needs: changes
+    if: github.event_name != 'schedule' && (needs.changes.outputs.miniprogram == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -208,10 +275,12 @@ jobs:
 
   compose-smoke:
     name: Compose Smoke
+    needs: changes
+    if: github.event_name != 'schedule' && (needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cp .env.example .env
       - name: 校验 compose 配置
         run: docker compose config -q
@@ -237,7 +306,7 @@ jobs:
       run:
         working-directory: admin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 准备 .env（含 e2e 需要的 SMTP 指向 mailcatcher）
         working-directory: .

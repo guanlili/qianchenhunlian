@@ -18,8 +18,8 @@ import { toast } from "sonner"
 
 import {
   type AdminMemberFull,
-  type MemberQuotaStatus,
   AdminService,
+  type MemberQuotaStatus,
 } from "@/client"
 import { AssignStoreDialog } from "@/components/Members/AssignStoreDialog"
 import { ContactCard } from "@/components/Members/ContactCard"
