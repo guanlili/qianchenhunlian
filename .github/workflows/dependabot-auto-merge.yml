@@ -4,12 +4,15 @@ name: Dependabot Auto-merge
 # 级更新, CI 全绿后无需人工过目 —— 这里自动以 merge commit 方式合并。
 # 大版本升级 (typescript 7 / react-table 9 这类) 不在分组里, 永远留给人工决策。
 #
-# CI 已按区域拆成多个 workflow (Backend/Admin/Miniprogram/Compose), 本工作流
-# 会在任一 CI workflow 完成时触发; 合并前通过 API 校验该提交的「全部」
-# check runs 都已成功 (跳过视为通过), 避免第一个完成时另一个还在跑。
+# CI 已按区域拆成多个 workflow (Backend/Admin/Miniprogram/Compose)。本工作流
+# 只监听 CI Admin 一个入口 (npm 分组 PR 只触发它; actions 分组 PR 改 workflow
+# 文件时它也会跑), 合并正确性不依赖触发源 —— 步骤里会用 API 校验该提交的
+# 「全部」check runs 都已成功。这样避免每个 CI workflow 完成都生成一条
+# (多数为 skipped 的) run 记录刷屏 Actions 页面 (workflow_run 即使 job
+# 跳过也会创建 run)。
 on:
   workflow_run:
-    workflows: [CI Backend, CI Admin, CI Miniprogram, CI Compose]
+    workflows: [CI Admin]
     types: [completed]
 
 permissions:
