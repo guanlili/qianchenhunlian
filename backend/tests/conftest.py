@@ -28,9 +28,42 @@ from tests.utils.utils import get_superuser_token_headers
 #   而不是被 mock. 要求指向一个可丢弃的空库.
 # - 不调用 init_db: init_db 含 PG 特有语法 (如 DELETE...USING), 且会灌 demo
 #   种子; 测试是全新库, create_all 建表即可.
+# - PG + xdist 并行时, 每个 worker 建独立数据库 (<库名>_xdist_gwN):
+#   测试隔离依赖「每测试 savepoint 回滚」, 共享一个库会互相踩.
 _TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "")
 
+
+def _create_xdist_worker_db(base_url: str, worker: str):
+    """为 xdist worker 创建独享数据库, 返回新 URL 对象 (幂等: 先 DROP 再 CREATE)。
+
+    注意返回 URL 对象而非字符串: SQLAlchemy 的 str(url) 会把密码打码成 ***,
+    转成字符串再建引擎会认证失败 (踩过)。
+    """
+    from sqlalchemy import text
+    from sqlalchemy.engine import make_url
+
+    url = make_url(base_url)
+    dbname = f"{url.database}_xdist_{worker}"
+    admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT")
+    try:
+        with admin.connect() as conn:
+            conn.execute(
+                text(
+                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    f"WHERE datname = '{dbname}' AND pid <> pg_backend_pid()"
+                )
+            )
+            conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}"'))
+            conn.execute(text(f'CREATE DATABASE "{dbname}"'))
+    finally:
+        admin.dispose()
+    return url.set(database=dbname)
+
+
 if _TEST_DB_URL.startswith("postgresql"):
+    _worker = os.getenv("PYTEST_XDIST_WORKER", "")
+    if _worker:
+        _TEST_DB_URL = _create_xdist_worker_db(_TEST_DB_URL, _worker)
     engine = create_engine(_TEST_DB_URL)
 else:
     # StaticPool 让所有 Session 共享同一个内存连接 (否则每个连接是各自独立的空库).
