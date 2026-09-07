@@ -17,7 +17,8 @@
       "!**/src/components/ui/**/*",
       "!**/playwright-report",
       "!**/playwright.config.ts",
-      "!**/public/assets/**/*"
+      "!**/public/assets/**/*",
+      "!**/openapi.json"
     ]
   },
   "linter": {
