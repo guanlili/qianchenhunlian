@@ -2,11 +2,6 @@ name: CI Admin
 
 # 区域化 workflow: admin 前端变化时跑 lint/tsc/单测/build; 每周一跑 e2e。
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'admin/**'
-      - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
