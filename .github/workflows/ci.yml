@@ -63,7 +63,7 @@ jobs:
       infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           # infra = 构建/部署骨架变化, 视为「全区域受影响」, 所有 job 都跑
