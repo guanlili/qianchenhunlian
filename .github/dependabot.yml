@@ -45,3 +45,11 @@ updates:
     groups:
       npm-minor:
         update-types: ["minor", "patch"]
+    ignore:
+      # 以下大版本因 peer 依赖冲突暂时升不了 (npm ci ERESOLVE), 上游支持后删除对应行:
+      # - typescript 7: @hey-api/openapi-ts 要求 typescript ^5
+      # - vite 8: @tailwindcss/vite 尚未支持 vite 8
+      - dependency-name: typescript
+        versions: ["7.x", "8.x"]
+      - dependency-name: vite
+        versions: ["8.x", "9.x"]
