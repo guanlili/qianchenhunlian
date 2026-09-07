@@ -33,7 +33,6 @@ admin/.vite/
 admin/blob-report/
 admin/test-results/
 admin/playwright-report/
-admin/openapi.json
 
 # --- 微信小程序 ---
 miniprogram/miniprogram_npm/
