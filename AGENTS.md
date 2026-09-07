@@ -19,6 +19,7 @@
 1. **所有代码注释、文案、错误信息用中文**（面向中国用户 + 中国团队）
 2. **禁止密钥入库**：`.env.production`、任何 `secrets`、`API_KEY` 值都不允许出现在 commit 里
 3. **业务改动附测试**：backend PR 必须带 pytest；admin PR 至少验证 tsc + biome + build 通过
+4. **分支与发布流程**：所有变更走 `feat/*`、`fix/*`、`docs/*` 等分支 → 向 `main` 提 PR → CI 必需检查全绿 → 合并（合并即自动部署生产）。`main` 已启用分支保护，**禁止直接 push**（对管理员同样生效）；紧急修复也走 PR（小步、只含修复），生产问题优先用 `deploy.sh` 的 `:prev` 镜像回滚而非改代码
 
 ### Backend 特定
 
