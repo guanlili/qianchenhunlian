@@ -11,6 +11,23 @@ on:
   workflow_dispatch:
 
 jobs:
+  guard-main:
+    # 免费版私有仓库开不了分支保护，用「CI 标红 + deploy 仅由 PR 合并触发」做门禁:
+    # 直接 push main 时本 job 失败 → main 的 CI 永远红着, 且 deploy.yml 不会部署该提交。
+    # 功能分支 push 正常放行; PR 事件本 job 跳过。
+    name: Main 直推拦截
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拒绝直接 push 到 main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "::error::禁止直接 push 到 main（含管理员）。请走 分支 → PR → CI 绿 → 合并 的发布流程; 本次推送不会被部署。"
+          exit 1
+      - name: 非目标分支, 放行
+        if: github.ref != 'refs/heads/main'
+        run: echo "功能分支 push, 放行"
+
   backend-lint:
     name: Backend — Lint & Type Check
     runs-on: ubuntu-latest
