@@ -25,7 +25,12 @@ def test_openapi_spec_in_sync() -> None:
         spec_file.exists()
     ), "admin/openapi.json 不存在——它是前后端契约的存档, 应随仓库提交"
     committed = json.loads(spec_file.read_text())
-    assert committed == app.openapi(), (
+    actual = app.openapi()
+    # info.title 来自 PROJECT_NAME 环境变量 (CI 里是 qianchenhunlian-ci,
+    # 本地/导出时是产品名), 属部署环境差异而非接口契约 —— 从对比中剔除
+    committed.get("info", {}).pop("title", None)
+    actual.get("info", {}).pop("title", None)
+    assert committed == actual, (
         "后端 OpenAPI 与 admin/openapi.json 漂移: "
         "后端接口已变化, 请重新导出 openapi.json 并执行 npm run generate-client "
         "(步骤见本文件 docstring)"
