@@ -46,10 +46,18 @@ updates:
       npm-minor:
         update-types: ["minor", "patch"]
     ignore:
-      # 以下大版本因 peer 依赖冲突暂时升不了 (npm ci ERESOLVE), 上游支持后删除对应行:
-      # - typescript 7: @hey-api/openapi-ts 要求 typescript ^5
-      # - vite 8: @tailwindcss/vite 尚未支持 vite 8
+      # 大版本升级按下述原因分两类搁置, 条件成熟后删除对应行恢复升级:
+      # 1) peer 依赖冲突 (npm ci ERESOLVE):
+      #    - typescript >=6: @hey-api/openapi-ts 要求 typescript ^5
+      #    - vite >=8: @tailwindcss/vite 尚未支持 vite 8
+      # 2) 破坏性 API 变更, 需专门排期迁移 (升完记得删行):
+      #    - @tanstack/react-table >=9: ColumnDef 泛型签名变更, 表格列定义全量改写
+      #    - lucide-react >=1: 图标 API 变更, 需全量过一遍图标用法
       - dependency-name: typescript
-        versions: ["7.x", "8.x"]
+        versions: ["6.x", "7.x", "8.x"]
       - dependency-name: vite
         versions: ["8.x", "9.x"]
+      - dependency-name: "@tanstack/react-table"
+        versions: [">=9"]
+      - dependency-name: lucide-react
+        versions: [">=1"]
