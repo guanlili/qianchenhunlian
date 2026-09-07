@@ -13,16 +13,24 @@ on:
 jobs:
   guard-main:
     # 免费版私有仓库开不了分支保护，用「CI 标红 + deploy 仅由 PR 合并触发」做门禁:
-    # 直接 push main 时本 job 失败 → main 的 CI 永远红着, 且 deploy.yml 不会部署该提交。
-    # 功能分支 push 正常放行; PR 事件本 job 跳过。
+    # main 只接受 PR 的 merge commit 合并 (提交信息以 "Merge pull request #" 开头),
+    # 其余一律视为直推 → 本 job 失败 → main 的 CI 标红, 且 deploy.yml 不会部署该提交。
+    # 因此 PR 必须用 "Create a merge commit" 方式合并, 禁 rebase/squash (它们产生的
+    # 提交无合并标记, 会被误拦); 功能分支 push 放行; PR 事件本 job 跳过。
     name: Main 直推拦截
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: 拒绝直接 push 到 main
+      - name: 校验 main 提交来自 PR 合并
         if: github.ref == 'refs/heads/main'
+        env:
+          HEAD_MSG: ${{ github.event.head_commit.message }}
         run: |
-          echo "::error::禁止直接 push 到 main（含管理员）。请走 分支 → PR → CI 绿 → 合并 的发布流程; 本次推送不会被部署。"
+          if [[ "$HEAD_MSG" == "Merge pull request #"* ]]; then
+            echo "来自 PR 合并, 放行"
+            exit 0
+          fi
+          echo "::error::main 只接受 PR 合并 (merge commit)。请走 分支 → PR → CI 绿 → merge commit 合并 的发布流程; 本次直推不会被部署。"
           exit 1
       - name: 非目标分支, 放行
         if: github.ref != 'refs/heads/main'
