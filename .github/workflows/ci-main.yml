@@ -1,0 +1,30 @@
+name: CI Main
+
+# main 分支门禁: 只接受 PR 的 merge commit 合并, 直推标红 (且不会被部署)。
+# 独立成 workflow 是为了不受路径过滤影响 —— main 的每次 push 都必须跑。
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-main-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  guard-main:
+    name: Main 直推拦截
+    runs-on: ubuntu-latest
+    steps:
+      - name: 校验 main 提交来自 PR 合并
+        env:
+          HEAD_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          if [[ "$HEAD_MSG" == "Merge pull request #"* ]]; then
+            echo "来自 PR 合并, 放行"
+            exit 0
+          fi
+          echo "::error::main 只接受 PR 合并 (merge commit)。请走 分支 → PR → CI 绿 → merge commit 合并 的发布流程; 本次直推不会被部署。"
+          exit 1
