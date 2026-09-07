@@ -2,8 +2,14 @@ name: Deploy
 
 # 合并 PR 到 main → 自动部署到生产服务器。
 # 服务器在大陆、连不上 GitHub，所以用 rsync 把代码推过去、服务器本地构建（不用 git pull）。
+#
+# 触发方式即发布门禁（免费版私有仓库开不了分支保护）:
+# - 只有「PR 合并」和手动触发会部署; 直接 push main 不会触发本工作流,
+#   且该直推会让 CI 的「Main 直推拦截」job 标红。
+# - 升级 GitHub Pro 后建议再开真正的分支保护（命令见 docs/07-协作规范.md）。
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches: [main]
   workflow_dispatch:
 
@@ -15,6 +21,8 @@ concurrency:
 jobs:
   deploy:
     name: Deploy to production
+    # PR 被关闭但未合并（如手动关闭/被拒）不部署
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
