@@ -4,12 +4,8 @@ name: CI Backend
 # 后端代码/构建配置变化时跑 lint、SQLite 测试、PG 测试。
 # 注意 concurrency group 带本 workflow 名, 与其它区域 workflow 互不干扰。
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/**'
-      - 'deploy.sh'
+  # 不设 push 触发: PR 事件已跑同样检查, main 合并后重复跑纯烧分钟
+  # (风险由合并前 update branch 兜底; 详见 docs/07)
   pull_request:
     branches: [main]
     paths:
