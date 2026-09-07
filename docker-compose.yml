@@ -63,9 +63,9 @@ services:
       - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
       - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
       - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_TLS=${SMTP_TLS}
-      - SMTP_SSL=${SMTP_SSL}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_TLS=${SMTP_TLS:-True}
+      - SMTP_SSL=${SMTP_SSL:-False}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
@@ -75,8 +75,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
-      - LOGIN_IP_MAX=${LOGIN_IP_MAX}
-      - SENSITIVE_MAX=${SENSITIVE_MAX}
+      - LOGIN_IP_MAX=${LOGIN_IP_MAX:-10}
+      - SENSITIVE_MAX=${SENSITIVE_MAX:-10}
 
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
@@ -104,9 +104,9 @@ services:
       - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
       - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
       - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_TLS=${SMTP_TLS}
-      - SMTP_SSL=${SMTP_SSL}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_TLS=${SMTP_TLS:-True}
+      - SMTP_SSL=${SMTP_SSL:-False}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
@@ -116,8 +116,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
-      - LOGIN_IP_MAX=${LOGIN_IP_MAX}
-      - SENSITIVE_MAX=${SENSITIVE_MAX}
+      - LOGIN_IP_MAX=${LOGIN_IP_MAX:-10}
+      - SENSITIVE_MAX=${SENSITIVE_MAX:-10}
 
     healthcheck:
       # slim 镜像没有 curl, 用 venv 里的 python 探测 (PATH 首位是 /app/.venv/bin)
