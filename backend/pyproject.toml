@@ -34,6 +34,8 @@ dev-dependencies = [
     "prek>=0.2.24,<1.0.0",
     "types-passlib<2.0.0.0,>=1.7.7.20240106",
     "coverage<8.0.0,>=7.4.3",
+    "pytest-xdist>=3.8.0",
+    "pytest-cov>=6.3.0",
 ]
 
 [build-system]
@@ -79,7 +81,8 @@ keep-runtime-typing = true
 
 [tool.coverage.run]
 source = ["app"]
-dynamic_context = "test_function"
+# 注意: 不配置 dynamic_context (与 pytest-cov + xdist 并行冲突, 见 pytest-cov#604);
+# 需要按测试上下文归属时在命令行传 --cov-context=test
 
 [tool.coverage.report]
 show_missing = true
