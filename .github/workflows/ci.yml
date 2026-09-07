@@ -22,6 +22,11 @@ concurrency:
   # main 的 run 不取消 (合并后验证); PR/分支的新推送取消旧 run
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads/main') }}
 
+# 最小权限: 变更检测 (dorny/paths-filter) 需要读 PR 文件列表
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   guard-main:
     # 免费版私有仓库开不了分支保护，用「CI 标红 + deploy 仅由 PR 合并触发」做门禁:
