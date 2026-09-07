@@ -200,7 +200,8 @@ jobs:
         run: uv sync --dev
 
       - name: Run tests (PostgreSQL)
-        run: uv run pytest --cov=app --cov-report=term-missing
+        # xdist 并行: conftest 会为每个 worker 建独立数据库, 互不干扰
+        run: uv run pytest -n auto --cov=app --cov-report=term-missing
         env:
           TEST_DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/test"
           SECRET_KEY: "ci-test-secret-key-not-for-production"
