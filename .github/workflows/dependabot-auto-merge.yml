@@ -1,0 +1,48 @@
+name: Dependabot Auto-merge
+
+# dependabot 的「分组」PR (npm-minor / actions-minor) 按其配置只含 minor/patch
+# 级更新, CI 全绿后无需人工过目 —— 这里自动以 merge commit 方式合并。
+# 大版本升级 (typescript 7 / vite 8 这类) 不在分组里, 永远留给人工决策。
+# 上线后首个验证点: 下周一 dependabot 例行 PR 应自动合并 (见 docs/07)。
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: 合并全绿的 dependabot 分组 PR
+    # 仅当: CI 成功 + 是 dependabot 分支 (main 的 CI run head_branch 是 main, 天然被排除)
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: 查找并合并符合条件的 PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          PRS=$(gh pr list --repo "$GH_REPO" --head "$HEAD_BRANCH" --state open \
+            --json number,title,headRefOid)
+          MATCH=$(echo "$PRS" | python3 -c "
+          import json, sys
+          for pr in json.load(sys.stdin):
+              # 只自动合并「分组」PR: 标题带 group 的一定是 minor/patch 批量更新
+              if pr['headRefOid'] == '$HEAD_SHA' and 'group' in pr['title'].lower():
+                  print(pr['number'])
+                  break
+          ")
+          if [ -z "$MATCH" ]; then
+            echo "无符合条件的分组 PR (大版本/非分组 PR 留给人工)"
+            exit 0
+          fi
+          echo "自动合并 PR #$MATCH"
+          gh pr merge "$MATCH" --repo "$GH_REPO" --merge
