@@ -42,6 +42,9 @@ services:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     build:
       context: ./backend
+      args:
+        # PyPI 镜像源, 服务器 .env 可覆盖换源 (默认与 Dockerfile 内一致)
+        - UV_INDEX_URL=${UV_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
     logging:
       driver: json-file
       options:
@@ -129,6 +132,9 @@ services:
 
     build:
       context: ./backend
+      args:
+        # PyPI 镜像源, 服务器 .env 可覆盖换源 (默认与 Dockerfile 内一致)
+        - UV_INDEX_URL=${UV_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
 
   admin:
     image: '${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}'
