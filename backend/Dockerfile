@@ -1,5 +1,5 @@
 # ---- 构建阶段: 安装全部依赖 (含 dev) ----
-FROM python:3.10-slim AS builder
+FROM python:3.12-slim AS builder
 
 # 国内服务器直连 PyPI 极慢 (~30KB/s), 走阿里云镜像; 锁文件哈希校验不受镜像影响。
 # 镜像地址可用构建参数覆盖 (生产侧从服务器 .env 的 UV_INDEX_URL 透传),
@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project
 
 # ---- 运行阶段: 只装生产依赖, 不含 tests / dev 包 ----
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 ARG UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 ENV PYTHONUNBUFFERED=1 \
