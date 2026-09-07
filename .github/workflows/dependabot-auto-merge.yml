@@ -2,11 +2,14 @@ name: Dependabot Auto-merge
 
 # dependabot 的「分组」PR (npm-minor / actions-minor) 按其配置只含 minor/patch
 # 级更新, CI 全绿后无需人工过目 —— 这里自动以 merge commit 方式合并。
-# 大版本升级 (typescript 7 / vite 8 这类) 不在分组里, 永远留给人工决策。
-# 上线后首个验证点: 下周一 dependabot 例行 PR 应自动合并 (见 docs/07)。
+# 大版本升级 (typescript 7 / react-table 9 这类) 不在分组里, 永远留给人工决策。
+#
+# CI 已按区域拆成多个 workflow (Backend/Admin/Miniprogram/Compose), 本工作流
+# 会在任一 CI workflow 完成时触发; 合并前通过 API 校验该提交的「全部」
+# check runs 都已成功 (跳过视为通过), 避免第一个完成时另一个还在跑。
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [CI Backend, CI Admin, CI Miniprogram, CI Compose]
     types: [completed]
 
 permissions:
@@ -16,7 +19,7 @@ permissions:
 jobs:
   auto-merge:
     name: 合并全绿的 dependabot 分组 PR
-    # 仅当: CI 成功 + 是 dependabot 分支 (main 的 CI run head_branch 是 main, 天然被排除)
+    # 仅当: 触发的 CI 成功 + 是 dependabot 分支
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       startsWith(github.event.workflow_run.head_branch, 'dependabot/')
@@ -44,5 +47,12 @@ jobs:
             echo "无符合条件的分组 PR (大版本/非分组 PR 留给人工)"
             exit 0
           fi
-          echo "自动合并 PR #$MATCH"
+          # 校验该提交的全部 check runs 均已完成且非失败 (skipped/成功都算过)
+          PENDING=$(gh api "repos/$GH_REPO/commits/$HEAD_SHA/check-runs" \
+            --jq '[.check_runs[] | select(.status != "completed" or .conclusion == "failure")] | length')
+          if [ "$PENDING" != "0" ]; then
+            echo "尚有未完成/失败的检查 ($PENDING 项), 本次不合并"
+            exit 0
+          fi
+          echo "全部检查通过, 自动合并 PR #$MATCH"
           gh pr merge "$MATCH" --repo "$GH_REPO" --merge
