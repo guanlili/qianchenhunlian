@@ -181,9 +181,9 @@ docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
 | `DEPLOY_PATH` | 服务器上仓库路径（`/root/qianchenhunlian`） |
 | `DEPLOY_SSH_KEY` | SSH 私钥（公钥放服务器 `authorized_keys`） |
 
-### 日常发布：push 到 main
+### 日常发布：合并 PR 到 main
 
-合并 PR / push 到 `main` 自动触发 `.github/workflows/deploy.yml`（部署串行、不并发）：
+**部署仅由 PR 合并触发**（免费版私有仓库的发布门禁方案）：所有变更走 `feat/*`、`fix/*` 等分支提 PR，CI 全绿后合并，**合并到 `main` 自动触发** `.github/workflows/deploy.yml`（部署串行、不并发）；直接 push `main` 不会部署、且会被 CI 的「Main 直推拦截」job 标红：
 
 1. rsync 全量同步代码到 `$DEPLOY_PATH`（排除 `.git/`、`.env`、`data/`、`admin/node_modules/` 等；`--delete` 清理仓库中已删文件）
 2. SSH 到服务器执行 `./deploy.sh build`：
