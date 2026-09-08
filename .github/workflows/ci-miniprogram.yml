@@ -2,12 +2,8 @@ name: CI Miniprogram
 
 # 区域化 workflow: 小程序代码/顶层测试变化时跑语法检查与用户旅程模拟。
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'miniprogram/**'
-      - 'tests/**'
-      - '.github/workflows/**'
+  # 不设 push 触发: PR 事件已跑同样检查, main 合并后重复跑纯烧分钟
+  # (风险由合并前 update branch 兜底; 详见 docs/07)
   pull_request:
     branches: [main]
     paths:
