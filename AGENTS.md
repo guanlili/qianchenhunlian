@@ -1,7 +1,8 @@
 # AGENTS.md — 乾缘婚恋项目工作手册
 
-> 此文件为 AI 代码评审 / 编码助手的**权威**上下文。所有约定视为 hard rule；违反 = review 至少 important。
-> 本文件被 `.github/pr-review/review.py` 加载注入到每个 reviewer 的 system prompt。
+> 此文件为 AI 编码助手的**权威**上下文。所有约定视为 hard rule。
+> （历史上的 PR 评审机器人管线 `.github/pr-review/` 已于 2026-09 退役省分钟数,
+>  本文件继续作为编码约定与 review checklist 的唯一来源。）
 
 ## 项目概览
 
