@@ -11,6 +11,14 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
+    # 纯文档/服务器运维脚本类变更不影响线上, 不触发部署 (省 runner 分钟 + 免重启)
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+      - '.env.example'
+      - '.env.e2e.example'
+      - 'scripts-server/**'
   workflow_dispatch:
 
 # 部署串行、不可中断（避免两个部署并发）

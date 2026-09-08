@@ -4,16 +4,8 @@ name: CI Compose
 # (Dockerfile、compose 文件、部署脚本、依赖锁文件)。普通业务代码 PR
 # 不再构建 docker 镜像 —— 单测已覆盖, 冒烟只为验证容器化路径本身。
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/Dockerfile'
-      - 'backend/scripts/**'
-      - 'backend/pyproject.toml'
-      - 'backend/uv.lock'
-      - 'docker-compose*.yml'
-      - 'deploy.sh'
-      - '.github/workflows/**'
+  # 不设 push 触发: PR 事件已跑同样检查, main 合并后重复跑纯烧分钟
+  # (风险由合并前 update branch 兜底; 详见 docs/07)
   pull_request:
     branches: [main]
     paths:
