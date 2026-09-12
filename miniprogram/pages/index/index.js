@@ -5,7 +5,6 @@ const {
   houseOptions,
   marriageOptions,
   jobOptions,
-  regions,
   traits,
   advantages,
   requirements,
@@ -29,6 +28,15 @@ const GUEST_YEARS = wizard.buildYears();
 const _resolveList = (arr) =>
   Array.isArray(arr) ? arr.map(resolveFileUrl).filter(Boolean) : [];
 
+/** 微信 region picker 的 value (['北京市','北京市','朝阳区']) → 去重后拼展示串 ('北京市 朝阳区') */
+function _joinRegionLabel(value) {
+  const dedup = [];
+  (value || []).forEach((s) => {
+    if (s && !dedup.includes(s)) dedup.push(s);
+  });
+  return dedup.join(' ');
+}
+
 const _TONES = ['rose', 'sage', 'ocean', 'indigo', 'plum', 'gold'];
 
 function _hashToIndex(str, mod) {
@@ -51,6 +59,7 @@ const ON_SHOW_REFRESH_INTERVAL_MS = 3000;
 let _lastShowRefreshAt = 0;
 
 // 注册向导 picker 字段 → data 里的选项数组 key 映射 (表驱动, 替代逐字段 if/else)
+// 户籍/居住类字段 (origin/cOrigin/cLocation) 走 onGuestRegionPick 原生省市区, 不在此表
 const GUEST_PICKER_SOURCES = {
   edu: 'eduOptions',
   marriage: 'marriageOptions',
@@ -62,10 +71,10 @@ const GUEST_PICKER_SOURCES = {
   employer_type: 'employerOptions',
   has_social_insurance: 'socialOptions',
   health_status: 'healthOptions',
-  c_income: 'incomeOptions',
-  c_house: 'houseOptions',
-  c_edu: 'eduOptions',
-  c_marriage: 'marriageOptions',
+  cIncome: 'incomeOptions',
+  cHouse: 'houseOptions',
+  cEdu: 'eduOptions',
+  cMarriage: 'marriageOptions',
 };
 
 /** 把 server 的 MatchBrief / Profile 适配成 WXML 期望的 mock 形态 */
@@ -358,8 +367,8 @@ const buildMyProfileRows = (form) => [
   { label: '是否有车', value: form.has_car || '未填写' },
 ];
 
+// 户籍地要求不在此表: 走独立的原生省市区多选 tag (originsSelected), 与居住地要求同款
 const buildCriteriaFields = (values) => [
-  { key: 'origin', label: '户籍地要求', value: values.origin, options: ['不限', '北京-北京-东城区', '山东-济南-历下区', '河北-石家庄-不限', '江苏-徐州-云龙区'] },
   { key: 'year', label: '年份要求', value: values.year, options: ['不限', '1982年-1987年', '1987年-1992年', '1990年-1996年', '1995年-2000年'] },
   { key: 'height', label: '身高要求', value: values.height, options: ['不限', '140cm-156cm', '158cm-170cm', '170cm-183cm', '172cm-188cm'] },
   { key: 'edu', label: '学历要求', value: values.edu, options: ['不限', '小学/初中 至 大专', '大专及以上', '本科及以上', '硕士及以上'] },
@@ -542,7 +551,8 @@ Page({
     formReturnScreen: 'my-profile',
     criteriaValues: defaultCriteriaValues,
     criteriaFields: buildCriteriaFields(defaultCriteriaValues),
-    regionsSelected: [],
+    regionsSelected: [],    // 择偶要求·居住地 (多选, 原生省市区 picker)
+    originsSelected: [],    // 择偶要求·户籍地 (多选, 原生省市区 picker)
     criteriaReturnScreen: 'my-profile',
     filterSteps: createFilterSteps(),
     filterStep: 1,
@@ -650,7 +660,6 @@ Page({
     houseOptions: houseOptions.filter((it) => it !== '不限'),
     carOptions: ['有车', '无车'],
     jobOptionsWithOther: [...jobOptions, '其他'],
-    regions,
     jobOptions,
     memberQuota: null,  // 会员权益可视化: {limit, used, remaining, balance}
     profileGaps: [],    // 资料完善差距: 未填字段标签 (编辑页提示)
@@ -1021,6 +1030,9 @@ Page({
           updates.criteriaValues = cv;
           updates.criteriaFields = buildCriteriaFields(cv);
         }
+        // 居住地/户籍地要求 tag 回显 (后端 list[str], 截到 UI 上限)
+        updates.regionsSelected = (data.criteria.locations || []).slice(0, 8);
+        updates.originsSelected = (data.criteria.origins || []).slice(0, 8);
       }
         updates.myParentsRows = adaptParentsRows(data.parents_info);
         updates.myHomeStore = data.home_store || null;
@@ -2111,14 +2123,9 @@ Page({
   /** 资料编辑页内的 region picker change */
   onProfileRegionChange(e) {
     const key = e.currentTarget.dataset.key;
-    const arr = (e.detail.value || []).filter(Boolean);
-    if (!arr.length) return;
-    // 清掉重复 (如 直辖市 '北京市/北京市'), 拼成 '省 市 区' 字符串
-    const dedup = [];
-    arr.forEach((s) => {
-      if (!dedup.includes(s)) dedup.push(s);
-    });
-    this._updateProfileField(key, dedup.join(' '));
+    const label = _joinRegionLabel(e.detail.value);
+    if (!label) return;
+    this._updateProfileField(key, label);
   },
 
   /** 点照片格子: 空 → 选图上传; 已填 → 不动 (删除走右上角 ×) */
@@ -2234,7 +2241,7 @@ Page({
         marriage: cv.marriage && cv.marriage !== '不限' ? cv.marriage : null,
         house: cv.house && cv.house !== '不限' ? cv.house : null,
         note: cv.note || null,
-        origins: this.data.regionsSelected || [],
+        origins: this.data.originsSelected || [],
         locations: this.data.regionsSelected || [],
       };
       await profileSvc.saveCriteria(payload);
@@ -2263,16 +2270,28 @@ Page({
     });
   },
 
-  openRegionOption() {
-    this.setData({
-      optionSheet: {
-        mode: 'region',
-        key: 'location',
-        title: '居住地要求',
-        value: this.data.regionsSelected[0],
-        options: ['不限', '北京-北京-东城区', '北京-北京-朝阳区', '山东-济南-历下区', '山东-德州-德城区', '江苏-徐州-云龙区'],
-      },
-    });
+  /** 择偶要求·居住地/户籍地追加一项 (原生省市区 picker; data-scope: location|origin)。
+   *  多选上限 8 个 (后端 list[str] 无限制, UI 防滥用), 重复项直接忽略。 */
+  onCriteriaRegionAdd(e) {
+    const scope = e.currentTarget.dataset.scope === 'origin' ? 'originsSelected' : 'regionsSelected';
+    const label = _joinRegionLabel(e.detail.value);
+    if (!label) return;
+    const cur = this.data[scope] || [];
+    if (cur.includes(label)) {
+      return wx.showToast({ title: '已添加过', icon: 'none' });
+    }
+    if (cur.length >= 8) {
+      return wx.showToast({ title: '最多添加 8 个地区', icon: 'none' });
+    }
+    this.setData({ [scope]: [...cur, label] });
+  },
+
+  removeCriteriaRegion(e) {
+    const scope = e.currentTarget.dataset.scope === 'origin' ? 'originsSelected' : 'regionsSelected';
+    const idx = Number(e.currentTarget.dataset.index);
+    const cur = (this.data[scope] || []).slice();
+    cur.splice(idx, 1);
+    this.setData({ [scope]: cur });
   },
 
   onCriteriaNoteInput(e) {
@@ -2404,20 +2423,6 @@ Page({
       this.setData({
         criteriaValues,
         criteriaFields: buildCriteriaFields(criteriaValues),
-        optionSheet: null,
-      });
-      return;
-    }
-
-    if (sheet.mode === 'region') {
-      const criteriaValues = {
-        ...this.data.criteriaValues,
-        location: value,
-      };
-      this.setData({
-        criteriaValues,
-        criteriaFields: buildCriteriaFields(criteriaValues),
-        regionsSelected: [value],
         optionSheet: null,
       });
     }
@@ -3045,8 +3050,7 @@ Page({
   /** 微信原生省市区选择 (户籍地/居住地要求等, 与「我的资料」编辑一致) */
   onGuestRegionPick(e) {
     const field = e.currentTarget.dataset.field;
-    const arr = e.detail.value || [];
-    const label = arr.filter(Boolean).join('');
+    const label = _joinRegionLabel(e.detail.value);
     if (!label) return;
     this.setData({ guestForm: { ...this.data.guestForm, [field]: label } });
   },
@@ -3054,18 +3058,14 @@ Page({
   /** 注册向导: 通用 picker (data-field 指定字段; 选项来源见 GUEST_PICKER_SOURCES 表驱动映射) */
   onGuestFormPick(e) {
     const field = e.currentTarget.dataset.field;
-    const { guestForm, guestYears, guestCities } = this.data;
+    const { guestForm, guestYears } = this.data;
     const idx = Number(e.detail.value) || 0;
     let value;
     if (field === 'job') {
       // 职业表尾的「其他」走自定义输入弹窗
       value = this.data.jobOptionsWithOther[idx] === '其他' ? '__custom__' : this.data.jobOptionsWithOther[idx];
-    } else if (field === 'c_location' || field === 'location') {
-      value = guestCities[idx];
     } else if (field === 'cYearMin' || field === 'cYearMax' || field === 'year') {
       value = guestYears[idx];
-    } else if (field === 'c_origin' || field === 'origin' || field === 'hometown') {
-      value = regions[idx];
     } else {
       const sourceKey = GUEST_PICKER_SOURCES[field];
       value = sourceKey ? (this.data[sourceKey] || [])[idx] : '';

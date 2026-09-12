@@ -157,7 +157,7 @@
         </view>
         <view class="guest-row">
           <view class="guest-label">户籍地</view>
-          <picker mode="selector" range="{{regions}}" bindchange="onGuestFormPick" data-field="origin">
+          <picker mode="region" bindchange="onGuestRegionPick" data-field="origin">
             <view class="guest-picker {{!guestForm.origin ? 'placeholder' : ''}}">{{guestForm.origin || '请选择户籍地'}}</view>
           </picker>
         </view>
@@ -215,37 +215,37 @@
         </view>
         <view class="guest-row">
           <view class="guest-label">对方月收入<text class="req">*</text></view>
-          <picker mode="selector" range="{{incomeOptions}}" bindchange="onGuestFormPick" data-field="c_income">
+          <picker mode="selector" range="{{incomeOptions}}" bindchange="onGuestFormPick" data-field="cIncome">
             <view class="guest-picker {{!guestForm.cIncome ? 'placeholder' : ''}}">{{guestForm.cIncome || '请选择月收入要求'}}</view>
           </picker>
         </view>
         <view class="guest-row">
           <view class="guest-label">居住的要求<text class="req">*</text></view>
-          <picker mode="region" bindchange="onGuestRegionPick" data-field="c_location">
+          <picker mode="region" bindchange="onGuestRegionPick" data-field="cLocation">
             <view class="guest-picker {{!guestForm.cLocation ? 'placeholder' : ''}}">{{guestForm.cLocation || '请选择居住地要求'}}</view>
           </picker>
         </view>
         <view class="guest-row">
           <view class="guest-label">对方是否有房</view>
-          <picker mode="selector" range="{{houseOptions}}" bindchange="onGuestFormPick" data-field="c_house">
+          <picker mode="selector" range="{{houseOptions}}" bindchange="onGuestFormPick" data-field="cHouse">
             <view class="guest-picker {{!guestForm.cHouse ? 'placeholder' : ''}}">{{guestForm.cHouse || '不限, 可选填'}}</view>
           </picker>
         </view>
         <view class="guest-row">
           <view class="guest-label">对方学历要求</view>
-          <picker mode="selector" range="{{eduOptions}}" bindchange="onGuestFormPick" data-field="c_edu">
+          <picker mode="selector" range="{{eduOptions}}" bindchange="onGuestFormPick" data-field="cEdu">
             <view class="guest-picker {{!guestForm.cEdu ? 'placeholder' : ''}}">{{guestForm.cEdu || '不限, 可选填'}}</view>
           </picker>
         </view>
         <view class="guest-row">
           <view class="guest-label">对方婚姻状况</view>
-          <picker mode="selector" range="{{marriageOptions}}" bindchange="onGuestFormPick" data-field="c_marriage">
+          <picker mode="selector" range="{{marriageOptions}}" bindchange="onGuestFormPick" data-field="cMarriage">
             <view class="guest-picker {{!guestForm.cMarriage ? 'placeholder' : ''}}">{{guestForm.cMarriage || '不限, 可选填'}}</view>
           </picker>
         </view>
         <view class="guest-row">
           <view class="guest-label">对方户籍地要求</view>
-          <picker mode="selector" range="{{regions}}" bindchange="onGuestFormPick" data-field="c_origin">
+          <picker mode="region" bindchange="onGuestRegionPick" data-field="cOrigin">
             <view class="guest-picker {{!guestForm.cOrigin ? 'placeholder' : ''}}">{{guestForm.cOrigin || '不限, 可选填'}}</view>
           </picker>
         </view>
@@ -1163,8 +1163,20 @@
         <view class="form-card padded">
           <view class="form-title">居住地要求</view>
           <view class="tag-row">
-            <view wx:for="{{regionsSelected}}" wx:key="*this" class="region-tag">{{item}}</view>
-            <view class="add-tag" bindtap="openRegionOption">⊕ 添加</view>
+            <view wx:for="{{regionsSelected}}" wx:key="*this" class="region-tag">{{item}}<text class="chip-remove" catchtap="removeCriteriaRegion" data-scope="location" data-index="{{index}}">×</text></view>
+            <picker mode="region" bindchange="onCriteriaRegionAdd" data-scope="location">
+              <view class="add-tag">⊕ 添加</view>
+            </picker>
+          </view>
+        </view>
+
+        <view class="form-card padded">
+          <view class="form-title">户籍地要求</view>
+          <view class="tag-row">
+            <view wx:for="{{originsSelected}}" wx:key="*this" class="region-tag">{{item}}<text class="chip-remove" catchtap="removeCriteriaRegion" data-scope="origin" data-index="{{index}}">×</text></view>
+            <picker mode="region" bindchange="onCriteriaRegionAdd" data-scope="origin">
+              <view class="add-tag">⊕ 添加</view>
+            </picker>
           </view>
         </view>
 
