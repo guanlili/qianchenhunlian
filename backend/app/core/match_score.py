@@ -70,8 +70,8 @@ def sort_key(
     total: int,
     cand_profile: Any,
     me_profile: Any,
-) -> tuple[int, int, Any]:
-    """排序键: 匹配分 desc → 年龄接近 asc → 活跃 desc.
+) -> tuple[int, int, int, Any]:
+    """排序键: 年龄差≤3岁优先 → 匹配分 desc → 年龄接近 asc → 活跃 desc.
 
     返回值设计为可直接用于 sorted(key=...).
     """
@@ -80,7 +80,10 @@ def sort_key(
         if me_profile.year and cand_profile.year
         else 999  # 无出生年份的排尾部
     )
+    # 年龄差≤3岁的标记为0（排前面），否则为1（排后面）
+    age_within_3 = 0 if (age_diff <= 3 and age_diff != 999) else 1
     return (
+        age_within_3,
         -total,
         age_diff,
         -cand_profile.updated_at.timestamp(),
