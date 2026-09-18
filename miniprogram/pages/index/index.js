@@ -18,7 +18,6 @@ const contactSvc = require('../../services/contact');
 const affinitySvc = require('../../services/affinity');
 const membershipSvc = require('../../services/membership');
 const { resolveFileUrl } = require('../../utils/config');
-const { ALL_CITIES } = require('../../constants/cities');
 const { formatDate } = require('../../utils/format');
 const wizard = require('../../utils/wizard');
 
@@ -627,8 +626,7 @@ Page({
     guestGender: '',    // 三问表单
     guestYears: GUEST_YEARS,
     guestYearIndex: -1,
-    guestCities: ALL_CITIES,
-    guestCityIndex: -1,
+    guestCity: '',      // 三问·所在城市 (微信原生省市区 picker, 全国范围; 存「省 市 区」拼串)
     guestStep: 1,       // 注册向导: 1=三问 2=基本条件 3=工作与资产 → 预览
     guestForm: {
       height: '', edu: '', marriage: '', income: '',
@@ -2940,17 +2938,15 @@ Page({
     if (this.data.guestYearIndex < 0) {
       return wx.showToast({ title: '请选择出生年份', icon: 'none' });
     }
-    if (this.data.guestCityIndex < 0) {
+    if (!(this.data.guestCity || '').trim()) {
       return wx.showToast({ title: '请选择所在城市', icon: 'none' });
     }
     const g = this.data.guestGender;
     const ys = this.data.guestYears;
     const yi = this.data.guestYearIndex;
-    const cs = this.data.guestCities;
-    const ci = this.data.guestCityIndex;
     this.setData({ submitting: true });
     profileSvc
-      .saveProfile({ gender: g, year: Number(ys[yi]), location: cs[ci] })
+      .saveProfile({ gender: g, year: Number(ys[yi]), location: this.data.guestCity })
       .then(() => {
         // 三问完成 → 直接进每日推荐 (游客态); 注册由推荐页「注册会员」入口进入
         this.setData({
@@ -2976,8 +2972,11 @@ Page({
     this.setData({ guestYearIndex: Number(e.detail.value) || 0 });
   },
 
+  /** 三问·所在城市: 微信原生省市区 picker (全国范围, 与户籍/居住地一致) */
   onGuestCityPick(e) {
-    this.setData({ guestCityIndex: Number(e.detail.value) || 0 });
+    const label = _joinRegionLabel(e.detail.value);
+    if (!label) return;
+    this.setData({ guestCity: label });
   },
 
   /** 向导上一步 (各步通用, 首步到底) */
