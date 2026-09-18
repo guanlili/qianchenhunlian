@@ -70,7 +70,7 @@ app.ensureLogin().then(() => {
   console.log('【1】三问提交 → 直接进每日推荐');
   page.data.guestGender = '男';
   page.data.guestYearIndex = 30;
-  page.data.guestCityIndex = 13; // 德州
+  page.data.guestCity = '山东省 德州市 德城区'; // 三问·所在城市 (原生省市区 picker 拼串)
   page.data.previewGate = true;
   page.data.guestStep = 1;
   page.submitGuestBasics();

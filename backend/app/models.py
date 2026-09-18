@@ -545,7 +545,7 @@ class StaffsPublic(SQLModel):
 
 class StoreBase(SQLModel):
     name: str = Field(max_length=64)
-    city: str = Field(max_length=32, index=True)  # 山东省下的市 (例: 济南)
+    city: str = Field(max_length=32, index=True)  # 门店所在市 (例: 济南, 全国可选)
     district: str | None = Field(default=None, max_length=32)  # 区/县 (例: 历下区)
     address: str | None = Field(default=None, max_length=255)
     lng: float | None = None

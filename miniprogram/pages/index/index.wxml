@@ -46,9 +46,9 @@
         </view>
         <view class="guest-row">
           <view class="guest-label">所在城市<text class="req">*</text></view>
-          <picker mode="selector" range="{{guestCities}}" value="{{guestCityIndex < 0 ? 0 : guestCityIndex}}" bindchange="onGuestCityPick">
-            <view class="guest-picker {{guestCityIndex < 0 ? 'placeholder' : ''}}">
-              {{guestCityIndex < 0 ? '请选择所在城市' : guestCities[guestCityIndex]}}
+          <picker mode="region" bindchange="onGuestCityPick">
+            <view class="guest-picker {{!guestCity ? 'placeholder' : ''}}">
+              {{guestCity || '请选择所在城市'}}
             </view>
           </picker>
         </view>
