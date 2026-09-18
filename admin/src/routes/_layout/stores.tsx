@@ -53,13 +53,73 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
-import { SHANDONG_CITIES, SHANDONG_REGIONS } from "@/lib/shandong"
 import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/stores")({
   component: StoresLayout,
   head: () => ({ meta: [{ title: "门店总览 - 乾缘后台" }] }),
 })
+
+// 城市输入建议 (直辖市 + 省会 + 山东地级市 + 主要城市): 仅作 datalist 提示,
+// 门店城市放开全国任意值, 常用城市给规范写法保证 /stores/cities 聚合键一致
+const COMMON_CITIES = [
+  "北京",
+  "上海",
+  "天津",
+  "重庆",
+  "济南",
+  "青岛",
+  "淄博",
+  "枣庄",
+  "东营",
+  "烟台",
+  "潍坊",
+  "济宁",
+  "泰安",
+  "威海",
+  "日照",
+  "临沂",
+  "德州",
+  "聊城",
+  "滨州",
+  "菏泽",
+  "南京",
+  "苏州",
+  "无锡",
+  "杭州",
+  "宁波",
+  "温州",
+  "合肥",
+  "福州",
+  "厦门",
+  "南昌",
+  "石家庄",
+  "太原",
+  "呼和浩特",
+  "沈阳",
+  "大连",
+  "长春",
+  "哈尔滨",
+  "广州",
+  "深圳",
+  "东莞",
+  "佛山",
+  "南宁",
+  "海口",
+  "武汉",
+  "长沙",
+  "郑州",
+  "洛阳",
+  "成都",
+  "西安",
+  "昆明",
+  "贵阳",
+  "拉萨",
+  "兰州",
+  "西宁",
+  "银川",
+  "乌鲁木齐",
+]
 
 // stores.$storeId 是本路由的子路由 (TanStack 文件路由的嵌套约定):
 // 命中子路由 (门店工作台) 时只渲染 <Outlet/>, 否则渲染门店总览卡片墙
@@ -502,38 +562,25 @@ function StoreFormDialog({
           </div>
           <div>
             <Label>城市</Label>
-            <select
-              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+            <Input
+              list="store-city-suggestions"
               value={form.city}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  city: e.target.value,
-                  district: "",
-                }))
-              }
-            >
-              {SHANDONG_CITIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+              onChange={(e) => update("city")(e.target.value)}
+              placeholder="例: 济南 (全国可选)"
+            />
+            <datalist id="store-city-suggestions">
+              {COMMON_CITIES.map((c) => (
+                <option key={c} value={c} />
               ))}
-            </select>
+            </datalist>
           </div>
           <div>
             <Label>区/县</Label>
-            <select
-              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+            <Input
               value={form.district}
               onChange={(e) => update("district")(e.target.value)}
-            >
-              <option value="">— 不填 —</option>
-              {(SHANDONG_REGIONS[form.city] || []).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              placeholder="例: 历下区 (可不填)"
+            />
           </div>
           <div className="col-span-2">
             <Label>详细地址</Label>
