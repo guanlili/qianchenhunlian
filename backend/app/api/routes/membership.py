@@ -7,8 +7,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import update as sa_update
-from sqlmodel import Field, SQLModel, select
+from sqlmodel import Field, Session, SQLModel, select
 
 from app.api.deps import ApiReadLimited, CurrentUser, SessionDep
 from app.core import membership, wechat_pay
@@ -122,6 +123,61 @@ def _gen_out_trade_no() -> str:
     return "qy" + datetime.utcnow().strftime("%Y%m%d%H%M%S") + uuid.uuid4().hex[:10]
 
 
+def _prepare_order(
+    session: Session, user: User, plan_code: str
+) -> tuple[str, dict[str, Any], MembershipOrder]:
+    """下单前置同步事务段: 读支付模式/套餐配置, 懒关超时 pending 单, 落新单.
+
+    由 async 路由经 run_in_threadpool 调用 — commit 是网络往返 + fsync,
+    直接跑在事件循环上会把并发请求全部卡住。校验失败抛 HTTPException
+    (线程池中的异常会原样透传回调用方)。
+    """
+    mode = membership.purchase_mode(session)
+    if mode == "off":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="PAY_NOT_ENABLED",
+        )
+    plan = membership.get_plan(membership.get_config(session), plan_code)
+    if not plan or plan.get("price") in (None, 0):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="套餐不存在或不可购买"
+        )
+    if not user.openid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="缺少微信身份, 无法发起支付",
+        )
+
+    now = datetime.utcnow()
+    session.execute(
+        sa_update(MembershipOrder)
+        .where(MembershipOrder.user_id == user.id)  # type: ignore[arg-type]
+        .where(MembershipOrder.status == "pending")  # type: ignore[arg-type]
+        .where(MembershipOrder.created_at < now - timedelta(hours=2))  # type: ignore[arg-type]
+        .values(status="closed", closed_at=now)
+    )
+    order = MembershipOrder(
+        user_id=user.id,
+        plan_code=str(plan["code"]),
+        days=int(plan["days"]),
+        amount_fen=int(plan["price"]) * 100,
+        out_trade_no=_gen_out_trade_no(),
+    )
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+    return mode, plan, order
+
+
+def _close_order(session: Session, order: MembershipOrder) -> None:
+    """微信预支付下单失败时立即关单, 不留悬挂 pending (同步事务段)."""
+    order.status = "closed"
+    order.closed_at = datetime.utcnow()
+    session.add(order)
+    session.commit()
+
+
 @router.post("/orders", response_model=OrderCreatedOut, status_code=201)
 async def create_order(
     body: OrderCreateIn,
@@ -137,41 +193,9 @@ async def create_order(
     - 金额以「下单时」配置为准 (分), 回调金额必须一致才发放
     - 同一用户 2 小时前的 pending 单懒关单, 防止堆积
     """
-    mode = membership.purchase_mode(session)
-    if mode == "off":
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="PAY_NOT_ENABLED",
-        )
-    plan = membership.get_plan(membership.get_config(session), body.plan_code)
-    if not plan or plan.get("price") in (None, 0):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="套餐不存在或不可购买"
-        )
-    if not current_user.openid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="缺少微信身份, 无法发起支付",
-        )
-
-    now = datetime.utcnow()
-    session.execute(
-        sa_update(MembershipOrder)
-        .where(MembershipOrder.user_id == current_user.id)  # type: ignore[arg-type]
-        .where(MembershipOrder.status == "pending")  # type: ignore[arg-type]
-        .where(MembershipOrder.created_at < now - timedelta(hours=2))  # type: ignore[arg-type]
-        .values(status="closed", closed_at=now)
+    mode, plan, order = await run_in_threadpool(
+        _prepare_order, session, current_user, body.plan_code
     )
-    order = MembershipOrder(
-        user_id=current_user.id,
-        plan_code=str(plan["code"]),
-        days=int(plan["days"]),
-        amount_fen=int(plan["price"]) * 100,
-        out_trade_no=_gen_out_trade_no(),
-    )
-    session.add(order)
-    session.commit()
-    session.refresh(order)
 
     if mode == "mock":
         return OrderCreatedOut(
@@ -184,6 +208,8 @@ async def create_order(
             status=order.status,
         )
 
+    # _prepare_order 已校验 openid 非空; mypy 无法跨函数收窄, 此处断言
+    assert current_user.openid
     try:
         pay_params = await wechat_pay.jsapi_prepay(
             openid=current_user.openid,
@@ -193,10 +219,7 @@ async def create_order(
         )
     except wechat_pay.WechatPayError as e:
         # 下单失败立即关单, 不留悬挂 pending
-        order.status = "closed"
-        order.closed_at = datetime.utcnow()
-        session.add(order)
-        session.commit()
+        await run_in_threadpool(_close_order, session, order)
         logger.warning("下单失败已关单 %s: %s", order.out_trade_no, e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -306,6 +329,55 @@ def mock_pay(
     )
 
 
+def _apply_notify(
+    session: Session,
+    *,
+    out_trade_no: str,
+    trade_state: str,
+    transaction_id: str,
+    total: Any,
+) -> dict[str, str]:
+    """回调的同步事务段: 查单 → 金额校验 → 幂等发放/关单.
+
+    由 async 路由经 run_in_threadpool 调用, 避免同步 DB 阻塞事件循环。
+    非成功状态返回 ack 让微信停止重推; 校验失败抛 HTTPException 让微信重试。
+    """
+    order = session.exec(
+        select(MembershipOrder).where(MembershipOrder.out_trade_no == out_trade_no)
+    ).first()
+    if not order:
+        logger.error("支付回调订单不存在: %s", out_trade_no)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="订单不存在")
+
+    if trade_state != "SUCCESS":
+        # CLOSED/PAYERROR 等: pending 单顺手关掉, ack 让微信停止重推
+        if (
+            trade_state in ("CLOSED", "PAYERROR", "REVOKED")
+            and order.status == "pending"
+        ):
+            order.status = "closed"
+            order.closed_at = datetime.utcnow()
+            session.add(order)
+            session.commit()
+        return {"code": "SUCCESS", "message": "已忽略非成功状态"}
+
+    if total != order.amount_fen:
+        logger.error(
+            "支付回调金额不一致: 订单 %s 应付 %s 分实收 %s 分",
+            out_trade_no,
+            order.amount_fen,
+            total,
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="金额不一致")
+
+    # 幂等发放: pending → paid 条件更新, rowcount=0 即已处理过 (重复通知直接 ack)
+    granted = _mark_paid_and_grant(session, order=order, transaction_id=transaction_id)
+    if not granted:
+        return {"code": "SUCCESS", "message": "重复通知已忽略"}
+    logger.info("线上缴费发放成功: 订单 %s 用户 %s", out_trade_no, order.user_id)
+    return {"code": "SUCCESS", "message": "成功"}
+
+
 @router.post("/pay/notify")
 async def pay_notify(request: Request, session: SessionDep) -> dict[str, str]:
     """微信支付回调. 无 token 鉴权 — 以微信支付公钥验签代替 (签名覆盖原始请求体,
@@ -342,49 +414,15 @@ async def pay_notify(request: Request, session: SessionDep) -> dict[str, str]:
             status_code=status.HTTP_400_BAD_REQUEST, detail="报文解析失败"
         ) from e
 
-    out_trade_no = str(data.get("out_trade_no", ""))
-    trade_state = str(data.get("trade_state", ""))
-    transaction_id = data.get("transaction_id")
-    total = (data.get("amount") or {}).get("total")
-
-    order = session.exec(
-        select(MembershipOrder).where(MembershipOrder.out_trade_no == out_trade_no)
-    ).first()
-    if not order:
-        logger.error("支付回调订单不存在: %s", out_trade_no)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="订单不存在")
-
-    if trade_state != "SUCCESS":
-        # CLOSED/PAYERROR 等: pending 单顺手关掉, ack 让微信停止重推
-        if (
-            trade_state in ("CLOSED", "PAYERROR", "REVOKED")
-            and order.status == "pending"
-        ):
-            order.status = "closed"
-            order.closed_at = datetime.utcnow()
-            session.add(order)
-            session.commit()
-        return {"code": "SUCCESS", "message": "已忽略非成功状态"}
-
-    if total != order.amount_fen:
-        logger.error(
-            "支付回调金额不一致: 订单 %s 应付 %s 分实收 %s 分",
-            out_trade_no,
-            order.amount_fen,
-            total,
-        )
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="金额不一致")
-
-    # 幂等发放: pending → paid 条件更新, rowcount=0 即已处理过 (重复通知直接 ack)
-    granted = _mark_paid_and_grant(
+    transaction_id = str(data.get("transaction_id") or "")
+    return await run_in_threadpool(
+        _apply_notify,
         session,
-        order=order,
-        transaction_id=str(transaction_id) if transaction_id else "",
+        out_trade_no=str(data.get("out_trade_no", "")),
+        trade_state=str(data.get("trade_state", "")),
+        transaction_id=transaction_id,
+        total=(data.get("amount") or {}).get("total"),
     )
-    if not granted:
-        return {"code": "SUCCESS", "message": "重复通知已忽略"}
-    logger.info("线上缴费发放成功: 订单 %s 用户 %s", out_trade_no, order.user_id)
-    return {"code": "SUCCESS", "message": "成功"}
 
 
 # ---------------- 兑换码开通 (门店线下收款发码, 用户自助输码) ----------------
