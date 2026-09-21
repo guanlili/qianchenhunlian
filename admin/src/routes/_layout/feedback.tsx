@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/feedback")({
   component: FeedbackPage,
@@ -140,7 +141,7 @@ function FeedbackActions({ fbId, status }: { fbId: string; status: string }) {
       invalidate()
       toast.success("已重新打开")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   const handle = useMutation({
@@ -155,7 +156,7 @@ function FeedbackActions({ fbId, status }: { fbId: string; status: string }) {
       setOpen(false)
       setNote("")
     },
-    onError: (e) => toast.error(`处理失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`处理失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

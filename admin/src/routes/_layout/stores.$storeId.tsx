@@ -40,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth, { currentUserQueryOptions } from "@/hooks/useAuth"
 import { downloadCsv } from "@/lib/csv"
 import { GRANT_SOURCE_LABEL } from "@/lib/labels"
+import { getApiErrorMessage } from "@/utils"
 
 const VALID_TABS = [
   "overview",
@@ -223,7 +224,7 @@ function useStatementExport(storeId: string) {
       )
       toast.success(`已导出 ${st.month} 对账单`)
     },
-    onError: (e) => toast.error(`导出失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`导出失败: ${getApiErrorMessage(e)}`),
   })
   return { monthOffset, setMonthOffset, exportCsv, statement }
 }
@@ -266,7 +267,7 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
       URL.revokeObjectURL(url)
       toast.success("门店码已下载, 可直接印刷使用 (扫码自动绑店)")
     } catch (e) {
-      toast.error(`下载失败: ${(e as Error).message}`)
+      toast.error(`下载失败: ${getApiErrorMessage(e)}`)
     } finally {
       setQrDownloading(false)
     }

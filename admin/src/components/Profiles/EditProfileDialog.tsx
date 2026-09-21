@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getApiErrorMessage } from "@/utils"
 
 interface EditProfileDialogProps {
   item: AdminProfileItem
@@ -185,7 +186,7 @@ export function EditProfileDialog({ item, trigger }: EditProfileDialogProps) {
       toast.success("已保存")
       setOpen(false)
     },
-    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

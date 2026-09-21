@@ -54,6 +54,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
 import { resolveFileUrl } from "@/lib/utils"
+import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/stores")({
   component: StoresLayout,
@@ -538,7 +539,7 @@ function StoreFormDialog({
       toast.success(store ? "已更新" : "已创建")
       setOpen(false)
     },
-    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),
   })
 
   const update = (k: string) => (v: string) =>
@@ -674,7 +675,7 @@ function PhotoField({
       onChange(res.url)
       toast.success("已上传，保存门店后生效")
     },
-    onError: (e) => toast.error(`上传失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`上传失败: ${getApiErrorMessage(e)}`),
   })
   return (
     <div className="space-y-2">

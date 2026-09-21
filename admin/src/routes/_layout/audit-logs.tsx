@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select"
 import { currentUserQueryOptions } from "@/hooks/useAuth"
 import { downloadCsv } from "@/lib/csv"
+import { getApiErrorMessage } from "@/utils"
 
 const PAGE_SIZE = 50
 
@@ -110,7 +111,7 @@ function AuditLogsPage() {
       )
       toast.success(`已导出 ${rows.length} 条操作日志`)
     },
-    onError: (e) => toast.error(`导出失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`导出失败: ${getApiErrorMessage(e)}`),
   })
 
   const total = data?.total ?? 0
