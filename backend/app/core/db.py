@@ -10,7 +10,15 @@ from app.models import User, UserCreate  # noqa: F401  确保模型在 metadata 
 
 logger = logging.getLogger(__name__)
 
-engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+# pool_pre_ping: 取连接前探活, PG 重启/断连后自愈而非报错一批请求;
+# pool_recycle: 主动换掉长连接, 防被数据库/中间件的 idle 超时单方面掐断。
+# 测试环境 (SQLite) 二者无副作用。pool_size 暂用默认 (5+10 overflow),
+# 多 worker 峰值若再现 pool timeout 再按压测调大。
+engine = create_engine(
+    str(settings.SQLALCHEMY_DATABASE_URI),
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
 
 
 # (table, column, ddl) - 给已存在的表加列, 保留现有数据

@@ -60,14 +60,31 @@ API_WRITE_MAX = 30
 class SlidingWindowLimiter:
     """线程安全的滑动窗口计数器."""
 
+    # 每 N 次 record 触发一次全量清扫: 删除所有窗口均已过期的 key。
+    # 没有 sweep 的话 _hits 随 key (user_id/IP×场景) 单调增长, 长期运行慢性内存泄漏;
+    # 常数取值只需保证清扫频率 ≪ record 频率, 单次清扫 O(key 数) 很便宜。
+    _SWEEP_EVERY = 1024
+
     def __init__(self) -> None:
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
+        self._since_sweep = 0
+        # 见过的最大窗口秒数: sweep 用它做「整 key 已过期」的判据
+        # (约定: 同一 key 的 count/retry_after 使用的 window 不大于其 record 时的 window)
+        self._max_window = 0.0
 
     @staticmethod
     def _trim(dq: deque[float], cutoff: float) -> None:
         while dq and dq[0] < cutoff:
             dq.popleft()
+
+    def _sweep(self, now: float) -> None:
+        """调用方须已持锁。删除全部命中都已超出最大窗口的 key。"""
+        if len(self._hits) <= 64:  # key 少时清扫不值当
+            return
+        cutoff = now - self._max_window
+        for k in [k for k, dq in self._hits.items() if not dq or dq[-1] < cutoff]:
+            del self._hits[k]
 
     def count(self, key: str, window_sec: float) -> int:
         """返回窗口内命中数, 不记录新命中."""
@@ -89,6 +106,11 @@ class SlidingWindowLimiter:
             dq = self._hits[key]
             self._trim(dq, now - window_sec)
             dq.append(now)
+            self._max_window = max(self._max_window, window_sec)
+            self._since_sweep += 1
+            if self._since_sweep >= self._SWEEP_EVERY:
+                self._since_sweep = 0
+                self._sweep(now)
             return len(dq)
 
     def retry_after(self, key: str, window_sec: float) -> int:
