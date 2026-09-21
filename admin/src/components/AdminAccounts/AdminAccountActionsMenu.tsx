@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getApiErrorMessage } from "@/utils"
 
 interface Props {
   item: AdminAccountItem
@@ -45,7 +46,7 @@ export function AdminAccountActionsMenu({ item }: Props) {
       toast.success(item.is_active ? "已停用" : "已启用")
       setMenuOpen(false)
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   const resetPwd = useMutation({
@@ -60,7 +61,7 @@ export function AdminAccountActionsMenu({ item }: Props) {
       setPwdOpen(false)
       setNewPassword("")
     },
-    onError: (e) => toast.error(`重置失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`重置失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

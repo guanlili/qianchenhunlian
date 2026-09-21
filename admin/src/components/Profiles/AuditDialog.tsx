@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getApiErrorMessage } from "@/utils"
 
 interface AuditDialogProps {
   item: AdminProfileItem
@@ -62,7 +63,7 @@ export function AuditDialog({
       onClose?.()
     },
     onError: (err) => {
-      toast.error(`操作失败: ${(err as Error).message}`)
+      toast.error(`操作失败: ${getApiErrorMessage(err)}`)
     },
   })
 

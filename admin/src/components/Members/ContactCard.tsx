@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { AdminService, type ContactViewResponse } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getApiErrorMessage } from "@/utils"
 
 interface ContactCardProps {
   userId: string
@@ -19,7 +20,7 @@ export function ContactCard({ userId, canView }: ContactCardProps) {
   const view = useMutation({
     mutationFn: () => AdminService.viewMemberContact({ userId }),
     onSuccess: (data) => setContact(data),
-    onError: (e) => toast.error(`查看失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`查看失败: ${getApiErrorMessage(e)}`),
   })
 
   return (
