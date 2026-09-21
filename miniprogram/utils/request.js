@@ -164,7 +164,7 @@ function request(options, _retry = false) {
             const retryRes = await request(options, true);
             resolve(retryRes);
           } catch (e) {
-            if (loading) _hideLoading()
+            // loading 计数已在上方 success 入口 _hideLoading 过, 这里不再重复扣减
             if (!silent) wx.showToast({ title: '请重新登录', icon: 'none' });
             reject(e);
           }
