@@ -16,6 +16,7 @@ from typing import Any
 
 import httpx
 from fastapi import HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 
 from app.core.config import settings
 
@@ -37,11 +38,12 @@ async def get_wxacode_unlimit(*, scene: str, page: str) -> bytes:
     """不限量小程序码 (scene ≤ 32 字符), 返回 PNG 字节.
 
     check_path=False: 落地页不必已在线上版本存在 (发版前也能生成);
-    线下物料印刷用, 宽度 430px。凭证复用同步 get_access_token (stable_token 缓存)。
+    线下物料印刷用, 宽度 430px。凭证复用同步 get_access_token (stable_token 缓存),
+    经 run_in_threadpool 调用 — 它内部是同步 httpx, 直接 await 会阻塞事件循环。
     网络异常 (连接失败/超时) 统一收口为 WechatError, 由路由层转 4xx 提示。
     """
     try:
-        token = get_access_token()
+        token = await run_in_threadpool(get_access_token)
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
                 f"{WX_API_BASE}/wxa/getwxacodeunlimit",
