@@ -165,6 +165,8 @@ def get_or_create_wx_user(
 
     并发安全: 同一 openid 两路并发 wechat/login 时, 第一路 INSERT,
     第二路捕获 IntegrityError 后重新 SELECT, 避免创建双账号或 500.
+    xy_code 撞号 (check-then-insert 的固有窗口) 同样在此消化:
+    换号重建, 不再重抛 500 打断用户首次登录。
     """
     from sqlalchemy.exc import IntegrityError
 
@@ -178,40 +180,48 @@ def get_or_create_wx_user(
         session.refresh(user)
         return user, False
 
-    xy_code = _generate_xy_code(session)
-    user = User(
-        openid=openid,
-        unionid=unionid,
-        xy_code=xy_code,
-        unlock_balance=3,
-        last_active_at=datetime.utcnow(),
-    )
-    session.add(user)
-    try:
-        # 先 flush 让 user 行落库 (同事务), 再记赠送流水, 保证 FK 顺序
-        session.flush()
-        add_balance_txn(
-            session=session,
-            user_id=user.id,
-            amount=3,
-            balance_after=3,
-            source="register_gift",
-            note="注册赠送",
+    last_conflict: IntegrityError | None = None
+    for _ in range(3):
+        xy_code = _generate_xy_code(session)
+        user = User(
+            openid=openid,
+            unionid=unionid,
+            xy_code=xy_code,
+            unlock_balance=3,
+            last_active_at=datetime.utcnow(),
         )
-        session.commit()
-    except IntegrityError:
-        # 并发: 另一路已经 insert; 回滚后重 SELECT 拿到那个 user
-        session.rollback()
-        user = get_user_by_openid(session=session, openid=openid)
-        if user is None:
-            # 极端情况 (xy_code 冲突而非 openid), 重抛
-            raise
-        if unionid and not user.unionid:
-            user.unionid = unionid
-        user.last_active_at = datetime.utcnow()
         session.add(user)
-        session.commit()
+        try:
+            # 先 flush 让 user 行落库 (同事务), 再记赠送流水, 保证 FK 顺序
+            session.flush()
+            add_balance_txn(
+                session=session,
+                user_id=user.id,
+                amount=3,
+                balance_after=3,
+                source="register_gift",
+                note="注册赠送",
+            )
+            session.commit()
+        except IntegrityError as e:
+            # 并发: 另一路已经 insert; 回滚后重 SELECT 区分撞的是 openid 还是 xy_code
+            session.rollback()
+            user = get_user_by_openid(session=session, openid=openid)
+            if user is not None:
+                # 同 openid: 拿到对方创建的那个 user
+                if unionid and not user.unionid:
+                    user.unionid = unionid
+                user.last_active_at = datetime.utcnow()
+                session.add(user)
+                session.commit()
+                session.refresh(user)
+                return user, False
+            # xy_code 撞号: 换号重建
+            last_conflict = e
+            continue
         session.refresh(user)
-        return user, False
-    session.refresh(user)
-    return user, True
+        return user, True
+
+    # 连续 3 次撞号 (8 位数字 ~9e7 空间, 理论上极难): 按原语义抛出
+    assert last_conflict is not None
+    raise last_conflict
