@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import update as sa_update
@@ -1264,7 +1265,8 @@ async def store_qrcode(
 
     门店管理员限本店 (给自己店印物料); 总部任意店。凭证/配额由 core/wechat 管理。
     """
-    store = session.get(Store, store_id)
+    # 同步 DB 查询丢线程池, 不阻塞事件循环 (路由因 await 小程序码生成保持 async)
+    store = await run_in_threadpool(session.get, Store, store_id)
     if not store:
         raise HTTPException(status_code=404, detail="门店不存在")
     owner_sid = _store_owner_id(actor)
