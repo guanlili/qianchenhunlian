@@ -26,7 +26,7 @@ qianchenhunlian/
 ├── docker-compose.server.yml    生产覆盖 (1Panel + OpenResty 反代 127.0.0.1 端口)
 ├── deploy.sh                    服务器端部署入口 (构建 + 健康检查 + 自动回滚)
 ├── .env / .env.example          环境变量 (.env gitignored)
-├── scripts/                     manual-deploy.sh (CI 不可用时的手动部署兜底)
+├── scripts/                     manual-deploy.sh (手动部署入口, 2026-09 起 Actions 停用后的唯一发布通道)
 └── scripts-server/              服务器侧运维脚本 (备份 / 清理 / 前置检查)
 ```
 
@@ -160,7 +160,7 @@ docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
 
 ## 部署到生产服务器
 
-实际生产链路：**GitHub Actions（push main 触发）→ rsync 推代码 → 服务器本地构建**。服务器在大陆、连不上 GitHub，所以代码由 Actions 推过去、在服务器上构建镜像（不用 git pull、不依赖 Docker Hub）。反向代理由服务器上已有的 **1Panel + OpenResty** 承担，容器端口只绑 `127.0.0.1`，不直接对外。
+实际生产链路：**本地跑 `scripts/manual-deploy.sh` → rsync 推代码 → 服务器本地构建**（2026-09-21 起 GitHub Actions 额度耗尽、全部 workflow 已禁用；此前为 Actions push main 触发）。服务器在大陆、连不上 GitHub，所以代码由部署机推过去、在服务器上构建镜像（不用 git pull、不依赖 Docker Hub）。反向代理由服务器上已有的 **1Panel + OpenResty** 承担，容器端口只绑 `127.0.0.1`，不直接对外。
 
 ### 服务器前置要求
 
@@ -181,27 +181,19 @@ docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
 | `DEPLOY_PATH` | 服务器上仓库路径（`/root/qianchenhunlian`） |
 | `DEPLOY_SSH_KEY` | SSH 私钥（公钥放服务器 `authorized_keys`） |
 
-### 日常发布：合并 PR 到 main
+### 日常发布：合并 PR 后手动部署
 
-**部署仅由 PR 合并触发**（免费版私有仓库的发布门禁方案）：所有变更走 `feat/*`、`fix/*` 等分支提 PR，CI 全绿后合并，**合并到 `main` 自动触发** `.github/workflows/deploy.yml`（部署串行、不并发）；直接 push `main` 不会部署、且会被 CI 的「Main 直推拦截」job 标红：
-
-1. rsync 全量同步代码到 `$DEPLOY_PATH`（排除 `.git/`、`.env`、`data/`、`admin/node_modules/` 等；`--delete` 清理仓库中已删文件）
-2. SSH 到服务器执行 `./deploy.sh build`：
-   - 先把当前 `:latest` 镜像打 `:prev` 标签（回滚点）
-   - `docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build` 本地构建并启动
-   - 轮询 `http://127.0.0.1:8000/api/v1/utils/health-check/`（最多 60 秒），未就绪则自动把 `:prev` 重新打成 `:latest` 并强制重建（回滚），部署标红
-
-也可在 GitHub 页面手动触发（workflow_dispatch）。
-
-### 手动部署（CI 不可用时兜底）
-
-本机执行 `scripts/manual-deploy.sh`（依赖 `~/.ssh/config` 里名为 `qianyuan` 的主机别名，服务器路径 `/root/qianchenhunlian`）：
+**2026-09-21 起 Actions 全部 workflow 已手动禁用（含 deploy.yml），合并到 main 不会自动部署**，也没有在线检查。发布 = 本机执行（依赖 `~/.ssh/config` 里名为 `qianyuan` 的主机别名，服务器路径 `/root/qianchenhunlian`）：
 
 ```bash
 bash scripts/manual-deploy.sh qianyuan
 ```
 
-流程与 CI 相同（归档校验 → 部署前先跑一次 pg-backup → rsync → 服务器 `deploy.sh build`），并自带「孤儿容器清理 + 健康检查自愈」。已在服务器上时直接：
+流程与原 CI 相同（归档当前 HEAD 并校验完整性 → 部署前先跑一次 pg-backup → rsync → 服务器 `deploy.sh build`），并自带「孤儿容器清理 + 健康检查自愈」。
+
+原 CI 时期的门禁流程保留为约定：变更走 `feat/*`、`fix/*` 分支提 PR → **本地全量验证**（backend：ruff + mypy strict + pytest；admin：biome + tsc + vitest + build；结果写进 PR 描述）→ merge commit 合并（禁 rebase/squash）→ 手动部署。详见 docs/07 与 AGENTS.md。
+
+### 服务器上直接操作
 
 ```bash
 cd /root/qianchenhunlian
