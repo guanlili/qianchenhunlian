@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import EmailStr
-from sqlalchemy import JSON, Column, Index, UniqueConstraint
+from sqlalchemy import JSON, Column, Index, UniqueConstraint, text
 from sqlmodel import Field, Relationship, SQLModel
 
 # ------------------------------------------------------------
@@ -83,6 +83,13 @@ class User(UserBase, table=True):
     criteria: "Criteria" = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"uselist": False, "cascade": "all, delete-orphan"},
+    )
+
+    __table_args__ = (
+        # crud.get_user_by_email 按 func.lower(email) 做大小写归一查重,
+        # 普通邮箱索引用不上该表达式, 补函数索引 (PG/SQLite 均支持);
+        # 迁移由主任务补 (同 a1b2c3d4e5f6 的 IF NOT EXISTS 幂等模式)
+        Index("ix_user_email_lower", text("lower(email)")),
     )
 
 
@@ -215,8 +222,10 @@ class Profile(ProfileBase, table=True):
     hot: int = Field(default=0)
     viewed_count: int = Field(default=0)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    # 列表/撮合池按这两个字段过滤+倒序 (tab=new/missed、neighbors seek、后台资料列表),
+    # 是会员池变大后最先退化为扫表 top-N 的两列 (migration 由主任务补)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
     user: User = Relationship(back_populates="profile")
 

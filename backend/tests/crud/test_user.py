@@ -1,4 +1,6 @@
+import pytest
 from fastapi.encoders import jsonable_encoder
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from app import crud
@@ -89,3 +91,42 @@ def test_update_user(db: Session) -> None:
     assert user_2
     assert user.email == user_2.email
     assert verify_password(new_password, user_2.hashed_password)
+
+
+def test_get_or_create_wx_user_xy_code_collision(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """xy_code 撞号时换号重建, 而非重抛 IntegrityError 打断首次登录 (回归)."""
+    db.add(User(openid="openid-taken", xy_code="12345678", unlock_balance=3))
+    db.commit()
+
+    # 第一次生成撞号的 "12345678", 第二次给可用号 → 应换号成功建号
+    codes = iter(["12345678", "23456789"])
+    monkeypatch.setattr(crud, "_generate_xy_code", lambda session, **kw: next(codes))
+    user, created = crud.get_or_create_wx_user(session=db, openid="openid-fresh")
+    assert created is True
+    assert user.xy_code == "23456789"
+    # 注册赠送流水只记一次 (撞号那次已回滚)
+    assert user.unlock_balance == 3
+
+    # 连续撞光全部重试次数 → 按原语义抛 IntegrityError
+    codes = iter(["12345678"] * 5)
+    monkeypatch.setattr(crud, "_generate_xy_code", lambda session, **kw: next(codes))
+    with pytest.raises(IntegrityError):
+        crud.get_or_create_wx_user(session=db, openid="openid-fresh-2")
+
+
+def test_get_or_create_wx_user_openid_race_still_dedupes(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同 openid 并发: 撞号后重 SELECT 拿到已存在的用户 (原有语义不回归)."""
+    codes = iter(["34567890"])
+    monkeypatch.setattr(crud, "_generate_xy_code", lambda session, **kw: next(codes))
+    user, created = crud.get_or_create_wx_user(session=db, openid="openid-dup")
+    assert created is True
+    assert user.xy_code == "34567890"
+
+    # 第二路再进: openid 已存在 → 直接返回既有用户, 不新建
+    user2, created2 = crud.get_or_create_wx_user(session=db, openid="openid-dup")
+    assert created2 is False
+    assert user2.id == user.id
