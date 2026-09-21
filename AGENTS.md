@@ -1,7 +1,9 @@
 # AGENTS.md — 乾缘婚恋项目工作手册
 
 > 此文件为 AI 编码助手的**权威**上下文。所有约定视为 hard rule。
-> （历史上的 PR 评审机器人管线 `.github/pr-review/` 已于 2026-09 退役省分钟数,
+> （历史上的 PR 评审机器人管线 `.github/pr-review/` 已于 2026-09 退役省分钟数;
+>  GitHub Actions 全部 workflow 已于 2026-09-21 因额度耗尽手动禁用——合并不自动部署、
+>  无在线 CI，验证靠本地全量检查，部署靠 `scripts/manual-deploy.sh`。
 >  本文件继续作为编码约定与 review checklist 的唯一来源。）
 
 ## 项目概览
@@ -11,7 +13,7 @@
   - `backend/` — FastAPI + SQLModel + PostgreSQL（生产）/ SQLite（测试）+ Alembic
   - `admin/` — React 19 + Vite + TanStack Router + shadcn/ui + OpenAPI-generated client
   - `miniprogram/` — 微信原生小程序（无 Taro/Uniapp 中间层）
-  - `deploy` — Docker Compose + Traefik + GitHub Actions SSH 部署
+  - `deploy` — Docker Compose + Traefik；部署走 `scripts/manual-deploy.sh`（GitHub Actions 已停用）
 
 ## 强制约定（hard rules）
 
@@ -20,7 +22,7 @@
 1. **所有代码注释、文案、错误信息用中文**（面向中国用户 + 中国团队）
 2. **禁止密钥入库**：`.env.production`、任何 `secrets`、`API_KEY` 值都不允许出现在 commit 里
 3. **业务改动附测试**：backend PR 必须带 pytest；admin PR 至少验证 tsc + biome + build 通过
-4. **分支与发布流程**：所有变更走 `feat/*`、`fix/*`、`docs/*` 等分支 → 向 `main` 提 PR → CI 必需检查全绿 → **用 merge commit 方式合并**（`gh pr merge --merge`，禁 rebase/squash，否则被「Main 直推拦截」误拦）→ 合并即自动部署生产。`main` 禁止直接 push（含管理员）：部署仅由 PR 合并触发，直推不会部署且会被 CI 标红；紧急修复同样走 PR（小步、只含修复），生产问题优先用 `deploy.sh` 的 `:prev` 镜像回滚而非改代码
+4. **分支与发布流程**：所有变更走 `feat/*`、`fix/*`、`docs/*` 等分支 → 向 `main` 提 PR → **本地全量验证代替 CI**（Actions 已停用，无在线检查），结果写进 PR 描述：backend 过 `ruff check` + `ruff format --check` + `mypy app`（strict）+ pytest 全量；admin 过 biome + `tsc -p tsconfig.build.json` + vitest + build；miniprogram 本地走查受影响页面 → **用 merge commit 方式合并**（`gh pr merge --merge`，禁 rebase/squash）→ **手动部署**：本地跑 `bash scripts/manual-deploy.sh`（归档校验 → PG 备份 → rsync → 服务器 `deploy.sh build`，健康检查失败自动回滚 `:prev`）。合并**不会**自动部署。`main` 禁止直接 push（含管理员）；紧急修复同样走 PR（小步、只含修复），生产问题优先用服务器 `./deploy.sh` 的 `:prev` 镜像回滚而非改代码
 
 ### Backend 特定
 
@@ -76,6 +78,8 @@ miniprogram/
 ```
 
 ## 上线前 checklist（PR 描述必须涵盖）
+
+> CI 已停用（Actions 无额度），以下检查在**本地**执行，实际结果写进 PR 描述——「应该能过」不算验证。
 
 - [ ] 涉及后端接口改动：pytest 通过（含新增 case）
 - [ ] 涉及 UGC/权限/鉴权：说明手动验证步骤（哪个环境、什么账号、复现路径）
