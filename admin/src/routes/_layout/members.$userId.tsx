@@ -55,6 +55,7 @@ import {
   REQUEST_STATUS_LABEL,
 } from "@/lib/labels"
 import { resolveFileUrl } from "@/lib/utils"
+import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/members/$userId")({
   component: MemberDetail,
@@ -129,7 +130,7 @@ function MemberDetail() {
       invalidate()
       toast.success("已标为实名认证")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
   const unverify = useMutation({
     mutationFn: () => AdminService.unverifyProfile({ userId }),
@@ -137,7 +138,7 @@ function MemberDetail() {
       invalidate()
       toast.success("已撤销认证")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
   const block = useMutation({
     mutationFn: () => AdminService.blockUser({ userId }),
@@ -145,7 +146,7 @@ function MemberDetail() {
       invalidate()
       toast.success("已封禁")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
   const unblock = useMutation({
     mutationFn: () => AdminService.unblockUser({ userId }),
@@ -153,7 +154,7 @@ function MemberDetail() {
       invalidate()
       toast.success("已解封")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   if (isLoading || !full) {
@@ -769,7 +770,7 @@ function MembershipTab({
       qc.invalidateQueries({ queryKey: ["admin-members"] })
       toast.success("已撤销, 会员到期时间已重算")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

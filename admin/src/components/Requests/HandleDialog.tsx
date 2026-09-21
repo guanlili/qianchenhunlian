@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getApiErrorMessage } from "@/utils"
 
 type Status = "accepted" | "rejected" | "contacted" | "closed"
 
@@ -49,7 +50,7 @@ export function HandleDialog({ item, status, trigger }: Props) {
       setOpen(false)
       setNote("")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

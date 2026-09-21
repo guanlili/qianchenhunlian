@@ -9,36 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as LayoutUnassignedRouteImport } from './routes/_layout/unassigned'
-import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
-import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
-import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
-import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
-import { Route as LayoutRedeemCodesRouteImport } from './routes/_layout/redeem-codes'
-import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
-import { Route as LayoutMembersRouteImport } from './routes/_layout/members'
-import { Route as LayoutGuideRouteImport } from './routes/_layout/guide'
-import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
-import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
-import { Route as LayoutAuditLogsRouteImport } from './routes/_layout/audit-logs'
-import { Route as LayoutAdminsRouteImport } from './routes/_layout/admins'
+import { Route as LayoutRouteImport } from './routes/_layout'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LayoutActivitiesRouteImport } from './routes/_layout/activities'
-import { Route as LayoutStoresStoreIdRouteImport } from './routes/_layout/stores.$storeId'
+import { Route as LayoutAdminsRouteImport } from './routes/_layout/admins'
+import { Route as LayoutAuditLogsRouteImport } from './routes/_layout/audit-logs'
+import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
+import { Route as LayoutFeedbackRouteImport } from './routes/_layout/feedback'
+import { Route as LayoutGuideRouteImport } from './routes/_layout/guide'
+import { Route as LayoutMembersRouteImport } from './routes/_layout/members'
+import { Route as LayoutQualificationsRouteImport } from './routes/_layout/qualifications'
+import { Route as LayoutRedeemCodesRouteImport } from './routes/_layout/redeem-codes'
+import { Route as LayoutRequestsRouteImport } from './routes/_layout/requests'
+import { Route as LayoutReviewRouteImport } from './routes/_layout/review'
+import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutStoresRouteImport } from './routes/_layout/stores'
+import { Route as LayoutUnassignedRouteImport } from './routes/_layout/unassigned'
 import { Route as LayoutMembersUserIdRouteImport } from './routes/_layout/members.$userId'
+import { Route as LayoutStoresStoreIdRouteImport } from './routes/_layout/stores.$storeId'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
-  id: '/recover-password',
-  path: '/recover-password',
+const LayoutRoute = LayoutRouteImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -46,73 +45,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutRoute = LayoutRouteImport.update({
-  id: '/_layout',
+const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
+  id: '/recover-password',
+  path: '/recover-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutUnassignedRoute = LayoutUnassignedRouteImport.update({
-  id: '/unassigned',
-  path: '/unassigned',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutStoresRoute = LayoutStoresRouteImport.update({
-  id: '/stores',
-  path: '/stores',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutReviewRoute = LayoutReviewRouteImport.update({
-  id: '/review',
-  path: '/review',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutRequestsRoute = LayoutRequestsRouteImport.update({
-  id: '/requests',
-  path: '/requests',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutRedeemCodesRoute = LayoutRedeemCodesRouteImport.update({
-  id: '/redeem-codes',
-  path: '/redeem-codes',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutQualificationsRoute = LayoutQualificationsRouteImport.update({
-  id: '/qualifications',
-  path: '/qualifications',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutMembersRoute = LayoutMembersRouteImport.update({
-  id: '/members',
-  path: '/members',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutGuideRoute = LayoutGuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutFeedbackRoute = LayoutFeedbackRouteImport.update({
-  id: '/feedback',
-  path: '/feedback',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutAuditLogsRoute = LayoutAuditLogsRouteImport.update({
-  id: '/audit-logs',
-  path: '/audit-logs',
+const LayoutActivitiesRoute = LayoutActivitiesRouteImport.update({
+  id: '/activities',
+  path: '/activities',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminsRoute = LayoutAdminsRouteImport.update({
@@ -120,20 +65,75 @@ const LayoutAdminsRoute = LayoutAdminsRouteImport.update({
   path: '/admins',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutActivitiesRoute = LayoutActivitiesRouteImport.update({
-  id: '/activities',
-  path: '/activities',
+const LayoutAuditLogsRoute = LayoutAuditLogsRouteImport.update({
+  id: '/audit-logs',
+  path: '/audit-logs',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutStoresStoreIdRoute = LayoutStoresStoreIdRouteImport.update({
-  id: '/$storeId',
-  path: '/$storeId',
-  getParentRoute: () => LayoutStoresRoute,
+const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutFeedbackRoute = LayoutFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutGuideRoute = LayoutGuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutMembersRoute = LayoutMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutQualificationsRoute = LayoutQualificationsRouteImport.update({
+  id: '/qualifications',
+  path: '/qualifications',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutRedeemCodesRoute = LayoutRedeemCodesRouteImport.update({
+  id: '/redeem-codes',
+  path: '/redeem-codes',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutRequestsRoute = LayoutRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutReviewRoute = LayoutReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutStoresRoute = LayoutStoresRouteImport.update({
+  id: '/stores',
+  path: '/stores',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutUnassignedRoute = LayoutUnassignedRouteImport.update({
+  id: '/unassigned',
+  path: '/unassigned',
+  getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutMembersUserIdRoute = LayoutMembersUserIdRouteImport.update({
   id: '/$userId',
   path: '/$userId',
   getParentRoute: () => LayoutMembersRoute,
+} as any)
+const LayoutStoresStoreIdRoute = LayoutStoresStoreIdRouteImport.update({
+  id: '/$storeId',
+  path: '/$storeId',
+  getParentRoute: () => LayoutStoresRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -284,18 +284,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/recover-password': {
-      id: '/recover-password'
-      path: '/recover-password'
-      fullPath: '/recover-password'
-      preLoaderRoute: typeof RecoverPasswordRouteImport
+    '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -305,102 +305,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout': {
-      id: '/_layout'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof LayoutRouteImport
+    '/recover-password': {
+      id: '/recover-password'
+      path: '/recover-password'
+      fullPath: '/recover-password'
+      preLoaderRoute: typeof RecoverPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout/unassigned': {
-      id: '/_layout/unassigned'
-      path: '/unassigned'
-      fullPath: '/unassigned'
-      preLoaderRoute: typeof LayoutUnassignedRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/stores': {
-      id: '/_layout/stores'
-      path: '/stores'
-      fullPath: '/stores'
-      preLoaderRoute: typeof LayoutStoresRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/settings': {
-      id: '/_layout/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof LayoutSettingsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/review': {
-      id: '/_layout/review'
-      path: '/review'
-      fullPath: '/review'
-      preLoaderRoute: typeof LayoutReviewRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/requests': {
-      id: '/_layout/requests'
-      path: '/requests'
-      fullPath: '/requests'
-      preLoaderRoute: typeof LayoutRequestsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/redeem-codes': {
-      id: '/_layout/redeem-codes'
-      path: '/redeem-codes'
-      fullPath: '/redeem-codes'
-      preLoaderRoute: typeof LayoutRedeemCodesRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/qualifications': {
-      id: '/_layout/qualifications'
-      path: '/qualifications'
-      fullPath: '/qualifications'
-      preLoaderRoute: typeof LayoutQualificationsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/members': {
-      id: '/_layout/members'
-      path: '/members'
-      fullPath: '/members'
-      preLoaderRoute: typeof LayoutMembersRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/guide': {
-      id: '/_layout/guide'
-      path: '/guide'
-      fullPath: '/guide'
-      preLoaderRoute: typeof LayoutGuideRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/feedback': {
-      id: '/_layout/feedback'
-      path: '/feedback'
-      fullPath: '/feedback'
-      preLoaderRoute: typeof LayoutFeedbackRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/dashboard': {
-      id: '/_layout/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof LayoutDashboardRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/audit-logs': {
-      id: '/_layout/audit-logs'
-      path: '/audit-logs'
-      fullPath: '/audit-logs'
-      preLoaderRoute: typeof LayoutAuditLogsRouteImport
+    '/_layout/activities': {
+      id: '/_layout/activities'
+      path: '/activities'
+      fullPath: '/activities'
+      preLoaderRoute: typeof LayoutActivitiesRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/admins': {
@@ -410,19 +333,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/activities': {
-      id: '/_layout/activities'
-      path: '/activities'
-      fullPath: '/activities'
-      preLoaderRoute: typeof LayoutActivitiesRouteImport
+    '/_layout/audit-logs': {
+      id: '/_layout/audit-logs'
+      path: '/audit-logs'
+      fullPath: '/audit-logs'
+      preLoaderRoute: typeof LayoutAuditLogsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/stores/$storeId': {
-      id: '/_layout/stores/$storeId'
-      path: '/$storeId'
-      fullPath: '/stores/$storeId'
-      preLoaderRoute: typeof LayoutStoresStoreIdRouteImport
-      parentRoute: typeof LayoutStoresRoute
+    '/_layout/dashboard': {
+      id: '/_layout/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof LayoutDashboardRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/feedback': {
+      id: '/_layout/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof LayoutFeedbackRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/guide': {
+      id: '/_layout/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof LayoutGuideRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/members': {
+      id: '/_layout/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof LayoutMembersRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/qualifications': {
+      id: '/_layout/qualifications'
+      path: '/qualifications'
+      fullPath: '/qualifications'
+      preLoaderRoute: typeof LayoutQualificationsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/redeem-codes': {
+      id: '/_layout/redeem-codes'
+      path: '/redeem-codes'
+      fullPath: '/redeem-codes'
+      preLoaderRoute: typeof LayoutRedeemCodesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/requests': {
+      id: '/_layout/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof LayoutRequestsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/review': {
+      id: '/_layout/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof LayoutReviewRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/settings': {
+      id: '/_layout/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/stores': {
+      id: '/_layout/stores'
+      path: '/stores'
+      fullPath: '/stores'
+      preLoaderRoute: typeof LayoutStoresRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/unassigned': {
+      id: '/_layout/unassigned'
+      path: '/unassigned'
+      fullPath: '/unassigned'
+      preLoaderRoute: typeof LayoutUnassignedRouteImport
+      parentRoute: typeof LayoutRoute
     }
     '/_layout/members/$userId': {
       id: '/_layout/members/$userId'
@@ -430,6 +423,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/members/$userId'
       preLoaderRoute: typeof LayoutMembersUserIdRouteImport
       parentRoute: typeof LayoutMembersRoute
+    }
+    '/_layout/stores/$storeId': {
+      id: '/_layout/stores/$storeId'
+      path: '/$storeId'
+      fullPath: '/stores/$storeId'
+      preLoaderRoute: typeof LayoutStoresStoreIdRouteImport
+      parentRoute: typeof LayoutStoresRoute
     }
   }
 }

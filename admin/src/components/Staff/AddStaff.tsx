@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getApiErrorMessage } from "@/utils"
 
 interface AddStaffProps {
   /** 门店详情页传入: 创建的管理员自动绑定该门店 */
@@ -49,7 +50,7 @@ export function AddStaff({ storeId, storeName }: AddStaffProps) {
       setName("")
       setPassword("")
     },
-    onError: (e) => toast.error(`添加失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`添加失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

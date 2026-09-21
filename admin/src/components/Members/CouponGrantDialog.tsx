@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getApiErrorMessage } from "@/utils"
 
 /** 券面额档位 (后端校验 1-90 天 / 1-20 次) */
 const DAY_OPTIONS = [3, 7, 14, 30]
@@ -75,7 +76,7 @@ export function CouponGrantDialog({
       setOpen(false)
       setNote("")
     },
-    onError: (err) => toast.error(`发放失败: ${(err as Error).message}`),
+    onError: (err) => toast.error(`发放失败: ${getApiErrorMessage(err)}`),
   })
 
   return (

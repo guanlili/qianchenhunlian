@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { Search } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { AdminService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
@@ -29,7 +29,14 @@ export function MembersList() {
   const [membership, setMembership] = useState<MembershipFilter>("member")
   const [storeFilter, setStoreFilter] = useState<string>("__all__")
   const [keyword, setKeyword] = useState("")
+  // 防抖后再进 queryKey, 避免逐键打接口 + 逐键污染缓存
+  const [debouncedKeyword, setDebouncedKeyword] = useState("")
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedKeyword(keyword.trim()), 350)
+    return () => clearTimeout(t)
+  }, [keyword])
 
   const { data, isLoading } = useQuery({
     queryFn: () =>
@@ -39,7 +46,7 @@ export function MembersList() {
         userStatus,
         membership,
         storeId: storeFilter === "__all__" ? undefined : storeFilter,
-        keyword: keyword || undefined,
+        keyword: debouncedKeyword || undefined,
         skip: 0,
         limit: 200,
       }),
@@ -50,7 +57,7 @@ export function MembersList() {
       userStatus,
       membership,
       storeFilter,
-      keyword,
+      debouncedKeyword,
     ],
     // 切筛选条件时保留上一份数据, 避免列表闪空
     placeholderData: keepPreviousData,

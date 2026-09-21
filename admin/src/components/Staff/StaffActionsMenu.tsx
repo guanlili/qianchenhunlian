@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { getApiErrorMessage } from "@/utils"
 
 interface Props {
   item: StaffPublic
@@ -44,7 +45,7 @@ export function StaffActionsMenu({ item }: Props) {
       toast.success(item.is_active ? "已停用" : "已启用")
       setOpen(false)
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   const remove = useMutation({
@@ -55,7 +56,7 @@ export function StaffActionsMenu({ item }: Props) {
       setConfirmDelete(false)
       setOpen(false)
     },
-    onError: (e) => toast.error(`删除失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`删除失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

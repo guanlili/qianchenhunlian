@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
+import { getApiErrorMessage } from "@/utils"
 
 interface EditParentsDialogProps {
   item: AdminProfileItem
@@ -89,7 +90,7 @@ export function EditParentsDialog({ item, trigger }: EditParentsDialogProps) {
       toast.success("父母信息已保存")
       setOpen(false)
     },
-    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),
   })
 
   return (
