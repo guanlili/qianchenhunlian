@@ -51,11 +51,18 @@ App({
   /** 页面 onLoad 调用, 等待登录完成 */
   async ensureLogin() {
     if (!this.globalData.loginReady) {
-      this.globalData.loginReady = userSvc.login().then(({ payload }) => {
-        this._applyLoginPayload(payload);
-        // 引导改为用户主动触发 (见 requireWelcomed), 启动/登录时不强制跳转 —— 满足"先浏览再授权"
-        return payload;
-      });
+      this.globalData.loginReady = userSvc
+        .login()
+        .then(({ payload }) => {
+          this._applyLoginPayload(payload);
+          // 引导改为用户主动触发 (见 requireWelcomed), 启动/登录时不强制跳转 —— 满足"先浏览再授权"
+          return payload;
+        })
+        .catch((err) => {
+          // 置空允许下次调用重新登录 (否则缓存的失败 promise 永远拒绝, 「重试」按钮失效)
+          this.globalData.loginReady = null;
+          throw err;
+        });
     }
     return this.globalData.loginReady;
   },
