@@ -44,6 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import useAuth from "@/hooks/useAuth"
+import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/redeem-codes")({
   component: RedeemCodesPage,
@@ -110,17 +111,7 @@ function RedeemCodesPage() {
       queryClient.invalidateQueries({ queryKey: ["redeem-codes"] })
     },
     onError: (e) => {
-      const body =
-        e && typeof e === "object" && "body" in e
-          ? (e.body as { detail?: string | { msg?: string }[] })
-          : undefined
-      const d = body?.detail
-      const msg = Array.isArray(d)
-        ? d.map((it) => it.msg ?? "").join("; ")
-        : typeof d === "string"
-          ? d
-          : "生成失败"
-      toast.error(msg)
+      toast.error(getApiErrorMessage(e))
     },
   })
 

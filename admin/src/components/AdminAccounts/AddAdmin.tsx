@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getApiErrorMessage } from "@/utils"
 
 export function AddAdmin() {
   const [open, setOpen] = useState(false)
@@ -37,7 +38,7 @@ export function AddAdmin() {
       setFullName("")
       setPassword("")
     },
-    onError: (e) => toast.error(`创建失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`创建失败: ${getApiErrorMessage(e)}`),
   })
 
   return (

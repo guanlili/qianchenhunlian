@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { resolveFileUrl } from "@/lib/utils"
+import { getApiErrorMessage } from "@/utils"
 
 function EmptyQueue({ text }: { text: string }) {
   return (
@@ -41,7 +42,7 @@ export function VerifyQueue({ storeId }: { storeId?: string }) {
       qc.invalidateQueries({ queryKey: ["admin-members"] })
       toast.success("已通过实名认证")
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   if (isLoading) return <Skeleton className="h-40 w-full" />

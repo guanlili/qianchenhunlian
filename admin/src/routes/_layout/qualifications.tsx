@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { resolveFileUrl } from "@/lib/utils"
+import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/qualifications")({
   component: QualificationsPage,
@@ -61,7 +62,7 @@ function QualificationsPage() {
       qc.invalidateQueries({ queryKey: ["site-qualifications"] })
       toast.success("已上传并保存")
     },
-    onError: (e) => toast.error(`上传失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`上传失败: ${getApiErrorMessage(e)}`),
   })
 
   // 移除同样即时落库
@@ -76,7 +77,7 @@ function QualificationsPage() {
       qc.invalidateQueries({ queryKey: ["site-qualifications"] })
       toast.success("已移除并保存")
     },
-    onError: (e) => toast.error(`移除失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`移除失败: ${getApiErrorMessage(e)}`),
   })
 
   const save = useMutation({
@@ -89,7 +90,7 @@ function QualificationsPage() {
       setDirty(false)
       toast.success("已保存")
     },
-    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),
   })
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,7 +240,7 @@ function SiteContentEditor() {
       qc.invalidateQueries({ queryKey: ["site-contents"] })
       toast.success("文案已保存")
     },
-    onError: (e) => toast.error(`保存失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),
   })
   const qc = useQueryClient()
 

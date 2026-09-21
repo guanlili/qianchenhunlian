@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getApiErrorMessage } from "@/utils"
 
 const NONE = "__none__"
 
@@ -61,7 +62,7 @@ export function AssignTicketStoreDialog({
       toast.success("已改派工单归属门店")
       setOpen(false)
     },
-    onError: (e) => toast.error(`操作失败: ${(e as Error).message}`),
+    onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
 
   return (
