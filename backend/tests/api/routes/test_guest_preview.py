@@ -92,14 +92,14 @@ def test_preview_requires_basics(client: TestClient, db: Session) -> None:
 def test_preview_matches_opposite_gender_same_city_nearest_age(
     client: TestClient, db: Session
 ) -> None:
-    """男游客: 只出女会员, 同城济南优先, 年龄差小者排前."""
+    """男游客: 只出女会员; 年龄差≤3岁优先 (180e202), 带内同城加分再排前."""
     email = _mk_guest(db)
     headers = authentication_token_from_email(client=client, email=email, db=db)
     _set_basics(client, headers, gender="男", year=1992, city="济南")
 
-    _mk_member(db, gender="女", year=1993, location="山东 济南")  # 命中: 同城+年龄近
-    _mk_member(db, gender="女", year=1975, location="山东 济南")  # 命中: 同城+年龄远
-    _mk_member(db, gender="女", year=1990, location="山东 青岛")  # 异城: 排同城之后
+    _mk_member(db, gender="女", year=1993, location="山东 济南")  # 同年龄带+同城: 最前
+    _mk_member(db, gender="女", year=1975, location="山东 济南")  # 同城但年龄远: 带外
+    _mk_member(db, gender="女", year=1990, location="山东 青岛")  # 同年龄带但异城: 次之
     _mk_member(db, gender="男", year=1992, location="山东 济南")  # 同性: 不出现
     _mk_member(db, gender="女", year=1993, location="河南 郑州")  # 非山东: 不出现
 
@@ -112,11 +112,10 @@ def test_preview_matches_opposite_gender_same_city_nearest_age(
     assert "marriage" in items[0] and "job" in items[0]
     # 全部为女性
     assert all(it["gender"] == "女" for it in items)
-    # 同城 (济南) 排前 2, 且其中年龄接近的排最前
-    first_two_cities = [it["location"] for it in items[:2]]
-    assert all("济南" in c for c in first_two_cities)
-    assert items[0]["year"] == 1993
-    assert items[-1]["location"] == "山东 青岛"  # 异城兜底排最后
+    # 排序: 年龄差≤3岁 (1993/1990) 先于带外同城 (1975);
+    # 同带内按匹配分 (含同城加分) — 1993 济南 > 1990 青岛
+    assert [it["year"] for it in items] == [1993, 1990, 1975]
+    assert items[0]["location"] == "山东 济南"
 
 
 def test_preview_fills_up_from_province_when_city_runs_out(
