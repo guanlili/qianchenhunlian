@@ -12,8 +12,10 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import EmailStr
-from sqlalchemy import JSON, Column, Index, UniqueConstraint, text
+from sqlalchemy import JSON, Column, Index, UniqueConstraint, event, false, text
 from sqlmodel import Field, Relationship, SQLModel
+
+from app.core.shandong import is_shandong_text
 
 # ------------------------------------------------------------
 # User · 账号
@@ -90,6 +92,13 @@ class User(UserBase, table=True):
         # 普通邮箱索引用不上该表达式, 补函数索引 (PG/SQLite 均支持);
         # 迁移由主任务补 (同 a1b2c3d4e5f6 的 IF NOT EXISTS 幂等模式)
         Index("ix_user_email_lower", text("lower(email)")),
+        # 实名核验队列: WHERE verified='pending' ORDER BY updated_at DESC,
+        # 队列天然极小, 部分索引近零成本 (PG 专用; SQLite create_all 自动跳过)
+        Index(
+            "ix_user_verified_pending",
+            "updated_at",
+            postgresql_where=text("verified = 'pending'"),
+        ),
     )
 
 
@@ -226,6 +235,13 @@ class Profile(ProfileBase, table=True):
     # 是会员池变大后最先退化为扫表 top-N 的两列 (migration 由主任务补)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+    # 山东省标记 (写入时物化, 见文件末尾监听): 所有对外资料读接口的可见性
+    # 过滤列。物化成布尔后查询走等值判断可配合其它索引, 替代逐行跑 PG 正则
+    # (~ 运算符走不了普通索引); 存量由 migration 按同一关键词表回填。
+    is_shandong: bool = Field(
+        default=False, nullable=False, sa_column_kwargs={"server_default": false()}
+    )
 
     user: User = Relationship(back_populates="profile")
 
@@ -927,3 +943,19 @@ class WechatLoginResponse(SQLModel):
     has_profile: bool = False
     has_criteria: bool = False
     is_welcomed: bool = False  # nickname + avatar 都已设置
+
+
+# ------------------------------------------------------------
+# 山东省可见性标记: 写入时物化 (存量由 migration 按同一关键词表回填)
+# ------------------------------------------------------------
+
+
+@event.listens_for(Profile, "before_insert")
+@event.listens_for(Profile, "before_update")
+def _refresh_is_shandong(_mapper: Any, _connection: Any, target: Profile) -> None:
+    """origin/location 任一命中山东关键词前缀 → is_shandong=True.
+
+    用 mapper 级监听兜住所有写入口 (小程序路由 / admin 代录 / 种子脚本),
+    后续新增写路径不需要记得维护该列; 关键词表单点在 app.core.shandong。
+    """
+    target.is_shandong = is_shandong_text(target.origin, target.location)
