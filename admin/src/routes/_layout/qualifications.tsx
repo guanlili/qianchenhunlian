@@ -208,6 +208,7 @@ const CONTENT_KEYS = [
 
 /** 协议文案编辑器: 选 key -> 标题 + 段落(一行一段) -> 保存 */
 function SiteContentEditor() {
+  const qc = useQueryClient()
   const [key, setKey] = useState<string>("user_agreement")
   const [title, setTitle] = useState("")
   const [paragraphs, setParagraphs] = useState("")
@@ -242,7 +243,6 @@ function SiteContentEditor() {
     },
     onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),
   })
-  const qc = useQueryClient()
 
   return (
     <Card>

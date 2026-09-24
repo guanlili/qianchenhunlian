@@ -139,14 +139,6 @@ function UnassignedTicketsTab() {
     myStoreId: null,
     canAssign: true,
   }
-  const { data: storesData } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-  })
-  const storeMap: Record<string, string> = {}
-  for (const s of storesData?.items || []) {
-    storeMap[s.id] = s.city ? `${s.city} · ${s.name}` : s.name
-  }
 
   const { data, isLoading } = useQuery({
     queryFn: () =>
