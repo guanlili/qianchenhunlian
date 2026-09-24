@@ -79,7 +79,9 @@ function GlobalSearch() {
   const { data } = useQuery({
     queryFn: () =>
       AdminService.listMembers({ keyword: debounced, skip: 0, limit: 8 }),
-    queryKey: ["admin-members", "search", debounced],
+    // 独立根 key, 不挂在 ["admin-members"] 前缀下: 否则任何会员写操作后的
+    // 前缀失效会把搜索结果也标脏重拉 (命名空间与列表/详情解耦)
+    queryKey: ["member-search", debounced],
     enabled: debounced.length >= 2,
   })
   const results = debounced.length >= 2 ? (data?.items ?? []) : []
