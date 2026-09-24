@@ -273,7 +273,8 @@ export class AdminService {
      * Stores Overview
      * 门店总览 (总部首页卡片墙): 每店待办徽标 + 全平台未归属计数.
      *
-     * 计数全部走 group-by 聚合 (4 条), 不逐店查询; 门店管理员只看本店卡片。
+     * 计数全部走 group-by 聚合, 不逐店查询; 门店管理员只看本店卡片。
+     * 结果带 30s 进程内缓存 (侧边栏角标轮询贯穿全会话, 与 dashboard 同款策略)。
      * @param data The data for the request.
      * @param data.city
      * @returns StoreOverviewList Successful Response
@@ -529,6 +530,8 @@ export class AdminService {
     /**
      * Admin Stats
      * 工作台指标 — 门店管理员自动限本店口径; 总部可用 store_id 查看单店.
+     *
+     * 结果带 30s 进程内缓存 (同 dashboard: 看板高频轮询, 底层数据刷新频率低)。
      * @param data The data for the request.
      * @param data.storeId 指定门店口径 (总部可用)
      * @returns StatsResponse Successful Response
@@ -1477,7 +1480,7 @@ export class ContactsService {
      * 提交"想联系 X"工单. 红娘后台看到后人工撮合.
      *
      * - 必须已到店实名核验 (verified=passed), 否则 403 NOT_VERIFIED 引导到店
-     * - 必须自己资料完善度 >= 60% (CompleteProfileUser)
+     * - 必须自己资料完善度 >= 60% (CompleteProfileUserWithProfile)
      * - 消耗 1 次申请额度 (docs/13 三桶: 会员日额度/每日免费/永久余额)
      * - 同一目标 24h 内不允许重复申请 (避免骚扰红娘)
      * - 三桶全空 → 402
@@ -2523,7 +2526,7 @@ export class UploadsService {
 export class UsersService {
     /**
      * Read Users
-     * Retrieve users.
+     * Retrieve users. (skip/limit 封顶校验, 与 admin 侧列表口径一致)
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit

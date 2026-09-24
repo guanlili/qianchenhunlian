@@ -723,6 +723,7 @@ export type MatchDetailResponse = {
     starred?: boolean;
     verified?: string;
     criteria?: (MatchCriteriaBrief | null);
+    has_requested_recent?: boolean;
 };
 
 export type MatchListResponse = {
