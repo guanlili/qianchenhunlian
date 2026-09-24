@@ -5,6 +5,8 @@
 所以匹配关键词覆盖三级: 省名 / 市名 / 区县名 (含去掉 区|县|市 后缀的简写).
 """
 
+import re
+
 SHANDONG_REGIONS: dict[str, tuple[str, ...]] = {
     "济南": (
         "历下区",
@@ -159,3 +161,17 @@ SHANDONG_KEYWORDS: tuple[str, ...] = _build_keywords()
 
 # PostgreSQL 正则: 文本以任一关键词开头即算山东省内
 SHANDONG_PREFIX_RE: str = "^(" + "|".join(SHANDONG_KEYWORDS) + ")"
+
+_SHANDONG_PREFIX_PATTERN = re.compile(SHANDONG_PREFIX_RE)
+
+
+def is_shandong_text(*texts: str | None) -> bool:
+    """任一文本命中山东关键词前缀即算省内 (与 SHANDONG_PREFIX_RE 同一口径).
+
+    存量回填与 ORM 写入监听 (models.Profile 的 before_insert/before_update)
+    都用它物化 Profile.is_shandong, 单一关键词来源不漂移。
+    """
+    for t in texts:
+        if t and _SHANDONG_PREFIX_PATTERN.match(t):
+            return True
+    return False
