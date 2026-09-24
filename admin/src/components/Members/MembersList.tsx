@@ -31,12 +31,19 @@ export function MembersList() {
   const [keyword, setKeyword] = useState("")
   // 防抖后再进 queryKey, 避免逐键打接口 + 逐键污染缓存
   const [debouncedKeyword, setDebouncedKeyword] = useState("")
+  // 服务端分页: 此前固定取 200 行本地分页展示, 超 200 的会员静默不可达
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 })
   const navigate = useNavigate()
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedKeyword(keyword.trim()), 350)
     return () => clearTimeout(t)
   }, [keyword])
+
+  // 切筛选条件回到第一页
+  useEffect(() => {
+    setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }))
+  }, [auditStatus, verified, userStatus, membership, storeFilter, debouncedKeyword])
 
   const { data, isLoading } = useQuery({
     queryFn: () =>
@@ -47,8 +54,8 @@ export function MembersList() {
         membership,
         storeId: storeFilter === "__all__" ? undefined : storeFilter,
         keyword: debouncedKeyword || undefined,
-        skip: 0,
-        limit: 200,
+        skip: pagination.pageIndex * pagination.pageSize,
+        limit: pagination.pageSize,
       }),
     queryKey: [
       "admin-members",
@@ -58,8 +65,10 @@ export function MembersList() {
       membership,
       storeFilter,
       debouncedKeyword,
+      pagination.pageIndex,
+      pagination.pageSize,
     ],
-    // 切筛选条件时保留上一份数据, 避免列表闪空
+    // 切筛选/翻页时保留上一份数据, 避免列表闪空
     placeholderData: keepPreviousData,
   })
 
@@ -174,13 +183,19 @@ export function MembersList() {
         </div>
       ) : (
         <div>
-          <div className="text-muted-foreground mb-2 text-sm">
-            共 {data.total} 人
-          </div>
           <DataTable
             columns={memberColumns}
             data={data.items}
             meta={{ storeMap }}
+            pagination={{
+              total: data.total ?? data.items.length,
+              pageIndex: pagination.pageIndex,
+              pageSize: pagination.pageSize,
+              onPageChange: (pageIndex) =>
+                setPagination((p) => ({ ...p, pageIndex })),
+              onPageSizeChange: (pageSize) =>
+                setPagination((p) => ({ ...p, pageSize })),
+            }}
             onRowClick={(m) =>
               navigate({
                 to: "/members/$userId",

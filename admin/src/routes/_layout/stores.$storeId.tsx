@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
   Link,
@@ -6,7 +6,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router"
 import { ArrowLeft, Download, Inbox, QrCode } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { AdminService, OpenAPI, StoresService } from "@/client"
@@ -462,16 +462,30 @@ function StoreMembersTab({ storeId }: { storeId: string }) {
   ).includes(mfilter as "all")
     ? (mfilter as "all")
     : "member"
+  // 服务端分页: 此前固定取 200 行, 第 201 位之后静默不可达
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 })
   const { data, isPending } = useQuery({
     queryFn: () =>
       AdminService.listMembers({
         storeId,
         membership: membership === "all" ? undefined : membership,
-        skip: 0,
-        limit: 200,
+        skip: pagination.pageIndex * pagination.pageSize,
+        limit: pagination.pageSize,
       }),
-    queryKey: ["admin-members", "store", storeId, membership],
+    queryKey: [
+      "admin-members",
+      "store",
+      storeId,
+      membership,
+      pagination.pageIndex,
+      pagination.pageSize,
+    ],
+    placeholderData: keepPreviousData,
   })
+  // 切口径回到第一页
+  useEffect(() => {
+    setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }))
+  }, [membership])
 
   if (isPending) {
     return (
@@ -513,6 +527,15 @@ function StoreMembersTab({ storeId }: { storeId: string }) {
           <DataTable
             columns={memberColumns}
             data={items}
+            pagination={{
+              total: data?.total ?? 0,
+              pageIndex: pagination.pageIndex,
+              pageSize: pagination.pageSize,
+              onPageChange: (pageIndex) =>
+                setPagination((p) => ({ ...p, pageIndex })),
+              onPageSizeChange: (pageSize) =>
+                setPagination((p) => ({ ...p, pageSize })),
+            }}
             onRowClick={(m) =>
               navigate({
                 to: "/members/$userId",
