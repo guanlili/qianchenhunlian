@@ -11,6 +11,11 @@ admin 的 API client (src/client) 由 admin/openapi.json 生成。后端接口�
      (或起后端 curl localhost:8000/api/v1/openapi.json)
   2. cd admin && npm run generate-client
   3. 提交 openapi.json 与 src/client 的变更
+
+⚠️ @hey-api/openapi-ts 固定在 0.73.0 (精确版本): dependabot 曾把它升到 0.99.0,
+新版本加载旧 openapi-ts.config.ts 会静默产出 0 个文件、且先把 src/client 清空
+(2026-09-24 排查确认, 连显式 -f / 编程 API 调用同样失效)。升级生成器必须
+先单独验证产物布局迁移 (legacy axios → plugin-era client), 作为一个独立 PR。
 """
 
 import json

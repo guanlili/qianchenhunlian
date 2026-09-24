@@ -4792,6 +4792,11 @@ export const MatchDetailResponseSchema = {
                     type: 'null'
                 }
             ]
+        },
+        has_requested_recent: {
+            type: 'boolean',
+            title: 'Has Requested Recent',
+            default: false
         }
     },
     type: 'object',

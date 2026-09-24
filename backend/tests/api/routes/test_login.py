@@ -159,3 +159,23 @@ def test_login_email_case_still_rejects_wrong_password(
         data={"username": f"{local.upper()}@{domain}", "password": "wrong-pw-123"},
     )
     assert r.status_code == 400
+
+
+def test_staff_login_email_case_insensitive(client: TestClient, db: Session) -> None:
+    """员工登录邮箱同样大小写归一, 与 User 侧口径一致."""
+    from app.crud import create_staff
+    from app.models import StaffCreate
+
+    email = random_email()
+    password = random_lower_string() + "Aa1!"
+    create_staff(
+        session=db,
+        staff_create=StaffCreate(email=email, name="店长", password=password),
+    )
+    local, _, domain = email.partition("@")
+    r = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": f"{local.upper()}@{domain}", "password": password},
+    )
+    assert r.status_code == 200
+    assert r.json()["access_token"]

@@ -143,7 +143,10 @@ def update_staff(*, session: Session, db_staff: Staff, staff_in: StaffUpdate) ->
 
 
 def get_staff_by_email(*, session: Session, email: str) -> Staff | None:
-    return session.exec(select(Staff).where(Staff.email == email)).first()
+    """邮箱大小写归一化查询, 与 User 侧 get_user_by_email 口径一致."""
+    return session.exec(
+        select(Staff).where(func.lower(Staff.email) == email.strip().lower())
+    ).first()
 
 
 def authenticate_staff(*, session: Session, email: str, password: str) -> Staff | None:

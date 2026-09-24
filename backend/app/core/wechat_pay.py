@@ -19,6 +19,7 @@ import json
 import logging
 import secrets
 import time
+from functools import lru_cache
 from typing import Any
 
 import httpx
@@ -61,9 +62,8 @@ def credentials_ready() -> bool:
     )
 
 
-def _load_private_key() -> rsa.RSAPrivateKey:
-    """解析商户私钥 PEM. 每次解析不做缓存, 避免测试里 monkeypatch 配置后读到旧键."""
-    pem = settings.WECHAT_PAY_PRIVATE_KEY.replace("\\n", "\n")
+@lru_cache(maxsize=8)
+def _parse_private_key(pem: str) -> rsa.RSAPrivateKey:
     try:
         key = serialization.load_pem_private_key(pem.encode(), password=None)
     except ValueError as e:
@@ -73,9 +73,8 @@ def _load_private_key() -> rsa.RSAPrivateKey:
     return key
 
 
-def _load_public_key() -> rsa.RSAPublicKey:
-    """解析微信支付公钥 PEM (公钥模式)."""
-    pem = settings.WECHAT_PAY_PUBLIC_KEY.replace("\\n", "\n")
+@lru_cache(maxsize=8)
+def _parse_public_key(pem: str) -> rsa.RSAPublicKey:
     try:
         key = serialization.load_pem_public_key(pem.encode())
     except ValueError as e:
@@ -83,6 +82,16 @@ def _load_public_key() -> rsa.RSAPublicKey:
     if not isinstance(key, rsa.RSAPublicKey):
         raise WechatPayError("微信支付公钥不是 RSA 公钥")
     return key
+
+
+def _load_private_key() -> rsa.RSAPrivateKey:
+    """解析商户私钥 PEM, 按 PEM 文本缓存 (同文本必然同键, 换键自然换缓存条目)."""
+    return _parse_private_key(settings.WECHAT_PAY_PRIVATE_KEY.replace("\\n", "\n"))
+
+
+def _load_public_key() -> rsa.RSAPublicKey:
+    """解析微信支付公钥 PEM (公钥模式), 按 PEM 文本缓存."""
+    return _parse_public_key(settings.WECHAT_PAY_PUBLIC_KEY.replace("\\n", "\n"))
 
 
 def _rsa_sign(message: str) -> str:

@@ -247,6 +247,7 @@ class HomeStoreBody(SQLModel):
 def set_home_store(
     session: SessionDep,
     current_user: CurrentUser,
+    _write: ApiWriteLimited,
     body: HomeStoreBody = Body(),
 ) -> StorePublic:
     """用户在小程序选定主属门店"""
