@@ -93,7 +93,7 @@ function adaptCard(item) {
     location: item.location || '',
     origin: item.origin || '',
     desc: item.desc || '',
-    photos: _resolveList(item.photos),
+    // 首页卡片只渲染 glyph 占位块不渲染图, 不把整组照片 URL 过 setData 桥
     likes: item.likes || 0,
     hot: item.hot || 0,
     starred: !!item.starred,
@@ -408,34 +408,6 @@ const createQuickQuestions = () => [
 
 const getSelectedLabels = (options) => options.filter((item) => item.selected).map((item) => item.label);
 
-/**
- * "85后" → [1985, 1989]; "70后" → [1970, 1979]; "不限" → [null, null]
- */
-function parseAgeRange(label) {
-  if (!label || label === '不限') return [null, null];
-  const m = label.match(/(\d+)/);
-  if (!m) return [null, null];
-  const n = Number(m[1]);
-  // 70/80/90/00 后 → 整 10 年; 85/95 后 → 半个十年
-  if (label.includes('后')) {
-    if (n >= 100) return [null, null];
-    if (label.startsWith('70')) return [1970, 1979];
-    if (label.startsWith('80')) return [1980, 1989];
-    if (label.startsWith('85')) return [1985, 1989];
-    if (label.startsWith('90')) return [1990, 1999];
-    if (label.startsWith('95')) return [1995, 1999];
-    if (label.startsWith('00')) return [2000, 2009];
-  }
-  return [null, null];
-}
-
-/** "160cm+" → 160 ; "不限" → null */
-function parseHeightFloor(label) {
-  if (!label || label === '不限') return null;
-  const m = label.match(/(\d+)/);
-  return m ? Number(m[1]) : null;
-}
-
 /** 数 req 里命中了几个独立类别 (用作 UI "已筛选 N 项") */
 function countFilterCategories(req) {
   let n = 0;
@@ -452,7 +424,9 @@ function countFilterCategories(req) {
   return n;
 }
 
-/** 把 filterSteps 当前选中状态拼成后端 FilterRequest */
+/** 把 filterSteps 当前选中状态拼成后端 FilterRequest
+ *  (createFilterSteps 只有 gender/marriage/edu/house/car 五步;
+ *  年龄/身高走 slider 区间、职业已去掉, 不在本表内) */
 function filterStepsToRequest(filterSteps) {
   const req = {};
   for (const step of filterSteps) {
@@ -462,31 +436,11 @@ function filterStepsToRequest(filterSteps) {
       case 'gender':
         req.gender = selected[0];
         break;
-      case 'age': {
-        const [yMin, yMax] = parseAgeRange(selected[0]);
-        if (yMin) req.year_min = yMin;
-        if (yMax) req.year_max = yMax;
-        break;
-      }
       case 'marriage':
         req.marriage = selected;
         break;
-      case 'height': {
-        const min = parseHeightFloor(selected[0]);
-        if (min) req.height_min = min;
-        break;
-      }
       case 'edu':
         req.edu = selected;
-        break;
-      case 'income':
-        req.income = selected;
-        break;
-      case 'region':
-        req.region = selected;
-        break;
-      case 'job':
-        req.job = selected;
         break;
       case 'house': {
         const picked = selected.filter((x) => x !== '不限');
@@ -684,7 +638,8 @@ Page({
     if (now - _lastShowRefreshAt < ON_SHOW_REFRESH_INTERVAL_MS) return;
     _lastShowRefreshAt = now;
     this.refreshMembership();
-    this.loadMyProfile().catch(() => {});
+    // 已加载过完整资料时走轻量门面 (只刷头像/统计), 不整包重建表单
+    this.loadMyProfile({ light: !!this._myProfileLoaded }).catch(() => {});
   },
 
   /** 引导完成状态唯一同步口: globalData 权威 + 本地缓存兜底 (老用户)。
@@ -968,10 +923,34 @@ Page({
     }
   },
 
-  async loadMyProfile() {
+  async loadMyProfile({ light = false } = {}) {
     if (!this.data.apiReady) return;
     try {
       const data = await profileSvc.getMe();
+      // 轻量门面: tab 切换/回前台只刷头像/昵称/进度/统计/门店名这几个展示位,
+      // 不重建 profileForm/profileFields/photos/criteriaFields 等大对象 ——
+      // 整包 setData (几十 KB) 是「我的」页最大的性能开销。表单级完整重建
+      // 只在进入编辑页 (openProfileEdit/openCriteriaEdit) 与首次加载时做。
+      if (light) {
+        const lightUpdates = {};
+        if (data.profile) {
+          lightUpdates.myAvatar = data.profile.avatar_url
+            ? resolveFileUrl(data.profile.avatar_url)
+            : '';
+          lightUpdates.myNickname = data.profile.nickname || '';
+          lightUpdates.profileProgress = data.profile.progress || 0;
+          lightUpdates['stats[0].value'] = data.profile.likes || 0;
+          lightUpdates['stats[1].value'] = data.profile.hot || 0;
+        }
+        const homeName = data.home_store
+          ? `${data.home_store.city} · ${data.home_store.name}`
+          : '未选择 ›';
+        lightUpdates.meItems = this.data.meItems.map((it) =>
+          it.label === '我的当地门店' ? { ...it, sub: homeName } : it,
+        );
+        this.setData(lightUpdates);
+        return;
+      }
       const updates = {};
       if (data.profile) {
         updates.myProfileRows = adaptMyProfileRows(data.profile);
@@ -1045,6 +1024,8 @@ Page({
         it.label === '我的当地门店' ? { ...it, sub: homeName } : it,
       );
       this.setData(updates);
+      // 完整资料已就位: 后续 tab 切换/回前台走轻量门面刷新
+      this._myProfileLoaded = true;
       if (this._pendingGapRefresh) {
         this._pendingGapRefresh = false;
         this._refreshGaps();
@@ -1066,7 +1047,8 @@ Page({
     else if (tab === 'me') {
       // 访客/收藏统计是会员专属接口, 非会员不请求 (避免 403)
       if (this.data.isMember) this.loadMeStats();
-      this.loadMyProfile();  // 我的资料挪到了 me 页里, 顺手加载
+      // 我的资料挪到了 me 页里, 顺手加载; 已加载过则只刷轻量门面
+      this.loadMyProfile({ light: !!this._myProfileLoaded });
     }
     else if (tab === 'affinity') this.openAffinity();
   },
@@ -2517,9 +2499,11 @@ Page({
     if (!this.data.apiReady) return;
     try {
       const r = await favoriteSvc.listVisitors({ limit: 50 });
+      // 列表模板只用首图: 只保留 photo 一个字段, 不把整组照片 URL 过 setData 桥
       const items = (r.items || []).map((it) => ({
         ...it,
-        photos: _resolveList(it.photos),
+        photo: _resolveList(it.photos)[0] || '',
+        lastSeenText: formatDate(it.last_viewed_at),
       }));
       this.setData({
         visitorList: items,
@@ -2538,7 +2522,7 @@ Page({
       const r = await favoriteSvc.listMine({ limit: 50 });
       const items = (r.items || []).map((it) => ({
         ...it,
-        photos: _resolveList(it.photos),
+        photo: _resolveList(it.photos)[0] || '',
       }));
       this.setData({
         favoriteList: items,
@@ -2595,7 +2579,8 @@ Page({
       const r = await favoriteSvc.listSeenByMe({ limit: 50 });
       const items = (r.items || []).map((it) => ({
         ...it,
-        photos: _resolveList(it.photos),
+        photo: _resolveList(it.photos)[0] || '',
+        lastSeenText: formatDate(it.last_viewed_at),
       }));
       this.setData({ iVisitedList: items, iVisitedTotal: r.total || 0 });
     } catch (e) {
@@ -2611,7 +2596,7 @@ Page({
       const r = await affinitySvc.listMine({ limit: 50 });
       const items = (r.items || []).map((it) => ({
         ...it,
-        photos: _resolveList(it.photos),
+        photo: _resolveList(it.photos)[0] || '',
       }));
       this.setData({ myLikesList: items, myLikesTotal: r.total || 0 });
     } catch (e) {
@@ -2630,7 +2615,7 @@ Page({
       const r = await affinitySvc.listMutual({ limit: 50 });
       const items = (r.items || []).map((it) => ({
         ...it,
-        photos: _resolveList(it.photos),
+        photo: _resolveList(it.photos)[0] || '',
       }));
       this.setData({ affinityMutualList: items, affinityMutualTotal: r.total || 0 });
     } catch (e) {
