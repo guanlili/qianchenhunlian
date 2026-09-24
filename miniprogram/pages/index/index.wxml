@@ -866,12 +866,12 @@
         </view>
         <view wx:for="{{visitorList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
+            <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
             <view class="visitor-title">用户编号 {{item.xy_code}} · {{item.gender}} · {{item.year}}年</view>
-            <text class="visitor-time">最近访问 {{item.last_viewed_at}}</text>
+            <text class="visitor-time">最近访问 {{item.lastSeenText}}</text>
           </view>
           <text class="visitor-arrow">›</text>
         </view>
@@ -924,7 +924,7 @@
         </view>
         <view wx:for="{{favoriteList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
+            <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
@@ -975,7 +975,7 @@
       </view>
       <view wx:for="{{affinityMutualList}}" wx:key="user_id" class="visitor-row affinity-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
         <view class="visitor-avatar">
-          <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
+          <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
           <text wx:else>❤</text>
         </view>
         <view class="visitor-info">
@@ -1004,7 +1004,7 @@
         </view>
         <view wx:for="{{myLikesList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
+            <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
@@ -1032,12 +1032,12 @@
         </view>
         <view wx:for="{{iVisitedList}}" wx:key="user_id" class="visitor-row" bindtap="openDetailFromList" data-id="{{item.user_id}}">
           <view class="visitor-avatar">
-            <image wx:if="{{item.photos[0]}}" src="{{item.photos[0]}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
+            <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill" class="visitor-img" lazy-load="{{true}}" />
             <text wx:else>{{item.gender || '?'}}</text>
           </view>
           <view class="visitor-info">
             <view class="visitor-title">用户编号 {{item.xy_code}} · {{item.gender}} · {{item.year}}年</view>
-            <text class="visitor-time">最近浏览 {{item.last_viewed_at}}</text>
+            <text class="visitor-time">最近浏览 {{item.lastSeenText}}</text>
           </view>
           <text class="visitor-arrow">›</text>
         </view>
