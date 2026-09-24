@@ -31,6 +31,11 @@ function invalidateMeCache() {
   _meCache = null;
 }
 
+/** 「我的」页计数聚合: 看过我/我收藏/我的申请 三个 total 一次拿全 (会员专享) */
+function meStats() {
+  return get('/profiles/me/stats');
+}
+
 /**
  * 创建/更新我的资料
  * @param {Object} data - {gender,year,height,edu,income,marriage,origin,location,hometown,job,has_house,has_car,body_type,desc,relation}
@@ -187,6 +192,7 @@ function cancelAccount() {
 module.exports = {
   getMe,
   invalidateMeCache,
+  meStats,
   saveProfile,
   saveContact,
   saveCriteria,

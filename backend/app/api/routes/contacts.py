@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlmodel import Field, SQLModel, and_, func, select
+from sqlmodel import Field, Session, SQLModel, and_, func, select
 
 from app.api.deps import (
     ApiReadLimited,
@@ -174,6 +174,18 @@ def submit_contact_request(
     )
 
 
+def my_requests_total_for(session: Session, user_id: uuid.UUID) -> int:
+    """我提交的申请总数 (与 /contacts/my-requests total 同口径, 含山东过滤)."""
+    return session.exec(
+        select(func.count())
+        .select_from(ContactRequest)
+        .join(User, ContactRequest.to_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(ContactRequest.from_user_id == user_id)
+        .where(shandong_clause())
+    ).one()
+
+
 @router.get("/my-requests", response_model=ContactRequestList)
 def list_my_contact_requests(
     session: SessionDep,
@@ -184,14 +196,7 @@ def list_my_contact_requests(
 ) -> ContactRequestList:
     """我提交过的所有申请 (含 pending / accepted / rejected / contacted)"""
     # 目标非山东资料不入列表, 与对外资料契约一致
-    total = session.exec(
-        select(func.count())
-        .select_from(ContactRequest)
-        .join(User, ContactRequest.to_user_id == User.id)  # type: ignore[arg-type]
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
-        .where(ContactRequest.from_user_id == current_user.id)
-        .where(shandong_clause())
-    ).one()
+    total = my_requests_total_for(session, current_user.id)
 
     rows = session.exec(
         select(ContactRequest, User)
