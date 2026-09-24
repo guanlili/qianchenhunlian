@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { AlertTriangle, Inbox } from "lucide-react"
-import { useMemo } from "react"
+import { AlertTriangle, ChevronLeft, ChevronRight, Inbox } from "lucide-react"
+import { useMemo, useState } from "react"
 
 import { type AdminContactRequestItem, AdminService } from "@/client"
 import { AssignTicketStoreDialog } from "@/components/Requests/AssignTicketStoreDialog"
@@ -341,15 +341,20 @@ function RequestsList({
   storeMap: Record<string, string>
   storeId?: string
 }) {
-  const { data, isLoading } = useQuery({
+  // 服务端分页: 每张卡片挂 5 个左右 Dialog, 一次渲染 200 张是全项目最重的
+  // 一次性渲染; 切状态 Tab 时本组件随 Tabs 卸载重建, 页码天然回到第一页
+  const [pageIndex, setPageIndex] = useState(0)
+  const pageSize = 20
+  const { data, isLoading, isFetching } = useQuery({
     queryFn: () =>
       AdminService.listContactRequests({
         status,
         storeId: storeId ?? undefined,
-        skip: 0,
-        limit: 200,
+        skip: pageIndex * pageSize,
+        limit: pageSize,
       }),
-    queryKey: ["admin-requests", status, storeId ?? "all"],
+    queryKey: ["admin-requests", status, storeId ?? "all", pageIndex, pageSize],
+    placeholderData: keepPreviousData,
   })
   if (isLoading) {
     return (
@@ -367,9 +372,33 @@ function RequestsList({
       </div>
     )
   }
+  const total = data.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   return (
     <div className="space-y-3">
-      <div className="text-sm text-muted-foreground">共 {data.total} 条</div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm text-muted-foreground">
+          共 {total} 条 · 第 {pageIndex + 1}/{pageCount} 页
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pageIndex === 0 || isFetching}
+            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+          >
+            <ChevronLeft /> 上一页
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pageIndex >= pageCount - 1 || isFetching}
+            onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+          >
+            下一页 <ChevronRight />
+          </Button>
+        </div>
+      </div>
       {data.items.map((it) => (
         <RequestCard
           key={it.id}
@@ -378,6 +407,26 @@ function RequestsList({
           storeName={it.store_id ? (storeMap[it.store_id] ?? null) : null}
         />
       ))}
+      {pageCount > 1 && (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pageIndex === 0 || isFetching}
+            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+          >
+            <ChevronLeft /> 上一页
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pageIndex >= pageCount - 1 || isFetching}
+            onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+          >
+            下一页 <ChevronRight />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
