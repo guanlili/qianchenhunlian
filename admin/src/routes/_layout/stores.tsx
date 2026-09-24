@@ -17,7 +17,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react"
-import { useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
   AdminService,
@@ -139,6 +139,14 @@ function StoresPage() {
   const isSuperuser = !!user?.is_superuser
   const [city, setCity] = useState<string>("__all__")
   const [keyword, setKeyword] = useState("")
+  const [debounced, setDebounced] = useState("")
+
+  // 搜索防抖: 卡片墙每张含图片与多枚徽标, 逐键全量重渲染代价高
+  // (与 MembersList/TopBar 同款 350ms 模式)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(keyword.trim()), 350)
+    return () => clearTimeout(t)
+  }, [keyword])
 
   // 卡片墙数据: 每店待办徽标 + 未归属计数 (门店管理员后端自动限本店)
   // city key 用 "all" 哨兵, 与侧边栏 ["stores-overview", "all"] 共用缓存共享轮询
@@ -154,7 +162,10 @@ function StoresPage() {
     queryFn: () => AdminService.adminListStores({ limit: 500 }),
     queryKey: ["admin-stores"],
   })
-  const fullById = new Map((fullStores?.items || []).map((s) => [s.id, s]))
+  const fullById = useMemo(
+    () => new Map((fullStores?.items || []).map((s) => [s.id, s])),
+    [fullStores],
+  )
 
   const del = useMutation({
     mutationFn: (id: string) => AdminService.adminDeleteStore({ storeId: id }),
@@ -182,10 +193,10 @@ function StoresPage() {
   ] as string[]
   const items = (overview?.items || []).filter(
     (s) =>
-      !keyword ||
-      s.name.includes(keyword) ||
-      (s.city || "").includes(keyword) ||
-      (s.district || "").includes(keyword),
+      !debounced ||
+      s.name.includes(debounced) ||
+      (s.city || "").includes(debounced) ||
+      (s.district || "").includes(debounced),
   )
 
   const unassignedTotal =
