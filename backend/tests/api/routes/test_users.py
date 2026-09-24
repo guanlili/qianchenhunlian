@@ -168,6 +168,31 @@ def test_retrieve_users(
         assert "email" in item
 
 
+def test_retrieve_users_pagination_validation(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """skip/limit 参数校验: 超上限 / 非法值一律 422, 防全表拖取."""
+    r = client.get(
+        f"{settings.API_V1_STR}/users/",
+        headers=superuser_token_headers,
+        params={"limit": 1000},
+    )
+    assert r.status_code == 422
+    r = client.get(
+        f"{settings.API_V1_STR}/users/",
+        headers=superuser_token_headers,
+        params={"skip": -1},
+    )
+    assert r.status_code == 422
+    # 上限内正常返回
+    r = client.get(
+        f"{settings.API_V1_STR}/users/",
+        headers=superuser_token_headers,
+        params={"skip": 0, "limit": 200},
+    )
+    assert r.status_code == 200
+
+
 def test_update_user_me(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:

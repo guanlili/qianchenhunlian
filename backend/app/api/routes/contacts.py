@@ -10,7 +10,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Field, SQLModel, and_, func, select
 
 from app.api.deps import (
@@ -179,8 +179,8 @@ def list_my_contact_requests(
     session: SessionDep,
     current_user: CurrentUser,
     _lim: ApiReadLimited,
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
 ) -> ContactRequestList:
     """我提交过的所有申请 (含 pending / accepted / rejected / contacted)"""
     # 目标非山东资料不入列表, 与对外资料契约一致
