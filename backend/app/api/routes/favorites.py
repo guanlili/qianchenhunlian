@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import SQLModel, and_, func, select
+from sqlmodel import Session, SQLModel, and_, func, select
 
 from app.api.deps import (
     ApiReadLimited,
@@ -135,6 +135,18 @@ def toggle_favorite(
     )
 
 
+def favorites_total_for(session: Session, user_id: uuid.UUID) -> int:
+    """我收藏的人数 (与 /favorites 列表 total 同口径, 含山东过滤)."""
+    return session.exec(
+        select(func.count())
+        .select_from(Favorite)
+        .join(User, Favorite.target_user_id == User.id)  # type: ignore[arg-type]
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(Favorite.user_id == user_id)
+        .where(shandong_clause())
+    ).one()
+
+
 @router.get("", response_model=FavoriteList)
 def list_my_favorites(
     session: SessionDep,
@@ -145,14 +157,7 @@ def list_my_favorites(
     limit: int = Query(20, ge=1, le=100),
 ) -> FavoriteList:
     """我收藏的人列表 (按收藏时间倒序)"""
-    total = session.exec(
-        select(func.count())
-        .select_from(Favorite)
-        .join(User, Favorite.target_user_id == User.id)  # type: ignore[arg-type]
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
-        .where(Favorite.user_id == current_user.id)
-        .where(shandong_clause())
-    ).one()
+    total = favorites_total_for(session, current_user.id)
 
     rows = session.exec(
         select(Favorite, Profile, User)
@@ -182,6 +187,43 @@ def list_my_favorites(
     return FavoriteList(items=items, total=total)
 
 
+def _view_sub(filter_col: Any, group_col: Any, user_id: uuid.UUID) -> Any:
+    """浏览关系去重子查询: 每个相关人取最近一次浏览时间 (分页与计数共用)."""
+    return (
+        select(
+            group_col.label("uid"),
+            func.max(View.created_at).label("last_viewed_at"),
+        )
+        .where(filter_col == user_id)
+        .group_by(group_col)
+        .subquery()
+    )
+
+
+def _view_total(
+    session: Session, *, filter_col: Any, group_col: Any, user_id: uuid.UUID
+) -> int:
+    """浏览关系去重计数 (看过我 / 我看过 共用, 含山东过滤)."""
+    sub = _view_sub(filter_col, group_col, user_id)
+    return session.exec(
+        select(func.count())
+        .select_from(sub)
+        .join(User, User.id == sub.c.uid)
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(shandong_clause())
+    ).one()
+
+
+def visitors_total_for(session: Session, user_id: uuid.UUID) -> int:
+    """看过我的人数 (与 /favorites/visitors 列表 total 同口径)."""
+    return _view_total(
+        session,
+        filter_col=View.target_user_id,  # 谁看过我: 按被看者过滤
+        group_col=View.user_id,  # 按访客聚合
+        user_id=user_id,
+    )
+
+
 def _aggregate_view_list(
     session: SessionDep,
     current_user: CurrentUser,
@@ -196,27 +238,14 @@ def _aggregate_view_list(
     两者只差两点 —— 按哪一列过滤 (target_user_id / user_id) 和按哪一端聚合
     (group_col), 抽成 helper 复用, 避免双份 SQL 漂移。
     """
-    sub = (
-        select(
-            group_col.label("uid"),
-            func.max(View.created_at).label("last_viewed_at"),
-        )
-        .where(filter_col == current_user.id)
-        .group_by(group_col)
-        .subquery()
+    sub = _view_sub(filter_col, group_col, current_user.id)
+    total = _view_total(
+        session, filter_col=filter_col, group_col=group_col, user_id=current_user.id
     )
-
-    total = session.exec(
-        select(func.count())
-        .select_from(sub)
-        .join(User, User.id == sub.c.uid)  # type: ignore[arg-type]
-        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
-        .where(shandong_clause())
-    ).one()
 
     rows = session.exec(
         select(sub.c.uid, sub.c.last_viewed_at, User, Profile)
-        .join(User, User.id == sub.c.uid)  # type: ignore[arg-type]
+        .join(User, User.id == sub.c.uid)
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(shandong_clause())
         .order_by(sub.c.last_viewed_at.desc())
