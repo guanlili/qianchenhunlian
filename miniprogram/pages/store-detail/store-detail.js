@@ -19,7 +19,11 @@ Page({
   async onLoad(query) {
     const id = query.id;
     try {
-      const s = await storeSvc.getStore(id);
+      // 门店详情与我的资料 (只为比对 home_store_id) 无依赖, 并行拉
+      const [s, me] = await Promise.all([
+        storeSvc.getStore(id),
+        profileSvc.getMe().catch(() => null),
+      ]);
       this.setData({
         store: {
           ...s,
@@ -27,13 +31,9 @@ Page({
           contactQr: resolveFileUrl(s.contact_qr),
         },
       });
-      // 检查用户当前 home_store_id
-      try {
-        const me = await profileSvc.getMe();
-        if (me && me.home_store_id === id) {
-          this.setData({ isCurrent: true });
-        }
-      } catch (e) { /* noop */ }
+      if (me && me.home_store_id === id) {
+        this.setData({ isCurrent: true });
+      }
     } catch (e) {
       wx.showToast({ title: '门店不存在', icon: 'none' });
     }
