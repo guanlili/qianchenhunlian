@@ -4854,6 +4854,29 @@ export const MatchPreviewResponseSchema = {
     description: '游客每日推荐: 前 limit 位详细 + 模糊条目 (剩余资料模糊处理).'
 } as const;
 
+export const MeStatsPublicSchema = {
+    properties: {
+        visitors_total: {
+            type: 'integer',
+            title: 'Visitors Total',
+            default: 0
+        },
+        favorites_total: {
+            type: 'integer',
+            title: 'Favorites Total',
+            default: 0
+        },
+        requests_total: {
+            type: 'integer',
+            title: 'Requests Total',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'MeStatsPublic',
+    description: '「我的」页计数聚合 (一次拿全, 替代前端并发 3 个 limit=1 列表请求).'
+} as const;
+
 export const MemberCountsSchema = {
     properties: {
         favorites_given: {

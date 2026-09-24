@@ -11,9 +11,23 @@ function getMyMembership() {
   return get('/membership/me');
 }
 
+// 套餐/配额/支付开关是准静态配置: 5 分钟内存单飞缓存,
+// 会员页与首页 (游客套餐墙) 双处拉取合并为一次; 失败不缓存下次重试
+let _plansCache = null; // { at, promise }
+const _PLANS_TTL_MS = 5 * 60 * 1000;
+
 /** 可购套餐 + 线上购买开关 (pay_online=false 时小程序只展示门店线下引导) */
 function getPlans() {
-  return get('/membership/plans');
+  const now = Date.now();
+  if (_plansCache && now - _plansCache.at < _PLANS_TTL_MS) {
+    return _plansCache.promise;
+  }
+  const promise = get('/membership/plans');
+  _plansCache = { at: now, promise };
+  promise.catch(() => {
+    if (_plansCache && _plansCache.promise === promise) _plansCache = null;
+  });
+  return promise;
 }
 
 /** 线上下单: 返回 pay_params (wx.requestPayment 参数); mock 模式 pay_params 为 null */

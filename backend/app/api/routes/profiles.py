@@ -11,7 +11,15 @@ from fastapi import APIRouter, Body, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, SQLModel, select
 
-from app.api.deps import ApiReadLimited, ApiWriteLimited, CurrentUser, SessionDep
+from app.api.deps import (
+    ApiReadLimited,
+    ApiWriteLimited,
+    CurrentUser,
+    MemberRequired,
+    SessionDep,
+)
+from app.api.routes import contacts as contacts_routes
+from app.api.routes import favorites as favorites_routes
 from app.core import profile_audit
 from app.core.progress import calc_criteria_progress, calc_profile_progress
 from app.core.wechat import assert_text_safe, assert_text_safe_fields
@@ -107,6 +115,33 @@ def read_my_profile(
         has_profile=profile is not None,
         has_criteria=criteria is not None,
         is_welcomed=is_welcomed,
+    )
+
+
+class MeStatsPublic(SQLModel):
+    """「我的」页计数聚合 (一次拿全, 替代前端并发 3 个 limit=1 列表请求)."""
+
+    visitors_total: int = 0
+    favorites_total: int = 0
+    requests_total: int = 0
+
+
+@router.get("/me/stats", response_model=MeStatsPublic)
+def my_stats(
+    session: SessionDep,
+    current_user: CurrentUser,
+    _lim: ApiReadLimited,
+    _mem: MemberRequired,
+) -> MeStatsPublic:
+    """看过我 / 我收藏 / 我的申请 三个计数.
+
+    口径与各自列表接口的 total 完全一致 (复用同一批 count helper);
+    会员专属 (与 favorites/contacts 列表同门槛, 非会员 403)。
+    """
+    return MeStatsPublic(
+        visitors_total=favorites_routes.visitors_total_for(session, current_user.id),
+        favorites_total=favorites_routes.favorites_total_for(session, current_user.id),
+        requests_total=contacts_routes.my_requests_total_for(session, current_user.id),
     )
 
 

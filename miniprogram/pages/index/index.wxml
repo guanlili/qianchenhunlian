@@ -860,7 +860,7 @@
           <view class="nav-placeholder"></view>
         </view>
       </view>
-      <scroll-view class="child-scroll" scroll-y>
+      <scroll-view class="child-scroll" scroll-y bindscrolltolower="onChildLoadMore" lower-threshold="200">
         <view class="list-empty" wx:if="{{visitorTotal == 0}}">
           <text>暂时还没有人看过你的资料</text>
         </view>
@@ -888,7 +888,7 @@
           <view class="nav-placeholder"></view>
         </view>
       </view>
-      <scroll-view class="child-scroll" scroll-y>
+      <scroll-view class="child-scroll" scroll-y bindscrolltolower="onChildLoadMore" lower-threshold="200">
         <view class="list-empty" wx:if="{{requestTotal == 0}}">
           <text>还没有提交过联系申请</text>
         </view>
@@ -918,7 +918,7 @@
           <view class="nav-placeholder"></view>
         </view>
       </view>
-      <scroll-view class="child-scroll" scroll-y>
+      <scroll-view class="child-scroll" scroll-y bindscrolltolower="onChildLoadMore" lower-threshold="200">
         <view class="list-empty" wx:if="{{favoriteTotal == 0}}">
           <text>暂无收藏</text>
         </view>
@@ -938,7 +938,7 @@
   </block>
 
   <block wx:if="{{screen == 'affinity'}}">
-    <scroll-view class="screen main-screen" scroll-y>
+    <scroll-view class="screen main-screen" scroll-y bindscrolltolower="onChildLoadMore" lower-threshold="200">
       <view class="solid-header flat">
         <view class="nav-row light">
           <view class="nav-placeholder"></view>
@@ -998,7 +998,7 @@
           <view class="nav-placeholder"></view>
         </view>
       </view>
-      <scroll-view class="child-scroll" scroll-y>
+      <scroll-view class="child-scroll" scroll-y bindscrolltolower="onChildLoadMore" lower-threshold="200">
         <view class="list-empty" wx:if="{{myLikesTotal == 0}}">
           <text>暂未给任何人点好感</text>
         </view>
@@ -1026,7 +1026,7 @@
           <view class="nav-placeholder"></view>
         </view>
       </view>
-      <scroll-view class="child-scroll" scroll-y>
+      <scroll-view class="child-scroll" scroll-y bindscrolltolower="onChildLoadMore" lower-threshold="200">
         <view class="list-empty" wx:if="{{iVisitedTotal == 0}}">
           <text>暂未浏览过任何人的资料</text>
         </view>
