@@ -27,6 +27,70 @@ const GUEST_YEARS = wizard.buildYears();
 const _resolveList = (arr) =>
   Array.isArray(arr) ? arr.map(resolveFileUrl).filter(Boolean) : [];
 
+// ---------------- 子列表分页 (六个列表共用一套拉取/追加逻辑) ----------------
+// key = screen 名; data/total = 对应的 data 字段; fetch = 分页请求; adapt = 行适配
+// (列表模板只用首图, adapt 只保留 photo 一个字段, 不把整组照片 URL 过 setData 桥)
+const CHILD_PAGE_SIZE = 20;
+
+// 相过亲列表的状态字典 (展示层, 与 lib 口径一致)
+const _REQUEST_STATUS = {
+  pending: { label: '红娘处理中', tone: 'pending' },
+  accepted: { label: '对方同意', tone: 'good' },
+  rejected: { label: '对方暂不考虑', tone: 'bad' },
+  contacted: { label: '已建群', tone: 'good' },
+  closed: { label: '已关闭', tone: 'muted' },
+};
+
+const CHILD_LIST_CONFIG = {
+  visitors: {
+    data: 'visitorList',
+    total: 'visitorTotal',
+    fetch: (skip, limit) => favoriteSvc.listVisitors({ skip, limit }),
+    adapt: (it) => ({
+      ...it,
+      photo: _resolveList(it.photos)[0] || '',
+      lastSeenText: formatDate(it.last_viewed_at),
+    }),
+  },
+  'favorites-list': {
+    data: 'favoriteList',
+    total: 'favoriteTotal',
+    fetch: (skip, limit) => favoriteSvc.listMine({ skip, limit }),
+    adapt: (it) => ({ ...it, photo: _resolveList(it.photos)[0] || '' }),
+  },
+  'my-requests': {
+    data: 'requestList',
+    total: 'requestTotal',
+    fetch: (skip, limit) => contactSvc.listMyRequests({ skip, limit }),
+    adapt: (it) => {
+      const s = _REQUEST_STATUS[it.status] || { label: it.status, tone: 'muted' };
+      return { ...it, statusLabel: s.label, statusTone: s.tone, createdText: formatDate(it.created_at) };
+    },
+  },
+  'i-visited': {
+    data: 'iVisitedList',
+    total: 'iVisitedTotal',
+    fetch: (skip, limit) => favoriteSvc.listSeenByMe({ skip, limit }),
+    adapt: (it) => ({
+      ...it,
+      photo: _resolveList(it.photos)[0] || '',
+      lastSeenText: formatDate(it.last_viewed_at),
+    }),
+  },
+  'my-likes': {
+    data: 'myLikesList',
+    total: 'myLikesTotal',
+    fetch: (skip, limit) => affinitySvc.listMine({ skip, limit }),
+    adapt: (it) => ({ ...it, photo: _resolveList(it.photos)[0] || '' }),
+  },
+  affinity: {
+    data: 'affinityMutualList',
+    total: 'affinityMutualTotal',
+    fetch: (skip, limit) => affinitySvc.listMutual({ skip, limit }),
+    adapt: (it) => ({ ...it, photo: _resolveList(it.photos)[0] || '' }),
+  },
+};
+
 /** 微信 region picker 的 value (['北京市','北京市','朝阳区']) → 去重后拼展示串 ('北京市 朝阳区') */
 function _joinRegionLabel(value) {
   const dedup = [];
@@ -862,6 +926,9 @@ Page({
 
   async loadHome() {
     if (!this.data.apiReady || !this.data.isMember) return; // 非会员不请求推荐 (403)
+    // 序号守卫: 快速切 tab / 切筛选会并发多个 loadHome, 只让最后一次的结果落地,
+    // 防止旧响应后到覆盖新数据 (经典竞态)
+    const seq = (this._loadHomeSeq = (this._loadHomeSeq || 0) + 1);
     try {
       let items, next_cursor;
       if (this.data.activeFilter) {
@@ -877,6 +944,7 @@ Page({
         items = r.items;
         next_cursor = r.next_cursor;
       }
+      if (seq !== this._loadHomeSeq) return; // 已有更新的加载, 丢弃本次结果
       const adapted = (items || []).map(adaptCard);
       // 已登录: 服务端为空就让列表空, 别再混 mock (mock 没 user_id, 收藏/联系都会失效)
       this.setData({
@@ -2468,100 +2536,88 @@ Page({
     }
   },
 
-  /** 进"我的"页时刷新各项计数 */
+  /** 进"我的"页时刷新各项计数 (聚合接口一次拿全, 不再并发 3 个 limit=1 请求) */
   async loadMeStats() {
     if (!this.data.apiReady) return;
     try {
-      const [vis, favs, reqs] = await Promise.all([
-        favoriteSvc.listVisitors({ limit: 1 }).catch(() => ({ total: 0 })),
-        favoriteSvc.listMine({ limit: 1 }).catch(() => ({ total: 0 })),
-        contactSvc.listMyRequests({ limit: 1 }).catch(() => ({ total: 0 })),
-      ]);
+      const s = await profileSvc.meStats().catch(() => null);
+      if (!s) return;
       const shortcuts = this.data.affinityShortcuts.map((it) => {
-        if (it.key === 'visitors')  return { ...it, sub: `${vis.total || 0} 人` };
-        if (it.key === 'favorites') return { ...it, sub: `${favs.total || 0} 人` };
-        if (it.key === 'requests')  return { ...it, sub: `${reqs.total || 0} 条` };
+        if (it.key === 'visitors')  return { ...it, sub: `${s.visitors_total || 0} 人` };
+        if (it.key === 'favorites') return { ...it, sub: `${s.favorites_total || 0} 人` };
+        if (it.key === 'requests')  return { ...it, sub: `${s.requests_total || 0} 条` };
         return it;
       });
       this.setData({
         affinityShortcuts: shortcuts,
         // 「看过我」接真实 visitorTotal (我的资料页三格统计第三格)
-        'stats[2].value': vis.total || 0,
+        'stats[2].value': s.visitors_total || 0,
       });
     } catch (e) {
       console.warn('[index] loadMeStats', e);
     }
   },
 
-  async openVisitors() {
+  /**
+   * 子列表分页拉取 (六个列表共用, 配置见模块级 CHILD_LIST_CONFIG).
+   * first=true 拉第一页并覆盖列表; 否则从当前列表长度续拉并按路径键追加。
+   */
+  async _loadListPage(key, first = false) {
+    const cfg = CHILD_LIST_CONFIG[key];
+    if (!cfg || !this.data.apiReady) return;
+    if (!this._childDone) this._childDone = {};
+    if (!first) {
+      if (this._childLoading) return;
+      const list = this.data[cfg.data] || [];
+      // 已到底 (拿满 total 或上一页拉空) 不再请求
+      if (this._childDone[key] || list.length >= (this.data[cfg.total] || 0)) return;
+    }
+    this._childLoading = true;
+    try {
+      const skip = first ? 0 : (this.data[cfg.data] || []).length;
+      const r = await cfg.fetch(skip, CHILD_PAGE_SIZE);
+      const items = (r.items || []).map(cfg.adapt);
+      if (first) {
+        this._childDone[key] = !items.length;
+        this.setData({
+          [cfg.data]: items,
+          [cfg.total]: r.total || 0,
+        });
+      } else {
+        const updates = {};
+        items.forEach((it, i) => {
+          updates[`${cfg.data}[${skip + i}]`] = it;
+        });
+        this.setData(updates);
+        if (!items.length) this._childDone[key] = true;
+      }
+    } catch (e) {
+      console.warn('[index] loadListPage', key, e);
+    } finally {
+      this._childLoading = false;
+    }
+  },
+
+  /** 子列表滚动到底: 增量拉下一页 (按当前 screen 分发到 CHILD_LIST_CONFIG) */
+  onChildLoadMore() {
+    this._loadListPage(this.data.screen);
+  },
+
+  openVisitors() {
     if (!getApp().requireWelcomed()) return;
     this.setData({ screen: 'visitors' });
-    if (!this.data.apiReady) return;
-    try {
-      const r = await favoriteSvc.listVisitors({ limit: 50 });
-      // 列表模板只用首图: 只保留 photo 一个字段, 不把整组照片 URL 过 setData 桥
-      const items = (r.items || []).map((it) => ({
-        ...it,
-        photo: _resolveList(it.photos)[0] || '',
-        lastSeenText: formatDate(it.last_viewed_at),
-      }));
-      this.setData({
-        visitorList: items,
-        visitorTotal: r.total || 0,
-      });
-    } catch (e) {
-      console.warn('[index] openVisitors', e);
-    }
+    this._loadListPage('visitors', true);
   },
 
-  async openFavorites() {
+  openFavorites() {
     if (!getApp().requireWelcomed()) return;
     this.setData({ screen: 'favorites-list' });
-    if (!this.data.apiReady) return;
-    try {
-      const r = await favoriteSvc.listMine({ limit: 50 });
-      const items = (r.items || []).map((it) => ({
-        ...it,
-        photo: _resolveList(it.photos)[0] || '',
-      }));
-      this.setData({
-        favoriteList: items,
-        favoriteTotal: r.total || 0,
-      });
-    } catch (e) {
-      console.warn('[index] openFavorites', e);
-    }
+    this._loadListPage('favorites-list', true);
   },
 
-  async openMyRequests() {
+  openMyRequests() {
     this.setData({ screen: 'my-requests' });
-    if (!this.data.apiReady) return;
-    try {
-      const r = await contactSvc.listMyRequests({ limit: 50 });
-      // 给每条加个 friendly statusLabel
-      const _STATUS = {
-        pending: { label: '红娘处理中', tone: 'pending' },
-        accepted: { label: '对方同意', tone: 'good' },
-        rejected: { label: '对方暂不考虑', tone: 'bad' },
-        contacted: { label: '已建群', tone: 'good' },
-        closed: { label: '已关闭', tone: 'muted' },
-      };
-      const items = (r.items || []).map((it) => {
-        const s = _STATUS[it.status] || { label: it.status, tone: 'muted' };
-        return {
-          ...it,
-          statusLabel: s.label,
-          statusTone: s.tone,
-          createdText: formatDate(it.created_at), // 提交时间走 formatDate, 不裸显后端 ISO 串
-        };
-      });
-      this.setData({
-        requestList: items,
-        requestTotal: r.total || 0,
-      });
-    } catch (e) {
-      console.warn('[index] openMyRequests', e);
-    }
+    this._loadListPage('my-requests', true);
   },
 
   /** 列表项点击进详情 */
@@ -2572,55 +2628,24 @@ Page({
   },
 
   /** 我看过的人 — 拉 /favorites/seen-by-me */
-  async openIVisited() {
+  openIVisited() {
     this.setData({ screen: 'i-visited' });
-    if (!this.data.apiReady) return;
-    try {
-      const r = await favoriteSvc.listSeenByMe({ limit: 50 });
-      const items = (r.items || []).map((it) => ({
-        ...it,
-        photo: _resolveList(it.photos)[0] || '',
-        lastSeenText: formatDate(it.last_viewed_at),
-      }));
-      this.setData({ iVisitedList: items, iVisitedTotal: r.total || 0 });
-    } catch (e) {
-      console.warn('[index] openIVisited', e);
-    }
+    this._loadListPage('i-visited', true);
   },
 
   /** 我点过好感的人 */
-  async openMyLikes() {
+  openMyLikes() {
     this.setData({ screen: 'my-likes' });
-    if (!this.data.apiReady) return;
-    try {
-      const r = await affinitySvc.listMine({ limit: 50 });
-      const items = (r.items || []).map((it) => ({
-        ...it,
-        photo: _resolveList(it.photos)[0] || '',
-      }));
-      this.setData({ myLikesList: items, myLikesTotal: r.total || 0 });
-    } catch (e) {
-      console.warn('[index] openMyLikes', e);
-    }
+    this._loadListPage('my-likes', true);
   },
 
   /** 好感消息 (互相好感) — 进入 affinity screen */
-  async openAffinity() {
+  openAffinity() {
     this.setData({ screen: 'affinity', activeTab: 'affinity' });
     // 会员制: 非会员消息页锁定 (不请求, 避免接口 403 报错噪音)
     if (!this.data.isMember) return;
     this.loadMeStats();  // 刷新顶部快捷区计数 (看过我的人/我收藏的)
-    if (!this.data.apiReady) return;
-    try {
-      const r = await affinitySvc.listMutual({ limit: 50 });
-      const items = (r.items || []).map((it) => ({
-        ...it,
-        photo: _resolveList(it.photos)[0] || '',
-      }));
-      this.setData({ affinityMutualList: items, affinityMutualTotal: r.total || 0 });
-    } catch (e) {
-      console.warn('[index] openAffinity', e);
-    }
+    this._loadListPage('affinity', true);
   },
 
   /** 列表子页返回: 按来源回"我的"或"好感消息" */

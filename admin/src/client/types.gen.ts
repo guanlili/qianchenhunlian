@@ -866,6 +866,15 @@ export type Message = {
 };
 
 /**
+ * 「我的」页计数聚合 (一次拿全, 替代前端并发 3 个 limit=1 列表请求).
+ */
+export type MeStatsPublic = {
+    visitors_total?: number;
+    favorites_total?: number;
+    requests_total?: number;
+};
+
+/**
  * 我的反馈条目: 含官方回复 (admin_note) — 后台回复是用户与管理员的沟通通道.
  */
 export type MyFeedbackItem = {
@@ -2054,6 +2063,8 @@ export type ProfilesUpsertMyProfileData = {
 export type ProfilesUpsertMyProfileResponse = (ProfileWithContact);
 
 export type ProfilesDeleteMyProfileResponse = (Message);
+
+export type ProfilesMyStatsResponse = (MeStatsPublic);
 
 export type ProfilesSubmitWelcomeData = {
     requestBody: WelcomeBody;

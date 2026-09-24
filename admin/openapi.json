@@ -891,6 +891,33 @@
         ]
       }
     },
+    "/api/v1/profiles/me/stats": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "My Stats",
+        "description": "看过我 / 我收藏 / 我的申请 三个计数.\n\n口径与各自列表接口的 total 完全一致 (复用同一批 count helper);\n会员专属 (与 favorites/contacts 列表同门槛, 非会员 403)。",
+        "operationId": "profiles-my_stats",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeStatsPublic"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/profiles/me/welcome": {
       "post": {
         "tags": [
@@ -11554,6 +11581,28 @@
         "type": "object",
         "title": "MatchPreviewResponse",
         "description": "游客每日推荐: 前 limit 位详细 + 模糊条目 (剩余资料模糊处理)."
+      },
+      "MeStatsPublic": {
+        "properties": {
+          "visitors_total": {
+            "type": "integer",
+            "title": "Visitors Total",
+            "default": 0
+          },
+          "favorites_total": {
+            "type": "integer",
+            "title": "Favorites Total",
+            "default": 0
+          },
+          "requests_total": {
+            "type": "integer",
+            "title": "Requests Total",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "MeStatsPublic",
+        "description": "「我的」页计数聚合 (一次拿全, 替代前端并发 3 个 limit=1 列表请求)."
       },
       "MemberCounts": {
         "properties": {
