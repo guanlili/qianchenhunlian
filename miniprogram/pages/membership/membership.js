@@ -46,14 +46,12 @@ Page({
       this.setData({ loading: true });
     }
     try {
-      const [status, plansRes] = await Promise.all([
+      // getLatestOrder 与前两个无依赖, 并入同一个 Promise.all (404 无订单属正常)
+      const [status, plansRes, latestOrder] = await Promise.all([
         membershipSvc.getMyMembership(),
         membershipSvc.getPlans(),
+        membershipSvc.getLatestOrder().catch(() => null),
       ]);
-      let latestOrder = null;
-      try {
-        latestOrder = await membershipSvc.getLatestOrder();
-      } catch (_) { /* 无订单 404 属正常, 忽略 */ }
       const planName = (code) => {
         const p = (plansRes.plans || []).find((it) => it.code === code);
         return p ? p.name : code;

@@ -7,9 +7,28 @@
 const { get, put, post, del, getToken, loginAndGetToken } = require('../utils/request');
 const { BASE_URL } = require('../utils/config');
 
+// getMe 短 TTL 单飞缓存: 冷启动时 loadMyProfile 与 refreshMembership→
+// checkWizardResume 等链路几乎同时请求 /profiles/me, 5 秒内合并为一次。
+// 任何资料/照片写操作后主动失效 (见 invalidateMeCache), 保证写后读最新。
+const _ME_TTL_MS = 5000;
+let _meCache = null; // { at, promise }
+
 /** 获取我的资料 + 择偶要求 摘要 */
 function getMe() {
-  return get('/profiles/me');
+  const now = Date.now();
+  if (_meCache && now - _meCache.at < _ME_TTL_MS) return _meCache.promise;
+  const promise = get('/profiles/me');
+  _meCache = { at: now, promise };
+  // 失败不缓存: 清掉, 下次调用重新回源
+  promise.catch(() => {
+    if (_meCache && _meCache.promise === promise) _meCache = null;
+  });
+  return promise;
+}
+
+/** 主动失效 getMe 缓存 (写操作后调用, 保证写后读最新) */
+function invalidateMeCache() {
+  _meCache = null;
 }
 
 /**
@@ -17,26 +36,31 @@ function getMe() {
  * @param {Object} data - {gender,year,height,edu,income,marriage,origin,location,hometown,job,has_house,has_car,body_type,desc,relation}
  */
 function saveProfile(data) {
+  invalidateMeCache();
   return put('/profiles/me', data);
 }
 
 /** 单独更新联系方式 (敏感字段) */
 function saveContact({ wechat, phone }) {
+  invalidateMeCache();
   return put('/profiles/me/contact', { wechat, phone });
 }
 
 /** 首启动引导提交 (头像 url + 昵称必填; gender/year 缺失时 is_welcomed 无法置真) */
 function submitWelcome({ nickname, avatar_url, gender, year }) {
+  invalidateMeCache();
   return post('/profiles/me/welcome', { nickname, avatar_url, gender, year });
 }
 
 /** 创建/更新我的择偶要求 */
 function saveCriteria(data) {
+  invalidateMeCache();
   return put('/profiles/me/criteria', data);
 }
 
 /** 追加一张照片 (调用前先用 uploadImage 拿到 url) */
 function addPhoto(fileUrl) {
+  invalidateMeCache();
   return post('/profiles/me/photos', { file_url: fileUrl });
 }
 
@@ -127,11 +151,13 @@ function pickAndUploadPhoto() {
 
 /** 删除指定 index 的照片 */
 function deletePhoto(index) {
+  invalidateMeCache();
   return del(`/profiles/me/photos/${index}`);
 }
 
 /** 删除我的资料 (仅资料, 账号还在) */
 function deleteMyProfile() {
+  invalidateMeCache();
   return del('/profiles/me');
 }
 
@@ -142,21 +168,25 @@ function uploadAvatar(tempPath) {
 
 /** 相亲下线: 暂时不对外展示我的资料 */
 function deactivateMe() {
+  invalidateMeCache();
   return post('/profiles/me/deactivate');
 }
 
 /** 相亲重新上线 */
 function reactivateMe() {
+  invalidateMeCache();
   return post('/profiles/me/reactivate');
 }
 
 /** 提交注销账号申请 (后端 5 个工作日内处理) */
 function cancelAccount() {
+  invalidateMeCache();
   return post('/profiles/me/cancel-account');
 }
 
 module.exports = {
   getMe,
+  invalidateMeCache,
   saveProfile,
   saveContact,
   saveCriteria,
