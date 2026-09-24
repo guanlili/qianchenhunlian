@@ -900,12 +900,22 @@ def stores_overview(
 ) -> StoreOverviewList:
     """门店总览 (总部首页卡片墙): 每店待办徽标 + 全平台未归属计数.
 
-    计数全部走 group-by 聚合 (4 条), 不逐店查询; 门店管理员只看本店卡片。
+    计数全部走 group-by 聚合, 不逐店查询; 门店管理员只看本店卡片。
+    结果带 30s 进程内缓存 (侧边栏角标轮询贯穿全会话, 与 dashboard 同款策略)。
     """
     from app.models import ContactRequest
 
-    base = select(Store)
     sid = _store_owner_id(actor)
+    key: tuple[uuid.UUID | None, str | None] = (sid, city)
+    with _stats_cache_lock:
+        cached = _overview_cache.get(key)
+        if (
+            cached is not None
+            and time.monotonic() - _overview_cached_at.get(key, 0.0) < _STATS_CACHE_TTL
+        ):
+            return cached.model_copy(deep=True)  # 深拷贝防调用方改写污染缓存
+
+    base = select(Store)
     if sid is not None:
         base = base.where(Store.id == sid)
     if city:
@@ -996,7 +1006,7 @@ def stores_overview(
             )
         )
 
-    return StoreOverviewList(
+    resp = StoreOverviewList(
         items=items,
         total=len(items),
         # 与「未归属处理」列表同口径: 只统计未绑店的游客 (非会员);
@@ -1035,6 +1045,10 @@ def stores_overview(
             or 0
         ),
     )
+    with _stats_cache_lock:
+        _overview_cache[key] = resp
+        _overview_cached_at[key] = time.monotonic()
+    return resp
 
 
 class StatementMemberRow(SQLModel):
@@ -1742,8 +1756,24 @@ def admin_stats(
     actor: CurrentActor,
     store_id: uuid.UUID | None = Query(None, description="指定门店口径 (总部可用)"),
 ) -> StatsResponse:
-    """工作台指标 — 门店管理员自动限本店口径; 总部可用 store_id 查看单店."""
-    return _compute_stats(session, actor, store_id=store_id)
+    """工作台指标 — 门店管理员自动限本店口径; 总部可用 store_id 查看单店.
+
+    结果带 30s 进程内缓存 (同 dashboard: 看板高频轮询, 底层数据刷新频率低)。"""
+    sid = _store_owner_id(actor)
+    if sid is None:
+        sid = store_id
+    with _stats_cache_lock:
+        cached = _stats_cache.get(sid)
+        if (
+            cached is not None
+            and time.monotonic() - _stats_cached_at.get(sid, 0.0) < _STATS_CACHE_TTL
+        ):
+            return cached.model_copy(deep=True)  # 深拷贝防调用方改写污染缓存
+    resp = _compute_stats(session, actor, store_id=store_id)
+    with _stats_cache_lock:
+        _stats_cache[sid] = resp
+        _stats_cached_at[sid] = time.monotonic()
+    return resp
 
 
 def _count_filter(*conds: Any) -> Any:
@@ -3064,8 +3094,8 @@ def list_redeem_codes(
     session: SessionDep,
     actor: CurrentActor,
     status: str | None = None,
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
 ) -> RedeemCodeList:
     """兑换码列表 (默认倒序). 店长只看本店生成的码."""
     limit = max(1, min(limit, 200))
@@ -3651,6 +3681,28 @@ def clear_dashboard_cache() -> None:
     with _dashboard_cache_lock:
         _dashboard_cache.clear()
         _dashboard_cached_at.clear()
+
+
+# ---------------- stats / 门店总览 30s 进程内缓存 ----------------
+# 与 dashboard 同款策略: 看板与总部首页卡片墙 (侧边栏角标轮询) 高频访问,
+# 底层数据刷新频率低; 30s TTL 吸收峰值读。
+# key: stats=(生效门店 id, None=全平台); overview=(门店口径 sid, city 筛选)。
+# tests/conftest.py 每测试调用 clear_stats_cache() 清理。
+_STATS_CACHE_TTL = 30.0
+_stats_cache: dict[uuid.UUID | None, StatsResponse] = {}
+_stats_cached_at: dict[uuid.UUID | None, float] = {}
+_overview_cache: dict[tuple[uuid.UUID | None, str | None], StoreOverviewList] = {}
+_overview_cached_at: dict[tuple[uuid.UUID | None, str | None], float] = {}
+_stats_cache_lock = threading.Lock()
+
+
+def clear_stats_cache() -> None:
+    """清空 stats / 门店总览缓存 (tests/conftest.py 每测试调用, 保证测试间隔离)."""
+    with _stats_cache_lock:
+        _stats_cache.clear()
+        _stats_cached_at.clear()
+        _overview_cache.clear()
+        _overview_cached_at.clear()
 
 
 @router.get(

@@ -9,7 +9,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 from app import crud
 from app.api.deps import get_db
-from app.api.routes.admin import clear_dashboard_cache
+from app.api.routes.admin import clear_dashboard_cache, clear_stats_cache
 from app.api.routes.stores import clear_store_geo_cache
 from app.core.config import settings
 from app.core.membership import clear_membership_config_cache
@@ -119,6 +119,7 @@ def _reset_login_limiter() -> Generator[None, None, None]:
     clear_store_geo_cache()
     reset_view_cleanup_throttle()
     clear_dashboard_cache()
+    clear_stats_cache()
     yield
 
 
