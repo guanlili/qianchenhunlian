@@ -8,6 +8,7 @@ import {
   Crown,
   MapPin,
   Pencil,
+  RotateCcw,
   ShieldCheck,
   Ticket,
   X,
@@ -233,24 +234,30 @@ function MemberDetail() {
         {/* 操作条 */}
         {(canOperateMember || canWrite) && p && (
           <div className="flex flex-wrap gap-2">
-            {canWrite && (
-              <>
-                {/* 资料审核已下线 (先发后审); 保留「下架资料」用于违规内容 */}
+            {canWrite &&
+              (p.audit_status === "rejected" ? (
+                // 已下架 → 重新上架恢复可见 (audit_status 置回 approved 并清空下架原因)
+                <AuditDialog
+                  item={p}
+                  approve
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <RotateCcw /> 上架资料
+                    </Button>
+                  }
+                />
+              ) : (
+                // 资料审核已下线 (先发后审); 「下架资料」用于违规内容, 下架后可随时再上架
                 <AuditDialog
                   item={p}
                   approve={false}
                   trigger={
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={p.audit_status === "rejected"}
-                    >
+                    <Button size="sm" variant="outline">
                       <X /> 下架资料
                     </Button>
                   }
                 />
-              </>
-            )}
+              ))}
             {canOperateMember &&
               (m.verified === "passed" ? (
                 <Button
