@@ -3028,7 +3028,7 @@ Page({
     if (this.data.guestSubmitting) return;
     if (!this.data.guestAvatarUrl) {
       return wx.showToast({
-        title: this.data.guestAvatarPath ? '头像上传中, 请稍候' : '请上传真实头像',
+        title: this.data.guestAvatarPath ? '头像上传中, 请稍候' : '请上传头像',
         icon: 'none',
       });
     }
