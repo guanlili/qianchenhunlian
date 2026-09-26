@@ -15,7 +15,7 @@ export const REQUEST_STATUS_LABEL: Record<string, string> = {
 
 /** 后台敏感操作动作 (会员详情「操作日志」页签) */
 export const ACTION_LABEL: Record<string, string> = {
-  audit_pass: "资料通过 (历史)",
+  audit_pass: "上架资料",
   audit_reject: "下架资料",
   verify: "实名认证",
   unverify: "撤销认证",

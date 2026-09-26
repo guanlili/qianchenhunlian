@@ -21,7 +21,7 @@
           <view wx:else class="avatar-default">
             <text>{{defaultGlyph}}</text>
           </view>
-          <text class="avatar-edit-tag">{{avatarTempPath ? '点击更换' : '上传真实头像'}}</text>
+          <text class="avatar-edit-tag">{{avatarTempPath ? '点击更换' : '上传头像'}}</text>
         </view>
       </view>
 

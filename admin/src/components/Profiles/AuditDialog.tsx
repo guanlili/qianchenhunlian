@@ -19,7 +19,7 @@ import { getApiErrorMessage } from "@/utils"
 
 interface AuditDialogProps {
   item: AdminProfileItem
-  approve: boolean // true = 通过, false = 下架
+  approve: boolean // true = 上架 (恢复可见), false = 下架
   trigger: React.ReactNode
   onClose?: () => void
 }
@@ -57,7 +57,7 @@ export function AuditDialog({
       qc.invalidateQueries({ queryKey: ["admin-members"] })
       qc.invalidateQueries({ queryKey: ["member-full"] })
       qc.invalidateQueries({ queryKey: ["admin-stats"] })
-      toast.success(approve ? "已通过审核" : "已下架")
+      toast.success(approve ? "已上架" : "已下架")
       setOpen(false)
       setReason("")
       onClose?.()
@@ -72,7 +72,7 @@ export function AuditDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{approve ? "通过审核" : "下架资料"}</DialogTitle>
+          <DialogTitle>{approve ? "上架资料" : "下架资料"}</DialogTitle>
           <DialogDescription>
             寻缘号 {item.xy_code || "—"} · {item.gender || ""}{" "}
             {item.year ? `${item.year}年` : ""} {item.location || ""}
@@ -114,7 +114,7 @@ export function AuditDialog({
             {mutation.isPending
               ? "处理中..."
               : approve
-                ? "确认通过"
+                ? "确认上架"
                 : "确认下架"}
           </Button>
         </DialogFooter>
