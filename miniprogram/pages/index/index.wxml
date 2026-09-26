@@ -18,7 +18,7 @@
         <view class="member-lock-title" wx:if="{{previewGate}}">{{guestStep === 1 ? '先做个小测试' : guestStep === 2 ? '欢迎你, 先完善基本信息' : guestStep === 3 ? '完善基本条件' : guestStep === 4 ? '更多资料 (选填)' : guestStep === 5 ? '择偶要求' : '确认缴费'}}</view>
         <view class="member-lock-title" wx:else>每日推荐</view>
         <view class="member-lock-sub" wx:if="{{previewGate}}">
-          <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传真实头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、体重、民族、婚姻、职业与月收入' : guestStep === 4 ? '学历、工作、资产等, 均为选填' : guestStep === 5 ? '告诉我们你期待什么样的另一半' : '微信支付年费, 或填体验码直接开通'}}</text>
+          <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、体重、民族、婚姻、职业与月收入' : guestStep === 4 ? '学历、工作、资产等, 均为选填' : guestStep === 5 ? '告诉我们你期待什么样的另一半' : '微信支付年费, 或填体验码直接开通'}}</text>
           <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 6 步)</text>
         </view>
         <view class="member-lock-sub" wx:else>
@@ -57,11 +57,11 @@
       <!-- 注册页: 头像 + 昵称 + 协议 -->
       <view class="member-lock-card" wx:if="{{previewGate && guestStep === 2}}">
         <view class="guest-row">
-          <view class="guest-label">真实头像<text class="req">*</text></view>
+          <view class="guest-label">头像<text class="req">*</text></view>
           <view class="guest-avatar" bindtap="onGuestAvatarPick">
             <image wx:if="{{guestAvatarPath}}" class="guest-avatar-img" src="{{guestAvatarPath}}" mode="aspectFill" />
             <view wx:else class="guest-avatar-default"><text>+</text></view>
-            <text class="guest-avatar-tag">{{guestAvatarPath ? '点击更换' : '上传真实头像'}}</text>
+            <text class="guest-avatar-tag">{{guestAvatarPath ? '点击更换' : '上传头像'}}</text>
           </view>
         </view>
         <view class="guest-row">

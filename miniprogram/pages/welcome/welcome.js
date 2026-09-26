@@ -99,7 +99,7 @@ Page({
       wx.showToast({
         title: this.data.avatarTempPath
           ? '头像上传中, 请稍候'
-          : '请上传真实头像',
+          : '请上传头像',
         icon: 'none',
       });
       return;
