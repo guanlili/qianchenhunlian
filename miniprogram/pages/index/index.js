@@ -2839,11 +2839,17 @@ Page({
 
   /** 注册向导收口: 回到每日推荐/会员流 (缴费/体验码/跳过缴费共用) */
   finishGuestOnboarding() {
+    // 步骤 2 提交成功只置了 globalData/storage 的 welcomed 标记, 页面数据
+    // isWelcomed 仍是 onLoad 时的 false (向导全程在页内, 不触发 onShow 重同步)。
+    // 不在这里补齐, refreshMembership 的 loadHome 门槛 (isWelcomed) 过不去,
+    // 体验码/支付开通成功后会卡在 welcomed-gate 中间态, 表现为「不跳转」。
+    const isWelcomed = this._syncWelcomed();
     this.setData({
       previewLoaded: false,
       previewGate: false,
       guestStep: 1,
       guestRedeemCode: '',
+      isWelcomed,
     });
     this.refreshMembership(); // isMember 翻转 → loadHome; 否则回预览
   },
