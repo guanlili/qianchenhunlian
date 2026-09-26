@@ -4,6 +4,8 @@
 不同门店口径缓存键互不污染。与 test_config_cache.py 的配置缓存测试同风格。
 """
 
+from datetime import datetime, timedelta
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -24,11 +26,16 @@ def test_stats_cache_hit_and_invalidate(
     assert r.status_code == 200
     baseline = r.json()["today_signups"]
 
-    # 缓存期内绕过接口直插一个用户, 统计仍返回缓存值
-    crud.create_user(
+    # 缓存期内绕过接口直插一个在期会员, 统计仍返回缓存值
+    # (today_signups 已改会员口径: 只数当前在期会员, 直插游客不计数)
+    member = crud.create_user(
         session=db,
         user_create=UserCreate(email=random_email(), password=random_lower_string()),
     )
+    member.openid = "on_stats_cache_member"
+    member.membership_expires_at = datetime.utcnow() + timedelta(days=30)
+    db.add(member)
+    db.commit()
     r2 = client.get(f"{API}/admin/stats", headers=superuser_token_headers)
     assert r2.status_code == 200
     assert r2.json()["today_signups"] == baseline
