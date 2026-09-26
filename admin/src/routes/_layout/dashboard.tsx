@@ -125,8 +125,8 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
   ]
 
   const metricCards = [
-    { label: "今日新增注册", value: stats?.today_signups ?? 0 },
-    { label: "上月新增注册", value: stats?.last_month_signups ?? 0 },
+    { label: "今日新增会员", value: stats?.today_signups ?? 0 },
+    { label: "上月新增会员", value: stats?.last_month_signups ?? 0 },
     { label: "会员总数", value: stats?.total_users ?? 0 },
     { label: "已实名", value: stats?.verified_users ?? 0 },
     {

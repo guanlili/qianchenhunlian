@@ -1730,7 +1730,7 @@ class StatsResponse(SQLModel):
     total_users: int = 0
     total_profiles: int = 0
     pending_audits: int = 0
-    today_signups: int = 0
+    today_signups: int = 0  # 今日新增会员 (当天注册且当前在期; 游客见 guest_*)
     # — 新增 5 项 —
     pending_tickets: int = 0  # 待处理工单 (status='pending')
     mutual_affinity_pairs: int = 0  # 互相好感对子 (有 A→B 和 B→A 同时存在的对)
@@ -1743,7 +1743,7 @@ class StatsResponse(SQLModel):
     expiring_members: int = 0
     open_feedback: int = 0  # 未处理反馈 (Feedback.status='open')
     # — 门店对账 (2026-08-19) —
-    last_month_signups: int = 0  # 上个北京自然月新增会员 (对账口径)
+    last_month_signups: int = 0  # 上个北京自然月新增会员 (当月注册且当前在期)
     # — 游客 (2026-08-31): 注册了但当前非会员的用户, 跨店看板总览用 —
     guest_today: int = 0  # 今日新增游客
     guest_this_month: int = 0  # 本月新增游客
@@ -1834,15 +1834,17 @@ def _compute_stats(
             _count_filter(member_cond),
             # 已实名会员
             _count_filter(member_cond, User.verified == "passed"),
-            # 今日注册 (全量注册口径, 含游客)
-            _count_filter(User.created_at >= today_start),
+            # 今日新增会员 (当天注册且当前在期; 游客走下方 guest_* 专属计数)
+            _count_filter(member_cond, User.created_at >= today_start),
             # 待实名核验
             _count_filter(User.verified == "pending"),
             # 7 天内到期会员 (续费回访名单)
             _count_filter(User.membership_expires_at.between(now, soon)),  # type: ignore[union-attr]
-            # 上个北京自然月新增 (对账口径)
+            # 上个北京自然月新增会员 (对账口径: 当月注册且当前在期)
             _count_filter(
-                User.created_at >= lm_start_utc, User.created_at < lm_end_utc
+                member_cond,
+                User.created_at >= lm_start_utc,
+                User.created_at < lm_end_utc,
             ),
             # 游客三项 (注册了但当前非会员)
             _count_filter(guest_cond, User.created_at >= today_start),
@@ -3804,13 +3806,16 @@ def _compute_dashboard(
         overdue_stmt = overdue_stmt.where(ContactRequest.store_id == sid)
     overdue = session.exec(overdue_stmt).one() or 0
 
-    # 近 7 天每日新增 (北京时间自然日分桶; 量小, Python 分桶避免跨库日期函数差异)
-    week_ago = datetime.utcnow() - timedelta(days=7)
+    # 近 7 天每日新增会员 (北京时间自然日分桶; 只数当前在期会员, 游客不计入。
+    # 量小, Python 分桶避免跨库日期函数差异)
+    now_utc = datetime.utcnow()
+    week_ago = now_utc - timedelta(days=7)
     signup_base = (
         select(User.created_at)
         .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
         .where(User.openid.is_not(None))  # type: ignore[union-attr]
         .where(User.created_at >= week_ago)
+        .where(User.membership_expires_at > now_utc)  # type: ignore[operator]
     )
     if sid is not None:
         signup_base = signup_base.where(Profile.home_store_id == sid)

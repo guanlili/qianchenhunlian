@@ -141,9 +141,13 @@ def test_activity_feed_scoped_and_mutual(
 def test_dashboard_last_month_signups(
     client: TestClient, db: Session, superuser_token_headers: dict
 ) -> None:
-    """上月新增会员 (北京自然月对账口径): 区间内计入, 边界外不计."""
+    """上月新增会员 (北京自然月对账口径): 区间内且当前在期才计入."""
     lm_start, lm_end = _last_month_window_utc()
-    _make_user(db, created_at=lm_start + timedelta(hours=1))  # 上月内 ✓
+    in_window = _make_user(db, created_at=lm_start + timedelta(hours=1))  # 上月内 ✓
+    # 会员口径 (2026-09-26): 当前非在期会员不计入 last_month_signups
+    in_window.membership_expires_at = datetime.utcnow() + timedelta(days=30)
+    db.add(in_window)
+    db.commit()
     _make_user(db, created_at=lm_end + timedelta(hours=1))  # 本月 ✗
     _make_user(db, created_at=lm_start - timedelta(hours=1))  # 上上月 ✗
 
