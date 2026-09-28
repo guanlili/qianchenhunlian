@@ -12,6 +12,7 @@ export type ActivityFeedItem = {
     to_xy_code?: (string | null);
     to_avatar_url?: (string | null);
     mutual?: boolean;
+    pair_ticket_status?: (string | null);
     created_at: string;
 };
 
@@ -31,6 +32,13 @@ export type ActivityItem = {
 export type ActivityList = {
     items?: Array<ActivityItem>;
     total?: number;
+};
+
+export type ActivityMatchBody = {
+    from_user_id: string;
+    to_user_id: string;
+    store_id?: (string | null);
+    note?: (string | null);
 };
 
 export type AdminAccountCreate = {
@@ -1642,7 +1650,7 @@ export type AdminDeleteStaffEndpointResponse = (Message);
 export type AdminListContactRequestsData = {
     limit?: number;
     skip?: number;
-    status?: 'all' | 'pending' | 'accepted' | 'rejected' | 'contacted' | 'closed';
+    status?: 'all' | 'pending' | 'accepted' | 'rejected' | 'contacted' | 'matched' | 'closed';
     storeId?: (string | null);
     /**
      * 只看未归属任何门店的工单 (总部兜底)
@@ -1788,6 +1796,12 @@ export type AdminListActivityFeedData = {
 };
 
 export type AdminListActivityFeedResponse = (ActivityFeedList);
+
+export type AdminMatchFromActivityData = {
+    requestBody: ActivityMatchBody;
+};
+
+export type AdminMatchFromActivityResponse = (AdminContactRequestItem);
 
 export type AdminListMemberRequestsData = {
     limit?: number;

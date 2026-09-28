@@ -2,8 +2,8 @@ import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
-  type PaginationState,
   getPaginationRowModel,
+  type PaginationState,
   type Table as TanstackTable,
   type Updater,
   useReactTable,
@@ -66,7 +66,10 @@ export function DataTable<TData, TValue>({
     ...(pagination
       ? {
           manualPagination: true,
-          pageCount: Math.max(1, Math.ceil(pagination.total / pagination.pageSize)),
+          pageCount: Math.max(
+            1,
+            Math.ceil(pagination.total / pagination.pageSize),
+          ),
           state: {
             pagination: {
               pageIndex: pagination.pageIndex,
@@ -153,15 +156,13 @@ export function DataTable<TData, TValue>({
         </TableBody>
       </Table>
 
-      {pagination ? (
-        pagination.total > 0 && (
-          <ServerPaginationFooter pagination={pagination} table={table} />
-        )
-      ) : (
-        table.getPageCount() > 1 && (
-          <ClientPaginationFooter table={table} rowCount={data.length} />
-        )
-      )}
+      {pagination
+        ? pagination.total > 0 && (
+            <ServerPaginationFooter pagination={pagination} table={table} />
+          )
+        : table.getPageCount() > 1 && (
+            <ClientPaginationFooter table={table} rowCount={data.length} />
+          )}
     </div>
   )
 }
@@ -295,9 +296,7 @@ function ClientPaginationFooter<TData>({
             }}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue
-                placeholder={table.getState().pagination.pageSize}
-              />
+              <SelectValue placeholder={table.getState().pagination.pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
               {[5, 10, 25, 50].map((pageSize) => (

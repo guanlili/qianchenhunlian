@@ -92,6 +92,17 @@ export const ActivityFeedItemSchema = {
             title: 'Mutual',
             default: false
         },
+        pair_ticket_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Pair Ticket Status'
+        },
         created_at: {
             type: 'string',
             format: 'date-time',
@@ -192,6 +203,47 @@ export const ActivityListSchema = {
     },
     type: 'object',
     title: 'ActivityList'
+} as const;
+
+export const ActivityMatchBodySchema = {
+    properties: {
+        from_user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'From User Id'
+        },
+        to_user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'To User Id'
+        },
+        store_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Store Id'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        }
+    },
+    type: 'object',
+    required: ['from_user_id', 'to_user_id'],
+    title: 'ActivityMatchBody'
 } as const;
 
 export const AdminAccountCreateSchema = {

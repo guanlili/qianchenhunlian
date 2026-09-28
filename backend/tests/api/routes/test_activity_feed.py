@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.membership import CN_TZ
 from app.models import (
     Affinity,
+    ContactRequest,
     Favorite,
     Profile,
     StaffCreate,
@@ -136,6 +137,122 @@ def test_activity_feed_scoped_and_mutual(
         headers=superuser_token_headers,
     )
     assert r.json()["total"] == 1
+
+
+def test_match_from_activity_flow(client: TestClient, db: Session) -> None:
+    """动态撮合: 建单即已撮合 + 备注; 动态流标注工单状态; 同对去重 (任一方向)."""
+    headers, store = _setup_store_admin(client, db)
+    a = _make_user(db, home_store_id=store.id)
+    b = _make_user(db, home_store_id=store.id)
+    # 用户侧「我的申请」走 shandong_clause, 目标方 (b) 需是山东资料才可见
+    b.profile.location = "济南"
+    db.add(Affinity(from_user_id=a.id, to_user_id=b.id, created_at=datetime.utcnow()))
+    db.commit()
+
+    # 门店管理员撮合: 强制归属本店, 建单即 matched + 手写备注, 不扣申请额度
+    bal_before = a.unlock_balance
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={
+            "from_user_id": str(a.id),
+            "to_user_id": str(b.id),
+            "note": "双方均有意向, 已拉群对接",
+        },
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    ticket = r.json()
+    assert ticket["status"] == "matched"
+    assert ticket["store_id"] == str(store.id)
+    assert ticket["admin_note"] == "双方均有意向, 已拉群对接"
+    assert ticket["handled_at"] is not None
+    db.refresh(a)
+    assert a.unlock_balance == bal_before
+
+    # 动态流标注: 该对的行不再是无工单状态
+    r = client.get(f"{API}/admin/activity-feed?kind=affinity", headers=headers)
+    assert r.json()["items"][0]["pair_ticket_status"] == "matched"
+
+    # 工单列表按 status=matched 可查
+    r = client.get(f"{API}/admin/contact-requests?status=matched", headers=headers)
+    assert r.json()["total"] == 1
+    assert r.json()["items"][0]["status"] == "matched"
+
+    # 同对重复撮合 (正向) → 409
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={"from_user_id": str(a.id), "to_user_id": str(b.id)},
+        headers=headers,
+    )
+    assert r.status_code == 409
+    # 反方向同样算重复 → 409
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={"from_user_id": str(b.id), "to_user_id": str(a.id)},
+        headers=headers,
+    )
+    assert r.status_code == 409
+
+    # 用户侧申请列表可见已撮合状态 (红娘代客建单, 发起方在「我的申请」里能看到)
+    from tests.utils.user import authentication_token_from_email
+
+    a_headers = authentication_token_from_email(client=client, email=a.email, db=db)
+    r = client.get(f"{API}/contacts/my-requests", headers=a_headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["items"][0]["status"] == "matched"
+
+
+def test_match_from_activity_superuser_scope(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """superuser 撮合: 必须显式指定归属门店; 已拒绝的旧单不挡新撮合."""
+    store = Store(name="撮合总部测试店", city="济南")
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+    a = _make_user(db)
+    b = _make_user(db)
+
+    # 不带 store_id → 400
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={"from_user_id": str(a.id), "to_user_id": str(b.id)},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 400
+
+    # 带门店 → 200, 归属指定店
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={
+            "from_user_id": str(a.id),
+            "to_user_id": str(b.id),
+            "store_id": str(store.id),
+        },
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["store_id"] == str(store.id)
+
+    # 已拒绝的历史旧单不算「进行中」, 新一对撮合不受影响
+    c = _make_user(db)
+    d = _make_user(db)
+    db.add(
+        ContactRequest(
+            from_user_id=c.id, to_user_id=d.id, status="rejected", store_id=store.id
+        )
+    )
+    db.commit()
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={
+            "from_user_id": str(c.id),
+            "to_user_id": str(d.id),
+            "store_id": str(store.id),
+        },
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
 
 
 def test_dashboard_last_month_signups(
