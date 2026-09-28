@@ -4627,6 +4627,7 @@
                 "accepted",
                 "rejected",
                 "contacted",
+                "matched",
                 "closed"
               ],
               "type": "string",
@@ -5933,6 +5934,53 @@
         }
       }
     },
+    "/api/v1/admin/activity-feed/match": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Match From Activity",
+        "description": "动态撮合: 红娘在行为动态里把一对用户直接标记为已撮合.\n\n与用户主动提交的联系申请不同: 不扣 unlock_balance (运营动作非用户申请),\n建单即 status=matched + 记录红娘手写备注, 在「撮合工单」页留档展示.",
+        "operationId": "admin-match_from_activity",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityMatchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminContactRequestItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/members/{user_id}/requests": {
       "get": {
         "tags": [
@@ -6755,6 +6803,17 @@
             "title": "Mutual",
             "default": false
           },
+          "pair_ticket_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pair Ticket Status"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -6861,6 +6920,49 @@
         },
         "type": "object",
         "title": "ActivityList"
+      },
+      "ActivityMatchBody": {
+        "properties": {
+          "from_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "From User Id"
+          },
+          "to_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "To User Id"
+          },
+          "store_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Id"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from_user_id",
+          "to_user_id"
+        ],
+        "title": "ActivityMatchBody"
       },
       "AdminAccountCreate": {
         "properties": {

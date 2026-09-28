@@ -10,6 +10,7 @@ export const REQUEST_STATUS_LABEL: Record<string, string> = {
   accepted: "对方同意",
   rejected: "对方拒绝",
   contacted: "已建群",
+  matched: "已撮合",
   closed: "已关闭",
 }
 
@@ -27,6 +28,9 @@ export const ACTION_LABEL: Record<string, string> = {
   assign_store: "指定门店",
   grant_membership: "开通/续费会员",
   revoke_membership: "撤销会员",
+  match_from_activity: "动态撮合",
+  handle_ticket: "处理工单",
+  assign_ticket: "改派工单",
 }
 
 /** 会员发放来源 (会员详情发放记录 / 门店对账单明细共用) */

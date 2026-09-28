@@ -41,9 +41,17 @@ export function MembersList() {
   }, [keyword])
 
   // 切筛选条件回到第一页
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 依赖为有意触发 (任一筛选变化即重置页码), effect 体本身不读这些值
   useEffect(() => {
     setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }))
-  }, [auditStatus, verified, userStatus, membership, storeFilter, debouncedKeyword])
+  }, [
+    auditStatus,
+    verified,
+    userStatus,
+    membership,
+    storeFilter,
+    debouncedKeyword,
+  ])
 
   const { data, isLoading } = useQuery({
     queryFn: () =>
