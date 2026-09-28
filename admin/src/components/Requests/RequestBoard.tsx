@@ -20,7 +20,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 
-type StatusFilter = "pending" | "accepted" | "rejected" | "contacted" | "closed"
+type StatusFilter =
+  | "pending"
+  | "accepted"
+  | "contacted"
+  | "matched"
+  | "rejected"
+  | "closed"
 
 // 状态中文标签统一走 lib/labels (与 dashboard / 会员详情共用一份字典)
 const STATUS_LABEL = REQUEST_STATUS_LABEL
@@ -36,6 +42,7 @@ const STATUS_BADGE: Record<
   accepted: { label: "对方同意", variant: "default" },
   rejected: { label: "对方拒绝", variant: "destructive" },
   contacted: { label: "已建群", variant: "default" },
+  matched: { label: "已撮合", variant: "default" },
   closed: { label: "已关闭", variant: "secondary" },
 }
 
@@ -47,6 +54,8 @@ const NEXT_STATUSES: Record<string, HandleStatus[]> = {
   pending: ["accepted", "rejected", "contacted", "closed"],
   accepted: ["contacted", "closed"],
   contacted: ["closed"],
+  // matched (动态撮合生成) 只能关闭归档
+  matched: ["closed"],
   rejected: [],
   closed: [],
 }
@@ -128,8 +137,10 @@ function Timeline({ item }: { item: AdminContactRequestItem }) {
         </div>
       ) : item.handled_at ? (
         <div className="text-muted-foreground">
-          <span className="text-foreground">处理完成</span> ·{" "}
-          {new Date(item.handled_at).toLocaleString("zh-CN")}
+          <span className="text-foreground">
+            {item.status === "matched" ? "撮合完成" : "处理完成"}
+          </span>{" "}
+          · {new Date(item.handled_at).toLocaleString("zh-CN")}
           {item.admin_note && ` · 备注: ${item.admin_note}`}
           {item.handled_by && (
             <>
@@ -298,6 +309,7 @@ export function RequestBoard({ storeId }: { storeId?: string }) {
     "pending",
     "accepted",
     "contacted",
+    "matched",
     "rejected",
     "closed",
   ]

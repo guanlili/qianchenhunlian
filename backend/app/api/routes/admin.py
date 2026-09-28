@@ -2248,7 +2248,7 @@ def list_contact_requests(
     session: SessionDep,
     actor: CurrentActor,
     status_filter: Literal[
-        "all", "pending", "accepted", "rejected", "contacted", "closed"
+        "all", "pending", "accepted", "rejected", "contacted", "matched", "closed"
     ] = Query("all", alias="status"),
     store_id: uuid.UUID | None = Query(None),
     unassigned: bool = Query(False, description="只看未归属任何门店的工单 (总部兜底)"),
@@ -3437,6 +3437,8 @@ class ActivityFeedItem(SQLModel):
     to_xy_code: str | None = None
     to_avatar_url: str | None = None
     mutual: bool = False  # 仅心动: 双向互为心动 (撮合黄金线索)
+    # 该用户对 (任一方向) 最新进行中工单的状态; None=无, 前端给「撮合」按钮
+    pair_ticket_status: str | None = None
     created_at: datetime
 
 
@@ -3500,6 +3502,44 @@ def list_activity_feed(
         # 键转换成行方向 (to, from), 反向记录不在当前页也能命中
         mutual_pairs = {(t, f) for f, t in rev_rows}
 
+    # 进行中工单标记 (撮合入口用): 该用户对 (任一方向) 存在 pending/accepted/
+    # contacted/matched 工单时, 动态行显示工单状态而不是「撮合」按钮.
+    # 已拒绝/已关闭的旧单不算, 红娘可重新撮合.
+    pair_status: dict[frozenset[uuid.UUID], str] = {}
+    if rows:
+        pairs = [(getattr(r, from_col), getattr(r, to_col)) for r, *_ in rows]
+        ticket_rows = session.exec(
+            select(
+                ContactRequest.from_user_id,
+                ContactRequest.to_user_id,
+                ContactRequest.status,
+            ).where(
+                ContactRequest.status.in_(  # type: ignore[attr-defined]
+                    ["pending", "accepted", "contacted", "matched"]
+                ),
+                or_(
+                    *[
+                        or_(
+                            and_(
+                                ContactRequest.from_user_id == a,
+                                ContactRequest.to_user_id == b,
+                            ),
+                            and_(
+                                ContactRequest.from_user_id == b,
+                                ContactRequest.to_user_id == a,
+                            ),
+                        )
+                        for a, b in pairs
+                    ]
+                ),
+            )
+        ).all()
+        for f, t, st in ticket_rows:
+            # 未按时间排序, 同对多单时取字典序外优先级无所谓: 同对的在途单
+            # 状态语义等价 (都表示「已在处理」), 取先见到的一条即可
+            key = frozenset((f, t))
+            pair_status.setdefault(key, st)
+
     items = []
     for r, f_u, f_p, t_u, t_p in rows:
         f_uid = getattr(r, from_col)
@@ -3517,10 +3557,98 @@ def list_activity_feed(
                 to_xy_code=t_u.xy_code if t_u else None,
                 to_avatar_url=t_p.avatar_url if t_p else None,
                 mutual=(f_uid, t_uid) in mutual_pairs,
+                pair_ticket_status=pair_status.get(frozenset((f_uid, t_uid))),
                 created_at=r.created_at,
             )
         )
     return ActivityFeedList(items=items, total=total)
+
+
+class ActivityMatchBody(SQLModel):
+    from_user_id: uuid.UUID
+    to_user_id: uuid.UUID
+    # 归属门店: 门店管理员强制本店 (传了也忽略), superuser 必须显式指定
+    store_id: uuid.UUID | None = None
+    note: str | None = None  # 红娘手写备注 (≤255)
+
+
+@router.post(
+    "/activity-feed/match",
+    response_model=AdminContactRequestItem,
+    dependencies=[Depends(require_perm(Perm.HANDLE_REQUEST))],
+)
+def match_from_activity(
+    session: SessionDep,
+    actor: CurrentActor,
+    body: ActivityMatchBody,
+) -> AdminContactRequestItem:
+    """动态撮合: 红娘在行为动态里把一对用户直接标记为已撮合.
+
+    与用户主动提交的联系申请不同: 不扣 unlock_balance (运营动作非用户申请),
+    建单即 status=matched + 记录红娘手写备注, 在「撮合工单」页留档展示.
+    """
+    if body.from_user_id == body.to_user_id:
+        raise HTTPException(status_code=400, detail="不能撮合同一位用户")
+    for uid in (body.from_user_id, body.to_user_id):
+        if not session.get(User, uid):
+            raise HTTPException(status_code=404, detail="用户不存在")
+    # 归属门店: 门店管理员强制本店; superuser 须显式指定 (与动态流口径一致)
+    store_id = _store_owner_id(actor) or body.store_id
+    if store_id is None:
+        raise HTTPException(status_code=400, detail="请指定工单归属门店")
+    store = session.get(Store, store_id)
+    if not store or store.status != "active":
+        raise HTTPException(status_code=400, detail="门店不存在或已停用")
+    # 同一对去重 (任一方向, 进行中的工单即算): 防重复建单 / 重复撮合
+    dup = session.exec(
+        select(ContactRequest).where(
+            ContactRequest.status.in_(  # type: ignore[attr-defined]
+                ["pending", "accepted", "contacted", "matched"]
+            ),
+            or_(
+                and_(
+                    ContactRequest.from_user_id == body.from_user_id,
+                    ContactRequest.to_user_id == body.to_user_id,
+                ),
+                and_(
+                    ContactRequest.from_user_id == body.to_user_id,
+                    ContactRequest.to_user_id == body.from_user_id,
+                ),
+            ),
+        )
+    ).first()
+    if dup:
+        raise HTTPException(status_code=409, detail="该用户对已有进行中的撮合工单")
+    now = datetime.utcnow()
+    req = ContactRequest(
+        from_user_id=body.from_user_id,
+        to_user_id=body.to_user_id,
+        store_id=store_id,
+        status="matched",
+        handled_at=now,
+        updated_at=now,
+        admin_note=(body.note or "").strip()[:255] or None,
+    )
+    try:
+        req.handled_by = uuid.UUID(actor.id)
+    except (ValueError, TypeError):
+        pass
+    _audit(
+        session,
+        actor,
+        "match_from_activity",
+        target_user_id=body.from_user_id,
+        detail={
+            "request_id": str(req.id),
+            "to_user_id": str(body.to_user_id),
+            "store_id": str(store_id),
+            "note": req.admin_note,
+        },
+    )
+    session.add(req)
+    session.commit()
+    session.refresh(req)
+    return _build_request_item(req, actor, *_prefetch_request_parties(session, [req]))
 
 
 @router.get("/members/{user_id}/requests", response_model=AdminContactRequestList)
