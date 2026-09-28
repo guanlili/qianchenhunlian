@@ -17,6 +17,7 @@ const favoriteSvc = require('../../services/favorite');
 const contactSvc = require('../../services/contact');
 const affinitySvc = require('../../services/affinity');
 const membershipSvc = require('../../services/membership');
+const storeSvc = require('../../services/store');
 const { resolveFileUrl } = require('../../utils/config');
 const { formatDate } = require('../../utils/format');
 const wizard = require('../../utils/wizard');
@@ -449,17 +450,18 @@ const createFilterSteps = () => [
   { key: 'car', title: '车辆', multiple: false, columns: 'two', options: makeOptions(['不限', '有车', '无车']) },
 ];
 
-// income 10 档桶 (后端实际枚举值, 给 backend 用)
-const _INCOME_BUCKETS = ['3万以下', '3-5万', '5-7万', '7-10万', '10-15万', '15-20万', '20-30万', '30-50万', '50-100万', '100万以上'];
+// income 7 档桶 (后端实际枚举值, 给 backend 用)
+const _INCOME_BUCKETS = ['2000-4000', '4000-6000', '6000-8000', '8000-12000', '12000-20000', '20000-30000', '3万以上'];
 // income 滑块刻度显示 (UI 友好, 干净的金额点)
-const _INCOME_TICKS = ['3 万', '5 万', '7 万', '10 万', '15 万', '20 万', '30 万', '50 万', '100 万', '100 万+'];
+const _INCOME_TICKS = ['4k', '6k', '8k', '12k', '20k', '30k', '30k+'];
 const _CURRENT_YEAR = new Date().getFullYear();
 
 /** 收入 slider 拖到 (minIdx, maxIdx) 时用户看到的 label */
 function buildIncomeLabel(minIdx, maxIdx) {
-  if (minIdx === 0 && maxIdx === 9) return '不限金额';
+  const maxValid = _INCOME_TICKS.length - 1;
+  if (minIdx === 0 && maxIdx === maxValid) return '不限金额';
   if (minIdx === 0) return `${_INCOME_TICKS[maxIdx]} 以下`;
-  if (maxIdx === 9) return `${_INCOME_TICKS[minIdx]} 以上`;
+  if (maxIdx === maxValid) return `${_INCOME_TICKS[minIdx]} 以上`;
   if (minIdx === maxIdx) return _INCOME_TICKS[minIdx];
   return `${_INCOME_TICKS[minIdx]} — ${_INCOME_TICKS[maxIdx]}`;
 }
@@ -580,10 +582,10 @@ Page({
     // 年龄/身高/月收入 range state (slider 双端选择)
     ageRange: { min: 25, max: 35, unlimited: true },
     heightRange: { min: 160, max: 175, unlimited: true },
-    incomeRange: { minIdx: 0, maxIdx: 9, unlimited: true },
-    incomeRangeLabel: buildIncomeLabel(0, 9),
+    incomeRange: { minIdx: 0, maxIdx: 6, unlimited: true },
+    incomeRangeLabel: buildIncomeLabel(0, 6),
     incomeMinLabel: _INCOME_TICKS[0],     // 滑块右侧显示
-    incomeMaxLabel: _INCOME_TICKS[9],     // 同上
+    incomeMaxLabel: _INCOME_TICKS[6],     // 同上
     // 户籍地 多选 picker
     filterRegions: [],         // [{label:'北京·北京市·海淀区', keys:['北京市','海淀区']}, ...]
     visitorList: [],           // 看过我的人
@@ -670,6 +672,11 @@ Page({
     guestYearPrice: 100,  // 年卡价格 (后台可配)
     guestDailyQuota: 2,   // 会员每日申请额度 (后台可配)
     guestPaying: false,
+    // 注册向导第 7 步: 选门店
+    storeCities: [],
+    storeSelectedCity: '',
+    storeList: [],
+    storeBindingId: '',
     eduOptions: eduOptions.filter((it) => it !== '不限'),
     marriageOptions: marriageOptions.filter((it) => it !== '不限'),
     incomeOptions: incomeOptions.filter((it) => it !== '不限'),
@@ -763,7 +770,7 @@ Page({
           lastRanges.incomeRange.maxIdx
         );
         updates.incomeMinLabel = _INCOME_TICKS[lastRanges.incomeRange.minIdx] || _INCOME_TICKS[0];
-        updates.incomeMaxLabel = _INCOME_TICKS[lastRanges.incomeRange.maxIdx] || _INCOME_TICKS[9];
+        updates.incomeMaxLabel = _INCOME_TICKS[lastRanges.incomeRange.maxIdx] || _INCOME_TICKS[_INCOME_TICKS.length - 1];
       }
       if (lastRanges.filterRegions) updates.filterRegions = lastRanges.filterRegions;
       if (Object.keys(updates).length) this.setData(updates);
@@ -1263,10 +1270,10 @@ Page({
       filterSteps: fresh,
       ageRange: { min: 25, max: 35, unlimited: true },
       heightRange: { min: 160, max: 175, unlimited: true },
-      incomeRange: { minIdx: 0, maxIdx: 9, unlimited: true },
-      incomeRangeLabel: buildIncomeLabel(0, 9),
+      incomeRange: { minIdx: 0, maxIdx: 6, unlimited: true },
+      incomeRangeLabel: buildIncomeLabel(0, 6),
       incomeMinLabel: _INCOME_TICKS[0],
-      incomeMaxLabel: _INCOME_TICKS[9],
+      incomeMaxLabel: _INCOME_TICKS[6],
       filterRegions: [],
     });
   },
@@ -1436,10 +1443,10 @@ Page({
       activeFilterCount: 0,
       ageRange: { min: 25, max: 35, unlimited: true },
       heightRange: { min: 160, max: 175, unlimited: true },
-      incomeRange: { minIdx: 0, maxIdx: 9, unlimited: true },
-      incomeRangeLabel: buildIncomeLabel(0, 9),
+      incomeRange: { minIdx: 0, maxIdx: 6, unlimited: true },
+      incomeRangeLabel: buildIncomeLabel(0, 6),
       incomeMinLabel: _INCOME_TICKS[0],
-      incomeMaxLabel: _INCOME_TICKS[9],
+      incomeMaxLabel: _INCOME_TICKS[6],
       filterRegions: [],
     });
     this.loadHome();
@@ -3171,15 +3178,18 @@ Page({
   /** 更多资料 (全选填) + 联系方式 → 择偶要求 */
   submitGuestStep3() {
     const f = this.data.guestForm;
+    if (!f.phone) {
+      return wx.showToast({ title: '请填写手机号', icon: 'none' });
+    }
+    if (!/^1[3-9]\d{9}$/.test(f.phone)) {
+      return wx.showToast({ title: '请填写正确的手机号', icon: 'none' });
+    }
     this.setData({ submitting: true });
     const saveContact = () => {
-      if (f.phone || f.wechat) {
-        return profileSvc.saveContact({
-          phone: f.phone || undefined,
-          wechat: f.wechat || undefined,
-        });
-      }
-      return Promise.resolve();
+      return profileSvc.saveContact({
+        phone: f.phone,
+        wechat: f.wechat || undefined,
+      });
     };
     profileSvc
       .saveProfile({
@@ -3266,10 +3276,10 @@ Page({
         mode: this.data.guestPayMode,
         onGoStore: () => wx.navigateTo({ url: '/pages/store-cities/store-cities' }),
       });
-      // 微信回调 /pay/notify 常晚于客户端 success: 延迟后再收口刷新会员状态
+      // 微信回调 /pay/notify 常晚于客户端 success: 延迟后再进选门店
       setTimeout(() => {
-        this.finishGuestOnboarding();
         this.setData({ guestPaying: false });
+        this.goGuestStoreStep();
       }, 1500);
     } catch (err) {
       // 取消支付 / PAY_NOT_ENABLED 引导弹窗已由 service 处理, 这里只兜其余失败
@@ -3289,17 +3299,56 @@ Page({
     this.setData({ guestPaying: true });
     try {
       await membershipSvc.redeemCode(code);
-      this.setData({ guestRedeemCode: '' });
-      this.finishGuestOnboarding();
+      this.setData({ guestRedeemCode: '', guestPaying: false });
+      this.goGuestStoreStep();
     } catch (err) {
       console.warn('[index] onGuestRedeemPay', err);
-    } finally {
       this.setData({ guestPaying: false });
     }
   },
 
-  /** 暂不缴费: 先逛逛 (未会员, 回预览流) */
+  /** 暂不缴费: 先选门店再进 (游客预览也需要城市/门店信息做匹配) */
   skipGuestPay() {
+    this.goGuestStoreStep();
+  },
+
+  /** 进入选门店步骤 (第 7 步): 拉取城市列表 */
+  goGuestStoreStep() {
+    this.setData({ guestStep: 7 });
+    if (this.data.storeCities.length) return;
+    storeSvc.listCities()
+      .then((r) => {
+        const list = ((r && r.items) || []).map((c) => c.city || c);
+        this.setData({ storeCities: list });
+      })
+      .catch(() => {});
+  },
+
+  /** 选城市 → 拉该城市门店列表 */
+  onStoreCityTap(e) {
+    const city = e.currentTarget.dataset.city;
+    if (!city || city === this.data.storeSelectedCity) return;
+    this.setData({ storeSelectedCity: city, storeList: [] });
+    storeSvc.listStores({ city, limit: 50 })
+      .then((r) => this.setData({ storeList: (r && r.items) || [] }))
+      .catch(() => {});
+  },
+
+  /** 选定门店 → 绑定并进入主页 */
+  async onPickGuestStore(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name;
+    if (!id || this.data.storeBindingId) return;
+    this.setData({ storeBindingId: id });
+    const ok = await wizard.bindHomeStore(id, `已加入 ${name}`);
+    this.setData({ storeBindingId: '' });
+    if (ok) {
+      setTimeout(() => this.finishGuestOnboarding(), 600);
+    }
+  },
+
+  /** 跳过选门店直接进入 */
+  skipGuestStore() {
     this.finishGuestOnboarding();
   },
 });

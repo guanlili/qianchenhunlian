@@ -3575,3 +3575,58 @@ page {
   color: #b0a698;
   font-size: 24rpx;
 }
+
+/* 注册向导 · 选门店步骤 */
+.city-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.city-chip {
+  padding: 14rpx 28rpx;
+  border-radius: 999rpx;
+  background: #f7f1ea;
+  color: #5a4a3a;
+  font-size: 26rpx;
+}
+
+.city-chip.on {
+  background: #c93434;
+  color: #fff;
+}
+
+.store-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.store-item {
+  padding: 24rpx 28rpx;
+  border-radius: 20rpx;
+  background: #fdfaf6;
+  border: 2rpx solid #f0e6d8;
+}
+
+.store-item.binding {
+  opacity: 0.6;
+}
+
+.store-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #3a2f22;
+  margin-bottom: 6rpx;
+}
+
+.store-addr {
+  font-size: 24rpx;
+  color: #9b8a75;
+}
+
+.store-skip-row {
+  margin-top: 16rpx;
+}

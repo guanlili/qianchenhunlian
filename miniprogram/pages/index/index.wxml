@@ -15,11 +15,11 @@
         <view class="member-lock-crown-wrap">
           <view class="member-lock-crown">✦</view>
         </view>
-        <view class="member-lock-title" wx:if="{{previewGate}}">{{guestStep === 1 ? '先做个小测试' : guestStep === 2 ? '欢迎你, 先完善基本信息' : guestStep === 3 ? '完善基本条件' : guestStep === 4 ? '更多资料 (选填)' : guestStep === 5 ? '择偶要求' : '确认缴费'}}</view>
+        <view class="member-lock-title" wx:if="{{previewGate}}">{{guestStep === 1 ? '先做个小测试' : guestStep === 2 ? '欢迎你, 先完善基本信息' : guestStep === 3 ? '完善基本条件' : guestStep === 4 ? '更多资料 (选填)' : guestStep === 5 ? '择偶要求' : guestStep === 6 ? '确认缴费' : '选择门店'}}</view>
         <view class="member-lock-title" wx:else>每日推荐</view>
         <view class="member-lock-sub" wx:if="{{previewGate}}">
-          <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、体重、民族、婚姻、职业与月收入' : guestStep === 4 ? '学历、工作、资产等, 均为选填' : guestStep === 5 ? '告诉我们你期待什么样的另一半' : '微信支付年费, 或填体验码直接开通'}}</text>
-          <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 6 步)</text>
+          <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、体重、民族、婚姻、职业与月收入' : guestStep === 4 ? '学历、工作、资产等, 均为选填' : guestStep === 5 ? '告诉我们你期待什么样的另一半' : guestStep === 6 ? '微信支付年费, 或填体验码直接开通' : '选择你所在城市的门店'}}</text>
+          <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 7 步)</text>
         </view>
         <view class="member-lock-sub" wx:else>
           <text>按你的性别、年龄、城市相配而来</text>
@@ -178,7 +178,7 @@
           <textarea class="guest-textarea" placeholder="介绍一下自己, 让会员更了解你" value="{{guestForm.desc}}" bindinput="onGuestDescInput" maxlength="200" auto-height />
         </view>
         <view class="guest-row">
-          <view class="guest-label">手机号</view>
+          <view class="guest-label">手机号<text class="req">*</text></view>
           <input class="guest-input" type="number" placeholder="红娘联系你撮合用" value="{{guestForm.phone}}" bindinput="onGuestContactInput" data-field="phone" maxlength="11" />
         </view>
         <view class="guest-row">
@@ -280,6 +280,29 @@
           </view>
         </view>
         <view class="member-lock-alt" bindtap="skipGuestPay">暂不缴费, 先看看相配的会员 ›</view>
+      </view>
+
+      <!-- 第 7 步: 选择门店 → 进入主页 -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 7}}">
+        <button class="member-lock-btn ghost-prev pay-prev" bindtap="goWizardPrev">‹ 上一步</button>
+        <view class="guest-row">
+          <view class="guest-label">选择城市<text class="req">*</text></view>
+          <view class="city-chips">
+            <view class="city-chip {{item === storeSelectedCity ? 'on' : ''}}" wx:for="{{storeCities}}" wx:key="*this" bindtap="onStoreCityTap" data-city="{{item}}">{{item}}</view>
+          </view>
+        </view>
+        <view class="guest-row" wx:if="{{storeSelectedCity}}">
+          <view class="guest-label">选择门店<text class="req">*</text></view>
+          <view class="store-list">
+            <view class="store-item {{storeBindingId === item.id ? 'binding' : ''}}" wx:for="{{storeList}}" wx:key="id" bindtap="onPickGuestStore" data-id="{{item.id}}" data-name="{{item.name}}">
+              <view class="store-name">{{item.name}}</view>
+              <view class="store-addr">{{item.address || item.city}}</view>
+            </view>
+          </view>
+        </view>
+        <view class="guest-row store-skip-row">
+          <view class="member-lock-alt" bindtap="skipGuestStore">暂不选店, 先进入 ›</view>
+        </view>
       </view>
 
       <!-- 每日推荐 (游客态): 显著注册横幅 + 前 5 详细 + 剩余模糊 -->
@@ -1326,13 +1349,13 @@
           <view class="range-sliders {{incomeRange.unlimited ? 'disabled' : ''}}">
             <view class="slider-row">
               <text class="slider-label">下限</text>
-              <slider class="filter-slider" min="0" max="9" step="1" value="{{incomeRange.minIdx}}"
+              <slider class="filter-slider" min="0" max="6" step="1" value="{{incomeRange.minIdx}}"
                 data-side="min" bindchange="onIncomeChange" activeColor="#c93434" backgroundColor="#e5dcd2" block-size="22"/>
               <text class="slider-tick">{{incomeMinLabel}}</text>
             </view>
             <view class="slider-row">
               <text class="slider-label">上限</text>
-              <slider class="filter-slider" min="0" max="9" step="1" value="{{incomeRange.maxIdx}}"
+              <slider class="filter-slider" min="0" max="6" step="1" value="{{incomeRange.maxIdx}}"
                 data-side="max" bindchange="onIncomeChange" activeColor="#c93434" backgroundColor="#e5dcd2" block-size="22"/>
               <text class="slider-tick">{{incomeMaxLabel}}</text>
             </view>
