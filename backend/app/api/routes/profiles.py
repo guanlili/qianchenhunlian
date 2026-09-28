@@ -296,6 +296,8 @@ def set_home_store(
         # 没 profile 时 welcome 应该先走
         raise HTTPException(status_code=400, detail="请先完成首启动引导")
     profile.home_store_id = store.id
+    if not profile.location:
+        profile.location = store.city
     profile.updated_at = datetime.utcnow()
     session.add(profile)
     session.commit()
