@@ -31,6 +31,7 @@ export const ACTION_LABEL: Record<string, string> = {
   match_from_activity: "动态撮合",
   handle_ticket: "处理工单",
   assign_ticket: "改派工单",
+  delete_member: "删除会员",
 }
 
 /** 会员发放来源 (会员详情发放记录 / 门店对账单明细共用) */
