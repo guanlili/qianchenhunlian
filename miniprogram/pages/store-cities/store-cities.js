@@ -7,7 +7,14 @@ Page({
   },
   onLoad() {
     storeSvc.listCities()
-      .then((r) => this.setData({ cities: r.items || [], loading: false }))
+      .then((r) => {
+        const items = r.items || [];
+        // 「全国」档门店 (线上店/不限城市) 置顶
+        const ordered = items
+          .filter((i) => i.city === "全国")
+          .concat(items.filter((i) => i.city !== "全国"));
+        this.setData({ cities: ordered, loading: false });
+      })
       .catch(() => this.setData({ loading: false }));
   },
   pickCity(e) {

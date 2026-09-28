@@ -3319,7 +3319,11 @@ Page({
     storeSvc.listCities()
       .then((r) => {
         const list = ((r && r.items) || []).map((c) => c.city || c);
-        this.setData({ storeCities: list });
+        // 「全国」档门店 (线上店/不限城市) 置顶
+        const ordered = list
+          .filter((c) => c === "全国")
+          .concat(list.filter((c) => c !== "全国"));
+        this.setData({ storeCities: ordered });
       })
       .catch(() => {});
   },
