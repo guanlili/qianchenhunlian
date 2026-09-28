@@ -1715,6 +1715,11 @@ def unblock_user(
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
+    if user.status == "deleted":
+        # 删除是终态: 解封会把墓碑账号复活成无 openid 的怪状态
+        raise HTTPException(
+            status_code=400, detail="该会员已删除, 不可解封 (用户需重新注册)"
+        )
     _check_member_scope(actor, session, user_id)
     user.status = "active"
     user.is_active = True  # 解封同时恢复 token 有效性
@@ -1724,6 +1729,52 @@ def unblock_user(
     session.commit()
     session.refresh(user)
     return _to_user_brief(user)
+
+
+@router.post(
+    "/users/{user_id}/delete",
+    response_model=Message,
+    dependencies=[Depends(require_perm(Perm.BLOCK_USER))],
+)
+def delete_member(
+    session: SessionDep,
+    user_id: uuid.UUID,
+    actor: CurrentActor,
+) -> Message:
+    """删除会员 (软删归档 + 释放 openid, 用户可用同一微信重新注册全新账号).
+
+    与封禁不同 (封禁可解封找回), 删除是终态:
+    - 原账号行/流水/审计保留归档 (软删硬规则), 但 openid 改写为墓碑值,
+      微信登录按 openid upsert, 不释放则同一微信永远回到旧账号
+    - 该微信再进小程序 = 注册全新用户 (新寻缘号 / 新赠送额度 / 重新走引导)
+    - 在途会员权益随归档账号终止, 不结转到新账号
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.is_superuser:
+        raise HTTPException(status_code=400, detail="不能删除管理员账号")
+    if user.status == "deleted":
+        raise HTTPException(status_code=400, detail="该会员已是删除状态")
+    _check_member_scope(actor, session, user_id)
+    had_openid = user.openid is not None
+    user.status = "deleted"
+    user.is_active = False  # 立即吊销在途 token (get_current_user 拦截)
+    if user.openid:
+        # 墓碑格式带 user_id 保证唯一且可溯源, 不存原 openid (归档不留明文)
+        user.openid = f"deleted:{user_id}"
+    user.unionid = None
+    user.updated_at = datetime.utcnow()
+    session.add(user)
+    _audit(
+        session,
+        actor,
+        "delete_member",
+        target_user_id=user_id,
+        detail={"xy_code": user.xy_code, "openid_released": had_openid},
+    )
+    session.commit()
+    return Message(message="会员已删除, 该微信可重新注册 (新账号)")
 
 
 class StatsResponse(SQLModel):
@@ -1987,6 +2038,9 @@ def list_admin_users(
         base = base.where(User.is_superuser == True)  # noqa: E712
     if user_status != "all":
         base = base.where(User.status == user_status)
+    else:
+        # 「全部」不含已删除 (归档墓碑, 与会员列表口径一致)
+        base = base.where(User.status != "deleted")
     if keyword:
         kw = f"%{keyword}%"
         base = base.where(
@@ -2545,6 +2599,9 @@ def list_members(
         base = base.where(User.verified == verified)
     if user_status != "all":
         base = base.where(User.status == user_status)
+    else:
+        # 「全部」不含已删除: 删除即归档墓碑, 重新注册会生成全新账号
+        base = base.where(User.status != "deleted")
     if membership != "all":
         soon = datetime.utcnow() + timedelta(days=7)
         if membership == "member":
