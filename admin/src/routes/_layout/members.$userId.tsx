@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   ArrowLeft,
   BadgeCheck,
@@ -11,6 +11,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Ticket,
+  Trash2,
   X,
   Zap,
 } from "lucide-react"
@@ -36,6 +37,17 @@ import { AuditDialog } from "@/components/Profiles/AuditDialog"
 import { EditCriteriaDialog } from "@/components/Profiles/EditCriteriaDialog"
 import { EditParentsDialog } from "@/components/Profiles/EditParentsDialog"
 import { EditProfileDialog } from "@/components/Profiles/EditProfileDialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -156,6 +168,16 @@ function MemberDetail() {
       toast.success("已解封")
     },
     onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
+  })
+  const navigate = useNavigate()
+  const deleteMember = useMutation({
+    mutationFn: () => AdminService.deleteMember({ userId }),
+    onSuccess: () => {
+      invalidate()
+      toast.success("会员已删除, 该微信可重新注册 (新账号)")
+      navigate({ to: "/members" })
+    },
+    onError: (e) => toast.error(`删除失败: ${getApiErrorMessage(e)}`),
   })
 
   if (isLoading || !full) {
@@ -358,6 +380,38 @@ function MemberDetail() {
                     <Ban /> 封禁
                   </Button>
                 )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={deleteMember.isPending}>
+                      <Trash2 /> 删除会员
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>确认删除该会员？</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        删除后 {memberDisplayName(m)}（{m.xy_code || userId.slice(0, 8)}
+                        ）将从会员列表移除, 流水与审计保留归档。
+                        该微信号再进小程序会注册成全新账号（新寻缘号）,
+                        在途会员权益不结转。此操作不可撤销。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={deleteMember.isPending}>
+                        取消
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(e) => {
+                          e.preventDefault()
+                          deleteMember.mutate()
+                        }}
+                        disabled={deleteMember.isPending}
+                      >
+                        {deleteMember.isPending ? "删除中..." : "确认删除"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             )}
           </div>
