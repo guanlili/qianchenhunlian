@@ -39,6 +39,7 @@ const _REQUEST_STATUS = {
   accepted: { label: '对方同意', tone: 'good' },
   rejected: { label: '对方暂不考虑', tone: 'bad' },
   contacted: { label: '已建群', tone: 'good' },
+  matched: { label: '已撮合', tone: 'good' },
   closed: { label: '已关闭', tone: 'muted' },
 };
 
