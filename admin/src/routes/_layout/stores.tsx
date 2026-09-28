@@ -64,6 +64,8 @@ export const Route = createFileRoute("/_layout/stores")({
 // 城市输入建议 (直辖市 + 省会 + 山东地级市 + 主要城市): 仅作 datalist 提示,
 // 门店城市放开全国任意值, 常用城市给规范写法保证 /stores/cities 聚合键一致
 const COMMON_CITIES = [
+  // 「全国」档: 不限城市的门店 (如线上店), 小程序端城市列表置顶展示
+  "全国",
   "北京",
   "上海",
   "天津",

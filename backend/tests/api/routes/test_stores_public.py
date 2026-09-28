@@ -3,7 +3,11 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.models import Store
+from app import crud
+from app.core.config import settings
+from app.models import Store, UserCreate
+from tests.utils.user import authentication_token_from_email
+from tests.utils.utils import random_email, random_lower_string
 
 API = "/api/v1/stores"
 
@@ -52,3 +56,63 @@ def test_districts_requires_city(client: TestClient) -> None:
     """city 必填 (区县列表脱离城市无意义)."""
     r = client.get(f"{API}/districts")
     assert r.status_code == 422
+
+
+def _mk_headers(client: TestClient, db: Session) -> dict:
+    """建普通用户 + 过 welcome (生成 Profile, location 留空), 返回鉴权头."""
+    u = crud.create_user(
+        session=db,
+        user_create=UserCreate(
+            email=random_email(), password=random_lower_string() + "Aa1!"
+        ),
+    )
+    db.refresh(u)
+    headers = authentication_token_from_email(client=client, email=u.email, db=db)
+    r = client.post(
+        f"{settings.API_V1_STR}/profiles/me/welcome",
+        json={
+            "nickname": random_lower_string(),
+            "avatar_url": "default",
+            "gender": "女",
+            "year": 1995,
+        },
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    return headers
+
+
+def test_set_home_store_fills_location_for_real_city(
+    client: TestClient, db: Session
+) -> None:
+    """location 为空时用门店城市补全 (匹配链路需要城市维度)."""
+    headers = _mk_headers(client, db)
+    store = _add_store(db, "济南总店", "济南")
+
+    r = client.put(
+        f"{settings.API_V1_STR}/profiles/me/home-store",
+        json={"store_id": str(store.id)},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+
+    me = client.get(f"{settings.API_V1_STR}/profiles/me", headers=headers).json()
+    assert me["profile"]["location"] == "济南"
+
+
+def test_set_home_store_nationwide_keeps_location_empty(
+    client: TestClient, db: Session
+) -> None:
+    """「全国」档门店不回填 location: 「全国」非真实城市, 写入会被判非山东对外 404."""
+    headers = _mk_headers(client, db)
+    store = _add_store(db, "线上全国店", "全国")
+
+    r = client.put(
+        f"{settings.API_V1_STR}/profiles/me/home-store",
+        json={"store_id": str(store.id)},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+
+    me = client.get(f"{settings.API_V1_STR}/profiles/me", headers=headers).json()
+    assert me["profile"]["location"] is None
