@@ -1598,6 +1598,12 @@ export type AdminUnblockUserData = {
 
 export type AdminUnblockUserResponse = (AdminUserBrief);
 
+export type AdminDeleteMemberData = {
+    userId: string;
+};
+
+export type AdminDeleteMemberResponse = (Message);
+
 export type AdminAdminStatsData = {
     /**
      * 指定门店口径 (总部可用)
