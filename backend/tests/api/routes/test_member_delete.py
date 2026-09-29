@@ -147,3 +147,36 @@ def test_member_lists_exclude_deleted(
     r = client.get(f"{API}/admin/users?limit=200", headers=superuser_token_headers)
     ids = {it["id"] for it in r.json()["items"]}
     assert str(m1.id) not in ids
+
+
+def test_deleted_member_old_token_returns_401(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    """被删账号的旧 access token 必须吃 401 (非 400).
+
+    小程序只在 401 时静默 wx.login 换新身份: 400 会让被删用户永远卡在
+    旧会话里无法重新注册。封禁用户保持 400 停用语义 (身份保留, 不重登)。
+    """
+    from tests.utils.user import authentication_token_from_email
+
+    # 删除场景: 旧 token → 401
+    email = random_email()
+    headers = authentication_token_from_email(client=client, email=email, db=db)
+    u = db.exec(select(User).where(User.email == email)).first()
+    r = client.post(
+        f"{API}/admin/users/{u.id}/delete", headers=superuser_token_headers
+    )
+    assert r.status_code == 200, r.text
+    r = client.get(f"{API}/profiles/me", headers=headers)
+    assert r.status_code == 401, f"期望 401 触发静默重登, 实际 {r.status_code}"
+
+    # 封禁场景: 旧 token → 400 (现状语义不变)
+    email2 = random_email()
+    headers2 = authentication_token_from_email(client=client, email=email2, db=db)
+    u2 = db.exec(select(User).where(User.email == email2)).first()
+    r = client.post(
+        f"{API}/admin/users/{u2.id}/block", headers=superuser_token_headers
+    )
+    assert r.status_code == 200, r.text
+    r = client.get(f"{API}/profiles/me", headers=headers2)
+    assert r.status_code == 400
