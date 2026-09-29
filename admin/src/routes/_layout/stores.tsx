@@ -61,8 +61,8 @@ export const Route = createFileRoute("/_layout/stores")({
   head: () => ({ meta: [{ title: "门店总览 - 乾缘后台" }] }),
 })
 
-// 城市输入建议 (直辖市 + 省会 + 山东地级市 + 主要城市): 仅作 datalist 提示,
-// 门店城市放开全国任意值, 常用城市给规范写法保证 /stores/cities 聚合键一致
+// 城市下拉选项 (全国 + 直辖市 + 省会 + 山东地级市 + 主要城市):
+// 规范写法保证 /stores/cities 聚合键一致; 列表外城市走「其他」手动输入
 const COMMON_CITIES = [
   // 「全国」档: 不限城市的门店 (如线上店), 小程序端城市列表置顶展示
   "全国",
@@ -576,17 +576,39 @@ function StoreFormDialog({
           </div>
           <div>
             <Label>城市</Label>
-            <Input
-              list="store-city-suggestions"
-              value={form.city}
-              onChange={(e) => update("city")(e.target.value)}
-              placeholder="例: 济南 (全国可选)"
-            />
-            <datalist id="store-city-suggestions">
-              {COMMON_CITIES.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
+            <Select
+              value={COMMON_CITIES.includes(form.city) ? form.city : "__custom"}
+              onValueChange={(v) =>
+                update("city")(
+                  v === "__custom"
+                    ? COMMON_CITIES.includes(form.city)
+                      ? ""
+                      : form.city
+                    : v,
+                )
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="选择城市" />
+              </SelectTrigger>
+              <SelectContent>
+                {COMMON_CITIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__custom">其他 (手动输入)</SelectItem>
+              </SelectContent>
+            </Select>
+            {/* 列表外的自定义城市: 编辑存量门店或选「其他」时出现 */}
+            {!COMMON_CITIES.includes(form.city) && (
+              <Input
+                className="mt-2"
+                value={form.city}
+                onChange={(e) => update("city")(e.target.value)}
+                placeholder="输入完整城市名 (全国任意城市)"
+              />
+            )}
           </div>
           <div>
             <Label>区/县</Label>

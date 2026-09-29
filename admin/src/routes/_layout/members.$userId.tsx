@@ -382,7 +382,11 @@ function MemberDetail() {
                 )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="outline" disabled={deleteMember.isPending}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={deleteMember.isPending}
+                    >
                       <Trash2 /> 删除会员
                     </Button>
                   </AlertDialogTrigger>
@@ -390,7 +394,8 @@ function MemberDetail() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>确认删除该会员？</AlertDialogTitle>
                       <AlertDialogDescription>
-                        删除后 {memberDisplayName(m)}（{m.xy_code || userId.slice(0, 8)}
+                        删除后 {memberDisplayName(m)}（
+                        {m.xy_code || userId.slice(0, 8)}
                         ）将从会员列表移除, 流水与审计保留归档。
                         该微信号再进小程序会注册成全新账号（新寻缘号）,
                         在途会员权益不结转。此操作不可撤销。
