@@ -93,6 +93,10 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     if not user.is_active:
+        if user.status == "deleted":
+            # 删除会员: 身份已注销 → 必须 401 触发小程序静默重登 (400 不会),
+            # 释放的 openid 走注册链路生成全新账号; 封禁用户保持 400 停用语义
+            raise HTTPException(status_code=401, detail="账号已删除, 请重新登录")
         raise HTTPException(status_code=400, detail="账号已停用")
     return user
 
