@@ -44,6 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import useAuth from "@/hooks/useAuth"
+import { MEMBER_BILLING_ENABLED } from "@/lib/featureFlags"
 import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/redeem-codes")({
@@ -135,6 +136,8 @@ function RedeemCodesPage() {
   }
 
   const items = listQuery.data?.items || []
+  // 网上推广期暂停发码 (见 lib/featureFlags): 历史记录只读展示, 不再生成/作废
+  const billingOpen = canWrite && MEMBER_BILLING_ENABLED
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-6">
@@ -149,8 +152,13 @@ function RedeemCodesPage() {
             门店线下收款后把会员码交给用户, 用户在小程序「会员页 -
             会员码开通」输码自助开通。
           </p>
+          {!MEMBER_BILLING_ENABLED && (
+            <p className="mt-1 text-sm text-amber-600">
+              网上推广期暂停生成新体验码, 以下仅保留历史记录查询。
+            </p>
+          )}
         </div>
-        {canWrite && (
+        {billingOpen && (
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" /> 批量生成
           </Button>
@@ -268,7 +276,7 @@ function RedeemCodesPage() {
                       >
                         <Copy className="size-3.5" />
                       </Button>
-                      {canWrite && it.status === "unused" && (
+                      {billingOpen && it.status === "unused" && (
                         <Button
                           variant="ghost"
                           size="sm"

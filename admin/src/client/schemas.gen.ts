@@ -5085,11 +5085,24 @@ export const MembershipConfigUpdateSchema = {
                 }
             ],
             title: 'Free Daily Quota'
+        },
+        promo_trial_days: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 3650,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Promo Trial Days'
         }
     },
     type: 'object',
     title: 'MembershipConfigUpdate',
-    description: '支付开关 + 优惠券限领 + 每日额度 (后台可调).'
+    description: '支付开关 + 优惠券限领 + 每日额度 + 推广模式 (后台可调).'
 } as const;
 
 export const MembershipGrantListSchema = {
@@ -5347,6 +5360,11 @@ export const MembershipPlansResponseSchema = {
             type: 'string',
             title: 'Pay Mode',
             default: 'off'
+        },
+        promo_trial_days: {
+            type: 'integer',
+            title: 'Promo Trial Days',
+            default: 0
         },
         plans: {
             items: {
@@ -5790,6 +5808,26 @@ export const PlanItemSchema = {
     type: 'object',
     required: ['code', 'name', 'days', 'price'],
     title: 'PlanItem'
+} as const;
+
+export const PlatformContactSchema = {
+    properties: {
+        qr_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Qr Url'
+        }
+    },
+    type: 'object',
+    title: 'PlatformContact',
+    description: '平台红娘联系方式: 目前只有微信二维码图片 (相对路径 /files/...).'
 } as const;
 
 export const ProfileAuditModeResponseSchema = {

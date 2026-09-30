@@ -62,6 +62,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { MEMBER_BILLING_ENABLED } from "@/lib/featureFlags"
 import {
   ACTION_LABEL,
   GRANT_SOURCE_LABEL,
@@ -328,7 +329,8 @@ function MemberDetail() {
                 />
               </>
             )}
-            {canOperateMember && (
+            {/* 网上推广期暂停收费入口 (见 lib/featureFlags), 推广结束后恢复 */}
+            {canOperateMember && MEMBER_BILLING_ENABLED && (
               <GrantDialog
                 userId={userId}
                 xyCode={m.xy_code}
@@ -340,17 +342,19 @@ function MemberDetail() {
                 }
               />
             )}
+            {canWrite && MEMBER_BILLING_ENABLED && (
+              <CouponGrantDialog
+                userId={userId}
+                xyCode={m.xy_code}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <Ticket /> 发优惠券
+                  </Button>
+                }
+              />
+            )}
             {canWrite && (
               <>
-                <CouponGrantDialog
-                  userId={userId}
-                  xyCode={m.xy_code}
-                  trigger={
-                    <Button size="sm" variant="outline">
-                      <Ticket /> 发优惠券
-                    </Button>
-                  }
-                />
                 <AssignStoreDialog
                   userId={userId}
                   xyCode={m.xy_code}
