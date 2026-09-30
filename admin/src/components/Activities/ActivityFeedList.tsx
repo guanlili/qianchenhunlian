@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Eye, Heart, Star } from "lucide-react"
 import { useState } from "react"
 
 import { type ActivityFeedItem, AdminService } from "@/client"
+import { MatchDialog } from "@/components/Activities/MatchDialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
+import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 import { resolveFileUrl } from "@/lib/utils"
 
 type FeedKind = "affinity" | "favorite" | "view"
@@ -64,6 +66,9 @@ export function ActivityFeedList() {
       <p className="text-muted-foreground text-sm">
         谁对谁 心动 / 收藏 / 浏览 — 全量留痕可观测
         {isSuperuser ? "" : " · 已限定本店会员相关动态"}
+        {isSuperuser
+          ? " · 可直接在行内撮合 (无门店会员的工单不挂店, 进未归属处理)"
+          : ""}
       </p>
 
       <Card>
@@ -127,7 +132,7 @@ export function ActivityFeedList() {
           ) : (
             <div className="divide-y">
               {items.map((it) => (
-                <FeedRow key={it.id} item={it} />
+                <FeedRow key={it.id} item={it} storeId={user?.store_id} />
               ))}
             </div>
           )}
@@ -194,7 +199,13 @@ function Party({
   )
 }
 
-function FeedRow({ item }: { item: ActivityFeedItem }) {
+function FeedRow({
+  item,
+  storeId,
+}: {
+  item: ActivityFeedItem
+  storeId?: string | null
+}) {
   const Icon = KIND_OPTION[(item.kind as FeedKind) || "affinity"]?.icon ?? Heart
   return (
     <div className="flex items-center justify-between gap-3 py-2">
@@ -221,9 +232,39 @@ function FeedRow({ item }: { item: ActivityFeedItem }) {
           </Badge>
         )}
       </div>
-      <span className="text-muted-foreground shrink-0 text-xs">
-        {new Date(item.created_at).toLocaleString("zh-CN")}
-      </span>
+      <div className="flex shrink-0 items-center gap-2">
+        {/* 行内撮合 (与门店工作台行为动态同款): 已有进行中工单则显示状态徽标 */}
+        {item.pair_ticket_status ? (
+          <Badge variant="secondary">
+            {REQUEST_STATUS_LABEL[item.pair_ticket_status] ??
+              item.pair_ticket_status}
+          </Badge>
+        ) : (
+          <MatchDialog
+            storeId={storeId}
+            fromUserId={item.from_user_id}
+            toUserId={item.to_user_id}
+            fromLabel={
+              item.from_nickname
+                ? `${item.from_nickname} (${item.from_xy_code})`
+                : (item.from_xy_code ?? "—")
+            }
+            toLabel={
+              item.to_nickname
+                ? `${item.to_nickname} (${item.to_xy_code})`
+                : (item.to_xy_code ?? "—")
+            }
+            trigger={
+              <Button size="sm" variant="destructive">
+                撮合
+              </Button>
+            }
+          />
+        )}
+        <span className="text-muted-foreground text-xs">
+          {new Date(item.created_at).toLocaleString("zh-CN")}
+        </span>
+      </div>
     </div>
   )
 }

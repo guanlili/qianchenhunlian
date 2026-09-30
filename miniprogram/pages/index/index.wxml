@@ -19,7 +19,7 @@
         <view class="member-lock-title" wx:else>每日推荐</view>
         <view class="member-lock-sub" wx:if="{{previewGate}}">
           <text>{{guestStep === 1 ? '选择性别、出生年份和所在城市' : guestStep === 2 ? '上传头像, 填写昵称并同意协议' : guestStep === 3 ? '身高、体重、民族、婚姻、职业与月收入' : guestStep === 4 ? '学历、工作、资产等, 均为选填' : guestStep === 5 ? '告诉我们你期待什么样的另一半' : guestStep === 6 ? '微信支付年费, 或填体验码直接开通' : '选择你所在城市的门店'}}</text>
-          <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 7 步)</text>
+          <text>填齐资料马上为你匹配相配的会员 (第 {{guestStep}} 步 / 共 {{promoSkipPayStore ? 5 : 7}} 步)</text>
         </view>
         <view class="member-lock-sub" wx:else>
           <text>按你的性别、年龄、城市相配而来</text>

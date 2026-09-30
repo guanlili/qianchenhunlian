@@ -106,6 +106,7 @@ function QualificationsPage() {
           <TabsTrigger value="qualifications">资质图片</TabsTrigger>
           <TabsTrigger value="contents">协议文案 / 公告</TabsTrigger>
           <TabsTrigger value="membership">会员配置</TabsTrigger>
+          <TabsTrigger value="promo">推广配置</TabsTrigger>
         </TabsList>
         <TabsContent value="qualifications">
           <Card>
@@ -193,8 +194,182 @@ function QualificationsPage() {
         <TabsContent value="membership">
           <MembershipConfigSection />
         </TabsContent>
+        <TabsContent value="promo">
+          <div className="space-y-6">
+            <PlatformQrSection />
+            <PromoTrialSection />
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+/**
+ * 平台红娘微信二维码 (网上推广用): 上传即落库 (与资质图片同款「传完即存」,
+ * 杜绝「已上传但没点保存」导致小程序看不到)。
+ * 小程序「我的 → 平台红娘微信」点击后大图展示, 长按识别添加红娘。
+ */
+function PlatformQrSection() {
+  const qc = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { data } = useQuery({
+    queryFn: () => SiteService.getPlatformContact(),
+    queryKey: ["site-platform-contact"],
+  })
+  const qrUrl = data?.qr_url ?? null
+
+  const save = useMutation({
+    mutationFn: async (url: string | null) => {
+      const res = await SiteService.putPlatformContact({
+        requestBody: { qr_url: url },
+      })
+      return res.qr_url ?? null
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["site-platform-contact"] })
+      toast.success("已保存, 小程序「我的-平台红娘微信」即时可见")
+    },
+    onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),
+  })
+
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      // Body_uploads_upload_image.file 类型为 Blob | File, 直接传无需 cast
+      const res = await UploadsService.uploadImage({ formData: { file } })
+      await save.mutateAsync(res.url)
+      return res.url
+    },
+    onError: (e) => toast.error(`上传失败: ${getApiErrorMessage(e)}`),
+  })
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (f) upload.mutate(f)
+    e.target.value = ""
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>平台红娘微信二维码</CardTitle>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={upload.isPending}
+          >
+            <Upload />{" "}
+            {upload.isPending
+              ? "上传中..."
+              : qrUrl
+                ? "更换二维码"
+                : "上传二维码"}
+          </Button>
+          {qrUrl && (
+            <Button
+              variant="outline"
+              disabled={save.isPending}
+              onClick={() => save.mutate(null)}
+            >
+              <Trash2 /> 移除
+            </Button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onPickFile}
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-muted-foreground text-sm">
+          上传/移除即时保存, 无需其他操作。用户在小程序「我的 → 平台红娘微信」
+          点开大图, 长按识别添加红娘微信。
+        </p>
+        {qrUrl ? (
+          <img
+            src={resolveFileUrl(qrUrl)}
+            alt="平台红娘微信二维码"
+            className="max-h-64 w-auto rounded border"
+          />
+        ) : (
+          <div className="text-muted-foreground rounded border border-dashed py-10 text-center text-sm">
+            暂未上传二维码
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** 推广模式: 注册自动赠送试用天数 (0 = 关闭推广模式, 恢复缴费/选店流程)。 */
+function PromoTrialSection() {
+  const qc = useQueryClient()
+  const [days, setDays] = useState("30")
+  const { data } = useQuery({
+    queryFn: () => AdminService.getMembershipPlans(),
+    queryKey: ["membership-plans-admin"],
+  })
+  useEffect(() => {
+    if (data) setDays(String(data.promo_trial_days ?? 0))
+  }, [data])
+  const save = useMutation({
+    mutationFn: () =>
+      AdminService.updateMembershipConfig({
+        requestBody: { promo_trial_days: Number(days) },
+      }),
+    onSuccess: () => {
+      toast.success("推广配置已保存")
+      qc.invalidateQueries({ queryKey: ["membership-plans-admin"] })
+    },
+    onError: () => toast.error("保存失败"),
+  })
+  const active = Number(days) > 0
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>推广模式 (注册自动赠送试用会员)</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="max-w-md">
+          <Label htmlFor="promo-days">注册赠送天数 (0 = 关闭推广模式)</Label>
+          <Input
+            id="promo-days"
+            type="number"
+            min={0}
+            max={3650}
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+          />
+        </div>
+        <p className="text-muted-foreground text-sm">
+          开启时 ({">"}0 天): 新用户注册即自动成为试用会员, 直接进主页浏览,
+          不再经过缴费/选店页; 同时线上缴费/续费全部停用 (pay_mode 强制
+          off)。推广结束后填 0 关闭, 恢复正常计费与注册流程, 无需发版。
+        </p>
+        <p className="text-sm">
+          当前状态:
+          {active ? (
+            <span className="ml-1 font-medium text-emerald-600">
+              推广模式开启 · 注册送 {days} 天试用
+            </span>
+          ) : (
+            <span className="ml-1 font-medium text-muted-foreground">
+              已关闭 (正常计费)
+            </span>
+          )}
+        </p>
+        <Button
+          size="sm"
+          disabled={save.isPending}
+          onClick={() => save.mutate()}
+        >
+          {save.isPending ? "保存中..." : "保存"}
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
 
