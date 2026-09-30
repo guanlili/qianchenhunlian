@@ -46,6 +46,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     # 门店优惠券限领: 每会员每 30 天最多可领张数 (两类券合计), 0 = 不限。
     # 防线下无限发券冲击会员付费体系。
     "coupon_monthly_limit": 2,
+    # 网上推广模式 (2026-09-30): 新注册用户自动赠送 N 天试用会员, 0 = 关闭推广模式。
+    # 开启时: 注册 (welcome) 即送试用 → 跳过缴费/选店直接进主页 (小程序向导同步精简);
+    # 同时 purchase_mode 强制 off (推广期不开线上收费), 后台收费入口由 admin 前端隐藏。
+    # 推广结束后在 平台设置→推广配置 把天数改回 0 即恢复正常计费, 无需发版。
+    "promo_trial_days": 30,
     "plans": [
         {"code": "trial_7d", "name": "7天体验卡", "days": 7, "price": None},
         {"code": "monthly_30d", "name": "月卡", "days": 30, "price": 99},
@@ -67,6 +72,9 @@ SOURCE_ONLINE = "wx_pay"
 SOURCE_COUPON = "store_coupon"
 # 会员兑换码 (门店线下收款后发码, 用户在缴费页输码自助开通): 系统兑换时写入
 SOURCE_REDEEM = "redeem_code"
+# 网上推广模式: welcome 注册时系统自动赠送的试用会员 (见 DEFAULT_CONFIG.promo_trial_days),
+# 系统写入, 与 admin 手动发放枚举无关。
+SOURCE_PROMO = "promo_trial"
 VALID_SOURCES = {
     SOURCE_RECHARGE,
     SOURCE_TRIAL,
@@ -74,6 +82,7 @@ VALID_SOURCES = {
     SOURCE_ONLINE,
     SOURCE_COUPON,
     SOURCE_REDEEM,
+    SOURCE_PROMO,
 }
 
 # 兑换码字符集: 去掉易混淆的 0/O/1/I/L
@@ -173,15 +182,53 @@ def purchase_mode(session: Session) -> str:
     - mock:   凭证未配齐但 pay_mock 打开 (联调演练, 不真扣款)
     - off:    都不满足, 小程序只展示门店线下引导
     真实支付优先: 凭证齐 + pay_mock 也开着 → online。
+    推广模式开启时恒为 off: 注册即送试用会员, 线上收费一并停掉 (业务要求
+    「推广期缴费/续费全部关闭」), 避免同一时期「新人免费 + 老人收费」的双轨。
     """
     from app.core import wechat_pay
 
     cfg = get_config(session)
+    if int(cfg.get("promo_trial_days") or 0) > 0:
+        return "off"
     if cfg.get("pay_enabled") and wechat_pay.credentials_ready():
         return "online"
     if cfg.get("pay_mock"):
         return "mock"
     return "off"
+
+
+def grant_promo_trial_if_eligible(
+    session: Session, user: User
+) -> MembershipGrant | None:
+    """网上推广模式: 新注册用户自动赠送试用会员 (不 commit, 由调用方提交).
+
+    防重复发放, 三个条件都满足才发:
+    - 推广模式开启 (promo_trial_days > 0);
+    - 当前不是会员 (is_member 为 false);
+    - 从未有过推广赠送记录 (即便后来被管理员撤销也不补发, 撤销即终局)。
+    命中任意一条则跳过, 返回 None。
+    """
+    cfg = get_config(session)
+    days = int(cfg.get("promo_trial_days") or 0)
+    if days <= 0 or is_member(user):
+        return None
+    exists = session.exec(
+        select(MembershipGrant)
+        .where(MembershipGrant.user_id == user.id)
+        .where(MembershipGrant.source == SOURCE_PROMO)
+    ).first()
+    if exists is not None:
+        return None
+    return grant_membership(
+        session,
+        user=user,
+        plan_code="promo_trial",
+        days=days,
+        source=SOURCE_PROMO,
+        granted_by_type="system",
+        granted_by_id=user.id,
+        note="网上推广期注册自动赠送",
+    )
 
 
 def is_member(user: User, *, now: datetime | None = None) -> bool:

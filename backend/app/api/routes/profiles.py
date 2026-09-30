@@ -20,7 +20,7 @@ from app.api.deps import (
 )
 from app.api.routes import contacts as contacts_routes
 from app.api.routes import favorites as favorites_routes
-from app.core import profile_audit
+from app.core import membership, profile_audit
 from app.core.progress import calc_criteria_progress, calc_profile_progress
 from app.core.wechat import assert_text_safe, assert_text_safe_fields
 from app.models import (
@@ -197,6 +197,9 @@ def submit_welcome(
 
     profile.progress = calc_profile_progress(profile)
     session.add(profile)
+    # 网上推广模式: 注册即送试用会员 (后台可配天数, 0=关闭), 与 profile 同事务提交。
+    # 新用户凭会员身份直接进主页浏览, 不再经过缴费/选店页 (小程序向导同步精简)。
+    membership.grant_promo_trial_if_eligible(session, current_user)
     session.commit()
     session.refresh(profile)
     return ProfileWithContact.model_validate(profile, from_attributes=True)

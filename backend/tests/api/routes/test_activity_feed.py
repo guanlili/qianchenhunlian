@@ -205,7 +205,7 @@ def test_match_from_activity_flow(client: TestClient, db: Session) -> None:
 def test_match_from_activity_superuser_scope(
     client: TestClient, db: Session, superuser_token_headers: dict
 ) -> None:
-    """superuser 撮合: 必须显式指定归属门店; 已拒绝的旧单不挡新撮合."""
+    """superuser 撮合: 可不挂店 (平台撮合无门店会员, 网上推广); 已拒绝的旧单不挡新撮合."""
     store = Store(name="撮合总部测试店", city="济南")
     db.add(store)
     db.commit()
@@ -213,20 +213,24 @@ def test_match_from_activity_superuser_scope(
     a = _make_user(db)
     b = _make_user(db)
 
-    # 不带 store_id → 400
+    # 不带 store_id → 200, 工单不归属任何门店 (进「未归属处理」)
     r = client.post(
         f"{API}/admin/activity-feed/match",
         json={"from_user_id": str(a.id), "to_user_id": str(b.id)},
         headers=superuser_token_headers,
     )
-    assert r.status_code == 400
+    assert r.status_code == 200, r.text
+    assert r.json()["store_id"] is None
+    assert r.json()["status"] == "matched"
 
     # 带门店 → 200, 归属指定店
+    c = _make_user(db)
+    d = _make_user(db)
     r = client.post(
         f"{API}/admin/activity-feed/match",
         json={
-            "from_user_id": str(a.id),
-            "to_user_id": str(b.id),
+            "from_user_id": str(c.id),
+            "to_user_id": str(d.id),
             "store_id": str(store.id),
         },
         headers=superuser_token_headers,
@@ -234,20 +238,38 @@ def test_match_from_activity_superuser_scope(
     assert r.status_code == 200, r.text
     assert r.json()["store_id"] == str(store.id)
 
+    # 指定了已停用门店 → 400
+    closed = Store(name="停用店", city="济南", status="closed")
+    db.add(closed)
+    db.commit()
+    db.refresh(closed)
+    e = _make_user(db)
+    f = _make_user(db)
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={
+            "from_user_id": str(e.id),
+            "to_user_id": str(f.id),
+            "store_id": str(closed.id),
+        },
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 400
+
     # 已拒绝的历史旧单不算「进行中」, 新一对撮合不受影响
-    c = _make_user(db)
-    d = _make_user(db)
+    g = _make_user(db)
+    h = _make_user(db)
     db.add(
         ContactRequest(
-            from_user_id=c.id, to_user_id=d.id, status="rejected", store_id=store.id
+            from_user_id=g.id, to_user_id=h.id, status="rejected", store_id=store.id
         )
     )
     db.commit()
     r = client.post(
         f"{API}/admin/activity-feed/match",
         json={
-            "from_user_id": str(c.id),
-            "to_user_id": str(d.id),
+            "from_user_id": str(g.id),
+            "to_user_id": str(h.id),
             "store_id": str(store.id),
         },
         headers=superuser_token_headers,
