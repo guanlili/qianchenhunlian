@@ -7,25 +7,11 @@
 const { get, put } = require('../utils/request');
 const { invalidateMeCache } = require('./profile');
 
-// 城市列表变化频率极低 (门店增删才变): storage 缓存 1 天, 失败/过期回源。
-// store-cities 与 welcome 选店步骤共用, 免去每次进入重拉。
-const _CITIES_CACHE_KEY = 'qy_store_cities_v1';
-const _CITIES_CACHE_TTL = 24 * 3600 * 1000;
-
+// 城市列表不落本地缓存: 后台新建门店 (尤其新城市) 要尽快在小程序可见 ——
+// 曾有 24h storage 缓存导致新门店/新城市最长一天不出现。后端 /stores/cities
+// 自带 60s 进程内缓存且 admin 写路径会主动失效, 客户端每次直读足够快。
 function listCities() {
-  try {
-    const cached = wx.getStorageSync(_CITIES_CACHE_KEY);
-    if (cached && cached.at && cached.data
-      && Date.now() - cached.at < _CITIES_CACHE_TTL) {
-      return Promise.resolve(cached.data);
-    }
-  } catch (e) { /* storage 异常直接回源 */ }
-  return get('/stores/cities').then((r) => {
-    try {
-      wx.setStorageSync(_CITIES_CACHE_KEY, { at: Date.now(), data: r });
-    } catch (e) { /* noop */ }
-    return r;
-  });
+  return get('/stores/cities');
 }
 
 /** 某城市有门店的区/县列表（含门店数，筛选条用） */

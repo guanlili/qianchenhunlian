@@ -3,6 +3,11 @@ const profileSvc = require('../../services/profile');
 const storeSvc = require('../../services/store');
 const wizard = require('../../utils/wizard');
 
+// 网上推广模式 (2026-09-30): 与 pages/index 注册向导同口径 —— 提交基本信息后
+// 不再进选店步骤, 直接进小程序 (后台推广模式已在注册时送试用会员)。
+// 推广结束后改回 false, 恢复「可选门店」步骤。
+const PROMO_SKIP_STORE_STEP = true;
+
 Page({
   data: {
     step: 'info',           // info = 头像昵称等基本信息; store = 可选门店步骤
@@ -138,6 +143,11 @@ Page({
       app.globalData.isWelcomed = true;
       app.globalData.hasProfile = true;
       this.setData({ submitting: false });
+      if (PROMO_SKIP_STORE_STEP) {
+        // 推广模式: 直接进小程序 (选店改为「我的-我的当地门店」软引导)
+        this.enterApp();
+        return;
+      }
       // 第二步: 可选门店 (不强制, 可跳过)
       this.loadCities();
       this.setData({ step: 'store' });
