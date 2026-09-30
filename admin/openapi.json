@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "qianchenhunlian",
+    "title": "乾缘婚恋",
     "version": "0.1.0"
   },
   "paths": {
@@ -2791,6 +2791,73 @@
         ]
       }
     },
+    "/api/v1/site/platform-contact": {
+      "get": {
+        "tags": [
+          "site"
+        ],
+        "summary": "Get Platform Contact",
+        "description": "公开: 平台红娘微信二维码 (小程序「我的-平台红娘微信」展示, 长按识别加红娘).",
+        "operationId": "site-get_platform_contact",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformContact"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "site"
+        ],
+        "summary": "Put Platform Contact",
+        "description": "admin: 设置平台红娘微信二维码 (上传接口返回的 /files/... 相对路径, 空 = 清除).",
+        "operationId": "site-put_platform_contact",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformContact"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformContact"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/site/contents": {
       "get": {
         "tags": [
@@ -5151,7 +5218,7 @@
           "admin"
         ],
         "summary": "Update Membership Config",
-        "description": "支付开关管理: pay_enabled (真实支付) / pay_mock (模拟支付联调).\n\n只覆盖这两个 key, 其余套餐/额度配置原样保留。返回更新后的完整配置。",
+        "description": "支付开关管理: pay_enabled (真实支付) / pay_mock (模拟支付联调).\n\n只覆盖这几个 key, 其余套餐/额度配置原样保留。返回更新后的完整配置。\npromo_trial_days: 网上推广模式开关, >0 时注册自动送试用 + 线上收费强制关闭。",
         "operationId": "admin-update_membership_config",
         "requestBody": {
           "content": {
@@ -11905,11 +11972,24 @@
               }
             ],
             "title": "Free Daily Quota"
+          },
+          "promo_trial_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3650.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promo Trial Days"
           }
         },
         "type": "object",
         "title": "MembershipConfigUpdate",
-        "description": "支付开关 + 优惠券限领 + 每日额度 (后台可调)."
+        "description": "支付开关 + 优惠券限领 + 每日额度 + 推广模式 (后台可调)."
       },
       "MembershipGrantList": {
         "properties": {
@@ -12183,6 +12263,11 @@
             "type": "string",
             "title": "Pay Mode",
             "default": "off"
+          },
+          "promo_trial_days": {
+            "type": "integer",
+            "title": "Promo Trial Days",
+            "default": 0
           },
           "plans": {
             "items": {
@@ -12652,6 +12737,25 @@
           "price"
         ],
         "title": "PlanItem"
+      },
+      "PlatformContact": {
+        "properties": {
+          "qr_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qr Url"
+          }
+        },
+        "type": "object",
+        "title": "PlatformContact",
+        "description": "平台红娘联系方式: 目前只有微信二维码图片 (相对路径 /files/...)."
       },
       "ProfileAuditModeResponse": {
         "properties": {

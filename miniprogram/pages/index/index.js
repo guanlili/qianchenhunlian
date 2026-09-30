@@ -18,9 +18,17 @@ const contactSvc = require('../../services/contact');
 const affinitySvc = require('../../services/affinity');
 const membershipSvc = require('../../services/membership');
 const storeSvc = require('../../services/store');
+const siteSvc = require('../../services/site');
 const { resolveFileUrl } = require('../../utils/config');
 const { formatDate } = require('../../utils/format');
 const wizard = require('../../utils/wizard');
+
+// 网上推广模式开关 (2026-09-30): 注册向导跳过「缴费页(第6步)」和「选门店页(第7步)」,
+// 第5步(择偶要求)填完直接进主页 —— 后台配合开「推广模式」(平台设置→推广配置,
+// 注册自动送试用会员), 新用户凭会员身份无门槛浏览, 转化走「我的-平台红娘微信」。
+// 注意: 与后台 promo_trial_days 联动 (后者管会员身份与收费开关), 推广结束后
+// 两处一起恢复 (此开关改回 false + 后台天数改 0), 第6/7步代码原样保留。
+const PROMO_SKIP_PAY_STORE = true;
 
 // 出生年份候选: 2015→1950 倒序 (静态, 全流程共用)
 const GUEST_YEARS = wizard.buildYears();
@@ -619,7 +627,10 @@ Page({
       { icon: '设', label: '设置', sub: '' },
       { icon: '反', label: '意见反馈', sub: '' },
       { icon: '客', label: '在线客服', sub: '' },
+      { icon: '红', label: '平台红娘微信', sub: '' },
     ],
+    // 推广模式: 向导总步数 (wxml 第 X 步 / 共 N 步) 与跳过缴费/选店共用此口径
+    promoSkipPayStore: PROMO_SKIP_PAY_STORE,
     // 好感消息页顶部快捷区 (原在"我的"页, 按需求挪到消息里)
     affinityShortcuts: [
       { key: 'i-visited', icon: '我', label: '我看过的人',     sub: '' },
@@ -2493,6 +2504,7 @@ Page({
     if (label === '设置')            return wx.navigateTo({ url: '/pages/settings/settings' });
     if (label === '意见反馈')        return wx.navigateTo({ url: '/pages/feedback/feedback' });
     if (label === '在线客服')        return this.openCustomerService();
+    if (label === '平台红娘微信')   return this.showPlatformQr();
     wx.showToast({ title: '功能演示', icon: 'none' });
   },
 
@@ -2509,6 +2521,32 @@ Page({
     if (key === 'my-likes')  return this.openMyLikes();
     if (key === 'favorites') return this.openFavorites();
     if (key === 'requests')  return this.openMyRequests();
+  },
+
+  /** 平台红娘微信: 拉取后台上传的二维码, 大图展示长按识别添加 (网上推广转化入口) */
+  showPlatformQr() {
+    // 页面级缓存: 本次会话内重复点击不重复请求
+    if (this._platformQr) {
+      return wx.previewImage({ urls: [this._platformQr] });
+    }
+    siteSvc
+      .getPlatformContact()
+      .then((r) => {
+        const qr = resolveFileUrl(r && r.qr_url);
+        if (!qr) {
+          return wx.showModal({
+            title: '暂未开放',
+            content: '平台红娘二维码暂未上传, 请先通过「在线客服」联系我们。',
+            showCancel: false,
+            confirmText: '知道了',
+          });
+        }
+        this._platformQr = qr;
+        wx.previewImage({ urls: [qr] });
+      })
+      .catch(() => {
+        wx.showToast({ title: '加载失败, 请稍后重试', icon: 'none' });
+      });
   },
 
   /** 在线客服: 弹出客服邮箱 + 当地门店电话 */
@@ -2874,8 +2912,11 @@ Page({
   /** 推荐页注册横幅: 未注册进注册页, 已注册未缴费进缴费页 */
   goRegister() {
     const app = getApp();
+    // 推广模式: 缴费/选店页已跳过, 断点续填的兜底步从 6 改为 2
+    // (老用户已填完资料则重走注册页提交, 后台会按推广模式补发试用会员)
+    const fallbackStep = PROMO_SKIP_PAY_STORE ? 2 : 6;
     const step = app.globalData.isWelcomed
-      ? this.data.resumeToStep || 6
+      ? this.data.resumeToStep || fallbackStep
       : 2;
     this.setData({ previewGate: true, guestStep: step });
     if (step === 2) this.initGuestNickname();
@@ -3214,7 +3255,7 @@ Page({
       });
   },
 
-  /** 择偶要求 (必填: 年份/身高/月收入/居住要求) → 缴费页 */
+  /** 择偶要求 (必填: 年份/身高/月收入/居住要求) → 缴费页 (推广模式: 直接进主页) */
   submitGuestCriteria() {
     const f = this.data.guestForm;
     if (!f.cYearMin || !f.cYearMax) {
@@ -3246,6 +3287,12 @@ Page({
         origins: f.cOrigin ? [f.cOrigin] : undefined,
       })
       .then(() => {
+        if (PROMO_SKIP_PAY_STORE) {
+          // 网上推广: 资料填完直接进主页 (后台推广模式已在注册时送了试用会员)
+          this.setData({ submitting: false });
+          this.finishGuestOnboarding();
+          return;
+        }
         this.setData({ guestStep: 6, submitting: false });
         this.loadGuestPlans();
       })

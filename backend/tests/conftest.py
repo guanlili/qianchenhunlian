@@ -11,6 +11,7 @@ from app import crud
 from app.api.deps import get_db
 from app.api.routes.admin import clear_dashboard_cache, clear_stats_cache
 from app.api.routes.stores import clear_store_geo_cache
+from app.core import membership
 from app.core.config import settings
 from app.core.membership import clear_membership_config_cache
 from app.core.ratelimit import api_limiter, login_limiter, redeem_limiter
@@ -109,6 +110,17 @@ def _reset_login_limiter() -> Generator[None, None, None]:
     clear_dashboard_cache()
     clear_stats_cache()
     yield
+
+
+@pytest.fixture(autouse=True)
+def _promo_mode_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """测试默认关闭网上推广模式 (注册自动送试用会员).
+
+    生产 DEFAULT_CONFIG 的 promo_trial_days=30 (推广期), 若测试沿用会悄悄给
+    所有 welcome 调用发会员, 污染「新用户非会员」类断言。这里只在测试进程内
+    把默认值压成 0 (不动 SiteSetting 行); 推广相关测试显式写配置行开启。
+    """
+    monkeypatch.setitem(membership.DEFAULT_CONFIG, "promo_trial_days", 0)
 
 
 @pytest.fixture

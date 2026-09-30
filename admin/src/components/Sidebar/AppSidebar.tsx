@@ -23,6 +23,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
+import { MEMBER_BILLING_ENABLED } from "@/lib/featureFlags"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
@@ -38,8 +39,11 @@ const storeHubItems: Item[] = [
 ]
 
 // 仅总部管理员可见的平台级工具
+// 「会员体验」受 MEMBER_BILLING_ENABLED 控制: 网上推广期暂停发码收费入口
 const platformItems: Item[] = [
-  { icon: Ticket, title: "会员体验", path: "/redeem-codes" },
+  ...(MEMBER_BILLING_ENABLED
+    ? [{ icon: Ticket, title: "会员体验", path: "/redeem-codes" }]
+    : []),
   { icon: MessageSquare, title: "意见反馈", path: "/feedback" },
   { icon: Award, title: "平台设置", path: "/qualifications" },
   { icon: UserCog, title: "管理员账号", path: "/admins" },

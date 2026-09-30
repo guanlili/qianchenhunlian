@@ -776,7 +776,7 @@ export type MemberQuotaStatus = {
 };
 
 /**
- * 支付开关 + 优惠券限领 + 每日额度 (后台可调).
+ * 支付开关 + 优惠券限领 + 每日额度 + 推广模式 (后台可调).
  */
 export type MembershipConfigUpdate = {
     pay_enabled?: (boolean | null);
@@ -784,6 +784,7 @@ export type MembershipConfigUpdate = {
     coupon_monthly_limit?: (number | null);
     member_daily_quota?: (number | null);
     free_daily_quota?: (number | null);
+    promo_trial_days?: (number | null);
 };
 
 export type MembershipGrantList = {
@@ -840,6 +841,7 @@ export type MembershipPlansResponse = {
     pay_enabled?: boolean;
     pay_mock?: boolean;
     pay_mode?: string;
+    promo_trial_days?: number;
     plans?: Array<{
         [key: string]: unknown;
     }>;
@@ -941,6 +943,13 @@ export type PlanItem = {
     name: string;
     days: number;
     price: number;
+};
+
+/**
+ * 平台红娘联系方式: 目前只有微信二维码图片 (相对路径 /files/...).
+ */
+export type PlatformContact = {
+    qr_url?: (string | null);
 };
 
 /**
@@ -2135,6 +2144,14 @@ export type SitePutQualificationsData = {
 };
 
 export type SitePutQualificationsResponse = (QualificationList);
+
+export type SiteGetPlatformContactResponse = (PlatformContact);
+
+export type SitePutPlatformContactData = {
+    requestBody: PlatformContact;
+};
+
+export type SitePutPlatformContactResponse = (PlatformContact);
 
 export type SiteListContentsResponse = (SiteContentMap);
 

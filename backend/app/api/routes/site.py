@@ -71,6 +71,56 @@ def put_qualifications(
     return body
 
 
+# ---------------- 平台红娘微信二维码 (网上推广用) ----------------
+
+_KEY_PLATFORM_CONTACT = "platform.contact"
+
+
+class PlatformContact(SQLModel):
+    """平台红娘联系方式: 目前只有微信二维码图片 (相对路径 /files/...)."""
+
+    qr_url: str | None = Field(default=None, max_length=500)
+
+
+def _get_platform_contact(session: SessionDep) -> PlatformContact:
+    row = session.get(SiteSetting, _KEY_PLATFORM_CONTACT)
+    url = ""
+    if row and isinstance(row.value, dict):
+        url = row.value.get("qr_url") or ""
+    return PlatformContact(qr_url=url or None)
+
+
+@router.get("/platform-contact", response_model=PlatformContact)
+def get_platform_contact(session: SessionDep) -> PlatformContact:
+    """公开: 平台红娘微信二维码 (小程序「我的-平台红娘微信」展示, 长按识别加红娘)."""
+    return _get_platform_contact(session)
+
+
+@router.put(
+    "/platform-contact",
+    response_model=PlatformContact,
+    dependencies=[Depends(require_perm(Perm.SETTINGS_MANAGE))],
+)
+def put_platform_contact(
+    session: SessionDep,
+    body: PlatformContact = Body(),
+) -> PlatformContact:
+    """admin: 设置平台红娘微信二维码 (上传接口返回的 /files/... 相对路径, 空 = 清除)."""
+    url = (body.qr_url or "").strip()[:500] or None
+    row = session.get(SiteSetting, _KEY_PLATFORM_CONTACT)
+    payload = {"qr_url": url}
+    if row is None:
+        row = SiteSetting(key=_KEY_PLATFORM_CONTACT, value=payload)
+    else:
+        row.value = payload
+        row.updated_at = datetime.utcnow()
+    session.add(row)
+    session.commit()
+    # SiteSetting 写路径统一失效套餐配置读缓存 (同表写入, 保持口径一致)
+    invalidate_membership_config()
+    return PlatformContact(qr_url=url)
+
+
 # ---------------- 协议文案 / 公告 (key-value) ----------------
 
 

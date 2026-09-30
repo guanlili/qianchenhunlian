@@ -558,6 +558,10 @@ function StoreFormDialog({
   const update = (k: string) => (v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }))
 
+  // 图片 (门店照片/红娘二维码) 上传中禁用「保存」: 上传尚未回传 URL 时就点保存,
+  // 会把空字段写库 —— 用户再进小程序自然看不到二维码 (线上反馈的「上传后不显示」)
+  const [uploadBusy, setUploadBusy] = useState(false)
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -663,11 +667,16 @@ function StoreFormDialog({
           </div>
           <div className="col-span-2">
             <Label>门店照片</Label>
-            <PhotoField value={form.photo} onChange={update("photo")} />
+            <PhotoField
+              value={form.photo}
+              onChange={update("photo")}
+              onPendingChange={setUploadBusy}
+            />
             <Label className="mt-3">红娘微信二维码 (用户扫码直接加红娘)</Label>
             <PhotoField
               value={form.contact_qr}
-              onChange={(v) => setForm({ ...form, contact_qr: v })}
+              onChange={update("contact_qr")}
+              onPendingChange={setUploadBusy}
             />
           </div>
           <div className="col-span-2">
@@ -685,8 +694,12 @@ function StoreFormDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             取消
           </Button>
-          <LoadingButton loading={save.isPending} onClick={() => save.mutate()}>
-            保存
+          <LoadingButton
+            loading={save.isPending}
+            disabled={uploadBusy}
+            onClick={() => save.mutate()}
+          >
+            {uploadBusy ? "图片上传中..." : "保存"}
           </LoadingButton>
         </DialogFooter>
       </DialogContent>
@@ -697,20 +710,25 @@ function StoreFormDialog({
 function PhotoField({
   value,
   onChange,
+  onPendingChange,
 }: {
   value: string
   onChange: (v: string) => void
+  /** 上传开始/结束时回调 (表单据此刻住「保存」, 防止空 URL 落库) */
+  onPendingChange?: (busy: boolean) => void
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const upload = useMutation({
     // Body_uploads_upload_image.file 类型为 Blob | File, 直接传无需 cast
     mutationFn: (file: File) =>
       UploadsService.uploadImage({ formData: { file } }),
+    onMutate: () => onPendingChange?.(true),
     onSuccess: (res) => {
       onChange(res.url)
       toast.success("已上传，保存门店后生效")
     },
     onError: (e) => toast.error(`上传失败: ${getApiErrorMessage(e)}`),
+    onSettled: () => onPendingChange?.(false),
   })
   return (
     <div className="space-y-2">
