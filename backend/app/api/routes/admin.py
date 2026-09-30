@@ -2750,17 +2750,20 @@ class MembershipPlansResponse(SQLModel):
     pay_mock: bool = False  # 模拟支付模式 (联调演练; 真实支付配置齐全时被忽略)
     # 实际生效的购买模式: online / mock / off (凭证 + 开关共同决定)
     pay_mode: str = "off"
+    # 网上推广模式: 注册自动赠送试用天数, >0 = 开启 (此时 pay_mode 恒为 off)
+    promo_trial_days: int = 0
     plans: list[dict[str, Any]] = []
 
 
 class MembershipConfigUpdate(SQLModel):
-    """支付开关 + 优惠券限领 + 每日额度 (后台可调)."""
+    """支付开关 + 优惠券限领 + 每日额度 + 推广模式 (后台可调)."""
 
     pay_enabled: bool | None = None
     pay_mock: bool | None = None
     coupon_monthly_limit: int | None = Field(default=None, ge=0, le=99)
     member_daily_quota: int | None = Field(default=None, ge=0, le=999)
     free_daily_quota: int | None = Field(default=None, ge=0, le=999)
+    promo_trial_days: int | None = Field(default=None, ge=0, le=3650)
 
 
 class CouponGrantRequest(SQLModel):
@@ -2838,7 +2841,8 @@ def update_membership_config(
 ) -> MembershipPlansResponse:
     """支付开关管理: pay_enabled (真实支付) / pay_mock (模拟支付联调).
 
-    只覆盖这两个 key, 其余套餐/额度配置原样保留。返回更新后的完整配置。
+    只覆盖这几个 key, 其余套餐/额度配置原样保留。返回更新后的完整配置。
+    promo_trial_days: 网上推广模式开关, >0 时注册自动送试用 + 线上收费强制关闭。
     """
     cfg = membership.get_config(session)
     if body.pay_enabled is not None:
@@ -2851,6 +2855,8 @@ def update_membership_config(
         cfg["member_daily_quota"] = body.member_daily_quota
     if body.free_daily_quota is not None:
         cfg["free_daily_quota"] = body.free_daily_quota
+    if body.promo_trial_days is not None:
+        cfg["promo_trial_days"] = body.promo_trial_days
     row = session.get(SiteSetting, membership.CONFIG_KEY)
     if row:
         row.value = cfg
@@ -2872,6 +2878,7 @@ def _plans_response(
         trial_once_per_user=bool(cfg.get("trial_once_per_user", True)),
         pay_enabled=bool(cfg.get("pay_enabled", False)),
         pay_mock=bool(cfg.get("pay_mock", False)),
+        promo_trial_days=int(cfg.get("promo_trial_days") or 0),
         pay_mode=membership.purchase_mode(session),
         plans=list(cfg.get("plans", [])),
     )
@@ -3624,7 +3631,8 @@ def list_activity_feed(
 class ActivityMatchBody(SQLModel):
     from_user_id: uuid.UUID
     to_user_id: uuid.UUID
-    # 归属门店: 门店管理员强制本店 (传了也忽略), superuser 必须显式指定
+    # 归属门店: 门店管理员强制本店 (传了也忽略); superuser 可不挂店
+    # (网上推广期平台直接撮合无门店会员, 工单进「未归属处理」)
     store_id: uuid.UUID | None = None
     note: str | None = None  # 红娘手写备注 (≤255)
 
@@ -3649,13 +3657,13 @@ def match_from_activity(
     for uid in (body.from_user_id, body.to_user_id):
         if not session.get(User, uid):
             raise HTTPException(status_code=404, detail="用户不存在")
-    # 归属门店: 门店管理员强制本店; superuser 须显式指定 (与动态流口径一致)
+    # 归属门店: 门店管理员强制本店; superuser 可不挂店 (平台撮合无门店会员,
+    # 工单 store_id 为空, 总部在「未归属处理」/撮合工单页可见)
     store_id = _store_owner_id(actor) or body.store_id
-    if store_id is None:
-        raise HTTPException(status_code=400, detail="请指定工单归属门店")
-    store = session.get(Store, store_id)
-    if not store or store.status != "active":
-        raise HTTPException(status_code=400, detail="门店不存在或已停用")
+    if store_id is not None:
+        store = session.get(Store, store_id)
+        if not store or store.status != "active":
+            raise HTTPException(status_code=400, detail="门店不存在或已停用")
     # 同一对去重 (任一方向, 进行中的工单即算): 防重复建单 / 重复撮合
     dup = session.exec(
         select(ContactRequest).where(
@@ -3698,7 +3706,7 @@ def match_from_activity(
         detail={
             "request_id": str(req.id),
             "to_user_id": str(body.to_user_id),
-            "store_id": str(store_id),
+            "store_id": str(store_id) if store_id else None,
             "note": req.admin_note,
         },
     )
