@@ -100,13 +100,10 @@ Page({
       return;
     }
     // 基本信息必填: 未填齐不放行资料流 (后端 is_welcomed 同口径)
-    if (!this.data.avatarUploadedUrl) {
-      wx.showToast({
-        title: this.data.avatarTempPath
-          ? '头像上传中, 请稍候'
-          : '请上传头像',
-        icon: 'none',
-      });
+    // 头像不强制: 没选直接用后端默认头像 (avatar_url 传空, 后端落 "default");
+    // 已选图但还在上传时仍稍等 —— 此时提交会把用户选好的头像丢掉
+    if (this.data.avatarTempPath && !this.data.avatarUploadedUrl) {
+      wx.showToast({ title: '头像上传中, 请稍候', icon: 'none' });
       return;
     }
     if (!(this.data.nickname || '').trim()) {
