@@ -57,11 +57,11 @@
       <!-- 注册页: 头像 + 昵称 + 协议 -->
       <view class="member-lock-card" wx:if="{{previewGate && guestStep === 2}}">
         <view class="guest-row">
-          <view class="guest-label">头像<text class="req">*</text></view>
+          <view class="guest-label">头像</view>
           <view class="guest-avatar" bindtap="onGuestAvatarPick">
             <image wx:if="{{guestAvatarPath}}" class="guest-avatar-img" src="{{guestAvatarPath}}" mode="aspectFill" />
             <view wx:else class="guest-avatar-default"><text>+</text></view>
-            <text class="guest-avatar-tag">{{guestAvatarPath ? '点击更换' : '上传头像'}}</text>
+            <text class="guest-avatar-tag">{{guestAvatarPath ? '点击更换' : '上传头像 (可选)'}}</text>
           </view>
         </view>
         <view class="guest-row">
