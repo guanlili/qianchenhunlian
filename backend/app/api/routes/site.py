@@ -10,7 +10,8 @@ from typing import Any, cast
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlmodel import Field, SQLModel, select
 
-from app.api.deps import SessionDep
+from app.api.audit import write_audit as _audit
+from app.api.deps import CurrentActor, SessionDep
 from app.api.permissions import Perm, require_perm
 from app.core.membership import invalidate_membership_config
 from app.models import SiteSetting
@@ -54,6 +55,7 @@ def get_qualifications(session: SessionDep) -> QualificationList:
 )
 def put_qualifications(
     session: SessionDep,
+    actor: CurrentActor,
     body: QualificationList = Body(),
 ) -> QualificationList:
     """admin: 设置资质图片列表 (覆盖)"""
@@ -65,6 +67,13 @@ def put_qualifications(
         row.value = payload
         row.updated_at = datetime.utcnow()
     session.add(row)
+    # 审计: 对外展示的平台资质变更留痕
+    _audit(
+        session,
+        actor,
+        "site_qualifications_update",
+        detail={"count": len(body.items)},
+    )
     session.commit()
     # SiteSetting 写路径统一失效套餐配置读缓存 (同表写入, 保持口径一致)
     invalidate_membership_config()
@@ -103,6 +112,7 @@ def get_platform_contact(session: SessionDep) -> PlatformContact:
 )
 def put_platform_contact(
     session: SessionDep,
+    actor: CurrentActor,
     body: PlatformContact = Body(),
 ) -> PlatformContact:
     """admin: 设置平台红娘微信二维码 (上传接口返回的 /files/... 相对路径, 空 = 清除)."""
@@ -115,6 +125,13 @@ def put_platform_contact(
         row.value = payload
         row.updated_at = datetime.utcnow()
     session.add(row)
+    # 审计: 用户加红娘的转化入口变更留痕
+    _audit(
+        session,
+        actor,
+        "platform_contact_update",
+        detail={"qr_url_set": url is not None, "qr_url": url},
+    )
     session.commit()
     # SiteSetting 写路径统一失效套餐配置读缓存 (同表写入, 保持口径一致)
     invalidate_membership_config()
@@ -181,7 +198,10 @@ def get_content(session: SessionDep, key: str) -> SiteContent:
     dependencies=[Depends(require_perm(Perm.SETTINGS_MANAGE))],
 )
 def put_content(
-    session: SessionDep, key: str, body: SiteContent = Body()
+    session: SessionDep,
+    actor: CurrentActor,
+    key: str,
+    body: SiteContent = Body(),
 ) -> SiteContent:
     """设置单份文案 (段落整体覆盖)."""
     if key not in CONTENT_KEYS:
@@ -194,6 +214,13 @@ def put_content(
         row.value = payload
         row.updated_at = datetime.utcnow()
     session.add(row)
+    # 审计: 用户协议/隐私政策等对外文案变更留痕
+    _audit(
+        session,
+        actor,
+        "site_content_update",
+        detail={"key": key, "title": body.title, "paragraphs": len(body.paragraphs)},
+    )
     session.commit()
     # SiteSetting 写路径统一失效套餐配置读缓存 (同表写入, 保持口径一致)
     invalidate_membership_config()
