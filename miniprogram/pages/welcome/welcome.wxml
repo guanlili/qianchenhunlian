@@ -10,7 +10,7 @@
       <view class="form-title">欢迎你, 先完善基本信息</view>
 
       <view class="row">
-        <view class="row-label">头像<text class="req">*</text></view>
+        <view class="row-label">头像</view>
         <view class="avatar-btn" bindtap="onPickAvatar">
           <image
             wx:if="{{avatarTempPath}}"
@@ -21,7 +21,7 @@
           <view wx:else class="avatar-default">
             <text>{{defaultGlyph}}</text>
           </view>
-          <text class="avatar-edit-tag">{{avatarTempPath ? '点击更换' : '上传头像'}}</text>
+          <text class="avatar-edit-tag">{{avatarTempPath ? '点击更换' : '上传头像 (可选)'}}</text>
         </view>
       </view>
 

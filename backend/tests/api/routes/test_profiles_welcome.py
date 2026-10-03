@@ -81,3 +81,18 @@ def test_welcome_rejects_year_out_of_range(client: TestClient, db: Session) -> N
         headers=headers,
     )
     assert r.status_code == 422
+
+
+def test_welcome_avatar_optional_falls_back_to_default(
+    client: TestClient, db: Session
+) -> None:
+    """头像不强制 (网上推广注册降门槛): 传空 → 落 "default" 占位, 引导门槛不受影响.
+
+    前端注册页已放开头像必选; 该契约是小程序渲染默认头像 + is_welcomed
+    放行的依赖, 用测试锁死防回归。
+    """
+    email = _mk_user(db)
+    headers = authentication_token_from_email(client=client, email=email, db=db)
+    profile = _welcome(client, headers, avatar_url="", gender="女", year=1995)
+    assert profile["avatar_url"] == "default"
+    assert _me_is_welcomed(client, headers) is True
