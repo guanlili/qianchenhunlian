@@ -202,6 +202,43 @@ def test_match_from_activity_flow(client: TestClient, db: Session) -> None:
     assert r.json()["items"][0]["status"] == "matched"
 
 
+def test_match_from_activity_requires_own_store_initiator(
+    client: TestClient, db: Session
+) -> None:
+    """门店账号撮合的发起方必须是本店会员 (防止借建单拿任意用户联系方式).
+
+    工单联系方式可见性以 store_id 为准: 发起方不限店的话, 店长可对任意两个
+    用户凭空建「本店单」并从响应拿到双方联系方式明文, 绕过本店边界。
+    """
+    headers, store = _setup_store_admin(client, db)
+    own = _make_user(db, home_store_id=store.id)
+    other_store = Store(name="别店", city="青岛")
+    db.add(other_store)
+    db.commit()
+    db.refresh(other_store)
+    outsider = _make_user(db, home_store_id=other_store.id)
+    storeless = _make_user(db)
+
+    # 发起方非本店会员 (别店/无店) → 403, 不建单
+    for stranger in (outsider, storeless):
+        r = client.post(
+            f"{API}/admin/activity-feed/match",
+            json={"from_user_id": str(stranger.id), "to_user_id": str(own.id)},
+            headers=headers,
+        )
+        assert r.status_code == 403, r.text
+
+    # 本店会员发起、对方是别店会员 → 200 (红娘牵线联系双方的业务能力不变)
+    r = client.post(
+        f"{API}/admin/activity-feed/match",
+        json={"from_user_id": str(own.id), "to_user_id": str(outsider.id)},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["store_id"] == str(store.id)
+    assert r.json()["status"] == "matched"
+
+
 def test_match_from_activity_superuser_scope(
     client: TestClient, db: Session, superuser_token_headers: dict
 ) -> None:

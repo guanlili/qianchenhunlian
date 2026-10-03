@@ -540,6 +540,13 @@ def admin_update_criteria(
     criteria.progress = calc_criteria_progress(criteria)
     criteria.updated_at = datetime.utcnow()
     session.add(criteria)
+    _audit(
+        session,
+        actor,
+        "update_criteria",
+        target_user_id=user_id,
+        detail={"fields": sorted(data.keys())},
+    )
     session.commit()
     session.refresh(criteria)
     return _to_admin_criteria_item(criteria)
@@ -576,6 +583,13 @@ def admin_update_parents_info(
             setattr(parents, k, v if v != "" else None)
     parents.updated_at = datetime.utcnow()
     session.add(parents)
+    _audit(
+        session,
+        actor,
+        "update_parents_info",
+        target_user_id=user_id,
+        detail={"fields": sorted(data.keys())},
+    )
     session.commit()
     session.refresh(parents)
     return _to_admin_parents_info_item(parents)
@@ -1305,10 +1319,18 @@ async def store_qrcode(
 )
 def admin_create_store(
     session: SessionDep,
+    actor: CurrentActor,
     body: StoreCreate = Body(),
 ) -> StorePublic:
     s = Store(**body.model_dump())
     session.add(s)
+    session.flush()
+    _audit(
+        session,
+        actor,
+        "store_create",
+        detail={"store_id": str(s.id), "name": s.name, "city": s.city},
+    )
     session.commit()
     session.refresh(s)
     stores_routes.invalidate_store_geo_cache()  # 城市聚合变了
@@ -1322,6 +1344,7 @@ def admin_create_store(
 )
 def admin_update_store(
     session: SessionDep,
+    actor: CurrentActor,
     store_id: uuid.UUID,
     body: StoreUpdate = Body(),
 ) -> StorePublic:
@@ -1333,6 +1356,12 @@ def admin_update_store(
         setattr(s, k, v if v != "" else None)
     s.updated_at = datetime.utcnow()
     session.add(s)
+    _audit(
+        session,
+        actor,
+        "store_update",
+        detail={"store_id": str(store_id), "fields": sorted(data.keys())},
+    )
     session.commit()
     session.refresh(s)
     stores_routes.invalidate_store_geo_cache()  # 城市/区县聚合可能变了
@@ -1347,6 +1376,7 @@ def admin_update_store(
 )
 def admin_delete_store(
     session: SessionDep,
+    actor: CurrentActor,
     store_id: uuid.UUID,
 ) -> Message:
     """软删: 改 status=closed, 保留历史 + home_store_id 关联完整"""
@@ -1356,6 +1386,12 @@ def admin_delete_store(
     s.status = "closed"
     s.updated_at = datetime.utcnow()
     session.add(s)
+    _audit(
+        session,
+        actor,
+        "store_close",
+        detail={"store_id": str(store_id), "name": s.name},
+    )
     session.commit()
     stores_routes.invalidate_store_geo_cache()  # 关闭门店会影响 active 口径聚合
     wechat.invalidate_wxacode_cache(scene=store_id.hex)  # 门店码缓存一并失效
@@ -2111,6 +2147,7 @@ def list_staff(
 )
 def create_staff_endpoint(
     session: SessionDep,
+    actor: CurrentActor,
     body: StaffCreate,
 ) -> StaffPublic:
     if crud.get_staff_by_email(session=session, email=body.email):
@@ -2124,6 +2161,18 @@ def create_staff_endpoint(
     if not store or store.status != "active":
         raise HTTPException(status_code=400, detail="门店不存在或已停用")
     s = crud.create_staff(session=session, staff_create=body)
+    # 审计: 账号生命周期是敏感操作 (detail 只记 email/角色/门店, 不落密码)
+    _audit(
+        session,
+        actor,
+        "staff_create",
+        detail={
+            "staff_id": str(s.id),
+            "email": s.email,
+            "role": s.role,
+            "store_id": str(s.store_id) if s.store_id else None,
+        },
+    )
     session.commit()
     session.refresh(s)
     return StaffPublic.model_validate(s, from_attributes=True)
@@ -2136,6 +2185,7 @@ def create_staff_endpoint(
 )
 def update_staff_endpoint(
     session: SessionDep,
+    actor: CurrentActor,
     staff_id: uuid.UUID,
     body: StaffUpdate,
 ) -> StaffPublic:
@@ -2154,6 +2204,16 @@ def update_staff_endpoint(
         if not store or store.status != "active":
             raise HTTPException(status_code=400, detail="门店不存在或已停用")
     s = crud.update_staff(session=session, db_staff=s, staff_in=body)
+    _audit(
+        session,
+        actor,
+        "staff_update",
+        detail={
+            "staff_id": str(staff_id),
+            "email": s.email,
+            "fields": sorted(body.model_dump(exclude_unset=True).keys()),
+        },
+    )
     session.commit()
     session.refresh(s)
     return StaffPublic.model_validate(s, from_attributes=True)
@@ -2166,6 +2226,7 @@ def update_staff_endpoint(
 )
 def delete_staff_endpoint(
     session: SessionDep,
+    actor: CurrentActor,
     staff_id: uuid.UUID,
 ) -> Message:
     s = session.get(Staff, staff_id)
@@ -2175,6 +2236,12 @@ def delete_staff_endpoint(
     s.is_active = False
     s.updated_at = datetime.utcnow()
     session.add(s)
+    _audit(
+        session,
+        actor,
+        "staff_disable",
+        detail={"staff_id": str(staff_id), "email": s.email},
+    )
     session.commit()
     return Message(message="已禁用员工")
 
@@ -2837,7 +2904,9 @@ def get_membership_plans(session: SessionDep) -> MembershipPlansResponse:
     dependencies=[Depends(require_perm(Perm.SETTINGS_MANAGE))],
 )
 def update_membership_config(
-    session: SessionDep, body: MembershipConfigUpdate
+    session: SessionDep,
+    actor: CurrentActor,
+    body: MembershipConfigUpdate,
 ) -> MembershipPlansResponse:
     """支付开关管理: pay_enabled (真实支付) / pay_mock (模拟支付联调).
 
@@ -2857,6 +2926,24 @@ def update_membership_config(
         cfg["free_daily_quota"] = body.free_daily_quota
     if body.promo_trial_days is not None:
         cfg["promo_trial_days"] = body.promo_trial_days
+    # 审计: 支付/推广/额度开关直接影响全平台计费口径, 变更必须留痕
+    _audit(
+        session,
+        actor,
+        "membership_config_update",
+        detail={
+            k: getattr(body, k)
+            for k in (
+                "pay_enabled",
+                "pay_mock",
+                "coupon_monthly_limit",
+                "member_daily_quota",
+                "free_daily_quota",
+                "promo_trial_days",
+            )
+            if getattr(body, k) is not None
+        },
+    )
     row = session.get(SiteSetting, membership.CONFIG_KEY)
     if row:
         row.value = cfg
@@ -3657,9 +3744,16 @@ def match_from_activity(
     for uid in (body.from_user_id, body.to_user_id):
         if not session.get(User, uid):
             raise HTTPException(status_code=404, detail="用户不存在")
+    # 作用域: 门店账号撮合的发起方必须是本店会员 —— 与用户自发申请的归属口径
+    # 一致 (工单 store_id 本就取发起方门店); 对方可以是别店/无店会员。
+    # 缺这层校验时, 店长可对任意两个用户凭空建单并从响应拿到双方联系方式,
+    # 绕过 VIEW_CONTACT 的本店边界与 contact-view 审计。
+    owner_sid = _store_owner_id(actor)
+    if owner_sid is not None:
+        _check_member_scope(actor, session, body.from_user_id)
     # 归属门店: 门店管理员强制本店; superuser 可不挂店 (平台撮合无门店会员,
     # 工单 store_id 为空, 总部在「未归属处理」/撮合工单页可见)
-    store_id = _store_owner_id(actor) or body.store_id
+    store_id = owner_sid or body.store_id
     if store_id is not None:
         store = session.get(Store, store_id)
         if not store or store.status != "active":
