@@ -580,6 +580,9 @@ export class AdminService {
     /**
      * List Admin Users
      * User 表列表. 加 user_status 过滤; 默认 openid 打码避免后台员工误转发.
+     *
+     * 门店账号强制本店 (与 members 列表同口径): 只能看到 home_store 归属本店的
+     * 会员, 防止跨店翻全平台用户列表。
      * @param data The data for the request.
      * @param data.actor
      * @param data.userStatus

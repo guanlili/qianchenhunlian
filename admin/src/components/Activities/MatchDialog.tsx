@@ -59,6 +59,9 @@ export function MatchDialog({
       // 动态行状态标注 + 撮合工单列表都要刷新
       await queryClient.invalidateQueries({ queryKey: ["activity-feed"] })
       await queryClient.invalidateQueries({ queryKey: ["admin-requests"] })
+      // 总览「待处理撮合工单」/统计角标同步刷新 (staleTime 窗口内否则数字滞后)
+      await queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] })
+      await queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
     },
     onError: (e) => toast.error(`撮合失败: ${getApiErrorMessage(e)}`),
   })

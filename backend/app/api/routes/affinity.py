@@ -21,6 +21,7 @@ from app.api.deps import (
     SessionDep,
 )
 from app.api.shandong import shandong_clause
+from app.core import membership
 from app.models import Affinity, Profile, User
 
 _AFFINITY_DAILY_LIMIT = 20
@@ -70,6 +71,9 @@ def toggle_affinity(
         .where(shandong_clause())
     ).first()
     if not target_profile or target_profile.audit_status != "approved":
+        raise HTTPException(status_code=404, detail="对方资料不可见")
+    # 好感列表会持续展示对方资料, 目标须与推荐池同口径: 在期会员
+    if not membership.is_member(target):
         raise HTTPException(status_code=404, detail="对方资料不可见")
 
     existing = session.exec(

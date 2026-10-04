@@ -724,7 +724,11 @@ Page({
     const now = Date.now();
     if (now - _lastShowRefreshAt < ON_SHOW_REFRESH_INTERVAL_MS) return;
     _lastShowRefreshAt = now;
-    this.refreshMembership();
+    // 常驻后台跨天使用也能收到到期/即将到期提醒: refreshMembership 拿到最新
+    // 会员状态后顺带走提醒 (内部按「每天最多一次」的 storage 键去重, 不会骚扰)
+    this.refreshMembership().then((m) => {
+      if (m) this.checkMembershipRenewal(m).catch(() => {});
+    });
     // 已加载过完整资料时走轻量门面 (只刷头像/统计), 不整包重建表单
     this.loadMyProfile({ light: !!this._myProfileLoaded }).catch(() => {});
   },
