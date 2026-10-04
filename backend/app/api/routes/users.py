@@ -199,6 +199,10 @@ def delete_user(
         raise HTTPException(status_code=403, detail="超级管理员不允许删除自己")
     user.status = "deleted"
     user.is_active = False
+    if user.openid:
+        # openid 墓碑 (与 admin 删会员同款): 微信登录按 openid upsert,
+        # 不释放则同一微信永远回到旧账号且旧 token 陷入登录循环
+        user.openid = f"deleted:{user_id}"
     user.updated_at = datetime.utcnow()
     session.add(user)
     session.commit()
