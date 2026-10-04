@@ -40,8 +40,27 @@ App({
       });
   },
 
+  /** 跨账号清残留: 换了 user id (被删重注册/换号) 时清掉上一世的本地位.
+   * 这些 key 按「人」存, 不清会让新账号继承旧账号的引导标记/关系选择/提醒去重. */
+  _clearStaleUserStorage(userId) {
+    try {
+      const last = wx.getStorageSync('qy_last_uid');
+      if (last && last !== userId) {
+        ['qy_welcomed', 'qy_relation', 'qy_last_filter', 'qy_filter_ranges',
+          'qy_renewal_notice_date', 'qy_expiry_soon_date',
+          'qy_renewal_notice_date', 'qy_pending_target'].forEach((k) => {
+          try { wx.removeStorageSync(k); } catch (e) { /* noop */ }
+        });
+      }
+      wx.setStorageSync('qy_last_uid', userId);
+    } catch (e) { /* storage 异常不阻塞登录 */ }
+  },
+
   /** 把 /wechat/login 返回的 payload 灌进 globalData (onLaunch 与 ensureLogin 共用) */
   _applyLoginPayload(payload) {
+    if (payload && payload.user && payload.user.id) {
+      this._clearStaleUserStorage(payload.user.id);
+    }
     this.globalData.user = payload && payload.user;
     this.globalData.hasProfile = !!(payload && payload.has_profile);
     this.globalData.hasCriteria = !!(payload && payload.has_criteria);
@@ -78,7 +97,22 @@ App({
         return true;
       }
     } catch (e) { /* noop */ }
-    wx.navigateTo({ url: '/pages/welcome/welcome' });
+    // 防抖: 引导跳转完成前二次点击会把 welcome 压栈两层
+    if (this._navigatingWelcome) return false;
+    this._navigatingWelcome = true;
+    setTimeout(() => { this._navigatingWelcome = false; }, 1000);
+    // 页面栈满 (10 层) 时 navigateTo 会静默失败 —— 兜底 reLaunch
+    const fallback = () => wx.navigateTo({
+      url: '/pages/welcome/welcome',
+      fail: () => wx.reLaunch({ url: '/pages/welcome/welcome' }),
+    });
+    try {
+      const pages = getCurrentPages();
+      if (pages.length >= 10) wx.reLaunch({ url: '/pages/welcome/welcome' });
+      else fallback();
+    } catch (e) {
+      fallback();
+    }
     return false;
   },
 });

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select"
 import { currentUserQueryOptions } from "@/hooks/useAuth"
 import { downloadCsv } from "@/lib/csv"
-import { formatCnDateTime } from "@/lib/datetime"
+import { formatCnDate, formatCnDateTime } from "@/lib/datetime"
 import { getApiErrorMessage } from "@/utils"
 
 const PAGE_SIZE = 50
@@ -104,7 +104,7 @@ function AuditLogsPage() {
         ACTION_OPTIONS.filter(([v]) => v !== ALL_ACTIONS),
       )
       downloadCsv(
-        `操作日志_${new Date().toISOString().slice(0, 10)}.csv`,
+        `操作日志_${formatCnDate(new Date().toISOString())}.csv`,
         ["时间", "操作人", "动作", "目标用户ID", "详情"],
         rows.map((r) => [
           formatCnDateTime(r.created_at),

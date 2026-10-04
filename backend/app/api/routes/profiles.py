@@ -261,6 +261,11 @@ def upsert_my_profile(
     else:
         profile.audit_status = "approved"  # 先发后审 (默认): 保持现行为
 
+    # 兼容老 year 字段: 填了 birth_date 就同步 year (与 admin 代录同款,
+    # 推荐打分 / is_welcomed / 完善度口径都只认 year, 只填出生日期会被视为未填)
+    if profile.birth_date is not None:
+        profile.year = profile.birth_date.year
+
     profile.progress = calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
