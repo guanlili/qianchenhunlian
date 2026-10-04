@@ -2,6 +2,7 @@ const profileSvc = require('../../services/profile');
 
 Page({
   data: {
+    activeStatus: '',  // 'active' | 'inactive' | ...
     sections: [
       {
         items: [
@@ -19,6 +20,18 @@ Page({
       },
     ],
   },
+  onLoad() {
+    // 展示当前上/下线状态, 按钮文案随之变化 (此前用户无法知道自己在下线中)。
+    // 状态来自登录 payload (globalData.user.status), 不额外发请求
+    const me = (getApp().globalData && getApp().globalData.user) || {};
+    const status = me.status || 'active';
+    this.setData({
+      activeStatus: status,
+      'sections[0].items[0].sub':
+        status === 'inactive' ? '当前: 已下线 (点此重新上线)' : '暂时不接收推荐',
+    });
+  },
+
   tap(e) {
     const { url, kind, label } = e.currentTarget.dataset;
     if (kind === 'navigate' && url) {
@@ -36,13 +49,16 @@ Page({
   },
 
   _toggleActive() {
+    const inactive = this.data.activeStatus === 'inactive';
+    const items = inactive ? ['重新上线 (恢复推荐展示)'] : ['相亲下线 (暂时不显示我)'];
     wx.showActionSheet({
-      itemList: ['相亲下线 (暂时不显示我)', '重新上线'],
-      success({ tapIndex }) {
-        // 走 services 层 (profileSvc), 不在页面里直拼 request.post
-        const req = tapIndex === 0 ? profileSvc.deactivateMe() : profileSvc.reactivateMe();
+      items,
+      success: ({ tapIndex }) => {
+        // 走 services 层 (profileSvc): 只提供与当前状态对应的动作
+        const req = inactive ? profileSvc.reactivateMe() : profileSvc.deactivateMe();
         req.then((r) => {
           wx.showToast({ title: (r && r.message) || '已操作', icon: 'success' });
+          this.onLoad(); // 刷新状态展示
         }).catch((e) => {
           wx.showToast({ title: (e && e.detail) || '操作失败', icon: 'none' });
         });

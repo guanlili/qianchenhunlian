@@ -35,7 +35,12 @@ Page({
         this.setData({ isCurrent: true });
       }
     } catch (e) {
-      wx.showToast({ title: '门店不存在', icon: 'none' });
+      // 区分「真不存在」与「网络异常」(此前统一文案误导用户以为门店没了)
+      const notFound = e && e.statusCode === 404;
+      wx.showToast({
+        title: notFound ? '门店不存在或已关闭' : '加载失败, 请稍后重试',
+        icon: 'none',
+      });
     }
   },
 
@@ -76,7 +81,13 @@ Page({
       // 从「我的-当地门店」直达 (栈深 2) 只回一层, 避免 delta 超栈导航失败
       const depth = getCurrentPages().length;
       const delta = Math.min(2, Math.max(1, depth - 1));
-      setTimeout(() => wx.navigateBack({ delta }), 800);
+      setTimeout(() => {
+        wx.navigateBack({
+          delta,
+          // 分享/扫码直达 (栈深 1) 时 navigateBack 必然失败, 兜底回首页
+          fail: () => wx.reLaunch({ url: '/pages/index/index' }),
+        });
+      }, 800);
     } catch (e) {
       this.setData({ binding: false });
       wx.showToast({ title: (e && e.detail) || '操作失败', icon: 'none' });

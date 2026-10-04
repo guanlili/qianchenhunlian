@@ -2214,7 +2214,17 @@ Page({
       // 已有图, 点击不响应 (删除请用右上角 ×)
       return;
     }
+    // 在途防抖: 双击会连开两次选图并重复上传同一张
+    if (this._photoUploading) return;
+    this._photoUploading = true;
+    try {
+      await this._doPhotoUpload(index);
+    } finally {
+      this._photoUploading = false;
+    }
+  },
 
+  async _doPhotoUpload(index) {
     if (!this.data.apiReady) {
       // 没登录降级 - 仍切 fake "已选" 状态
       const photos = this.data.photos.map((p, i) =>
