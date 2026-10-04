@@ -24,7 +24,11 @@ API = settings.API_V1_STR
 
 
 def _mk_user(
-    db: Session, *, member_days: int | None = None, location="山东 济南"
+    db: Session,
+    *,
+    member_days: int | None = None,
+    location="山东 济南",
+    gender="女",
 ) -> object:
     u = crud.create_user(
         session=db,
@@ -39,7 +43,7 @@ def _mk_user(
             user_id=u.id,
             progress=100,
             location=location,
-            gender="女",
+            gender=gender,
             audit_status="approved",
         )
     )
@@ -63,7 +67,7 @@ def _mk_user(
 
 def test_feed_only_shows_members(client: TestClient, db: Session) -> None:
     """推荐列表只出现在期会员; 非会员资料既不在列表也不可看详情."""
-    viewer = _mk_user(db, member_days=30)
+    viewer = _mk_user(db, member_days=30, gender="男")
     member_target = _mk_user(db, member_days=30)
     nonmember_target = _mk_user(db)  # 资料已审核通过, 但不是会员
 

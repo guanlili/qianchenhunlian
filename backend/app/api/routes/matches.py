@@ -45,10 +45,13 @@ def _member_only_clause() -> Any:
     return User.membership_expires_at > datetime.utcnow()  # type: ignore[operator]
 
 
-def _visible_candidates_clause(current_user: User) -> list[Any]:
+def _visible_candidates_clause(session: Session, current_user: User) -> list[Any]:
     """候选可见性统一口径 (推荐/筛选/游客预览/上下翻页共用):
-    排除自己 + active + 非超管 + 有寻缘号 + 审核通过 + 在期会员 + 山东资料。"""
-    return [
+    排除自己 + active + 非超管 + 有寻缘号 + 审核通过 + 在期会员 + 山东资料
+    + 异性 (相亲场景, 与游客预览口径统一; 此前会员端推荐混入同性资料)。
+    自己性别未填时不设性别条件 (新号由引导兜底补填)。
+    """
+    clauses = [
         Profile.user_id != current_user.id,
         User.status == "active",
         User.is_superuser == False,  # noqa: E712  排除 admin
@@ -57,6 +60,12 @@ def _visible_candidates_clause(current_user: User) -> list[Any]:
         _member_only_clause(),  # 仅在期会员资料对外可见
         _shandong_clause(),  # 仅山东资料对外可见
     ]
+    my_gender = session.exec(
+        select(Profile.gender).where(Profile.user_id == current_user.id)
+    ).first()
+    if my_gender in ("男", "女"):
+        clauses.append(Profile.gender == ("女" if my_gender == "男" else "男"))
+    return clauses
 
 
 # ---------------- DTOs ----------------
@@ -169,13 +178,21 @@ def _compute_today_ranking(
 
     与原实时路径完全同一套打分口径 (候选池 User.id 稳定序 + pair_score + 同城加分)。
     """
+    import random
+
     stmt = (
         select(Profile, User)
         .join(User, Profile.user_id == User.id)  # type: ignore
-        .where(*_visible_candidates_clause(current_user))
+        .where(*_visible_candidates_clause(session, current_user))
     )
-    # 候选池前 500 内择优 (User.id 稳定序保证池子可复现; 不加 limit 会全表载入打分)
-    pool = session.exec(stmt.order_by(User.id).limit(500)).all()  # type: ignore[arg-type]
+    # 候选池 500 内择优。取样窗随机: 会员池超过 500 时若按固定 User.id 截断,
+    # 排序靠后的会员永远进不了任何人的推荐; 快照内仍稳定 (一天一份)。
+    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
+    pool_limit = 500
+    pool_offset = random.randrange(total - pool_limit + 1) if total > pool_limit else 0
+    pool = session.exec(
+        stmt.order_by(User.id).offset(pool_offset).limit(pool_limit)  # type: ignore[arg-type]
+    ).all()
     cand_ids = [p.user_id for p, _ in pool]
     cand_criteria_map: dict[Any, Any] = (
         {
@@ -274,7 +291,7 @@ def _read_snapshot_page(
     rows = session.exec(
         select(Profile, User)
         .join(User, Profile.user_id == User.id)  # type: ignore
-        .where(*_visible_candidates_clause(current_user))
+        .where(*_visible_candidates_clause(session, current_user))
         .where(Profile.user_id.in_(id_uuids))  # type: ignore
     ).all()
     by_id = {p.user_id: (p, u) for p, u in rows}
@@ -390,7 +407,9 @@ def get_guest_preview(
     )
     age_rank = func.abs(Profile.year - me.year)  # type: ignore[operator]
 
-    base = _visible_candidates_clause(current_user) + [Profile.gender == opposite]
+    base = _visible_candidates_clause(session, current_user) + [
+        Profile.gender == opposite
+    ]
 
     def _query(extra: list[Any]) -> Any:
         return (
@@ -489,7 +508,7 @@ def get_daily_recommendations(
     stmt = (
         select(Profile, User)
         .join(User, Profile.user_id == User.id)  # type: ignore
-        .where(*_visible_candidates_clause(current_user))
+        .where(*_visible_candidates_clause(session, current_user))
     )
 
     if tab == "today":
@@ -571,7 +590,7 @@ def apply_filter(
     stmt = (
         select(Profile, User)
         .join(User, Profile.user_id == User.id)  # type: ignore
-        .where(*_visible_candidates_clause(current_user))
+        .where(*_visible_candidates_clause(session, current_user))
     )
 
     if body.gender:
@@ -594,8 +613,10 @@ def apply_filter(
         # 户籍 OR 居住地任一命中即可
         region_clauses = []
         for r in body.region:
-            region_clauses.append(Profile.location.like(f"%{r}%"))  # type: ignore
-            region_clauses.append(Profile.origin.like(f"%{r}%"))  # type: ignore
+            # 剥掉 LIKE 通配符: 用户输入含 %/_ 会放大匹配面 (参数化无注入风险)
+            safe = r.replace("%", "").replace("_", "")
+            region_clauses.append(Profile.location.like(f"%{safe}%"))  # type: ignore
+            region_clauses.append(Profile.origin.like(f"%{safe}%"))  # type: ignore
         stmt = stmt.where(or_(*region_clauses))
     if body.job:
         stmt = stmt.where(Profile.job.in_(body.job))  # type: ignore
@@ -761,7 +782,7 @@ def get_neighbor(
         stmt = (
             select(Profile.user_id)
             .join(User, Profile.user_id == User.id)  # type: ignore
-            .where(*_visible_candidates_clause(current_user))
+            .where(*_visible_candidates_clause(session, current_user))
             .where(Profile.updated_at < current.updated_at)
             .order_by(Profile.updated_at.desc())  # type: ignore
             .limit(1)
@@ -770,7 +791,7 @@ def get_neighbor(
         stmt = (
             select(Profile.user_id)
             .join(User, Profile.user_id == User.id)  # type: ignore
-            .where(*_visible_candidates_clause(current_user))
+            .where(*_visible_candidates_clause(session, current_user))
             .where(Profile.updated_at > current.updated_at)
             .order_by(Profile.updated_at.asc())  # type: ignore
             .limit(1)
