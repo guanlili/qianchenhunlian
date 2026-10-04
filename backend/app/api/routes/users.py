@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import func, select
 
 from app import crud
@@ -64,7 +65,12 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
         raise HTTPException(status_code=400, detail="该邮箱已被注册")
 
     user = crud.create_user(session=session, user_create=user_in)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发注册撞 email 唯一索引 (查重是 check-then-insert): 归一为 409
+        session.rollback()
+        raise HTTPException(status_code=409, detail="该邮箱已被注册")
     session.refresh(user)
     if settings.emails_enabled and user_in.email:
         email_data = generate_new_account_email(

@@ -4,7 +4,6 @@ import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import useAuth from "@/hooks/useAuth"
 
 const tabsConfig = [
   { value: "my-profile", title: "个人资料", component: UserInformation },
@@ -24,14 +23,7 @@ export const Route = createFileRoute("/_layout/settings")({
 })
 
 function UserSettings() {
-  const { user: currentUser } = useAuth()
-  const finalTabs = currentUser?.is_superuser
-    ? tabsConfig.slice(0, 3)
-    : tabsConfig
-
-  if (!currentUser) {
-    return null
-  }
+  const finalTabs = tabsConfig
 
   return (
     <div className="flex flex-col gap-6">

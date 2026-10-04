@@ -1403,6 +1403,8 @@ def admin_update_store(
     if not s:
         raise HTTPException(status_code=404, detail="门店不存在")
     data = body.model_dump(exclude_unset=True)
+    if data.get("city") is not None and not str(data["city"]).strip():
+        raise HTTPException(status_code=400, detail="城市不能为空")
     for k, v in data.items():
         setattr(s, k, v if v != "" else None)
     s.updated_at = datetime.utcnow()

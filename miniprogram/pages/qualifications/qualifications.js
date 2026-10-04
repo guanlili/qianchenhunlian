@@ -18,6 +18,6 @@ Page({
   preview(e) {
     const url = e.currentTarget.dataset.url;
     if (!url) return;
-    wx.previewImage({ current: url, urls: this.data.items.map((it) => it.image_url) });
+    wx.previewImage({ current: url, urls: this.data.items.map((it) => it.image_url).filter(Boolean) });
   },
 });

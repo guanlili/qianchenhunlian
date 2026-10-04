@@ -71,7 +71,10 @@ def decode_token(token: str, *, expected_type: str = "access") -> TokenPayload:
     """解码 JWT 并校验 token 类型。expected_type 不符 → 403。"""
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+            token,
+            settings.SECRET_KEY,
+            algorithms=[security.ALGORITHM],
+            options={"require": ["exp", "sub"]},  # 缺声明字段直接判无效
         )
         data = TokenPayload(**payload)
     except (InvalidTokenError, ValidationError):

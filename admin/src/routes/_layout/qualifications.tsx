@@ -15,6 +15,7 @@ import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/qualifications")({
   component: QualificationsPage,
+  head: () => ({ meta: [{ title: "平台设置 - 乾缘婚恋后台" }] }),
 })
 
 type Item = { image_url: string; title: string | null }
@@ -321,7 +322,8 @@ function PromoTrialSection() {
   // 输入框清空时 Number("") === 0 —— 直接保存会静默关闭全平台推广模式,
   // 非法输入 (空/非整数/负数) 一律禁用保存
   const daysNum = Number(days)
-  const daysValid = days !== "" && Number.isInteger(daysNum) && daysNum >= 0
+  const daysValid =
+    days !== "" && Number.isInteger(daysNum) && daysNum >= 0 && daysNum <= 3650
   const save = useMutation({
     mutationFn: () =>
       AdminService.updateMembershipConfig({

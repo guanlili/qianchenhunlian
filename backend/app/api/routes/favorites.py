@@ -255,6 +255,7 @@ def _aggregate_view_list(
         .join(User, User.id == sub.c.uid)
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(shandong_clause())
+        .where(User.status != "deleted")  # 已注销账号的浏览痕迹不再展示
         .order_by(sub.c.last_viewed_at.desc())
         .offset(skip)
         .limit(limit)
