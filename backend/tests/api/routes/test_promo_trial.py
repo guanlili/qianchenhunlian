@@ -194,3 +194,55 @@ def test_promo_order_rejected_while_promo_on(client: TestClient, db: Session) ->
     )
     assert r.status_code == 503
     assert r.json()["detail"] == "PAY_NOT_ENABLED"
+
+
+def test_member_daily_quota_zero_is_honored(client: TestClient, db: Session) -> None:
+    """会员日额度配 0 必须生效 (历史 bug: `or 2` 把 falsy 的 0 吞成 2)."""
+    from app.models import Profile
+
+    _set_cfg(db, promo_trial_days=0, member_daily_quota=0)
+    user = _mk_user(db)
+    db.add(Profile(user_id=user.id, progress=100))
+    membership.grant_membership(
+        db,
+        user=user,
+        plan_code="monthly_30d",
+        days=30,
+        source=membership.SOURCE_RECHARGE,
+        granted_by_type="admin",
+        granted_by_id=user.id,
+    )
+    db.commit()
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+
+    r = client.get(f"{API}/membership/me", headers=headers)
+    assert r.status_code == 200, r.text
+    quota = r.json()["quota"]
+    assert quota["limit"] == 0
+    assert quota["remaining"] == 0
+
+
+def test_promo_grant_unique_index_blocks_duplicate(db: Session) -> None:
+    """(user_id, source='promo_trial') 部分唯一索引兜并发: 第二条直接撞约束.
+
+    存在性检查与插入之间的并发窗口靠索引兜底 (SELECT-then-INSERT 会双通过)。
+    """
+    import pytest as _pytest
+    from sqlalchemy.exc import IntegrityError
+
+    # conftest 默认压成 0 (测试隔离), 先显式开推广
+    _set_cfg(db, promo_trial_days=30)
+    user = _mk_user(db)
+    assert membership.grant_promo_trial_if_eligible(db, user) is not None
+    db.commit()
+    with _pytest.raises(IntegrityError):
+        membership.grant_membership(
+            db,
+            user=user,
+            plan_code="promo_trial",
+            days=30,
+            source=membership.SOURCE_PROMO,
+            granted_by_type="system",
+            granted_by_id=user.id,
+        )
+        db.flush()

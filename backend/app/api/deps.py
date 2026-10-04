@@ -101,7 +101,27 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
     return user
 
 
+def get_current_user_allow_inactive(session: SessionDep, token: TokenDep) -> User:
+    """自助恢复类端点用 (相亲下线后重新上线): 放行 inactive 账号.
+
+    get_current_user 对一切停用账号 400, 会让「下线」用户连重新上线的入口
+    都调不通 (自锁)。本依赖只放行 inactive; deleted 仍 401 触发重登,
+    blocked 交由端点自行 403 (封禁与下线语义不同)。
+    仅限明确的自助恢复端点挂载, 常规业务接口仍用 CurrentUser。
+    """
+    data = decode_token(token)
+    if data.actor != "user":
+        raise HTTPException(status_code=403, detail="此 token 不能调用业务接口")
+    user = session.get(User, data.sub)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.status == "deleted":
+        raise HTTPException(status_code=401, detail="账号已删除, 请重新登录")
+    return user
+
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentUserAllowInactive = Annotated[User, Depends(get_current_user_allow_inactive)]
 
 
 def _enforce_api_read_limit(current_user: CurrentUser) -> None:

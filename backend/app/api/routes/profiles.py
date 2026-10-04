@@ -15,6 +15,7 @@ from app.api.deps import (
     ApiReadLimited,
     ApiWriteLimited,
     CurrentUser,
+    CurrentUserAllowInactive,
     MemberRequired,
     SessionDep,
 )
@@ -68,7 +69,8 @@ class PhotoCommit(SQLModel):
 
 class WelcomeBody(SQLModel):
     nickname: str
-    avatar_url: str
+    # max_length 与 Profile.avatar_url 列宽一致, 超长 422 而非打穿列宽 500
+    avatar_url: str = Field(default="", max_length=500)
     # 基本信息必填项: 前端强制, 后端可选兼容老客户端 (is_welcomed 口径含这两项)
     gender: str | None = Field(default=None, max_length=8)
     year: int | None = Field(default=None, ge=1950, le=2015)
@@ -200,7 +202,29 @@ def submit_welcome(
     # 网上推广模式: 注册即送试用会员 (后台可配天数, 0=关闭), 与 profile 同事务提交。
     # 新用户凭会员身份直接进主页浏览, 不再经过缴费/选店页 (小程序向导同步精简)。
     membership.grant_promo_trial_if_eligible(session, current_user)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发首提撞 Profile.user_id 唯一约束 (双击/双请求): 回滚后改为更新已有行
+        session.rollback()
+        existing = session.exec(
+            select(Profile).where(Profile.user_id == current_user.id)
+        ).first()
+        if existing is None:
+            raise
+        existing.nickname = nickname
+        existing.avatar_url = avatar_url
+        if gender:
+            existing.gender = gender
+        if body.year:
+            existing.year = body.year
+        existing.progress = calc_profile_progress(existing)
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+        membership.grant_promo_trial_if_eligible(session, current_user)
+        session.commit()
+        session.refresh(existing)
+        return ProfileWithContact.model_validate(existing, from_attributes=True)
     session.refresh(profile)
     return ProfileWithContact.model_validate(profile, from_attributes=True)
 
@@ -434,7 +458,8 @@ def deactivate_me(
 @router.post("/me/reactivate", response_model=Message)
 def reactivate_me(
     session: SessionDep,
-    current_user: CurrentUser,
+    # 自助恢复专用依赖: 放行 inactive 账号 (常规 CurrentUser 会 400 自锁)
+    current_user: CurrentUserAllowInactive,
 ) -> Message:
     """重新上线"""
     if current_user.status == "blocked":
