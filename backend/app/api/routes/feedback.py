@@ -82,10 +82,14 @@ def submit_feedback(
     if len(content) > 1000:
         raise HTTPException(status_code=400, detail="内容过长 (最多 1000 字)")
     assert_text_safe(content, current_user.openid, scene=2)
+    contact = (body.contact or "").strip()[:64] or None
+    if contact:
+        # 联系方式也是用户自由文本 (后台展示), 同样过审 fail-closed
+        assert_text_safe(contact, current_user.openid, scene=2)
     fb = Feedback(
         user_id=current_user.id,
         content=content,
-        contact=(body.contact or "").strip()[:64] or None,
+        contact=contact,
     )
     session.add(fb)
     session.commit()

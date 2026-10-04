@@ -17,6 +17,7 @@ from app.api.deps import (
     SessionDep,
 )
 from app.api.shandong import shandong_clause
+from app.core import membership
 from app.models import Favorite, Profile, User, View
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
@@ -97,6 +98,12 @@ def toggle_favorite(
             select(Profile).where(Profile.user_id == target_id).where(shandong_clause())
         ).first()
         if not target_profile:
+            raise HTTPException(status_code=404, detail="对方资料不可见")
+        # 收藏/好感列表会持续展示对方资料, 目标须与推荐池同口径:
+        # 在期会员 + 审核通过 (否则列表里能看到已下架/过期资料)
+        if not membership.is_member(target) or (
+            target_profile.audit_status != "approved"
+        ):
             raise HTTPException(status_code=404, detail="对方资料不可见")
 
     if existing:
