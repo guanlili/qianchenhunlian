@@ -37,7 +37,9 @@ function AdminsTableContent() {
   return (
     <div>
       <div className="text-sm text-muted-foreground mb-2">
-        共 {data.total} 个管理员账号
+        共 {data.total ?? 0} 个管理员账号
+        {(data.total ?? 0) > (data.items?.length ?? 0) &&
+          ` · 仅显示前 ${data.items?.length ?? 0} 条`}
       </div>
       <DataTable columns={columns} data={data.items ?? []} />
     </div>

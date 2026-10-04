@@ -1,6 +1,9 @@
 import logging
 import os
 import re
+import threading
+import time
+import uuid
 from pathlib import Path
 
 import sentry_sdk
@@ -8,11 +11,14 @@ from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.routing import APIRoute
+from sqlmodel import Session
 from starlette.middleware.cors import CORSMiddleware
 
+from app.api.deps import SessionDep
 from app.api.main import api_router
 from app.core import oss
 from app.core.config import settings
+from app.models import User
 
 # httpx 默认在 INFO 级别打印每个请求的完整 URL，而 jscode2session 的 URL 里带 AppSecret，
 # 降级到 WARNING，避免密钥泄露进日志。
@@ -60,10 +66,50 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 _FILES_KEY_RE = re.compile(r"[0-9A-Za-z_.\-]+(?:/[0-9A-Za-z_.\-]+)*")
 
 
+# 文件主状态短缓存 (60s, LRU 上限): 每张图片请求不做 DB 查询的折中
+_OWNER_STATUS_TTL = 60.0
+_OWNER_STATUS_MAX = 2000
+_owner_status_cache: dict[str, tuple[float, str]] = {}
+_owner_status_lock = threading.Lock()
+
+
+def _owner_status(session: Session, owner_id: str) -> str | None:
+    """key 首段 user id 的账号状态; 查不到 (非 User id, 如历史残留) 返回 None 放行."""
+    now = time.monotonic()
+    with _owner_status_lock:
+        hit = _owner_status_cache.get(owner_id)
+        if hit and now - hit[0] < _OWNER_STATUS_TTL:
+            return hit[1] or None  # "" (查无此人) 归一为 None, 与回源分支一致
+    try:
+        row = session.get(User, uuid.UUID(owner_id))
+    except (ValueError, AttributeError):
+        return None
+    st = row.status if row else None
+    with _owner_status_lock:
+        if len(_owner_status_cache) >= _OWNER_STATUS_MAX:
+            _owner_status_cache.clear()
+        # 缓存值统一用 str ("": 查无此人), 返回前归一为 None, 否则空串会被
+        # 调用方的 `st is not None` 误判成「状态异常」而 404
+        _owner_status_cache[owner_id] = (now, st or "")
+    return st if st else None
+
+
 @app.get("/files/{key:path}", tags=["files"])
-def get_file(key: str) -> Response:
+def get_file(key: str, session: SessionDep) -> Response:
     if not _FILES_KEY_RE.fullmatch(key) or ".." in key.split("/"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    # 文件主状态检查 (key 首段 = 上传者 user id): 封禁/注销/下线用户的图片
+    # 不再对外提供。找不到主 (非 User id) 或 active 一律放行。
+    owner_id = key.split("/", 1)[0]
+    try:
+        uuid.UUID(owner_id)
+    except ValueError:
+        owner_id = ""
+    if owner_id:
+        st = _owner_status(session, owner_id)
+        if st is not None and st != "active":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     local_path = (UPLOAD_DIR / key).resolve()
     try:
