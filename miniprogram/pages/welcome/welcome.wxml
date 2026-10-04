@@ -68,7 +68,8 @@
         </picker>
       </view>
 
-      <view class="fee-notice">乾缘婚恋会员费 100元/年</view>
+      <!-- 费用口径以平台公示为准 (线上收费当前关闭, 不再硬编码 100 元/年) -->
+      <view class="fee-notice">注册即享会员试用, 费用以平台公示为准</view>
 
       <view class="agreement-row" bindtap="toggleAgreed">
         <view class="checkbox {{agreed ? 'on' : ''}}">{{agreed ? '✓' : ''}}</view>
