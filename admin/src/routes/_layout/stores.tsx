@@ -461,7 +461,13 @@ function StoreCard({
               <StoreFormDialog
                 store={full}
                 trigger={
-                  <Button variant="ghost" size="icon" aria-label="编辑门店">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="编辑门店"
+                    disabled={!full}
+                    title={full ? undefined : "门店详情加载中"}
+                  >
                     <Pencil />
                   </Button>
                 }

@@ -56,6 +56,8 @@ export function AssignStoreDialog({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-members"] })
       qc.invalidateQueries({ queryKey: ["member-full"] })
+      // 门店卡片会员数与侧边栏「未归属」角标
+      qc.invalidateQueries({ queryKey: ["stores-overview"] })
       toast.success("已更新所属门店")
       setOpen(false)
     },

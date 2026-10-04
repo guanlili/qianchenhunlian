@@ -40,6 +40,7 @@ export function VerifyQueue({ storeId }: { storeId?: string }) {
       qc.invalidateQueries({ queryKey: ["verify-queue"] })
       qc.invalidateQueries({ queryKey: ["admin-stats"] })
       qc.invalidateQueries({ queryKey: ["admin-members"] })
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] })
       toast.success("已通过实名认证")
     },
     onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
