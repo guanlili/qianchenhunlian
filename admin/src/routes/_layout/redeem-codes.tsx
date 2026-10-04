@@ -296,6 +296,8 @@ function RedeemCodesPage() {
       <p className="text-muted-foreground mt-2 text-xs">
         共 {listQuery.data?.total ?? 0} 张
         {user?.store_id ? " (仅显示本店生成的兑换码)" : ""}
+        {(listQuery.data?.total ?? 0) > items.length &&
+          ` · 仅显示前 ${items.length} 条`}
       </p>
 
       {/* 生成对话框 */}

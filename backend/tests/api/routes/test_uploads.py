@@ -227,3 +227,55 @@ def test_upload_rejects_sec_check_failure(
         r = _upload_png(client, normal_user_token_headers)
     assert r.status_code == 400
     assert "违规" in r.json()["detail"]
+
+
+def test_files_owner_inactive_serves_404(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """/files 本地模式: 封禁/注销用户的图片不再对外提供 (active/未知主放行)."""
+    import uuid as _uuid
+
+    from app import crud
+    from app.models import Profile, UserCreate
+    from tests.utils.utils import random_lower_string as _rand_lower
+
+    monkeypatch.delenv("OSS_ACCESS_KEY_ID", raising=False)
+    monkeypatch.delenv("OSS_ACCESS_KEY_SECRET", raising=False)
+
+    owner_active = crud.create_user(
+        session=db,
+        user_create=UserCreate(email=random_email(), password=_rand_lower() + "Aa1!"),
+    )
+    owner_blocked = crud.create_user(
+        session=db,
+        user_create=UserCreate(email=random_email(), password=_rand_lower() + "Aa1!"),
+    )
+    db.add(Profile(user_id=owner_blocked.id, progress=10))
+    owner_blocked.status = "blocked"
+    owner_blocked.is_active = False
+    db.add(owner_blocked)
+    db.commit()
+
+    for uid, expected in (
+        (str(owner_active.id), 200),
+        (str(owner_blocked.id), 404),
+    ):
+        target = UPLOAD_DIR / uid / "probe.jpg"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"probe")
+        try:
+            r = client.get(f"/files/{uid}/probe.jpg")
+            assert r.status_code == expected, (uid, r.status_code)
+        finally:
+            target.unlink(missing_ok=True)
+
+    # 查无此人的 owner id (非 User 表记录) → 放行 (避免误伤历史残留路径)
+    ghost = str(_uuid.uuid4())
+    target = UPLOAD_DIR / ghost / "probe.jpg"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"probe")
+    try:
+        r = client.get(f"/files/{ghost}/probe.jpg")
+        assert r.status_code == 200, r.status_code
+    finally:
+        target.unlink(missing_ok=True)

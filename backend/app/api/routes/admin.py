@@ -256,64 +256,72 @@ class AuditRequest(SQLModel):
 
 
 class AdminProfileUpdate(SQLModel):
-    """红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式."""
+    """红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.
 
-    nickname: str | None = None
-    avatar_url: str | None = None
-    real_name: str | None = None
-    ethnicity: str | None = None
-    relation: str | None = None
-    gender: str | None = None
-    year: int | None = None
+    长度/范围与用户侧 ProfileBase (models.py) 完全一致: 不设约束的超长提交
+    在 PG 上是 StringDataRightTruncation 500 (SQLite 测试不 enforcing, 测不出)。
+    """
+
+    nickname: str | None = Field(default=None, max_length=64)
+    avatar_url: str | None = Field(default=None, max_length=500)
+    real_name: str | None = Field(default=None, max_length=64)
+    ethnicity: str | None = Field(default=None, max_length=16)
+    relation: str | None = Field(default=None, max_length=16)
+    gender: str | None = Field(default=None, max_length=8)
+    year: int | None = Field(default=None, ge=1950, le=2015)
     birth_date: date | None = None
-    height: int | None = None
-    weight: int | None = None
-    health_status: str | None = None
-    edu: str | None = None
-    major: str | None = None
-    hobbies: str | None = None
-    income: str | None = None
-    marriage: str | None = None
-    origin: str | None = None
-    location: str | None = None
-    hometown: str | None = None
-    job: str | None = None
-    employer_type: str | None = None
-    has_social_insurance: str | None = None
-    has_house: str | None = None
-    has_car: str | None = None
-    house_car_loan: str | None = None
-    body_type: str | None = None
-    personality_type: str | None = None
-    desc: str | None = None
-    contact_wechat: str | None = None
-    contact_phone: str | None = None
+    height: int | None = Field(default=None, ge=100, le=220)
+    weight: int | None = Field(default=None, ge=20, le=200)
+    health_status: str | None = Field(default=None, max_length=64)
+    edu: str | None = Field(default=None, max_length=32)
+    major: str | None = Field(default=None, max_length=64)
+    hobbies: str | None = Field(default=None, max_length=120)
+    income: str | None = Field(default=None, max_length=32)
+    marriage: str | None = Field(default=None, max_length=16)
+    origin: str | None = Field(default=None, max_length=128)
+    location: str | None = Field(default=None, max_length=128)
+    hometown: str | None = Field(default=None, max_length=128)
+    job: str | None = Field(default=None, max_length=64)
+    employer_type: str | None = Field(default=None, max_length=32)
+    has_social_insurance: str | None = Field(default=None, max_length=8)
+    has_house: str | None = Field(default=None, max_length=32)
+    has_car: str | None = Field(default=None, max_length=16)
+    house_car_loan: str | None = Field(default=None, max_length=64)
+    body_type: str | None = Field(default=None, max_length=16)
+    personality_type: str | None = Field(default=None, max_length=32)
+    desc: str | None = Field(default=None, max_length=240)
+    contact_wechat: str | None = Field(default=None, max_length=64)
+    contact_phone: str | None = Field(default=None, max_length=32)
 
 
 class AdminCriteriaUpdate(SQLModel):
-    year_min: int | None = None
-    year_max: int | None = None
-    height_min: int | None = None
-    height_max: int | None = None
-    weight_min: int | None = None
-    weight_max: int | None = None
-    income: str | None = None
-    edu: str | None = None
-    marriage: str | None = None
-    house: str | None = None
-    car: str | None = None
-    job: str | None = None
-    social_insurance: str | None = None
-    note: str | None = None
+    """代录择偶要求. 字符串长度与用户侧 CriteriaBase (models.py) 一致."""
+
+    year_min: int | None = Field(default=None, ge=1950, le=2015)
+    year_max: int | None = Field(default=None, ge=1950, le=2015)
+    height_min: int | None = Field(default=None, ge=100, le=220)
+    height_max: int | None = Field(default=None, ge=100, le=220)
+    weight_min: int | None = Field(default=None, ge=20, le=200)
+    weight_max: int | None = Field(default=None, ge=20, le=200)
+    income: str | None = Field(default=None, max_length=32)
+    edu: str | None = Field(default=None, max_length=64)
+    marriage: str | None = Field(default=None, max_length=16)
+    house: str | None = Field(default=None, max_length=32)
+    car: str | None = Field(default=None, max_length=32)
+    job: str | None = Field(default=None, max_length=64)
+    social_insurance: str | None = Field(default=None, max_length=8)
+    note: str | None = Field(default=None, max_length=180)
     origins: list[str] | None = None
     locations: list[str] | None = None
 
 
 class AdminParentsInfoUpdate(SQLModel):
-    parents_health: str | None = None
-    parents_job: str | None = None
-    parents_pension: str | None = None
-    siblings: str | None = None
+    """代录父母信息. 长度与用户侧 ParentsInfoBase (models.py) 一致."""
+
+    parents_health: str | None = Field(default=None, max_length=64)
+    parents_job: str | None = Field(default=None, max_length=64)
+    parents_pension: str | None = Field(default=None, max_length=16)
+    siblings: str | None = Field(default=None, max_length=120)
 
 
 class GrantBalanceRequest(SQLModel):
@@ -3661,6 +3669,9 @@ class ActivityFeedItem(SQLModel):
     mutual: bool = False  # 仅心动: 双向互为心动 (撮合黄金线索)
     # 该用户对 (任一方向) 最新进行中工单的状态; None=无, 前端给「撮合」按钮
     pair_ticket_status: str | None = None
+    # 门店账号是否可撮合此行: 发起方须为本店会员 (后端建单强制, 前端据此预判
+    # 置灰, 避免点了才 403); superuser 恒可撮合
+    matchable: bool = True
     created_at: datetime
 
 
@@ -3780,6 +3791,9 @@ def list_activity_feed(
                 to_avatar_url=t_p.avatar_url if t_p else None,
                 mutual=(f_uid, t_uid) in mutual_pairs,
                 pair_ticket_status=pair_status.get(frozenset((f_uid, t_uid))),
+                matchable=(
+                    scope is None or (f_p is not None and f_p.home_store_id == scope)
+                ),
                 created_at=r.created_at,
             )
         )
@@ -4185,17 +4199,13 @@ def _compute_dashboard(
             .strftime("%m-%d")
         )
         day_counts[day_cn] = day_counts.get(day_cn, 0) + 1
+    # now_cn 取一次复用: label 与 lookup 各自取当前时间, 北京午夜瞬间跨日
+    # 会出现 label 归今天、lookup 查昨天的错位 (末日 count 永远 0)
+    now_cn = datetime.now(membership.CN_TZ)
     signups_7d = [
         DailyCount(
-            date=(datetime.now(membership.CN_TZ) - timedelta(days=6 - i)).strftime(
-                "%m-%d"
-            ),
-            count=day_counts.get(
-                (datetime.now(membership.CN_TZ) - timedelta(days=6 - i)).strftime(
-                    "%m-%d"
-                ),
-                0,
-            ),
+            date=(now_cn - timedelta(days=6 - i)).strftime("%m-%d"),
+            count=day_counts.get((now_cn - timedelta(days=6 - i)).strftime("%m-%d"), 0),
         )
         for i in range(7)
     ]

@@ -25,10 +25,14 @@ Page({
     // 状态来自登录 payload (globalData.user.status), 不额外发请求
     const me = (getApp().globalData && getApp().globalData.user) || {};
     const status = me.status || 'active';
+    const subMap = {
+      inactive: '当前: 已下线 (点此重新上线)',
+      deactivating: '当前: 注销审核中, 暂不可变更',
+      blocked: '当前: 账号已封禁',
+    };
     this.setData({
       activeStatus: status,
-      'sections[0].items[0].sub':
-        status === 'inactive' ? '当前: 已下线 (点此重新上线)' : '暂时不接收推荐',
+      'sections[0].items[0].sub': subMap[status] || '暂时不接收推荐',
     });
   },
 
@@ -49,6 +53,14 @@ Page({
   },
 
   _toggleActive() {
+    if (this.data.activeStatus === 'deactivating') {
+      return wx.showModal({
+        title: '注销审核中',
+        content: '账号正在注销审核流程中, 无法变更上/下线状态。',
+        showCancel: false,
+        confirmText: '知道了',
+      });
+    }
     const inactive = this.data.activeStatus === 'inactive';
     const items = inactive ? ['重新上线 (恢复推荐展示)'] : ['相亲下线 (暂时不显示我)'];
     wx.showActionSheet({

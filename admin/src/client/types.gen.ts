@@ -13,6 +13,7 @@ export type ActivityFeedItem = {
     to_avatar_url?: (string | null);
     mutual?: boolean;
     pair_ticket_status?: (string | null);
+    matchable?: boolean;
     created_at: string;
 };
 
@@ -123,6 +124,9 @@ export type AdminCriteriaItem = {
     progress?: number;
 };
 
+/**
+ * 代录择偶要求. 字符串长度与用户侧 CriteriaBase (models.py) 一致.
+ */
 export type AdminCriteriaUpdate = {
     year_min?: (number | null);
     year_max?: (number | null);
@@ -215,6 +219,9 @@ export type AdminParentsInfoItem = {
     siblings?: (string | null);
 };
 
+/**
+ * 代录父母信息. 长度与用户侧 ParentsInfoBase (models.py) 一致.
+ */
 export type AdminParentsInfoUpdate = {
     parents_health?: (string | null);
     parents_job?: (string | null);
@@ -287,6 +294,9 @@ export type AdminProfileList = {
 
 /**
  * 红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.
+ *
+ * 长度/范围与用户侧 ProfileBase (models.py) 完全一致: 不设约束的超长提交
+ * 在 PG 上是 StringDataRightTruncation 500 (SQLite 测试不 enforcing, 测不出)。
  */
 export type AdminProfileUpdate = {
     nickname?: (string | null);
