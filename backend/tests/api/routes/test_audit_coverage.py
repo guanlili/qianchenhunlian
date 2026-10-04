@@ -181,3 +181,44 @@ def test_proxy_edit_criteria_audited(
     assert len(logs) == 1
     assert str(logs[0].target_user_id) == str(user.id)
     assert logs[0].detail["fields"] == ["year_max", "year_min"]
+
+
+def test_admin_patch_is_active_null_ignored(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """PATCH is_active=null 视为未提供: 不得绕过「不能停用自己」保护 (历史 bug)."""
+
+    from sqlmodel import select as _select
+
+    from app.models import User
+
+    email = random_email()
+    r = client.post(
+        f"{API}/admin/admin-accounts",
+        headers=superuser_token_headers,
+        json={"email": email, "password": random_lower_string() + "Aa1!"},
+    )
+    assert r.status_code in (200, 201), r.text
+
+    # is_active=null → 不变更 (此前会置停用且跳过保护)
+    r = client.patch(
+        f"{API}/admin/admin-accounts/{r.json()['id']}",
+        headers=superuser_token_headers,
+        json={"is_active": None},
+    )
+    assert r.status_code == 200, r.text
+    from app.core.config import settings as _settings
+
+    row = db.exec(_select(User).where(User.email == email)).one()
+    assert row.is_active is True
+
+    # 显式 false 停用自己 → 仍被拦
+    me = client.get(
+        f"{_settings.API_V1_STR}/login/whoami", headers=superuser_token_headers
+    ).json()
+    r = client.patch(
+        f"{API}/admin/admin-accounts/{me['id']}",
+        headers=superuser_token_headers,
+        json={"is_active": False},
+    )
+    assert r.status_code == 400

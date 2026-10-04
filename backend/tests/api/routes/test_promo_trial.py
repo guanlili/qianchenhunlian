@@ -246,3 +246,20 @@ def test_promo_grant_unique_index_blocks_duplicate(db: Session) -> None:
             granted_by_id=user.id,
         )
         db.flush()
+
+
+def test_free_quota_zero_blocks_first_consume_of_day(db: Session) -> None:
+    """日额度配 0 时, 当天第一次消耗也必须被拦 (历史 bug: 首插路径不校验 limit)."""
+    from app.models import Profile
+
+    _set_cfg(db, promo_trial_days=0, free_daily_quota=0)
+    user = _mk_user(db)
+    db.add(Profile(user_id=user.id, progress=100))
+    user.unlock_balance = 1
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    # 日额度桶被 0 拦截 → 落到永久余额桶, 而不是白送一次日额度
+    bucket = membership.consume(db, user, note="测试")
+    assert bucket == "balance"

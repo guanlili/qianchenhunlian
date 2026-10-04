@@ -264,7 +264,25 @@ def upsert_my_profile(
     profile.progress = calc_profile_progress(profile)
     profile.updated_at = datetime.utcnow()
     session.add(profile)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发首存撞 Profile.user_id 唯一约束 (双击/双请求): 回滚后改为更新已有行
+        session.rollback()
+        existing = session.exec(
+            select(Profile).where(Profile.user_id == current_user.id)
+        ).first()
+        if existing is None:
+            raise
+        for k, v in data.items():
+            setattr(existing, k, v)
+        existing.audit_reason = None
+        existing.progress = calc_profile_progress(existing)
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+        session.commit()
+        session.refresh(existing)
+        return ProfileWithContact.model_validate(existing, from_attributes=True)
     session.refresh(profile)
     return ProfileWithContact.model_validate(profile, from_attributes=True)
 
@@ -446,9 +464,14 @@ def deactivate_me(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> Message:
-    """相亲下线: user.status='inactive', 推荐不再展示我; 我可以再 reactivate."""
+    """相亲下线: user.status='inactive', 推荐不再展示我; 我可以再 reactivate.
+
+    只改 status 不动 is_active: 下线语义是「不接收推荐」, 不是封号 ——
+    置 is_active=False 会把会员页/反馈/绑店等所有业务接口打成 400,
+    用户端表现是整个小程序坏掉 (历史自锁 bug 的根源之一)。
+    可见性由各读接口的 User.status == "active" 过滤保证。
+    """
     current_user.status = "inactive"
-    current_user.is_active = False  # 同步禁用 token, 与 admin 封禁逻辑一致
     current_user.updated_at = datetime.utcnow()
     session.add(current_user)
     session.commit()

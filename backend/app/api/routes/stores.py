@@ -92,10 +92,15 @@ def list_cities(session: SessionDep) -> CityList:
 
 @router.get("/districts", response_model=DistrictList)
 def list_districts(
-    session: SessionDep, city: str = Query(min_length=1)
+    session: SessionDep, city: str = Query(min_length=1, max_length=32)
 ) -> DistrictList:
     """某城市有门店的区/县 distinct 列表 (active 口径, 小程序筛选条用), 带 60s 读缓存."""
+    # 匿名接口 + 缓存按 city 建 key: 不设淘汰的话, 恶意构造任意 city 会把
+    # 进程内存越顶越多、且每个新 key 都打一次 DB (过期条目仅在命中同 key 时才覆盖)
     with _geo_cache_lock:
+        if len(_districts_cache) > 500:
+            _districts_cache.clear()
+            _districts_cached_at.clear()
         cached = _districts_cache.get(city)
         cached_at = _districts_cached_at.get(city, 0.0)
         if cached is not None and time.monotonic() - cached_at < _GEO_CACHE_TTL:
