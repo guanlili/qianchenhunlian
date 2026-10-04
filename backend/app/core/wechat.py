@@ -69,6 +69,7 @@ async def get_wxacode_unlimit(*, scene: str, page: str) -> bytes:
 # 名称等元数据变化)。admin 反复点「下载门店码」会打爆微信接口配额,
 # 故按 key 缓存 PNG bytes: 门店写路径 (admin 改/关门店) 主动失效, 其余 24h TTL 兜底。
 _WXACODE_CACHE_TTL = 24 * 3600.0
+_WXACODE_CACHE_MAX = 500  # 按门店数天然收敛, 加上限防意外膨胀
 _wxacode_cache: OrderedDict[tuple[str, str], tuple[float, bytes]] = OrderedDict()
 _wxacode_cache_lock = threading.Lock()
 
@@ -99,6 +100,8 @@ async def get_wxacode_unlimit_cached(*, scene: str, page: str) -> bytes:
             _wxacode_cache.pop(key, None)
     png = await get_wxacode_unlimit(scene=scene, page=page)
     with _wxacode_cache_lock:
+        if len(_wxacode_cache) >= _WXACODE_CACHE_MAX:
+            _wxacode_cache.clear()  # 简单淘汰: 超限整体清空 (重生成成本可接受)
         _wxacode_cache[key] = (time.monotonic(), png)
     return png
 

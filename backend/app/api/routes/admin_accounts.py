@@ -8,6 +8,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import func, select
 
 from app import crud
@@ -95,6 +96,12 @@ def create_admin_account(
             full_name=body.full_name,
         ),
     )
+    try:
+        session.flush()
+    except IntegrityError:
+        # 并发创建撞 email 唯一索引: 归一为 409 (查重是 check-then-insert)
+        session.rollback()
+        raise HTTPException(status_code=409, detail="该邮箱已被使用")
     write_audit(
         session,
         actor,

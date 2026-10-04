@@ -387,6 +387,15 @@ def grant_membership(
     叠加续费: 起算点 = max(now, 当前到期时间), 新记录到期自然顺延.
     """
     now = datetime.utcnow()
+    # 行级锁 (便携写法): 先 UPDATE 本行拿写锁, 串行化「读当前到期 → 算顺延 →
+    # 回写」窗口 —— admin 发放与支付回调并发时, 后者要等前者提交后才能读到
+    # 最新到期时间, 否则各自按旧值起算, 回写互相覆盖丢叠加天数 (PG 行锁 /
+    # SQLite 单写者都适用, 不需要 FOR UPDATE 方言)
+    session.execute(
+        sa_update(User)
+        .where(User.id == user.id)  # type: ignore[arg-type]
+        .values(updated_at=now)
+    )
     start_from = now
     if user.membership_expires_at and user.membership_expires_at > now:
         start_from = user.membership_expires_at
@@ -416,6 +425,12 @@ def revoke_membership(session: Session, *, user: User, grant: MembershipGrant) -
     """
     grant.revoked_at = datetime.utcnow()
     session.add(grant)
+    # 与 grant_membership 同款行锁: 撤销重算冗余列期间挡住并发发放
+    session.execute(
+        sa_update(User)
+        .where(User.id == user.id)  # type: ignore[arg-type]
+        .values(updated_at=datetime.utcnow())
+    )
     _sync_user_membership(session, user)
 
 
