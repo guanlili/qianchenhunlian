@@ -66,6 +66,9 @@ const useAuth = () => {
   const logout = () => {
     localStorage.removeItem("access_token")
     localStorage.removeItem("refresh_token")
+    // 清掉全部查询缓存: staleTime 窗口内换账号登录会命中上一个账号的
+    // whoami 缓存 → 身份展示与登录落点串号
+    qc.clear()
     navigate({ to: "/login" })
   }
 

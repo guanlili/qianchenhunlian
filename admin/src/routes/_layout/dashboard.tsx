@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { formatCnDate } from "@/lib/datetime"
 import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 
 const VALID_TABS = ["overview", "members", "review", "tickets", "activities"]
@@ -226,9 +227,7 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
           rows={(data?.recent_signups ?? []).map((m) => ({
             key: m.user_id,
             main: memberDisplayName(m),
-            sub: m.created_at
-              ? new Date(m.created_at).toLocaleDateString("zh-CN")
-              : "",
+            sub: m.created_at ? formatCnDate(m.created_at) : "",
           }))}
           footer={{ label: "去会员视图", to: "/dashboard?tab=members" }}
         />

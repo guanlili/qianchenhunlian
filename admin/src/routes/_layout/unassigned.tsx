@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { currentUserQueryOptions } from "@/hooks/useAuth"
+import { formatCnDate, formatCnDateTime } from "@/lib/datetime"
 import { resolveFileUrl } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/unassigned")({
@@ -106,9 +107,7 @@ function UnassignedMembersTab() {
                   </div>
                   <div className="text-muted-foreground font-mono text-xs">
                     {m.xy_code} · 注册于{" "}
-                    {m.created_at
-                      ? new Date(m.created_at).toLocaleDateString("zh-CN")
-                      : "—"}
+                    {m.created_at ? formatCnDate(m.created_at) : "—"}
                   </div>
                 </div>
               </Link>
@@ -199,9 +198,7 @@ function OpenFeedbackTab() {
                 <Badge variant="outline">未处理</Badge>
                 <span className="font-mono">{fb.user_xy_code || "匿名"}</span>
                 <span>
-                  {fb.created_at
-                    ? new Date(fb.created_at).toLocaleString("zh-CN")
-                    : ""}
+                  {fb.created_at ? formatCnDateTime(fb.created_at) : ""}
                 </span>
               </div>
             </div>

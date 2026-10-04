@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { formatCnDateTime } from "@/lib/datetime"
 import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 
 type StatusFilter =
@@ -126,7 +127,7 @@ function Timeline({ item }: { item: AdminContactRequestItem }) {
     <div className="space-y-1 border-l-2 border-muted py-1 pl-3 text-sm">
       <div className="text-muted-foreground">
         <span className="text-foreground">提交申请</span> ·{" "}
-        {new Date(item.created_at).toLocaleString("zh-CN")}
+        {formatCnDateTime(item.created_at)}
       </div>
       {item.status === "pending" && !item.handled_at ? (
         <div className="text-muted-foreground">
@@ -140,7 +141,7 @@ function Timeline({ item }: { item: AdminContactRequestItem }) {
           <span className="text-foreground">
             {item.status === "matched" ? "撮合完成" : "处理完成"}
           </span>{" "}
-          · {new Date(item.handled_at).toLocaleString("zh-CN")}
+          · {formatCnDateTime(item.handled_at)}
           {item.admin_note && ` · 备注: ${item.admin_note}`}
           {item.handled_by && (
             <>
@@ -183,7 +184,7 @@ export function RequestCard({
               <span className="text-muted-foreground">→</span> {item.to_xy_code}
             </CardTitle>
             <CardDescription>
-              提交于 {new Date(item.created_at).toLocaleString("zh-CN")}
+              提交于 {formatCnDateTime(item.created_at)}
               {storeName ? ` · 归属门店: ${storeName}` : " · 未分配门店"}
             </CardDescription>
           </div>

@@ -44,6 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import useAuth from "@/hooks/useAuth"
+import { formatCnDate, formatCnDateTime, parseUtc } from "@/lib/datetime"
 import { MEMBER_BILLING_ENABLED } from "@/lib/featureFlags"
 import { getApiErrorMessage } from "@/utils"
 
@@ -244,13 +245,13 @@ function RedeemCodesPage() {
                     {it.expires_at ? (
                       <span
                         className={
-                          new Date(it.expires_at) < new Date() &&
+                          parseUtc(it.expires_at) < new Date() &&
                           it.status === "unused"
                             ? "text-destructive"
                             : ""
                         }
                       >
-                        {it.expires_at.slice(0, 10)}
+                        {formatCnDate(it.expires_at)}
                       </span>
                     ) : (
                       "长期"
@@ -260,9 +261,7 @@ function RedeemCodesPage() {
                     {it.used_by_email || "-"}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {it.used_at
-                      ? it.used_at.slice(0, 16).replace("T", " ")
-                      : "-"}
+                    {it.used_at ? formatCnDateTime(it.used_at) : "-"}
                   </TableCell>
                   <TableCell className="max-w-40 truncate text-sm">
                     {it.note || "-"}
