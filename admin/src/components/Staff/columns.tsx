@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { AdminService, type StaffPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
+import { formatCnDate } from "@/lib/datetime"
 import { StaffActionsMenu } from "./StaffActionsMenu"
 
 function StoreNameCell({ storeId }: { storeId?: string | null }) {
@@ -47,8 +48,7 @@ export const columns: ColumnDef<StaffPublic>[] = [
   {
     accessorKey: "created_at",
     header: "创建时间",
-    cell: ({ row }) =>
-      new Date(row.original.created_at).toLocaleDateString("zh-CN"),
+    cell: ({ row }) => formatCnDate(row.original.created_at),
   },
   {
     id: "actions",

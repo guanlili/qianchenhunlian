@@ -755,6 +755,18 @@ class MembershipGrant(SQLModel, table=True):
     note: str | None = Field(default=None, max_length=255)
     revoked_at: datetime | None = None  # 非空 = 已撤销
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    # 并发防重: 同一用户只允许一条推广试用记录 (source='promo_trial')。
+    # SELECT-then-INSERT 在并发 welcome 双提交下会双双通过存在性检查,
+    # 无约束兜底会叠发会员天数。部分唯一索引不影响其它 source 叠加发放。
+    __table_args__ = (
+        Index(
+            "uq_membership_grant_promo_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("source = 'promo_trial'"),
+            sqlite_where=text("source = 'promo_trial'"),
+        ),
+    )
 
 
 class MembershipGrantPublic(SQLModel):

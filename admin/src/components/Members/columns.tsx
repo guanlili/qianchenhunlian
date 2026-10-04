@@ -6,6 +6,7 @@ import type { AdminMemberItem } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { formatCnDate, parseUtc } from "@/lib/datetime"
 import { resolveFileUrl } from "@/lib/utils"
 
 export function AuditBadge({ status }: { status: string | null | undefined }) {
@@ -92,8 +93,9 @@ export function MemberBadge({
 }) {
   if (!isMember) return <span className="text-muted-foreground text-xs">—</span>
   if (!expiresAt) return null
+  // 后端 naive UTC 串, 必须经 parseUtc 解析 (直接 new Date 会慢 8 小时)
   const daysLeft = Math.ceil(
-    (new Date(expiresAt).getTime() - Date.now()) / 86400000,
+    (parseUtc(expiresAt).getTime() - Date.now()) / 86400000,
   )
   return (
     <span className="flex items-center gap-1">
@@ -221,9 +223,7 @@ export const memberColumns: ColumnDef<AdminMemberItem>[] = [
     cell: ({ row }) => {
       const t = row.original.last_active_at
       return t ? (
-        <span className="text-muted-foreground text-xs">
-          {new Date(t).toLocaleDateString("zh-CN")}
-        </span>
+        <span className="text-muted-foreground text-xs">{formatCnDate(t)}</span>
       ) : (
         "—"
       )

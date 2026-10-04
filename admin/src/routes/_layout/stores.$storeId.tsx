@@ -40,6 +40,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth, { currentUserQueryOptions } from "@/hooks/useAuth"
 import { downloadCsv } from "@/lib/csv"
+import { formatCnDate, formatCnDateTime } from "@/lib/datetime"
 import { GRANT_SOURCE_LABEL, REQUEST_STATUS_LABEL } from "@/lib/labels"
 import { getApiErrorMessage } from "@/utils"
 
@@ -203,7 +204,7 @@ function useStatementExport(storeId: string) {
         ["明细·当月新增会员"],
         ["日期", "寻缘号", "昵称"],
         ...(st.member_rows || []).map((r) => [
-          new Date(r.created_at).toLocaleString("zh-CN"),
+          formatCnDateTime(r.created_at),
           r.xy_code ?? "",
           r.nickname ?? "",
         ]),
@@ -211,7 +212,7 @@ function useStatementExport(storeId: string) {
         ["明细·当月会员发放"],
         ["日期", "套餐", "天数", "来源", "操作人"],
         ...(st.grant_rows || []).map((r) => [
-          new Date(r.created_at).toLocaleString("zh-CN"),
+          formatCnDateTime(r.created_at),
           r.plan_code,
           r.days,
           GRANT_SOURCE_LABEL[r.source] ?? r.source,
@@ -393,7 +394,7 @@ function StoreOverviewTab({ storeId }: { storeId: string }) {
                       {r.from_xy_code} → {r.to_xy_code}
                     </span>
                     <span className="text-muted-foreground">
-                      {new Date(r.created_at).toLocaleDateString("zh-CN")}
+                      {formatCnDate(r.created_at)}
                     </span>
                   </div>
                 ))}
@@ -604,9 +605,7 @@ function StoreActivitiesTab({ storeId }: { storeId: string }) {
                   </TableCell>
                   <TableCell>{it.to_xy_code || "—"}</TableCell>
                   <TableCell>
-                    {it.created_at
-                      ? new Date(it.created_at).toLocaleString("zh-CN")
-                      : "—"}
+                    {it.created_at ? formatCnDateTime(it.created_at) : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     {it.pair_ticket_status ? (
@@ -699,9 +698,7 @@ function StoreManagersTab({
                       <Badge variant="secondary">已停用</Badge>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {new Date(m.created_at).toLocaleDateString("zh-CN")}
-                  </TableCell>
+                  <TableCell>{formatCnDate(m.created_at)}</TableCell>
                   <TableCell className="text-right">
                     <StaffActionsMenu item={m} />
                   </TableCell>

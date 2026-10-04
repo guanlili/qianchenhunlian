@@ -715,6 +715,10 @@ Page({
     const welcomed = this._syncWelcomed();
     if (welcomed && !this.data.isWelcomed && this.data.isMember) this.loadHome();
     if (welcomed !== this.data.isWelcomed) this.setData({ isWelcomed: welcomed });
+    // 注册向导进行中不刷新会员态: welcome 提交后后台已发试用会员, 此处一刷新
+    // isMember 翻真 → member-lock 整块消失, 第 3-5 步填了一半的资料直接丢失
+    // (填微信号时切微信复制是高频动作)。向导收口 finishGuestOnboarding 会显式刷新。
+    if (this.data.previewGate) return;
     // 节流: 3 秒内重复 onShow (页面间快速来回切) 不重拉会员状态+资料;
     // 支付回流/提交申请等关键场景走 switchTab('me') 与 contact 成功后的显式刷新, 不受节流影响
     const now = Date.now();
@@ -908,7 +912,7 @@ Page({
       const expiredDate = formatDate(membership.expired_at);
       wx.showModal({
         title: '会员已到期',
-        content: `你的会员已于 ${expiredDate} 到期。续费后继续享受全年资料展示与智能匹配服务，可在线续费或前往附近门店办理。`,
+        content: `你的会员已于 ${expiredDate} 到期。续费后继续享受全年资料展示与智能匹配服务，可联系平台红娘续费 (我的-平台红娘微信) 或前往附近门店办理。`,
         confirmText: '去续费',
         cancelText: '稍后',
         success: (res) => {
@@ -930,7 +934,7 @@ Page({
         wx.setStorageSync('qy_expiry_soon_date', today);
         wx.showModal({
           title: '会员即将到期',
-          content: `你的会员还有 ${daysLeft} 天到期。现在续费时间会在到期日自动往后接, 不吃亏; 可在线续费或前往附近门店办理。`,
+          content: `你的会员还有 ${daysLeft} 天到期。现在续费时间会在到期日自动往后接, 不吃亏; 可联系平台红娘续费 (我的-平台红娘微信) 或前往附近门店办理。`,
           confirmText: '去续费',
           cancelText: '知道了',
           success: (res) => {
@@ -1425,9 +1429,12 @@ Page({
       return;
     }
 
-    // 4) 调后端
+    // 4) 调后端。参与 _loadHomeSeq 序号守卫: 慢的在途 loadHome 响应 (如刚切过
+    //    homeTab) 后到会覆盖筛选结果 —— 先递增序号让旧响应作废, 响应回来再校验
+    const seq = (this._loadHomeSeq = (this._loadHomeSeq || 0) + 1);
     try {
       const { items } = await matchSvc.applyFilter(req);
+      if (seq !== this._loadHomeSeq) return; // 已有更新的加载 (再次筛选/切tab), 丢弃
       const adapted = (items || []).map(adaptCard);
       this.setData({
         screen: 'home',
@@ -1440,7 +1447,7 @@ Page({
       });
     } catch (e) {
       console.warn('[index] applyFilter', e);
-      this.closeFilter();
+      if (seq === this._loadHomeSeq) this.closeFilter();
     }
   },
 
@@ -1898,7 +1905,7 @@ Page({
   _handleQuotaExhausted() {
     wx.showModal({
       title: '今日额度已用完',
-      content: '开通会员可享更多每日申请次数, 可在线续费或前往附近门店办理。',
+      content: '开通会员可享更多每日申请次数, 可联系平台红娘开通 (我的-平台红娘微信) 或前往附近门店办理。',
       confirmText: '去开通',
       cancelText: '稍后',
       success: (res) => {

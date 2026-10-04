@@ -315,10 +315,14 @@ function PromoTrialSection() {
   useEffect(() => {
     if (data) setDays(String(data.promo_trial_days ?? 0))
   }, [data])
+  // 输入框清空时 Number("") === 0 —— 直接保存会静默关闭全平台推广模式,
+  // 非法输入 (空/非整数/负数) 一律禁用保存
+  const daysNum = Number(days)
+  const daysValid = days !== "" && Number.isInteger(daysNum) && daysNum >= 0
   const save = useMutation({
     mutationFn: () =>
       AdminService.updateMembershipConfig({
-        requestBody: { promo_trial_days: Number(days) },
+        requestBody: { promo_trial_days: daysNum },
       }),
     onSuccess: () => {
       toast.success("推广配置已保存")
@@ -326,7 +330,7 @@ function PromoTrialSection() {
     },
     onError: () => toast.error("保存失败"),
   })
-  const active = Number(days) > 0
+  const active = daysValid && daysNum > 0
   return (
     <Card>
       <CardHeader>
@@ -342,7 +346,13 @@ function PromoTrialSection() {
             max={3650}
             value={days}
             onChange={(e) => setDays(e.target.value)}
+            className={daysValid ? "" : "border-destructive"}
           />
+          {!daysValid && (
+            <p className="mt-1 text-destructive text-xs">
+              请输入 0-3650 的整数 (清空状态不会保存)
+            </p>
+          )}
         </div>
         <p className="text-muted-foreground text-sm">
           开启时 ({">"}0 天): 新用户注册即自动成为试用会员, 直接进主页浏览,
@@ -363,7 +373,7 @@ function PromoTrialSection() {
         </p>
         <Button
           size="sm"
-          disabled={save.isPending}
+          disabled={save.isPending || !daysValid}
           onClick={() => save.mutate()}
         >
           {save.isPending ? "保存中..." : "保存"}
