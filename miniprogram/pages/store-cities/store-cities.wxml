@@ -3,7 +3,11 @@
     <view class="title">选择您所在的城市</view>
     <view class="sub">全国门店</view>
   </view>
-  <view class="empty" wx:if="{{!loading && cities.length === 0}}">
+  <view class="empty" wx:if="{{!loading && loadError}}">
+    <text>加载失败, 请检查网络</text>
+    <view class="retry-btn" bindtap="retryCities">重试</view>
+  </view>
+  <view class="empty" wx:if="{{!loading && !loadError && cities.length === 0}}">
     <text>暂无门店</text>
   </view>
   <view class="city-list">
