@@ -298,7 +298,9 @@ def consume(
     #    有行且身份相同则条件自增 (used < limit); 身份当天切换则按新身份重开计数
     row = session.get(DailyQuotaUsage, (user.id, day))
     daily_ok = False
-    if row is None:
+    if row is None and limit > 0:
+        # limit=0 (后台停用该桶) 不能走插入路径 —— 首插 used=1 不校验 limit,
+        # 会绕过停用配置白送一次额度
         try:
             with session.begin_nested():
                 session.add(

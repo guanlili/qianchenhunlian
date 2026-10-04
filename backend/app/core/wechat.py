@@ -134,7 +134,12 @@ async def jscode2session(code: str) -> dict[str, str]:
         raise WechatError(
             -1, f"微信接口网络异常，请稍后重试（{type(e).__name__}）"
         ) from e
-    data = resp.json()
+    try:
+        data = resp.json()
+    except ValueError as e:
+        # 网关/代理异常页 (非 JSON) 统一收口为 WechatError, 不裸 500
+        logger.warning("jscode2session 非 JSON 响应: %r", e)
+        raise WechatError(-1, "微信接口响应异常，请稍后重试") from e
 
     errcode = int(data.get("errcode", 0))
     if errcode != 0:
@@ -240,11 +245,13 @@ def _msg_sec_check_remote(content: str, openid: str, *, scene: int = 1) -> bool:
         raise WechatError(
             int(data.get("errcode", -1)), data.get("errmsg", "msg_sec_check err")
         )
-    # result.results[].suggest: "pass" | "review" | "risk"  (risk=违规)
-    for r in (data.get("result") or {}).get("results") or []:
-        if r.get("suggest") == "risk":
-            return False
-    return True
+    # v2 响应形状: {"result": {"suggest": "pass" | "review" | "risky", "label": N}}
+    # 历史 bug: 误读 result.results (v2 无此字段) → 循环体永不执行, errcode=0 时
+    # 任何文本都判合规 (fail-open, 与本函数 fail-closed 约定相反)。
+    # 口径: 仅 suggest == "pass" 放行; review(疑似)/risky(违规)/字段缺失(形状
+    # 变化, fail-closed) 一律拒绝 —— 宁可误拦让用户改写, 不放过违规内容。
+    suggest = str((data.get("result") or {}).get("suggest") or "").lower()
+    return suggest == "pass"
 
 
 def msg_sec_check(content: str, openid: str, *, scene: int = 1) -> bool:

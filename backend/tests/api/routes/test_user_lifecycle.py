@@ -33,22 +33,32 @@ def _headers(client: TestClient, db: Session, email: str) -> dict:
 
 
 def test_deactivate_then_reactivate_roundtrip(client: TestClient, db: Session) -> None:
-    """下线后常规接口 400, 但 reactivate 可自助上线 (修复自锁)."""
+    """下线只改 status (不再禁用 token): 业务接口照常, 推荐池排除, 可自助上线.
+
+    历史 bug: deactivate 同时置 is_active=False, 下线语义变成全 App 停用
+    (会员页/反馈/绑店全 400), 且 reactivate 自身被鉴权拦死 (自锁)。
+    """
+    from app.models import User
+
     email = _mk_user(db)
     headers = _headers(client, db, email)
 
     r = client.post(f"{API}/profiles/me/deactivate", headers=headers)
     assert r.status_code == 200, r.text
 
-    # 下线后常规业务接口被拦 (停用语义)
+    # token 仍有效: 业务接口正常 (下线只是不接收推荐)
     r = client.get(f"{API}/profiles/me", headers=headers)
-    assert r.status_code == 400
+    assert r.status_code == 200, r.text
+    user = db.exec(select(User).where(User.email == email)).one()
+    db.refresh(user)
+    assert user.status == "inactive"
+    assert user.is_active is True
 
     # 自助重新上线 → 恢复
     r = client.post(f"{API}/profiles/me/reactivate", headers=headers)
     assert r.status_code == 200, r.text
-    r = client.get(f"{API}/profiles/me", headers=headers)
-    assert r.status_code == 200, r.text
+    db.refresh(user)
+    assert user.status == "active"
 
 
 def test_reactivate_blocked_user_still_403(client: TestClient, db: Session) -> None:
