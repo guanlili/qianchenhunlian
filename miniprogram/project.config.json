@@ -64,7 +64,6 @@
     }
   },
   "compileType": "miniprogram",
-  "srcMiniprogramRoot": "miniprogram/",
   "packOptions": {
     "ignore": [],
     "include": []
