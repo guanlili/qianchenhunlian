@@ -65,7 +65,6 @@ class User(UserBase, table=True):
     xy_code: str | None = Field(default=None, unique=True, index=True, max_length=16)
     unlock_balance: int = Field(default=3)
     notify_enabled: bool = False
-    follow_official: bool = False
     verified: str = Field(default="none", max_length=16)  # none/pending/passed/rejected
     status: str = Field(default="active", max_length=16)  # active/blocked
     last_active_at: datetime | None = None
@@ -385,19 +384,6 @@ class Favorite(SQLModel, table=True):
 # ------------------------------------------------------------
 
 
-class Unlock(SQLModel, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
-    )
-    target_user_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
-    )
-    target_xy_code: str = Field(max_length=16)
-    cost_balance: int = Field(default=1)
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-
-
 # ------------------------------------------------------------
 # View · 浏览记录(谁看过谁)
 # ------------------------------------------------------------
@@ -468,16 +454,6 @@ class DailyRecommendation(SQLModel, table=True):
 # ------------------------------------------------------------
 # NotifyToken · 订阅消息配额
 # ------------------------------------------------------------
-
-
-class NotifyToken(SQLModel, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
-    )
-    template_id: str = Field(max_length=64)
-    remaining: int = Field(default=0)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ------------------------------------------------------------

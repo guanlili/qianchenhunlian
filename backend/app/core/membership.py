@@ -59,10 +59,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     ],
 }
 
-# 发放来源 (MembershipGrant.source)
+# 发放来源 (MembershipGrant.source)。admin_trial / admin_compensate 两个字面量
+# 仅存活于 admin.py 的 Literal 入参 (此处不再设常量, 避免双份事实)。
 SOURCE_RECHARGE = "admin_recharge"  # 线下收款开通/续费
-SOURCE_TRIAL = "admin_trial"  # 体验发放
-SOURCE_COMPENSATE = "admin_compensate"  # 补偿
 # 线上微信支付 (docs/13 P3): 支付回调验签通过后由系统写入, 与线下开通共用
 # 同一张 MembershipGrant 表和同一个发放引擎, 体系一致。
 # 注意: admin 手动发放端点的 source 枚举不含此项 (管理员不能伪造线上支付记录)。
@@ -75,16 +74,6 @@ SOURCE_REDEEM = "redeem_code"
 # 网上推广模式: welcome 注册时系统自动赠送的试用会员 (见 DEFAULT_CONFIG.promo_trial_days),
 # 系统写入, 与 admin 手动发放枚举无关。
 SOURCE_PROMO = "promo_trial"
-VALID_SOURCES = {
-    SOURCE_RECHARGE,
-    SOURCE_TRIAL,
-    SOURCE_COMPENSATE,
-    SOURCE_ONLINE,
-    SOURCE_COUPON,
-    SOURCE_REDEEM,
-    SOURCE_PROMO,
-}
-
 # 兑换码字符集: 去掉易混淆的 0/O/1/I/L
 REDEEM_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 

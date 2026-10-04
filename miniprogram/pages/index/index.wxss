@@ -124,18 +124,6 @@ page {
   justify-content: flex-end;
 }
 
-.nav-icon {
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 8rpx;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20rpx;
-}
-
 .notice-card,
 .follow-card {
   position: relative;
@@ -290,21 +278,6 @@ page {
   color: #ffffff;
 }
 
-.outline-pill {
-  min-height: 84rpx;
-  padding: 0 30rpx;
-  border-radius: 999rpx;
-  background: #ffffff;
-  border: 3rpx solid #c93434;
-  color: #c93434;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30rpx;
-  font-weight: 700;
-  box-sizing: border-box;
-}
-
 .outline-pill.active {
   background: #c93434;
   color: #ffffff;
@@ -366,31 +339,6 @@ page {
   border: 2rpx solid #e9dfd0;
   border-radius: 16rpx;
   box-shadow: 0 8rpx 24rpx rgba(150, 80, 60, 0.05);
-}
-
-.relation-card {
-  padding: 34rpx 30rpx 38rpx;
-}
-
-.relation-title {
-  text-align: center;
-  font-size: 34rpx;
-  font-weight: 800;
-  color: #1f1a17;
-}
-
-.relation-sub {
-  text-align: center;
-  margin-top: 10rpx;
-  color: #9a8e84;
-  font-size: 24rpx;
-}
-
-.relation-grid {
-  margin-top: 30rpx;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18rpx;
 }
 
 .push-row {
@@ -770,36 +718,6 @@ page {
   flex: 1.35;
 }
 
-.side-action,
-.float-profile {
-  position: fixed;
-  right: 0;
-  z-index: 40;
-  background: linear-gradient(135deg, #f4a23a, #ed7030);
-  color: #ffffff;
-  box-shadow: 0 12rpx 28rpx rgba(237, 112, 48, 0.34);
-  font-size: 22rpx;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 1rpx;
-  width: 84rpx;
-  padding: 14rpx 10rpx;
-  border-radius: 999rpx 0 0 999rpx;
-  line-height: 1.25;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.side-action {
-  bottom: 220rpx;
-}
-
-.float-profile {
-  top: 320rpx;
-}
-
 .detail-card.top {
   margin: -10rpx 0 0;
   border-radius: 26rpx 26rpx 0 0;
@@ -846,20 +764,6 @@ page {
 
 .detail-stats .ico.flame {
   color: #c93434;
-}
-
-.chip-btn {
-  min-height: 54rpx;
-  padding: 0 20rpx;
-  border-radius: 999rpx;
-  background: #f9e5e0;
-  color: #c93434;
-  font-size: 23rpx;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
 }
 
 .detail-actions {
@@ -1149,42 +1053,6 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.hint-strip {
-  margin: 28rpx -30rpx -30rpx;
-  padding: 20rpx 30rpx;
-  background: #f9e5e0;
-  color: #5a4f47;
-  font-size: 25rpx;
-  display: flex;
-  align-items: center;
-  gap: 14rpx;
-}
-
-.hint-strip .strip-dot {
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 50%;
-  background: #c93434;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.hint-strip .strip-text {
-  flex: 1;
-  color: #5a4f47;
-  font-weight: 400;
-}
-
-.hint-strip .strip-text text {
-  color: #c93434;
-  font-weight: 700;
 }
 
 .list-card {
@@ -1754,23 +1622,6 @@ page {
   flex: 0 0 200rpx;
 }
 
-.filter-title {
-  font-size: 46rpx;
-  color: #1f1a17;
-  font-weight: 800;
-  line-height: 1.35;
-}
-
-.filter-title text:first-child {
-  color: #c93434;
-}
-
-.filter-title text:last-child {
-  color: #9a8e84;
-  font-size: 28rpx;
-  font-weight: 500;
-}
-
 .filter-hint {
   margin-top: 12rpx;
   color: #9a8e84;
@@ -1821,43 +1672,8 @@ page {
   box-shadow: 0 8rpx 18rpx rgba(201, 52, 52, 0.22);
 }
 
-.filter-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 50;
-  min-height: 140rpx;
-  padding: 0 36rpx calc(18rpx + env(safe-area-inset-bottom));
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-  gap: 18rpx;
-}
-
-.filter-footer > text {
-  color: #5a4f47;
-  font-size: 26rpx;
-  text-decoration: underline;
-}
-
 .filter-footer .next {
   width: 210rpx;
-}
-
-.gold-full {
-  width: 100%;
-  min-height: 82rpx;
-  background: linear-gradient(90deg, #f4a23a, #ed7030);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  border-radius: 999rpx;
-  font-size: 28rpx;
 }
 
 .quick-title {
@@ -2255,17 +2071,6 @@ page {
   font-size: 26rpx;
 }
 
-.unlock-tag {
-  flex: 1;
-  padding: 18rpx 24rpx;
-  background: #eaf4ec;
-  color: #2d8c4d;
-  border-radius: 12rpx;
-  text-align: center;
-  font-size: 26rpx;
-  font-weight: 700;
-}
-
 .contact-row {
   display: flex;
   align-items: center;
@@ -2284,25 +2089,6 @@ page {
   font-size: 24rpx;
 }
 
-.contact-value {
-  flex: 1;
-  font-family: 'PingFang SC', monospace;
-  font-size: 28rpx;
-  font-weight: 700;
-  color: #1f1a17;
-  word-break: break-all;
-}
-
-.contact-copy-btn {
-  flex-shrink: 0;
-  background: #c93434;
-  color: #fff;
-  font-size: 24rpx;
-  padding: 8rpx 22rpx;
-  border-radius: 8rpx;
-  line-height: 1.6;
-}
-
 .contact-input {
   flex: 1;
   font-size: 28rpx;
@@ -2316,9 +2102,6 @@ page {
   color: #b0a89e;
   font-size: 22rpx;
   line-height: 1.6;
-}
-.contact-copy-btn::after {
-  border: none;
 }
 
 .sheet-grid {
@@ -2348,20 +2131,6 @@ page {
 .sheet-option.selected {
   background: #c93434;
   color: #ffffff;
-}
-
-.my-photo-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14rpx;
-  margin-top: 16rpx;
-}
-
-.my-photo-img {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 12rpx;
-  background: #f7efe3;
 }
 
 .like-action {
@@ -2717,13 +2486,6 @@ page {
   color: #b3a89a;
 }
 
-.guest-retry {
-  margin-top: 10rpx;
-  color: #c93434;
-  font-size: 23rpx;
-  text-align: left;
-}
-
 .guest-input {
   height: 84rpx;
   padding: 0 24rpx;
@@ -3009,31 +2771,6 @@ page {
 
 .preview-card.after-resume {
   margin-top: 40rpx;
-}
-
-/* 续填入口条 */
-.resume-bar {
-  width: 100%;
-  margin-top: 88rpx;
-  padding: 22rpx 28rpx;
-  background: rgba(246, 198, 107, 0.16);
-  border: 1rpx solid rgba(246, 198, 107, 0.5);
-  border-radius: 999rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.resume-txt {
-  color: #a1651c;
-  font-size: 25rpx;
-  font-weight: 600;
-}
-
-.resume-go {
-  color: #c93434;
-  font-size: 25rpx;
-  font-weight: 700;
 }
 
 .preview-top {
