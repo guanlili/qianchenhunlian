@@ -907,7 +907,7 @@ Page({
   async checkMembershipRenewal(m) {
     const membership = m || await membershipSvc.getMyMembership();
     if (!membership) return;
-    const today = formatDate(new Date().toISOString());
+    const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); // 北京日期
 
     // 已到期: 每天提醒一次续费 (到期后唤回)
     if (membership.expired_at) {

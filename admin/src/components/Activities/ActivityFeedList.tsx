@@ -240,6 +240,13 @@ function FeedRow({
             {REQUEST_STATUS_LABEL[item.pair_ticket_status] ??
               item.pair_ticket_status}
           </Badge>
+        ) : item.matchable === false ? (
+          <span
+            className="text-muted-foreground/60 cursor-not-allowed text-xs"
+            title="发起方不是本店会员, 无法由本店撮合"
+          >
+            不可撮合
+          </span>
         ) : (
           <MatchDialog
             storeId={storeId}

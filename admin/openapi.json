@@ -6931,6 +6931,11 @@
             ],
             "title": "Pair Ticket Status"
           },
+          "matchable": {
+            "type": "boolean",
+            "title": "Matchable",
+            "default": true
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -7695,7 +7700,9 @@
           "year_min": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 2015.0,
+                "minimum": 1950.0
               },
               {
                 "type": "null"
@@ -7706,7 +7713,9 @@
           "year_max": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 2015.0,
+                "minimum": 1950.0
               },
               {
                 "type": "null"
@@ -7717,7 +7726,9 @@
           "height_min": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 220.0,
+                "minimum": 100.0
               },
               {
                 "type": "null"
@@ -7728,7 +7739,9 @@
           "height_max": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 220.0,
+                "minimum": 100.0
               },
               {
                 "type": "null"
@@ -7739,7 +7752,9 @@
           "weight_min": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 200.0,
+                "minimum": 20.0
               },
               {
                 "type": "null"
@@ -7750,7 +7765,9 @@
           "weight_max": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 200.0,
+                "minimum": 20.0
               },
               {
                 "type": "null"
@@ -7761,7 +7778,8 @@
           "income": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -7772,7 +7790,8 @@
           "edu": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -7783,7 +7802,8 @@
           "marriage": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -7794,7 +7814,8 @@
           "house": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -7805,7 +7826,8 @@
           "car": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -7816,7 +7838,8 @@
           "job": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -7827,7 +7850,8 @@
           "social_insurance": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 8
               },
               {
                 "type": "null"
@@ -7838,7 +7862,8 @@
           "note": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 180
               },
               {
                 "type": "null"
@@ -7876,7 +7901,8 @@
           }
         },
         "type": "object",
-        "title": "AdminCriteriaUpdate"
+        "title": "AdminCriteriaUpdate",
+        "description": "代录择偶要求. 字符串长度与用户侧 CriteriaBase (models.py) 一致."
       },
       "AdminFeedbackItem": {
         "properties": {
@@ -8373,7 +8399,8 @@
           "parents_health": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -8384,7 +8411,8 @@
           "parents_job": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -8395,7 +8423,8 @@
           "parents_pension": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -8406,7 +8435,8 @@
           "siblings": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 120
               },
               {
                 "type": "null"
@@ -8416,7 +8446,8 @@
           }
         },
         "type": "object",
-        "title": "AdminParentsInfoUpdate"
+        "title": "AdminParentsInfoUpdate",
+        "description": "代录父母信息. 长度与用户侧 ParentsInfoBase (models.py) 一致."
       },
       "AdminProfileDetail": {
         "properties": {
@@ -8925,7 +8956,8 @@
           "nickname": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -8936,7 +8968,8 @@
           "avatar_url": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 500
               },
               {
                 "type": "null"
@@ -8947,7 +8980,8 @@
           "real_name": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -8958,7 +8992,8 @@
           "ethnicity": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -8969,7 +9004,8 @@
           "relation": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -8980,7 +9016,8 @@
           "gender": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 8
               },
               {
                 "type": "null"
@@ -8991,7 +9028,9 @@
           "year": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 2015.0,
+                "minimum": 1950.0
               },
               {
                 "type": "null"
@@ -9014,7 +9053,9 @@
           "height": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 220.0,
+                "minimum": 100.0
               },
               {
                 "type": "null"
@@ -9025,7 +9066,9 @@
           "weight": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 200.0,
+                "minimum": 20.0
               },
               {
                 "type": "null"
@@ -9036,7 +9079,8 @@
           "health_status": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -9047,7 +9091,8 @@
           "edu": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -9058,7 +9103,8 @@
           "major": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -9069,7 +9115,8 @@
           "hobbies": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 120
               },
               {
                 "type": "null"
@@ -9080,7 +9127,8 @@
           "income": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -9091,7 +9139,8 @@
           "marriage": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -9102,7 +9151,8 @@
           "origin": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 128
               },
               {
                 "type": "null"
@@ -9113,7 +9163,8 @@
           "location": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 128
               },
               {
                 "type": "null"
@@ -9124,7 +9175,8 @@
           "hometown": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 128
               },
               {
                 "type": "null"
@@ -9135,7 +9187,8 @@
           "job": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -9146,7 +9199,8 @@
           "employer_type": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -9157,7 +9211,8 @@
           "has_social_insurance": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 8
               },
               {
                 "type": "null"
@@ -9168,7 +9223,8 @@
           "has_house": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -9179,7 +9235,8 @@
           "has_car": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -9190,7 +9247,8 @@
           "house_car_loan": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -9201,7 +9259,8 @@
           "body_type": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -9212,7 +9271,8 @@
           "personality_type": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -9223,7 +9283,8 @@
           "desc": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 240
               },
               {
                 "type": "null"
@@ -9234,7 +9295,8 @@
           "contact_wechat": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -9245,7 +9307,8 @@
           "contact_phone": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 32
               },
               {
                 "type": "null"
@@ -9256,7 +9319,7 @@
         },
         "type": "object",
         "title": "AdminProfileUpdate",
-        "description": "红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式."
+        "description": "红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.\n\n长度/范围与用户侧 ProfileBase (models.py) 完全一致: 不设约束的超长提交\n在 PG 上是 StringDataRightTruncation 500 (SQLite 测试不 enforcing, 测不出)。"
       },
       "AdminStoreItem": {
         "properties": {

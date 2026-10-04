@@ -222,3 +222,25 @@ def test_admin_patch_is_active_null_ignored(
         json={"is_active": False},
     )
     assert r.status_code == 400
+
+
+def test_proxy_edit_overlong_field_rejected_422(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """代录字段长度与用户侧一致: 超长 422 (此前无约束, PG 上直接 500)."""
+    from app import crud
+    from app.models import UserCreate
+
+    user = crud.create_user(
+        session=db,
+        user_create=UserCreate(
+            email=random_email(), password=random_lower_string() + "Aa1!"
+        ),
+    )
+    db.refresh(user)
+    r = client.put(
+        f"{API}/admin/profiles/{user.id}",
+        json={"nickname": "超" * 100},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 422
