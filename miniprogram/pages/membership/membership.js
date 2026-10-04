@@ -28,7 +28,8 @@ Page({
   },
 
   onShow() {
-    // 从协议页返回时不重拉, 只在首次/支付后拉; 下拉刷新兜底
+    // 首次 onShow 只置标记 (onLoad 已拉过); 之后每次回到本页静默刷新会员状态
+    // (协议页/门店页往返也会刷, 多一次 quiet 请求, 无害)
     if (!this._loadedOnce) {
       this._loadedOnce = true;
       return;

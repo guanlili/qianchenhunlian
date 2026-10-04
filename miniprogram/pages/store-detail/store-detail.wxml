@@ -6,7 +6,7 @@
   <view class="store-card">
     <view class="store-head">
       <view class="store-name">{{store.name}}</view>
-      <view class="verify-tag {{store.status === 'active' ? 'on' : ''}}">
+      <view class="verify-tag {{store.status === 'active' ? 'on' : ''}}" wx:if="{{store.status === 'active'}}">
         <text>✓ 营业</text>
       </view>
     </view>

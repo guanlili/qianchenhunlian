@@ -109,3 +109,30 @@ def test_welcome_avatar_url_too_long_rejected(client: TestClient, db: Session) -
         headers=headers,
     )
     assert r.status_code == 422
+
+
+def test_deactivating_account_cannot_toggle_active(
+    client: TestClient, db: Session
+) -> None:
+    """注销审核中 (deactivating) 的账号不能变更上/下线状态 (409).
+
+    此前下线/上线会直接改写 status, 静默撤销掉进行中的注销申请。
+    """
+    import uuid as _uuid
+
+    from app.models import User
+
+    email = _mk_user(db)
+    headers = _headers(client, db, email)
+    me = client.get(f"{API}/users/me", headers=headers).json()
+    row = db.get(User, _uuid.UUID(me["id"]))
+    row.status = "deactivating"
+    db.add(row)
+    db.commit()
+
+    r = client.post(f"{API}/profiles/me/deactivate", headers=headers)
+    assert r.status_code == 409
+    r = client.post(f"{API}/profiles/me/reactivate", headers=headers)
+    assert r.status_code == 409
+    db.refresh(row)
+    assert row.status == "deactivating"  # 状态未被改写

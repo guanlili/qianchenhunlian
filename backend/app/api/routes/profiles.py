@@ -476,6 +476,10 @@ def deactivate_me(
     用户端表现是整个小程序坏掉 (历史自锁 bug 的根源之一)。
     可见性由各读接口的 User.status == "active" 过滤保证。
     """
+    if current_user.status == "deactivating":
+        raise HTTPException(
+            status_code=409, detail="账号注销审核中, 无法变更上/下线状态"
+        )
     current_user.status = "inactive"
     current_user.updated_at = datetime.utcnow()
     session.add(current_user)
@@ -492,6 +496,10 @@ def reactivate_me(
     """重新上线"""
     if current_user.status == "blocked":
         raise HTTPException(status_code=403, detail="账号已封禁, 无法自助上线")
+    if current_user.status == "deactivating":
+        raise HTTPException(
+            status_code=409, detail="账号注销审核中, 无法变更上/下线状态"
+        )
     current_user.status = "active"
     current_user.is_active = True  # 恢复 token 有效性
     current_user.updated_at = datetime.utcnow()

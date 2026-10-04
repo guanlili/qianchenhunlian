@@ -103,6 +103,11 @@ export const ActivityFeedItemSchema = {
             ],
             title: 'Pair Ticket Status'
         },
+        matchable: {
+            type: 'boolean',
+            title: 'Matchable',
+            default: true
+        },
         created_at: {
             type: 'string',
             format: 'date-time',
@@ -852,7 +857,9 @@ export const AdminCriteriaUpdateSchema = {
         year_min: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 2015,
+                    minimum: 1950
                 },
                 {
                     type: 'null'
@@ -863,7 +870,9 @@ export const AdminCriteriaUpdateSchema = {
         year_max: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 2015,
+                    minimum: 1950
                 },
                 {
                     type: 'null'
@@ -874,7 +883,9 @@ export const AdminCriteriaUpdateSchema = {
         height_min: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 220,
+                    minimum: 100
                 },
                 {
                     type: 'null'
@@ -885,7 +896,9 @@ export const AdminCriteriaUpdateSchema = {
         height_max: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 220,
+                    minimum: 100
                 },
                 {
                     type: 'null'
@@ -896,7 +909,9 @@ export const AdminCriteriaUpdateSchema = {
         weight_min: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 200,
+                    minimum: 20
                 },
                 {
                     type: 'null'
@@ -907,7 +922,9 @@ export const AdminCriteriaUpdateSchema = {
         weight_max: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 200,
+                    minimum: 20
                 },
                 {
                     type: 'null'
@@ -918,7 +935,8 @@ export const AdminCriteriaUpdateSchema = {
         income: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -929,7 +947,8 @@ export const AdminCriteriaUpdateSchema = {
         edu: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -940,7 +959,8 @@ export const AdminCriteriaUpdateSchema = {
         marriage: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 16
                 },
                 {
                     type: 'null'
@@ -951,7 +971,8 @@ export const AdminCriteriaUpdateSchema = {
         house: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -962,7 +983,8 @@ export const AdminCriteriaUpdateSchema = {
         car: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -973,7 +995,8 @@ export const AdminCriteriaUpdateSchema = {
         job: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -984,7 +1007,8 @@ export const AdminCriteriaUpdateSchema = {
         social_insurance: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 8
                 },
                 {
                     type: 'null'
@@ -995,7 +1019,8 @@ export const AdminCriteriaUpdateSchema = {
         note: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 180
                 },
                 {
                     type: 'null'
@@ -1033,7 +1058,8 @@ export const AdminCriteriaUpdateSchema = {
         }
     },
     type: 'object',
-    title: 'AdminCriteriaUpdate'
+    title: 'AdminCriteriaUpdate',
+    description: '代录择偶要求. 字符串长度与用户侧 CriteriaBase (models.py) 一致.'
 } as const;
 
 export const AdminFeedbackItemSchema = {
@@ -1524,7 +1550,8 @@ export const AdminParentsInfoUpdateSchema = {
         parents_health: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -1535,7 +1562,8 @@ export const AdminParentsInfoUpdateSchema = {
         parents_job: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -1546,7 +1574,8 @@ export const AdminParentsInfoUpdateSchema = {
         parents_pension: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 16
                 },
                 {
                     type: 'null'
@@ -1557,7 +1586,8 @@ export const AdminParentsInfoUpdateSchema = {
         siblings: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 120
                 },
                 {
                     type: 'null'
@@ -1567,7 +1597,8 @@ export const AdminParentsInfoUpdateSchema = {
         }
     },
     type: 'object',
-    title: 'AdminParentsInfoUpdate'
+    title: 'AdminParentsInfoUpdate',
+    description: '代录父母信息. 长度与用户侧 ParentsInfoBase (models.py) 一致.'
 } as const;
 
 export const AdminProfileDetailSchema = {
@@ -2073,7 +2104,8 @@ export const AdminProfileUpdateSchema = {
         nickname: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -2084,7 +2116,8 @@ export const AdminProfileUpdateSchema = {
         avatar_url: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 500
                 },
                 {
                     type: 'null'
@@ -2095,7 +2128,8 @@ export const AdminProfileUpdateSchema = {
         real_name: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -2106,7 +2140,8 @@ export const AdminProfileUpdateSchema = {
         ethnicity: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 16
                 },
                 {
                     type: 'null'
@@ -2117,7 +2152,8 @@ export const AdminProfileUpdateSchema = {
         relation: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 16
                 },
                 {
                     type: 'null'
@@ -2128,7 +2164,8 @@ export const AdminProfileUpdateSchema = {
         gender: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 8
                 },
                 {
                     type: 'null'
@@ -2139,7 +2176,9 @@ export const AdminProfileUpdateSchema = {
         year: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 2015,
+                    minimum: 1950
                 },
                 {
                     type: 'null'
@@ -2162,7 +2201,9 @@ export const AdminProfileUpdateSchema = {
         height: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 220,
+                    minimum: 100
                 },
                 {
                     type: 'null'
@@ -2173,7 +2214,9 @@ export const AdminProfileUpdateSchema = {
         weight: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'integer',
+                    maximum: 200,
+                    minimum: 20
                 },
                 {
                     type: 'null'
@@ -2184,7 +2227,8 @@ export const AdminProfileUpdateSchema = {
         health_status: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -2195,7 +2239,8 @@ export const AdminProfileUpdateSchema = {
         edu: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -2206,7 +2251,8 @@ export const AdminProfileUpdateSchema = {
         major: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -2217,7 +2263,8 @@ export const AdminProfileUpdateSchema = {
         hobbies: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 120
                 },
                 {
                     type: 'null'
@@ -2228,7 +2275,8 @@ export const AdminProfileUpdateSchema = {
         income: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -2239,7 +2287,8 @@ export const AdminProfileUpdateSchema = {
         marriage: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 16
                 },
                 {
                     type: 'null'
@@ -2250,7 +2299,8 @@ export const AdminProfileUpdateSchema = {
         origin: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 128
                 },
                 {
                     type: 'null'
@@ -2261,7 +2311,8 @@ export const AdminProfileUpdateSchema = {
         location: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 128
                 },
                 {
                     type: 'null'
@@ -2272,7 +2323,8 @@ export const AdminProfileUpdateSchema = {
         hometown: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 128
                 },
                 {
                     type: 'null'
@@ -2283,7 +2335,8 @@ export const AdminProfileUpdateSchema = {
         job: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -2294,7 +2347,8 @@ export const AdminProfileUpdateSchema = {
         employer_type: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -2305,7 +2359,8 @@ export const AdminProfileUpdateSchema = {
         has_social_insurance: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 8
                 },
                 {
                     type: 'null'
@@ -2316,7 +2371,8 @@ export const AdminProfileUpdateSchema = {
         has_house: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -2327,7 +2383,8 @@ export const AdminProfileUpdateSchema = {
         has_car: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 16
                 },
                 {
                     type: 'null'
@@ -2338,7 +2395,8 @@ export const AdminProfileUpdateSchema = {
         house_car_loan: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -2349,7 +2407,8 @@ export const AdminProfileUpdateSchema = {
         body_type: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 16
                 },
                 {
                     type: 'null'
@@ -2360,7 +2419,8 @@ export const AdminProfileUpdateSchema = {
         personality_type: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -2371,7 +2431,8 @@ export const AdminProfileUpdateSchema = {
         desc: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 240
                 },
                 {
                     type: 'null'
@@ -2382,7 +2443,8 @@ export const AdminProfileUpdateSchema = {
         contact_wechat: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 64
                 },
                 {
                     type: 'null'
@@ -2393,7 +2455,8 @@ export const AdminProfileUpdateSchema = {
         contact_phone: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 32
                 },
                 {
                     type: 'null'
@@ -2404,7 +2467,10 @@ export const AdminProfileUpdateSchema = {
     },
     type: 'object',
     title: 'AdminProfileUpdate',
-    description: '红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.'
+    description: `红娘代录: 任意字段都可单独更新, 不传不动. 含敏感联系方式.
+
+长度/范围与用户侧 ProfileBase (models.py) 完全一致: 不设约束的超长提交
+在 PG 上是 StringDataRightTruncation 500 (SQLite 测试不 enforcing, 测不出)。`
 } as const;
 
 export const AdminStoreItemSchema = {

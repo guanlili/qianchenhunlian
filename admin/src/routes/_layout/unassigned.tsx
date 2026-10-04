@@ -80,6 +80,11 @@ function UnassignedMembersTab() {
           未指定门店的会员 (共 {data?.total ?? 0} 位) —
           指定后即进入对应门店工作台
         </CardTitle>
+        {(data?.total ?? 0) > items.length && (
+          <p className="text-destructive px-6 text-xs">
+            共 {data?.total} 条, 仅显示前 {items.length} 条, 请先处理完再刷新
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <div className="divide-y">
@@ -161,6 +166,11 @@ function UnassignedTicketsTab() {
         共 {data?.total ?? 0} 条待处理工单未归属门店 —
         用卡片上的「改派门店」归店后, 由对应门店红娘跟进
       </div>
+      {(data?.total ?? 0) > items.length && (
+        <p className="text-destructive text-xs">
+          共 {data?.total} 条, 仅显示前 {items.length} 条, 请先处理完再刷新
+        </p>
+      )}
       {items.map((it) => (
         <RequestCard key={it.id} item={it} perms={perms} storeName={null} />
       ))}
@@ -185,10 +195,16 @@ function OpenFeedbackTab() {
         <CardTitle className="text-base">
           未处理反馈 (共 {data?.total ?? 0} 条)
         </CardTitle>
+
         <Button variant="outline" size="sm" asChild>
           <Link to="/feedback">去意见反馈页处理</Link>
         </Button>
       </CardHeader>
+      {(data?.total ?? 0) > items.length && (
+        <p className="text-destructive px-6 text-xs">
+          共 {data?.total} 条, 仅显示前 {items.length} 条
+        </p>
+      )}
       <CardContent>
         <div className="divide-y">
           {items.map((fb) => (

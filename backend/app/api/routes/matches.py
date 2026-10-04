@@ -466,7 +466,9 @@ def get_guest_preview(
 
     # 剩余资料模糊处理: 直接取打分序的后 10 位 (与详细位同序, 不重不漏)
     blurred: list[BlurredItem] = []
-    now_year = datetime.utcnow().year
+    now_year = datetime.now(
+        membership.CN_TZ
+    ).year  # 北京自然年 (跨年 0-8 点 UTC 会差 1 岁)
     for p, _u in scored[limit : limit + 10]:
         if not p.year:
             continue
