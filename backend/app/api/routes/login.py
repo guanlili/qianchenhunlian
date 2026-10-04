@@ -70,7 +70,9 @@ def login_access_token(
     ip = client_ip(request)
     email = (form_data.username or "").strip().lower()
     ip_key = f"login:ip:{ip}"
-    fail_key = f"login:fail:{email}"
+    # 账号失败计数按 邮箱+IP 维度: 纯邮箱维度会让任何人 5 次错密码就把
+    # 某账号锁 15 分钟 (账号锁定 DoS)。单账号的分布式爆破由 IP 维度限流兜底。
+    fail_key = f"login:fail:{email}:{ip}"
 
     # 1. IP 频率: 防一个 IP 狂刷不同账号
     if login_limiter.record(ip_key, LOGIN_IP_WINDOW) > LOGIN_IP_MAX:

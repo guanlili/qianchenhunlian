@@ -676,11 +676,11 @@ def _check_edit_permission(actor: CurrentActor, target_profile: Profile | None) 
     if not has_perm(actor, Perm.PROFILE_EDIT):
         raise HTTPException(status_code=403, detail="总部员工无代录权限")
     sid = _store_owner_id(actor)
-    if (
-        sid is not None
-        and target_profile is not None
-        and target_profile.home_store_id != sid
-    ):
+    if sid is None:
+        return
+    # fail-closed: 无 Profile 的用户不归属任何门店, 门店账号一律不可代录
+    # (此前 None 直接跳过归属校验, 店长可给任意尚无资料的用户建择偶/父母信息)
+    if target_profile is None or target_profile.home_store_id != sid:
         raise HTTPException(status_code=403, detail="该用户不在您的门店, 无权操作")
 
 
@@ -969,7 +969,13 @@ def stores_overview(
         .group_by(ContactRequest.store_id)  # type: ignore[arg-type]
     )
     # 今日新增 / 已实名 (卡片展示指标; 与上面同款 group-by)
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    # 「今日」按北京自然日切 (与 stats 对账同口径), UTC 零点会差 8 小时
+    today_start = (
+        datetime.now(membership.CN_TZ)
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+        .astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
     today_counts = _group_count(
         select(Profile.home_store_id, func.count())
         .select_from(User)
@@ -1890,11 +1896,17 @@ def _compute_stats(
     if sid is None:
         sid = store_id
     now = datetime.utcnow()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    # 「今日」按北京自然日切 (与下方月度对账同口径): 用 UTC 零点会把北京
+    # 0:00-8:00 的注册算进昨天
+    now_cn = datetime.now(membership.CN_TZ)
+    today_start = (
+        now_cn.replace(hour=0, minute=0, second=0, microsecond=0)
+        .astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
     soon = now + timedelta(days=7)
 
     # 上个北京自然月区间 (对账口径: 门店结算按自然月, 用北京时间切边界)
-    now_cn = datetime.now(membership.CN_TZ)
     this_month_start = now_cn.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     last_month_start = (
         this_month_start.replace(year=now_cn.year - 1, month=12)
@@ -2058,7 +2070,8 @@ def _mask_openid(openid: str | None) -> str | None:
 @router.get("/users", response_model=AdminUserList)
 def list_admin_users(
     session: SessionDep,
-    actor: Literal["all", "wx", "admin"] = Query("all"),
+    actor: CurrentActor,
+    actor_filter: Literal["all", "wx", "admin"] = Query("all", alias="actor"),
     user_status: Literal[
         "all", "active", "inactive", "deactivating", "blocked"
     ] = Query("all"),
@@ -2066,11 +2079,22 @@ def list_admin_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ) -> AdminUserList:
-    """User 表列表. 加 user_status 过滤; 默认 openid 打码避免后台员工误转发."""
+    """User 表列表. 加 user_status 过滤; 默认 openid 打码避免后台员工误转发.
+
+    门店账号强制本店 (与 members 列表同口径): 只能看到 home_store 归属本店的
+    会员, 防止跨店翻全平台用户列表。
+    """
     base = select(User)
-    if actor == "wx":
+    # 门店账号: 只看本店会员 (有 Profile 且 home_store 归属本店)
+    owner_sid = _store_owner_id(actor)
+    if owner_sid is not None:
+        base = base.join(Profile, Profile.user_id == User.id).where(  # type: ignore[arg-type]
+            Profile.home_store_id == owner_sid
+        )
+    if actor_filter == "wx":
         base = base.where(User.openid.is_not(None))  # type: ignore
-    elif actor == "admin":
+    elif actor_filter == "admin":
+        # 门店账号本就只能看本店会员, admin 行 (is_superuser) 天然不在结果里
         base = base.where(User.is_superuser == True)  # noqa: E712
     if user_status != "all":
         base = base.where(User.status == user_status)
