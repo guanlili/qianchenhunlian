@@ -168,8 +168,12 @@ function StoreWorkspacePage() {
 
 /** 生成本月/上月 (北京时间) 的 YYYY-MM; 上月跨年正确回退 */
 function cnMonth(offset: 0 | 1): string {
-  const now = new Date(Date.now() + 8 * 3600 * 1000)
-  const d = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+  // 北京时间自然月: 直接按时区取年月。不做「+8h 再取本地值」的数值偏移 ——
+  // 在 +8 时区浏览器上等于双移: 月末 16 点后跳下月, 1 日 0-8 点退上上月
+  const now = new Date()
+  const ym = now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" })
+  const [y, m] = ym.slice(0, 7).split("-").map(Number)
+  const d = new Date(y, m - 1 - offset, 1)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
 }
 

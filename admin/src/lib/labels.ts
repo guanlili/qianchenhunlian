@@ -32,6 +32,18 @@ export const ACTION_LABEL: Record<string, string> = {
   handle_ticket: "处理工单",
   assign_ticket: "改派工单",
   delete_member: "删除会员",
+  update_criteria: "代录择偶要求",
+  update_parents_info: "代录父母信息",
+  store_create: "创建门店",
+  store_update: "编辑门店",
+  store_close: "关闭门店",
+  staff_create: "创建员工",
+  staff_update: "编辑员工",
+  staff_disable: "禁用员工",
+  membership_config_update: "修改会员配置",
+  site_qualifications_update: "更新平台资质",
+  site_content_update: "更新协议文案",
+  platform_contact_update: "更新红娘二维码",
 }
 
 /** 会员发放来源 (会员详情发放记录 / 门店对账单明细共用) */

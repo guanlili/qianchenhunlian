@@ -312,9 +312,12 @@ function PromoTrialSection() {
     queryFn: () => AdminService.getMembershipPlans(),
     queryKey: ["membership-plans-admin"],
   })
+  // 服务端值只在「用户尚未改动」时灌入: 保存后的 invalidate/后台 refetch
+  // 不再覆盖用户改了一半未保存的输入
+  const [daysDirty, setDaysDirty] = useState(false)
   useEffect(() => {
-    if (data) setDays(String(data.promo_trial_days ?? 0))
-  }, [data])
+    if (data && !daysDirty) setDays(String(data.promo_trial_days ?? 0))
+  }, [data, daysDirty])
   // 输入框清空时 Number("") === 0 —— 直接保存会静默关闭全平台推广模式,
   // 非法输入 (空/非整数/负数) 一律禁用保存
   const daysNum = Number(days)
@@ -326,6 +329,7 @@ function PromoTrialSection() {
       }),
     onSuccess: () => {
       toast.success("推广配置已保存")
+      setDaysDirty(false)
       qc.invalidateQueries({ queryKey: ["membership-plans-admin"] })
     },
     onError: () => toast.error("保存失败"),
@@ -345,7 +349,10 @@ function PromoTrialSection() {
             min={0}
             max={3650}
             value={days}
-            onChange={(e) => setDays(e.target.value)}
+            onChange={(e) => {
+              setDays(e.target.value)
+              setDaysDirty(true)
+            }}
             className={daysValid ? "" : "border-destructive"}
           />
           {!daysValid && (
@@ -498,22 +505,35 @@ function MembershipConfigSection() {
     queryFn: () => AdminService.getMembershipPlans(),
     queryKey: ["membership-plans-admin"],
   })
+  // 与推广天数同款防护: 清空输入 Number('')===0 会把当日申请额度锁死为 0;
+  // 脏值保护避免保存后的 refetch 覆盖未保存的输入
+  const [quotaDirty, setQuotaDirty] = useState(false)
+  const memberNum = Number(memberQuota)
+  const freeNum = Number(freeQuota)
+  const quotasValid =
+    memberQuota !== "" &&
+    freeQuota !== "" &&
+    Number.isInteger(memberNum) &&
+    Number.isInteger(freeNum) &&
+    memberNum >= 0 &&
+    freeNum >= 0
   useEffect(() => {
-    if (data) {
+    if (data && !quotaDirty) {
       setMemberQuota(String(data.member_daily_quota ?? 2))
       setFreeQuota(String(data.free_daily_quota ?? 5))
     }
-  }, [data])
+  }, [data, quotaDirty])
   const save = useMutation({
     mutationFn: () =>
       AdminService.updateMembershipConfig({
         requestBody: {
-          member_daily_quota: Number(memberQuota),
-          free_daily_quota: Number(freeQuota),
+          member_daily_quota: memberNum,
+          free_daily_quota: freeNum,
         },
       }),
     onSuccess: () => {
       toast.success("会员配置已保存")
+      setQuotaDirty(false)
       qc.invalidateQueries({ queryKey: ["membership-plans-admin"] })
     },
     onError: () => toast.error("保存失败"),
@@ -548,7 +568,7 @@ function MembershipConfigSection() {
         </div>
         <Button
           size="sm"
-          disabled={save.isPending}
+          disabled={save.isPending || !quotasValid}
           onClick={() => save.mutate()}
         >
           {save.isPending ? "保存中..." : "保存"}
