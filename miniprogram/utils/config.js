@@ -8,9 +8,6 @@
 // 本机调试: http://127.0.0.1:8000/api/v1
 const BASE_URL = 'https://api.qianyuan.website/api/v1';
 
-// 是否使用 mock 数据 (后端没起来时打开)
-const USE_MOCK = false;
-
 // JWT token 在 storage 里的 key
 const TOKEN_KEY = 'qy_access_token';
 
@@ -35,7 +32,6 @@ function resolveFileUrl(u) {
 
 module.exports = {
   BASE_URL,
-  USE_MOCK,
   TOKEN_KEY,
   HOST_ROOT,
   resolveFileUrl,

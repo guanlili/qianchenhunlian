@@ -24,20 +24,29 @@ _PARTIAL_WHERE = "source = 'promo_trial'"
 
 
 def upgrade():
-    from alembic import op
+    # 幂等 (教训见 PR#103): baseline 对空库按当前元数据 create_all, 索引已随
+    # 模型 __table_args__ 存在, 无脑 CREATE 会撞 DuplicateTable
     import sqlalchemy as sa
+    from alembic import op
 
-    op.create_index(
-        INDEX_NAME,
-        "membershipgrant",
-        ["user_id"],
-        unique=True,
-        postgresql_where=sa.text(_PARTIAL_WHERE),
-        sqlite_where=sa.text(_PARTIAL_WHERE),
-    )
+    bind = op.get_bind()
+    existing = {ix["name"] for ix in sa.inspect(bind).get_indexes("membershipgrant")}
+    if INDEX_NAME not in existing:
+        op.create_index(
+            INDEX_NAME,
+            "membershipgrant",
+            ["user_id"],
+            unique=True,
+            postgresql_where=sa.text(_PARTIAL_WHERE),
+            sqlite_where=sa.text(_PARTIAL_WHERE),
+        )
 
 
 def downgrade():
+    import sqlalchemy as sa
     from alembic import op
 
-    op.drop_index(INDEX_NAME, table_name="membershipgrant")
+    bind = op.get_bind()
+    existing = {ix["name"] for ix in sa.inspect(bind).get_indexes("membershipgrant")}
+    if INDEX_NAME in existing:
+        op.drop_index(INDEX_NAME, table_name="membershipgrant")

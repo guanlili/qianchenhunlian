@@ -42,6 +42,7 @@ miniprogram/project.private.config.json
 
 # --- IDE / 工具 / OS ---
 .zcode/
+.claude/
 .vscode/
 .idea/
 *.swp

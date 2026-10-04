@@ -1,3 +1,5 @@
+> ⚠️ 本 README 为 full-stack-fastapi-template 原版遗留, 与现行目录/流程不符; 实际开发口径见根目录 README 与 AGENTS.md。
+
 # FastAPI Project - Frontend
 
 The frontend is built with [Vite](https://vitejs.dev/), [React](https://reactjs.org/), [TypeScript](https://www.typescriptlang.org/), [TanStack Query](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router) and [Tailwind CSS](https://tailwindcss.com/).
