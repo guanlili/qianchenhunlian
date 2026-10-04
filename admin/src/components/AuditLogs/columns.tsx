@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { formatCnDateTime } from "@/lib/datetime"
 
 const ACTION_LABELS: Record<string, string> = {
   audit_pass: "审核通过",
@@ -65,8 +66,7 @@ export const columns: ColumnDef<AuditLogPublic>[] = [
   {
     accessorKey: "created_at",
     header: "时间",
-    cell: ({ row }) =>
-      new Date(row.original.created_at).toLocaleString("zh-CN"),
+    cell: ({ row }) => formatCnDateTime(row.original.created_at),
   },
   {
     accessorKey: "actor_email",

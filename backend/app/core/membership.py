@@ -219,16 +219,22 @@ def grant_promo_trial_if_eligible(
     ).first()
     if exists is not None:
         return None
-    return grant_membership(
-        session,
-        user=user,
-        plan_code="promo_trial",
-        days=days,
-        source=SOURCE_PROMO,
-        granted_by_type="system",
-        granted_by_id=user.id,
-        note="网上推广期注册自动赠送",
-    )
+    # 部分唯一索引 (uq_membership_grant_promo_per_user) 兜并发: 存在性检查
+    # 与插入之间的并发窗口由 IntegrityError 捕获, savepoint 回滚不污染外层事务
+    try:
+        with session.begin_nested():
+            return grant_membership(
+                session,
+                user=user,
+                plan_code="promo_trial",
+                days=days,
+                source=SOURCE_PROMO,
+                granted_by_type="system",
+                granted_by_id=user.id,
+                note="网上推广期注册自动赠送",
+            )
+    except IntegrityError:
+        return None
 
 
 def is_member(user: User, *, now: datetime | None = None) -> bool:
@@ -246,8 +252,9 @@ def quota_status(
     day = today_cn()
     member = is_member(user)
     bucket = "member" if member else "free"
+    # 注意不能写 `or 2`: 后台配 0 (停用会员日额度) 会被 falsy 吞掉变回 2
     limit = (
-        int(cfg.get("member_daily_quota") or 2)
+        int(cfg.get("member_daily_quota", 2))
         if member
         else int(cfg.get("free_daily_quota", 5))
     )
@@ -280,8 +287,9 @@ def consume(
     day = today_cn()
     member = is_member(user)
     bucket = "member" if member else "free"
+    # 注意不能写 `or 2`: 后台配 0 (停用会员日额度) 会被 falsy 吞掉变回 2
     limit = (
-        int(cfg.get("member_daily_quota") or 2)
+        int(cfg.get("member_daily_quota", 2))
         if member
         else int(cfg.get("free_daily_quota", 5))
     )

@@ -15799,7 +15799,9 @@
           },
           "avatar_url": {
             "type": "string",
-            "title": "Avatar Url"
+            "maxLength": 500,
+            "title": "Avatar Url",
+            "default": ""
           },
           "gender": {
             "anyOf": [
@@ -15829,8 +15831,7 @@
         },
         "type": "object",
         "required": [
-          "nickname",
-          "avatar_url"
+          "nickname"
         ],
         "title": "WelcomeBody"
       },

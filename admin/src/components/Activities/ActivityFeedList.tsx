@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
+import { formatCnDateTime } from "@/lib/datetime"
 import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 import { resolveFileUrl } from "@/lib/utils"
 
@@ -262,7 +263,7 @@ function FeedRow({
           />
         )}
         <span className="text-muted-foreground text-xs">
-          {new Date(item.created_at).toLocaleString("zh-CN")}
+          {formatCnDateTime(item.created_at)}
         </span>
       </div>
     </div>
