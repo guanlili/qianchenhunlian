@@ -207,7 +207,6 @@ function request(options, _retry = false) {
 const get = (path, opts = {}) => request({ ...opts, path, method: 'GET' });
 const post = (path, data, opts = {}) => request({ ...opts, path, method: 'POST', data });
 const put = (path, data, opts = {}) => request({ ...opts, path, method: 'PUT', data });
-const patch = (path, data, opts = {}) => request({ ...opts, path, method: 'PATCH', data });
 // DELETE 支持可选 body (部分后端接口要求带 data), 不传时行为与旧版一致
 const del = (path, data = null, opts = {}) => request({ ...opts, path, method: 'DELETE', data });
 
@@ -216,7 +215,6 @@ module.exports = {
   get,
   post,
   put,
-  patch,
   del,
   loginAndGetToken,
   getToken,

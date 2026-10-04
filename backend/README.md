@@ -1,3 +1,5 @@
+> ⚠️ 本 README 为 full-stack-fastapi-template 原版遗留 (含已删除的 frontend 指引), 实际开发口径见根目录 README 与 AGENTS.md。
+
 # FastAPI Project - Backend
 
 ## Requirements
