@@ -8821,7 +8821,9 @@ export const WelcomeBodySchema = {
         },
         avatar_url: {
             type: 'string',
-            title: 'Avatar Url'
+            maxLength: 500,
+            title: 'Avatar Url',
+            default: ''
         },
         gender: {
             anyOf: [
@@ -8850,7 +8852,7 @@ export const WelcomeBodySchema = {
         }
     },
     type: 'object',
-    required: ['nickname', 'avatar_url'],
+    required: ['nickname'],
     title: 'WelcomeBody'
 } as const;
 

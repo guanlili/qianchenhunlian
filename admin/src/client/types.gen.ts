@@ -1428,7 +1428,7 @@ export type WechatLoginResponse = {
 
 export type WelcomeBody = {
     nickname: string;
-    avatar_url: string;
+    avatar_url?: string;
     gender?: (string | null);
     year?: (number | null);
 };

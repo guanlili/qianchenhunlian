@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { formatCnDate } from "@/lib/datetime"
 import { getApiErrorMessage } from "@/utils"
 
 export const Route = createFileRoute("/_layout/feedback")({
@@ -91,7 +92,7 @@ function FeedbackPage() {
                 {items.map((fb) => (
                   <TableRow key={fb.id}>
                     <TableCell className="whitespace-nowrap">
-                      {new Date(fb.created_at).toLocaleDateString("zh-CN")}
+                      {formatCnDate(fb.created_at)}
                     </TableCell>
                     <TableCell>{fb.user_xy_code || "—"}</TableCell>
                     <TableCell className="max-w-md whitespace-normal break-words align-top">

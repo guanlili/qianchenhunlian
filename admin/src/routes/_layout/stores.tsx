@@ -559,8 +559,11 @@ function StoreFormDialog({
     setForm((prev) => ({ ...prev, [k]: v }))
 
   // 图片 (门店照片/红娘二维码) 上传中禁用「保存」: 上传尚未回传 URL 时就点保存,
-  // 会把空字段写库 —— 用户再进小程序自然看不到二维码 (线上反馈的「上传后不显示」)
-  const [uploadBusy, setUploadBusy] = useState(false)
+  // 会把空字段写库 —— 用户再进小程序自然看不到二维码 (线上反馈的「上传后不显示」)。
+  // 计数器而非布尔: 两张图并发上传时, 先完成的不能提前解锁保存
+  const [uploadBusyCount, setUploadBusyCount] = useState(0)
+  const onUploadBusyChange = (busy: boolean) =>
+    setUploadBusyCount((c) => Math.max(0, c + (busy ? 1 : -1)))
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -670,13 +673,13 @@ function StoreFormDialog({
             <PhotoField
               value={form.photo}
               onChange={update("photo")}
-              onPendingChange={setUploadBusy}
+              onPendingChange={onUploadBusyChange}
             />
             <Label className="mt-3">红娘微信二维码 (用户扫码直接加红娘)</Label>
             <PhotoField
               value={form.contact_qr}
               onChange={update("contact_qr")}
-              onPendingChange={setUploadBusy}
+              onPendingChange={onUploadBusyChange}
             />
           </div>
           <div className="col-span-2">
@@ -696,10 +699,10 @@ function StoreFormDialog({
           </Button>
           <LoadingButton
             loading={save.isPending}
-            disabled={uploadBusy}
+            disabled={uploadBusyCount > 0}
             onClick={() => save.mutate()}
           >
-            {uploadBusy ? "图片上传中..." : "保存"}
+            {uploadBusyCount > 0 ? "图片上传中..." : "保存"}
           </LoadingButton>
         </DialogFooter>
       </DialogContent>

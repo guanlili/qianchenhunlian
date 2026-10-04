@@ -62,6 +62,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { formatCnDate, formatCnDateTime } from "@/lib/datetime"
 import { MEMBER_BILLING_ENABLED } from "@/lib/featureFlags"
 import {
   ACTION_LABEL,
@@ -235,21 +236,14 @@ function MemberDetail() {
                 {m.is_member ? (
                   <>
                     <Crown className="mr-0.5 inline size-3.5 text-amber-500" />
-                    会员至{" "}
-                    {m.membership_expires_at
-                      ? new Date(m.membership_expires_at).toLocaleDateString(
-                          "zh-CN",
-                        )
-                      : "—"}
+                    会员至 {formatCnDate(m.membership_expires_at)}
                   </>
                 ) : (
                   "非会员"
                 )}
               </span>
               <span>永久余额 {m.unlock_balance} 次</span>
-              <span>
-                注册于 {new Date(m.created_at).toLocaleDateString("zh-CN")}
-              </span>
+              <span>注册于 {formatCnDate(m.created_at)}</span>
             </div>
           </div>
         </div>
@@ -618,7 +612,7 @@ function ProfileTab({ full }: { full: AdminMemberFull }) {
             <CardContent>
               <Row
                 label="核验时间"
-                value={new Date(full.verified_at).toLocaleString("zh-CN")}
+                value={formatCnDateTime(full.verified_at)}
               />
               <Row
                 label="核验门店"
@@ -721,9 +715,7 @@ function BalanceTab({
               {isMember ? (
                 <>
                   <Crown className="size-5 text-amber-500" />
-                  {expiresAt
-                    ? `至 ${new Date(expiresAt).toLocaleDateString("zh-CN")}`
-                    : "生效中"}
+                  {expiresAt ? `至 ${formatCnDate(expiresAt)}` : "生效中"}
                 </>
               ) : (
                 "非会员"
@@ -790,7 +782,7 @@ function BalanceTab({
                       余 {t.balance_after}
                     </span>
                     <span className="text-muted-foreground w-36 text-right text-xs">
-                      {new Date(t.created_at).toLocaleString("zh-CN")}
+                      {formatCnDateTime(t.created_at)}
                     </span>
                   </div>
                 </div>
@@ -870,8 +862,7 @@ function MembershipTab({
                     {GRANT_SOURCE_LABEL[g.source] || g.source}
                   </Badge>
                   <span className="font-mono text-xs">
-                    {new Date(g.start_from).toLocaleDateString("zh-CN")} →{" "}
-                    {new Date(g.expires_at).toLocaleDateString("zh-CN")}
+                    {formatCnDate(g.start_from)} → {formatCnDate(g.expires_at)}
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {g.granted_by_email || g.granted_by_type}
@@ -902,7 +893,7 @@ function MembershipTab({
                     )
                   )}
                   <span className="text-muted-foreground text-xs">
-                    {new Date(g.created_at).toLocaleString("zh-CN")}
+                    {formatCnDateTime(g.created_at)}
                   </span>
                 </div>
               </div>
@@ -986,7 +977,7 @@ function ActivityTab({ userId }: { userId: string }) {
                   </span>
                 </div>
                 <span className="text-muted-foreground text-xs">
-                  {new Date(a.created_at).toLocaleString("zh-CN")}
+                  {formatCnDateTime(a.created_at)}
                 </span>
               </Link>
             ))}
@@ -1051,7 +1042,7 @@ function RequestsTab({ userId, selfId }: { userId: string; selfId: string }) {
                       {REQ_STATUS_LABEL[r.status] || r.status}
                     </Badge>
                     <span className="text-muted-foreground text-xs">
-                      {new Date(r.created_at).toLocaleDateString("zh-CN")}
+                      {formatCnDate(r.created_at)}
                     </span>
                   </div>
                 </div>
@@ -1102,7 +1093,7 @@ function LogsTab({ userId }: { userId: string }) {
                   )}
                 </div>
                 <span className="text-muted-foreground text-xs">
-                  {new Date(l.created_at).toLocaleString("zh-CN")}
+                  {formatCnDateTime(l.created_at)}
                 </span>
               </div>
             ))}

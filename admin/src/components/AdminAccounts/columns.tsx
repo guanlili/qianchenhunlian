@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { AdminAccountItem } from "@/client"
 import { Badge } from "@/components/ui/badge"
+import { formatCnDate, formatCnDateTime } from "@/lib/datetime"
 import { AdminAccountActionsMenu } from "./AdminAccountActionsMenu"
 
 export const columns: ColumnDef<AdminAccountItem>[] = [
@@ -31,16 +32,14 @@ export const columns: ColumnDef<AdminAccountItem>[] = [
     accessorKey: "created_at",
     header: "创建时间",
     cell: ({ row }) =>
-      row.original.created_at
-        ? new Date(row.original.created_at).toLocaleDateString("zh-CN")
-        : "-",
+      row.original.created_at ? formatCnDate(row.original.created_at) : "-",
   },
   {
     accessorKey: "last_active_at",
     header: "最近活跃",
     cell: ({ row }) =>
       row.original.last_active_at
-        ? new Date(row.original.last_active_at).toLocaleString("zh-CN")
+        ? formatCnDateTime(row.original.last_active_at)
         : "从未登录",
   },
   {
