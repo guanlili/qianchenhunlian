@@ -33,6 +33,16 @@ const ACTION_LABELS: Record<string, string> = {
   enable_admin: "启用管理员",
   update_admin: "编辑管理员",
   reset_admin_password: "重置管理员密码",
+  store_create: "创建门店",
+  store_update: "编辑门店",
+  store_close: "关闭门店",
+  staff_create: "创建员工",
+  staff_update: "编辑员工",
+  staff_disable: "禁用员工",
+  membership_config_update: "修改会员配置",
+  site_qualifications_update: "更新平台资质",
+  site_content_update: "更新协议文案",
+  platform_contact_update: "更新红娘二维码",
 }
 
 function actionLabel(action: string) {

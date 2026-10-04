@@ -34,6 +34,12 @@ const ACTION_OPTIONS = [
   ["verify", "实名认证"],
   ["handle_ticket", "工单处理"],
   ["create_admin", "管理员账号"],
+  ["grant_membership", "会员发放 / 撤销"],
+  ["match_from_activity", "动态撮合"],
+  ["store_create", "门店增改关"],
+  ["staff_create", "员工账号"],
+  ["membership_config_update", "会员 / 推广配置"],
+  ["site_content_update", "平台资质 / 文案 / 二维码"],
 ] as const
 
 export const Route = createFileRoute("/_layout/audit-logs")({
