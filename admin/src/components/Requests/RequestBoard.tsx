@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { AlertTriangle, ChevronLeft, ChevronRight, Inbox } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { type AdminContactRequestItem, AdminService } from "@/client"
 import { AssignTicketStoreDialog } from "@/components/Requests/AssignTicketStoreDialog"
@@ -332,6 +332,7 @@ export function RequestBoard({ storeId }: { storeId?: string }) {
       {tabs.map((t) => (
         <TabsContent key={t} value={t} className="mt-4">
           <RequestsList
+            key={storeId ?? "all"}
             status={t}
             perms={perms}
             storeMap={storeMap}
@@ -356,11 +357,10 @@ function RequestsList({
 }) {
   // 服务端分页: 每张卡片挂 5 个左右 Dialog, 一次渲染 200 张是全项目最重的
   // 一次性渲染; 切状态 Tab 时本组件随 Tabs 卸载重建, 页码天然回到第一页。
-  // 但切换门店筛选不卸载本组件 —— 页码要显式归零, 否则新门店大概率落在空页
+  // 切换门店筛选时由调用方以 key 重挂本组件 (重置页码)。
+  // 不用 useEffect([storeId]): biome useExhaustiveDependencies 的 unsafe 自动修
+  // 会把「多余」依赖删成 [], 变成只在挂载时跑一次的空操作 (已踩过)
   const [pageIndex, setPageIndex] = useState(0)
-  useEffect(() => {
-    setPageIndex(0)
-  }, [])
   const pageSize = 20
   const { data, isLoading, isFetching } = useQuery({
     queryFn: () =>

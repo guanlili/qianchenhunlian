@@ -34,7 +34,8 @@ function maskPhone(p) {
   const s = String(p == null ? '' : p);
   if (!s) return '';
   if (s.length >= 7) return s.slice(0, 3) + '****' + s.slice(-4);
-  return s.slice(0, 1) + '*'.repeat(Math.max(0, s.length - 3)) + s.slice(-2);
+  // 短串 (<7 位) 无法安全遮挡: 头尾切片会互相覆盖变成原样/全星, 直接原样返回
+  return s;
 }
 
 module.exports = {

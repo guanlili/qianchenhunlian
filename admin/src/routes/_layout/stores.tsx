@@ -459,6 +459,7 @@ function StoreCard({
           {isSuperuser && (
             <>
               <StoreFormDialog
+                key={full ? full.id : "loading"}
                 store={full}
                 trigger={
                   <Button
@@ -556,6 +557,22 @@ function StoreFormDialog({
       qc.invalidateQueries({ queryKey: ["admin-stores"] })
       qc.invalidateQueries({ queryKey: ["stores-overview"] })
       toast.success(store ? "已更新" : "已创建")
+      if (!store) {
+        // 新建成功后清空表单: 下次再开不残留上一次的城市/图片 URL 等输入
+        setForm({
+          name: "",
+          city: "济南",
+          district: "",
+          address: "",
+          lng: "",
+          lat: "",
+          phone: "",
+          photo: "",
+          fees_desc: "",
+          contact_qr: "",
+          status: "active",
+        })
+      }
       setOpen(false)
     },
     onError: (e) => toast.error(`保存失败: ${getApiErrorMessage(e)}`),

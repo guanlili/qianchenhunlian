@@ -26,9 +26,9 @@ from app.main import app
 
 def test_openapi_spec_in_sync() -> None:
     spec_file = Path(__file__).resolve().parents[2] / "admin" / "openapi.json"
-    assert (
-        spec_file.exists()
-    ), "admin/openapi.json 不存在——它是前后端契约的存档, 应随仓库提交"
+    assert spec_file.exists(), (
+        "admin/openapi.json 不存在——它是前后端契约的存档, 应随仓库提交"
+    )
     committed = json.loads(spec_file.read_text())
     actual = app.openapi()
     # info.title 来自 PROJECT_NAME 环境变量 (CI 里是 qianchenhunlian-ci,

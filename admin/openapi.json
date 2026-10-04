@@ -1205,7 +1205,7 @@
           "profiles"
         ],
         "summary": "Deactivate Me",
-        "description": "相亲下线: user.status='inactive', 推荐不再展示我; 我可以再 reactivate.",
+        "description": "相亲下线: user.status='inactive', 推荐不再展示我; 我可以再 reactivate.\n\n只改 status 不动 is_active: 下线语义是「不接收推荐」, 不是封号 ——\n置 is_active=False 会把会员页/反馈/绑店等所有业务接口打成 400,\n用户端表现是整个小程序坏掉 (历史自锁 bug 的根源之一)。\n可见性由各读接口的 User.status == \"active\" 过滤保证。",
         "operationId": "profiles-deactivate_me",
         "responses": {
           "200": {
@@ -2468,6 +2468,7 @@
             "schema": {
               "type": "string",
               "minLength": 1,
+              "maxLength": 32,
               "title": "City"
             }
           }
@@ -11320,6 +11321,8 @@
         "properties": {
           "delta": {
             "type": "integer",
+            "maximum": 10000.0,
+            "minimum": -10000.0,
             "title": "Delta",
             "default": 1
           },

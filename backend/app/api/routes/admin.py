@@ -16,6 +16,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import update as sa_update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 from sqlmodel import Field, SQLModel, and_, func, or_, select
 
@@ -316,7 +317,8 @@ class AdminParentsInfoUpdate(SQLModel):
 
 
 class GrantBalanceRequest(SQLModel):
-    delta: int = 1  # 可正可负
+    # 可正可负; 加幅值边界防误操作一次打穿流水 (±1 万次已远超业务需要)
+    delta: int = Field(default=1, ge=-10000, le=10000)
     reason: str | None = None
 
 
@@ -547,7 +549,29 @@ def admin_update_criteria(
         target_user_id=user_id,
         detail={"fields": sorted(data.keys())},
     )
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发首录撞 user_id 唯一约束: 回滚后改为更新已有行 (审计随新事务落库)
+        session.rollback()
+        existing = session.exec(
+            select(Criteria).where(Criteria.user_id == user_id)
+        ).first()
+        if existing is None:
+            raise
+        for k, v in data.items():
+            setattr(existing, k, v if v != "" else None)
+        existing.progress = calc_criteria_progress(existing)
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+        _audit(
+            session,
+            actor,
+            "update_criteria",
+            target_user_id=user_id,
+            detail={"fields": sorted(data.keys())},
+        )
+        session.commit()
     session.refresh(criteria)
     return _to_admin_criteria_item(criteria)
 
@@ -590,7 +614,28 @@ def admin_update_parents_info(
         target_user_id=user_id,
         detail={"fields": sorted(data.keys())},
     )
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发首录撞 user_id 唯一约束: 回滚后改为更新已有行
+        session.rollback()
+        existing = session.exec(
+            select(ParentsInfo).where(ParentsInfo.user_id == user_id)
+        ).first()
+        if existing is None:
+            raise
+        for k, v in data.items():
+            setattr(existing, k, v if v != "" else None)
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+        _audit(
+            session,
+            actor,
+            "update_parents_info",
+            target_user_id=user_id,
+            detail={"fields": sorted(data.keys())},
+        )
+        session.commit()
     session.refresh(parents)
     return _to_admin_parents_info_item(parents)
 

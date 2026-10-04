@@ -4429,6 +4429,8 @@ export const GrantBalanceRequestSchema = {
     properties: {
         delta: {
             type: 'integer',
+            maximum: 10000,
+            minimum: -10000,
             title: 'Delta',
             default: 1
         },
