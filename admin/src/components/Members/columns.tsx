@@ -92,7 +92,13 @@ export function MemberBadge({
   expiresAt?: string | null
 }) {
   if (!isMember) return <span className="text-muted-foreground text-xs">—</span>
-  if (!expiresAt) return null
+  if (!expiresAt) {
+    return (
+      <Badge className="bg-amber-500 hover:bg-amber-500/80">
+        <Crown className="mr-0.5 size-3" /> 会员
+      </Badge>
+    )
+  }
   // 后端 naive UTC 串, 必须经 parseUtc 解析 (直接 new Date 会慢 8 小时)
   const daysLeft = Math.ceil(
     (parseUtc(expiresAt).getTime() - Date.now()) / 86400000,

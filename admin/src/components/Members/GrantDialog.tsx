@@ -48,6 +48,7 @@ export function GrantDialog({
       toast.success(`已更新, 当前余额 ${data.unlock_balance} 次`)
       setOpen(false)
       setReason("")
+      setDelta("3")
     },
     onError: (e) => toast.error(`操作失败: ${getApiErrorMessage(e)}`),
   })
