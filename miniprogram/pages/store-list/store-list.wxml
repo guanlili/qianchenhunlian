@@ -13,7 +13,11 @@
       data-district="{{item.district}}"
     >{{item.district}} {{item.count}}</view>
   </scroll-view>
-  <view class="empty" wx:if="{{!loading && stores.length === 0}}">
+  <view class="empty" wx:if="{{!loading && loadError}}">
+    <text>加载失败, 请检查网络</text>
+    <view class="retry-btn" bindtap="retryStores">重试</view>
+  </view>
+  <view class="empty" wx:if="{{!loading && !loadError && stores.length === 0}}">
     <text>该区域暂无门店</text>
   </view>
   <view class="store-list">

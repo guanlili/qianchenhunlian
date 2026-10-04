@@ -2358,6 +2358,11 @@ export class ProfilesService {
     /**
      * Deactivate Me
      * 相亲下线: user.status='inactive', 推荐不再展示我; 我可以再 reactivate.
+     *
+     * 只改 status 不动 is_active: 下线语义是「不接收推荐」, 不是封号 ——
+     * 置 is_active=False 会把会员页/反馈/绑店等所有业务接口打成 400,
+     * 用户端表现是整个小程序坏掉 (历史自锁 bug 的根源之一)。
+     * 可见性由各读接口的 User.status == "active" 过滤保证。
      * @returns Message Successful Response
      * @throws ApiError
      */

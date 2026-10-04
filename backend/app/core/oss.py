@@ -32,8 +32,14 @@ def _bucket(endpoint: str) -> oss2.Bucket:
 
 def put_object(key: str, content: bytes) -> None:
     """上传文件到 OSS (内网 endpoint). 失败抛 OssError, 不落本地."""
+    import mimetypes
+
+    content_type = mimetypes.guess_type(key)[0] or "application/octet-stream"
+    headers = {"Content-Type": content_type}
     try:
-        _bucket(settings.OSS_INTERNAL_ENDPOINT).put_object(key, content)
+        _bucket(settings.OSS_INTERNAL_ENDPOINT).put_object(
+            key, content, headers=headers
+        )
     except OssError:
         raise
     except (

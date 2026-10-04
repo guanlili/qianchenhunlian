@@ -261,3 +261,77 @@ def test_single_text_uses_serial_path() -> None:
         assert_text_safe_fields({"desc": "唯一文本"}, "openid-a")
     mock_pool.assert_not_called()
     mock_check.assert_called_once()
+
+
+# ---------------- _msg_sec_check_remote v2 响应解析 (真实形状) ----------------
+# 历史 bug: 误读 result.results (v2 无此字段) → errcode=0 时任何文本都放行。
+# 这里用微信官方文档的 v2 响应形状直接测解析, 不再整体 mock 掉被测函数。
+
+
+class _FakeResp:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._payload
+
+
+class _FakeClient:
+    def __init__(self, resp):
+        self._resp = resp
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def post(self, *args, **kwargs):
+        return self._resp
+
+
+def _patch_wechat_http(monkeypatch, payload) -> None:
+    monkeypatch.setattr(wechat, "get_access_token", lambda: "test-token")
+    monkeypatch.setattr(
+        wechat.httpx, "Client", lambda **kwargs: _FakeClient(_FakeResp(payload))
+    )
+
+
+def test_msg_sec_check_v2_suggest_pass(monkeypatch) -> None:
+    _patch_wechat_http(
+        monkeypatch, {"errcode": 0, "result": {"suggest": "pass", "label": 100}}
+    )
+    assert wechat._msg_sec_check_remote("正常文本", "openid") is True
+
+
+def test_msg_sec_check_v2_suggest_risky_rejected(monkeypatch) -> None:
+    _patch_wechat_http(
+        monkeypatch, {"errcode": 0, "result": {"suggest": "risky", "label": 20001}}
+    )
+    assert wechat._msg_sec_check_remote("违规文本", "openid") is False
+
+
+def test_msg_sec_check_v2_suggest_review_rejected(monkeypatch) -> None:
+    """疑似 (review) 也拒绝: 宁可误拦让用户改写, 不放过违规内容."""
+    _patch_wechat_http(
+        monkeypatch, {"errcode": 0, "result": {"suggest": "review", "label": 100}}
+    )
+    assert wechat._msg_sec_check_remote("疑似文本", "openid") is False
+
+
+def test_msg_sec_check_missing_suggest_fail_closed(monkeypatch) -> None:
+    """result/suggest 字段缺失 (微信改形状/版本回落) → fail-closed 拒绝."""
+    for payload in ({"errcode": 0, "result": {}}, {"errcode": 0}, {}):
+        _patch_wechat_http(monkeypatch, payload)
+        assert wechat._msg_sec_check_remote("任意文本", "openid") is False
+
+
+def test_msg_sec_check_errcode_nonzero_raises(monkeypatch) -> None:
+    import pytest as _pytest
+
+    _patch_wechat_http(monkeypatch, {"errcode": 45009, "errmsg": "频控"})
+    with _pytest.raises(wechat.WechatError):
+        wechat._msg_sec_check_remote("任意文本", "openid")

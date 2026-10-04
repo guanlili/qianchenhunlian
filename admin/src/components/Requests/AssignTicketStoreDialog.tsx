@@ -59,6 +59,8 @@ export function AssignTicketStoreDialog({
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-requests"] })
+      qc.invalidateQueries({ queryKey: ["stores-overview"] })
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] })
       toast.success("已改派工单归属门店")
       setOpen(false)
     },

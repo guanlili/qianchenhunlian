@@ -124,6 +124,10 @@ def update_admin_account(
             raise HTTPException(status_code=409, detail="不能停用最后一个活跃管理员")
 
     updates = body.model_dump(exclude_unset=True)
+    # 显式 null 视为未提供: 若放行, is_active=None 会把账号置停用且跳过
+    # 上方「不能停用自己 / 最后一个活跃管理员」两道保护 (它们只认 is False)
+    if updates.get("is_active") is None:
+        updates.pop("is_active", None)
     if "full_name" in updates:
         user.full_name = body.full_name
     if "is_active" in updates:

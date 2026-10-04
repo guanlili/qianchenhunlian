@@ -66,6 +66,15 @@ def upload_image(
             detail=f"不支持的图片格式, 仅支持 {', '.join(ALLOWED_EXT)}",
         )
 
+    # 声明长度超限直接拒 (multipart 有边界开销, 留 64KB 余量), 避免把
+    # 数 GB body 一次性读进内存; 声明缺失 (chunked) 时退回读后校验
+    declared = file.headers.get("content-length") if file.headers else None
+    if declared and declared.isdigit() and int(declared) > MAX_SIZE + 65536:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"图片过大, 最大 {MAX_SIZE // (1024 * 1024)} MB",
+        )
+
     # 读全文件 (一期简单, 二期接 COS 后改成流式)
     # def 路由由 FastAPI 丢进 threadpool, 同步读底层 SpooledTemporaryFile 不阻塞事件循环
     content = file.file.read()

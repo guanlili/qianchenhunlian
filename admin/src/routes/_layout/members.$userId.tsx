@@ -137,6 +137,10 @@ function MemberDetail() {
     qc.invalidateQueries({ queryKey: ["member-full", userId] })
     qc.invalidateQueries({ queryKey: ["admin-members"] })
     qc.invalidateQueries({ queryKey: ["admin-stats"] })
+    // 实名核验影响核验队列/总览角标/门店卡片待办
+    qc.invalidateQueries({ queryKey: ["verify-queue"] })
+    qc.invalidateQueries({ queryKey: ["admin-dashboard"] })
+    qc.invalidateQueries({ queryKey: ["stores-overview"] })
   }
 
   const verify = useMutation({

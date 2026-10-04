@@ -55,7 +55,7 @@ function _requestPayment(params) {
 /** mock 模式: 弹「模拟支付」确认框, 返回用户是否确认 */
 function _confirmMockPayModal(order) {
   return new Promise((resolve) => {
-    const yuan = (order.amount_fen / 100).toFixed(0);
+    const yuan = (order.amount_fen / 100).toFixed(2).replace(/\.?0+$/, '');
     wx.showModal({
       title: '模拟支付',
       content: `确认支付 ¥${yuan} 开通会员? (当前为模拟支付模式, 不会真实扣款)`,

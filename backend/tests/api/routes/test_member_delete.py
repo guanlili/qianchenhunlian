@@ -163,9 +163,7 @@ def test_deleted_member_old_token_returns_401(
     email = random_email()
     headers = authentication_token_from_email(client=client, email=email, db=db)
     u = db.exec(select(User).where(User.email == email)).first()
-    r = client.post(
-        f"{API}/admin/users/{u.id}/delete", headers=superuser_token_headers
-    )
+    r = client.post(f"{API}/admin/users/{u.id}/delete", headers=superuser_token_headers)
     assert r.status_code == 200, r.text
     r = client.get(f"{API}/profiles/me", headers=headers)
     assert r.status_code == 401, f"期望 401 触发静默重登, 实际 {r.status_code}"
@@ -174,9 +172,7 @@ def test_deleted_member_old_token_returns_401(
     email2 = random_email()
     headers2 = authentication_token_from_email(client=client, email=email2, db=db)
     u2 = db.exec(select(User).where(User.email == email2)).first()
-    r = client.post(
-        f"{API}/admin/users/{u2.id}/block", headers=superuser_token_headers
-    )
+    r = client.post(f"{API}/admin/users/{u2.id}/block", headers=superuser_token_headers)
     assert r.status_code == 200, r.text
     r = client.get(f"{API}/profiles/me", headers=headers2)
     assert r.status_code == 400

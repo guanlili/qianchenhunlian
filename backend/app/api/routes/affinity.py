@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel, func, select
 
 from app.api.deps import (
@@ -106,7 +107,32 @@ def toggle_affinity(
 
     new_a = Affinity(from_user_id=current_user.id, to_user_id=target_user_id)
     session.add(new_a)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # 并发双击撞 affinity_pair_uq: 对方请求已建, 本请求静默视为已点好感
+        session.rollback()
+        existing = session.exec(
+            select(Affinity).where(
+                and_(
+                    Affinity.from_user_id == current_user.id,  # type: ignore[arg-type]
+                    Affinity.to_user_id == target_user_id,  # type: ignore[arg-type]
+                )
+            )
+        ).first()
+        liked = existing is not None
+        mutual = (
+            session.exec(
+                select(Affinity).where(
+                    and_(
+                        Affinity.from_user_id == target_user_id,  # type: ignore[arg-type]
+                        Affinity.to_user_id == current_user.id,  # type: ignore[arg-type]
+                    )
+                )
+            ).first()
+            is not None
+        )
+        return AffinityToggleResponse(liked=liked, mutual=mutual)
     session.refresh(new_a)
 
     # 检查是否互相好感
