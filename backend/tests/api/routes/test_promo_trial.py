@@ -263,3 +263,32 @@ def test_free_quota_zero_blocks_first_consume_of_day(db: Session) -> None:
     # 日额度桶被 0 拦截 → 落到永久余额桶, 而不是白送一次日额度
     bucket = membership.consume(db, user, note="测试")
     assert bucket == "balance"
+
+
+def test_stats_promo_funnel_fields(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """看板推广漏斗指标: 试用发放数 / 今日新增 / 线上会员 (无门店在期会员)."""
+    from app.models import Profile
+
+    _set_cfg(db, promo_trial_days=30)
+    user = _mk_user(db)
+    user.openid = "oSTATS-promo-test"  # 线上会员口径只数小程序用户 (openid 非空)
+    db.add(Profile(user_id=user.id, progress=80))
+    db.add(user)
+    db.commit()
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+
+    # openid 就位后 welcome 会真调微信 msg_sec_check, 测试里 mock 掉
+    from unittest.mock import patch
+
+    with patch("app.api.routes.profiles.assert_text_safe"):
+        _welcome(client, headers)
+
+    r = client.get(f"{API}/admin/stats", headers=superuser_token_headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["promo_trials_total"] >= 1
+    assert body["promo_trials_today"] >= 1
+    assert body["online_members"] >= 1  # welcome 用户无归属门店 → 线上会员
+    assert "matched_total" in body

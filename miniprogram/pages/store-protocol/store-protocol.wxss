@@ -49,3 +49,12 @@ page { background: #ffffff; }
   font-size: 24rpx;
   color: #9a8e84;
 }
+
+/* 后台配置协议段落 (remote 模式) */
+.remote-p {
+  display: block;
+  margin-bottom: 16rpx;
+  font-size: 26rpx;
+  line-height: 1.8;
+  color: #444;
+}
