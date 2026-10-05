@@ -31,7 +31,9 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
-    sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
+    # 只做错误上报: 性能追踪 (traces) 默认 100% 采样, 烧 Sentry 配额且加延迟,
+    # 当前规模用不到 —— 要做性能分析再显式打开 traces_sample_rate
+    sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=False)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
