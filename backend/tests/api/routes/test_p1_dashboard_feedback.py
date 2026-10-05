@@ -184,13 +184,13 @@ def test_dashboard_cache_hits_within_ttl(
     from app.api.routes import admin as admin_routes
 
     calls = {"n": 0}
-    _orig = admin_routes._compute_dashboard
+    _orig = admin_routes.stats._compute_dashboard
 
     def _counting(*args, **kwargs):
         calls["n"] += 1
         return _orig(*args, **kwargs)
 
-    monkeypatch.setattr(admin_routes, "_compute_dashboard", _counting)
+    monkeypatch.setattr(admin_routes.stats, "_compute_dashboard", _counting)
     r1 = client.get(
         f"{settings.API_V1_STR}/admin/dashboard", headers=superuser_token_headers
     )
