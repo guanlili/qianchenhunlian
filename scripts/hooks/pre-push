@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# git push 前自动跑全量本地验证 (CI 已停用后的守门); 安装: bash scripts/verify.sh --install-hook
+exec "$(git rev-parse --show-toplevel)/scripts/verify.sh"
