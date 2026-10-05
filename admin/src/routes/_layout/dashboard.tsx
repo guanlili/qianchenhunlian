@@ -201,6 +201,51 @@ function OverviewTab({ isSuperuser }: { isSuperuser: boolean }) {
         ))}
       </div>
 
+      {/* 推广漏斗 (网上推广 2026-10): 注册 → 试用 → 线上会员 → 撮合; 仅总部视角 */}
+      {isSuperuser && (
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Heart className="size-4" /> 推广漏斗 (注册 → 试用 → 线上会员 →
+            撮合)
+          </div>
+          <div className="grid gap-4 sm:grid-cols-4">
+            {[
+              {
+                label: "今日注册",
+                value: (stats?.today_signups ?? 0) + (stats?.guest_today ?? 0),
+                to: "/dashboard?tab=members",
+              },
+              {
+                label: `试用会员 (今日 +${stats?.promo_trials_today ?? 0})`,
+                value: stats?.promo_trials_total ?? 0,
+                to: "/dashboard?tab=members",
+              },
+              {
+                label: "线上会员 (无门店)",
+                value: stats?.online_members ?? 0,
+                to: "/unassigned",
+              },
+              {
+                label: "已撮合",
+                value: stats?.matched_total ?? 0,
+                to: "/dashboard?tab=tickets",
+              },
+            ].map((m) => (
+              <Link key={m.label} to={m.to}>
+                <Card className="transition-shadow hover:shadow-md">
+                  <CardContent className="py-4">
+                    <div className="text-xs text-muted-foreground">
+                      {m.label}
+                    </div>
+                    <div className="text-xl font-semibold">{m.value}</div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 游客模块: 注册未开通会员的转化池 */}
       <div>
         <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">

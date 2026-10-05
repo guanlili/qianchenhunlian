@@ -1233,6 +1233,10 @@ export type StatsResponse = {
     guest_today?: number;
     guest_this_month?: number;
     guest_last_month?: number;
+    promo_trials_total?: number;
+    promo_trials_today?: number;
+    online_members?: number;
+    matched_total?: number;
 };
 
 export type StoreCreate = {
