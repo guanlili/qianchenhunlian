@@ -1896,6 +1896,11 @@ class StatsResponse(SQLModel):
     guest_today: int = 0  # 今日新增游客
     guest_this_month: int = 0  # 本月新增游客
     guest_last_month: int = 0  # 上月新增游客
+    # — 推广漏斗 (2026-10 网上推广): 注册 → 试用 → 线上会员 → 撮合 —
+    promo_trials_total: int = 0  # 推广试用发放总数 (未撤销)
+    promo_trials_today: int = 0  # 今日新发放试用
+    online_members: int = 0  # 线上会员 (在期且无归属门店 —— 网上推广来的会员)
+    matched_total: int = 0  # 已撮合工单总数 (status='matched')
 
 
 @router.get("/stats", response_model=StatsResponse)
@@ -1945,7 +1950,7 @@ def _compute_stats(
     拿全 (SQLite 3.30+/PG 均支持), User 表 9 项 + Profile 表 2 项各一条,
     返回 JSON 结构与逐条 count 版本完全一致 (前端零改动)。
     """
-    from app.models import Affinity, ContactRequest, Store
+    from app.models import Affinity, ContactRequest, MembershipGrant, Store
 
     sid = _store_owner_id(actor)
     if sid is None:
@@ -2061,6 +2066,43 @@ def _compute_stats(
         profile_stmt = profile_stmt.where(Profile.home_store_id == sid)
     total_profiles, pending_audits = session.exec(profile_stmt).one()
 
+    # — 推广漏斗 (平台级计数, 不随门店口径) —
+    promo_base = (
+        select(func.count())
+        .select_from(MembershipGrant)
+        .where(
+            MembershipGrant.source == membership.SOURCE_PROMO,
+            MembershipGrant.revoked_at.is_(None),  # type: ignore[union-attr]
+        )
+    )
+    promo_trials_total = session.exec(promo_base).one() or 0
+    promo_trials_today = (
+        session.exec(promo_base.where(MembershipGrant.created_at >= today_start)).one()
+        or 0
+    )
+    online_members = (
+        session.exec(
+            select(func.count())
+            .select_from(User)
+            .outerjoin(Profile, Profile.user_id == User.id)  # type: ignore[arg-type]
+            .where(
+                member_cond,
+                User.openid.is_not(None),  # type: ignore[union-attr]
+                User.is_superuser == False,  # noqa: E712
+                Profile.home_store_id.is_(None),  # type: ignore[union-attr]
+            )
+        ).one()
+        or 0
+    )
+    matched_stmt = (
+        select(func.count())
+        .select_from(ContactRequest)
+        .where(ContactRequest.status == "matched")
+    )
+    if sid is not None:
+        matched_stmt = matched_stmt.where(ContactRequest.store_id == sid)
+    matched_total = session.exec(matched_stmt).one() or 0
+
     return StatsResponse(
         total_users=int(total_users or 0),
         total_profiles=int(total_profiles or 0),
@@ -2075,6 +2117,10 @@ def _compute_stats(
         ).one()
         or 0,
         pending_verifies=int(pending_verifies or 0),
+        promo_trials_total=int(promo_trials_total or 0),
+        promo_trials_today=int(promo_trials_today or 0),
+        online_members=int(online_members or 0),
+        matched_total=int(matched_total or 0),
         expiring_members=int(expiring_members or 0),
         open_feedback=session.exec(
             select(func.count()).select_from(Feedback).where(Feedback.status == "open")
