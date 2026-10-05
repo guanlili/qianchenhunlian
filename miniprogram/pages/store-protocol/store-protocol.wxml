@@ -1,5 +1,15 @@
 <scroll-view class="legal-page" scroll-y>
-  <view class="legal-title">线下门店入驻合作协议</view>
+  <view class="legal-title">{{title}}</view>
+
+  <!-- 后台配置的协议段落 (远端优先) -->
+  <block wx:if="{{mode === 'remote'}}">
+    <view class="legal-section">
+      <text wx:for="{{paragraphs}}" wx:key="index" class="remote-p">{{item}}</text>
+    </view>
+  </block>
+
+  <!-- 内置协议 (未配置/拉取失败时兜底) -->
+  <block wx:else>
   <view class="legal-sub">本协议为「乾缘婚恋小程序平台」与线下入驻婚介门店 / 婚恋公司 (以下简称"合作门店") 的线上引流合作协议</view>
 
   <view class="legal-section">
@@ -64,4 +74,7 @@
   </view>
 
   <view class="legal-foot">— 完 —</view>
+</block>
+
 </scroll-view>
+

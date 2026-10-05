@@ -7735,6 +7735,26 @@ export const StatsResponseSchema = {
             type: 'integer',
             title: 'Guest Last Month',
             default: 0
+        },
+        promo_trials_total: {
+            type: 'integer',
+            title: 'Promo Trials Total',
+            default: 0
+        },
+        promo_trials_today: {
+            type: 'integer',
+            title: 'Promo Trials Today',
+            default: 0
+        },
+        online_members: {
+            type: 'integer',
+            title: 'Online Members',
+            default: 0
+        },
+        matched_total: {
+            type: 'integer',
+            title: 'Matched Total',
+            default: 0
         }
     },
     type: 'object',
