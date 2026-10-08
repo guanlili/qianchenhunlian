@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
+import { useStores } from "@/hooks/useStores"
 import { formatCnDateTime } from "@/lib/datetime"
 import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 import { resolveFileUrl } from "@/lib/utils"
@@ -39,10 +40,7 @@ export function ActivityFeedList() {
   const [storeFilter, setStoreFilter] = useState<string>("__all__")
   const [page, setPage] = useState(0)
 
-  const { data: stores } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-  })
+  const { data: stores } = useStores()
 
   const { data, isLoading } = useQuery({
     queryFn: () =>

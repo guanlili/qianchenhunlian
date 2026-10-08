@@ -1,17 +1,13 @@
-import { useQuery } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import { AdminService, type StaffPublic } from "@/client"
+import type { StaffPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
+import { useStores } from "@/hooks/useStores"
 import { formatCnDate } from "@/lib/datetime"
 import { StaffActionsMenu } from "./StaffActionsMenu"
 
 function StoreNameCell({ storeId }: { storeId?: string | null }) {
-  const { data: stores } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-    staleTime: 60_000,
-  })
+  const { data: stores } = useStores()
   const store = (stores?.items || []).find((s) => s.id === storeId)
   if (!storeId) return <span className="text-muted-foreground">未分配</span>
   return <span>{store ? `${store.city} · ${store.name}` : "未知门店"}</span>
