@@ -3,12 +3,12 @@
  * 从 index.js 拆出, 以对象碎片形式被 Page({...filtersFragment}) 混入。
  */
 
-const matchSvc = require('../../services/match');
+const matchSvc = require('../../../services/match');
 const { makeOptions, getSelectedLabels, adaptCard } = require('./shared');
 const {
   eduOptions,
   marriageOptions,
-} = require('../../constants/enums');
+} = require('../../../constants/enums');
 
 // 注: 年龄/身高/月收入 改 slider 区间; 户籍地用 picker 多选; 职业去掉
 const createFilterSteps = () => [
@@ -19,6 +19,8 @@ const createFilterSteps = () => [
   { key: 'car', title: '车辆', multiple: false, columns: 'two', options: makeOptions(['不限', '有车', '无车']) },
 ];
 
+// income 档位值 (后端枚举, 与筛选请求 req.income 对齐)
+const _INCOME_BUCKETS = ['2000-4000', '4000-6000', '6000-8000', '8000-12000', '12000-20000', '20000-30000', '3万以上'];
 // income 滑块刻度显示 (UI 友好, 干净的金额点)
 const _INCOME_TICKS = ['4k', '6k', '8k', '12k', '20k', '30k', '30k+'];
 const _CURRENT_YEAR = new Date().getFullYear();
