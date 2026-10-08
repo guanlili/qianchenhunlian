@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { useStores } from "@/hooks/useStores"
 import { formatCnDateTime } from "@/lib/datetime"
 import { REQUEST_STATUS_LABEL } from "@/lib/labels"
 
@@ -289,10 +290,7 @@ export function RequestBoard({ storeId }: { storeId?: string }) {
   const scopeKey = storeId ?? "all"
 
   // 门店 id → 名称映射 (卡片展示归属门店)
-  const { data: storesData } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-  })
+  const { data: storesData } = useStores()
   const storeMap = useMemo(() => {
     const m: Record<string, string> = {}
     for (const s of storesData?.items || []) {

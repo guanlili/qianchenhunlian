@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
+import { useStores } from "@/hooks/useStores"
 import { resolveFileUrl } from "@/lib/utils"
 import { getApiErrorMessage } from "@/utils"
 
@@ -160,10 +161,7 @@ function StoresPage() {
     queryKey: ["stores-overview", city === "__all__" ? "all" : city],
   })
   // 完整门店数据 (编辑对话框初始化需要全部字段, overview 只有摘要)
-  const { data: fullStores } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-  })
+  const { data: fullStores } = useStores()
   const fullById = useMemo(
     () => new Map((fullStores?.items || []).map((s) => [s.id, s])),
     [fullStores],

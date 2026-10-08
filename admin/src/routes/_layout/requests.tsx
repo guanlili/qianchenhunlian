@@ -1,7 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
-import { AdminService } from "@/client"
 import { RequestBoard } from "@/components/Requests/RequestBoard"
 import {
   Select,
@@ -10,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useStores } from "@/hooks/useStores"
 
 export const Route = createFileRoute("/_layout/requests")({
   validateSearch: (search: Record<string, unknown>): { store?: string } => ({
@@ -26,10 +25,7 @@ function RequestsPage() {
   const navigate = useNavigate()
 
   // 门店筛选 (总部用; 门店管理员后端强制本店, 选项不影响结果)
-  const { data: storesData } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-  })
+  const { data: storesData } = useStores()
   const stores = storesData?.items || []
 
   return (

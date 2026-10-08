@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useStores } from "@/hooks/useStores"
 
 type AuditFilter = "all" | "none" | "pending" | "approved" | "rejected"
 type VerifiedFilter = "all" | "none" | "pending" | "passed" | "rejected"
@@ -80,10 +81,7 @@ export function MembersList() {
     placeholderData: keepPreviousData,
   })
 
-  const { data: stores } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-  })
+  const { data: stores } = useStores()
   const storeMap = useMemo(
     () =>
       new Map((stores?.items || []).map((s) => [s.id, `${s.city}·${s.name}`])),
