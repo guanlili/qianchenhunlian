@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useStores } from "@/hooks/useStores"
 import { getApiErrorMessage } from "@/utils"
 
 const NONE = "__none__"
@@ -45,11 +46,7 @@ export function AssignTicketStoreDialog({
   const [storeId, setStoreId] = useState(currentStoreId || NONE)
   const qc = useQueryClient()
 
-  const { data: stores } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-    enabled: open,
-  })
+  const { data: stores } = useStores({ enabled: open })
 
   const mutation = useMutation({
     mutationFn: () =>
