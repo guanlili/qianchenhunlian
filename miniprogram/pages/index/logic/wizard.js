@@ -3,13 +3,13 @@
  * 以对象碎片形式被 Page({...wizardFragment}) 混入, 方法内 this 仍指向页面实例。
  */
 
-const profileSvc = require('../../services/profile');
-const matchSvc = require('../../services/match');
-const membershipSvc = require('../../services/membership');
-const storeSvc = require('../../services/store');
-const { resolveFileUrl } = require('../../utils/config');
-const wizardUtil = require('../../utils/wizard');
-const { _resolveList } = require('./shared');
+const profileSvc = require('../../../services/profile');
+const matchSvc = require('../../../services/match');
+const membershipSvc = require('../../../services/membership');
+const storeSvc = require('../../../services/store');
+const { resolveFileUrl } = require('../../../utils/config');
+const wizardUtil = require('../../../utils/wizard');
+const { _resolveList, _joinRegionLabel } = require('./shared');
 
 // 注册向导 picker 字段 → data 里的选项数组 key 映射 (表驱动, 替代逐字段 if/else)
 // 户籍/居住类字段 (origin/cOrigin/cLocation) 走 onGuestRegionPick 原生省市区, 不在此表
@@ -270,7 +270,7 @@ const wizardFragment = {
 
   /** 注册页头像: 相册/相机 → 上传 (与 welcome 页共用 utils/wizard 流程) */
   onGuestAvatarPick() {
-    wizard.pickAndUploadAvatar({
+    wizardUtil.pickAndUploadAvatar({
       onUploading: (tempPath) => this.setData({ guestAvatarPath: tempPath, guestAvatarUrl: '' }),
       onUploaded: (url) => this.setData({ guestAvatarUrl: url }),
       onFailed: () => this.setData({ guestAvatarPath: '' }),
@@ -610,7 +610,7 @@ const wizardFragment = {
     const name = e.currentTarget.dataset.name;
     if (!id || this.data.storeBindingId) return;
     this.setData({ storeBindingId: id });
-    const ok = await wizard.bindHomeStore(id, `已加入 ${name}`);
+    const ok = await wizardUtil.bindHomeStore(id, `已加入 ${name}`);
     this.setData({ storeBindingId: '' });
     if (ok) {
       setTimeout(() => this.finishGuestOnboarding(), 600);

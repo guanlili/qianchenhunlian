@@ -38,6 +38,7 @@ const {
   getSelectedLabels,
   _pickTone,
   _pickGlyph,
+  _joinRegionLabel,
   adaptCard,
 } = shared;
 
@@ -111,15 +112,6 @@ const CHILD_LIST_CONFIG = {
     adapt: (it) => ({ ...it, photo: _resolveList(it.photos)[0] || '' }),
   },
 };
-
-/** 微信 region picker 的 value (['北京市','北京市','朝阳区']) → 去重后拼展示串 ('北京市 朝阳区') */
-function _joinRegionLabel(value) {
-  const dedup = [];
-  (value || []).forEach((s) => {
-    if (s && !dedup.includes(s)) dedup.push(s);
-  });
-  return dedup.join(' ');
-}
 
 // onShow 刷新节流: 3 秒内重复切前台不重拉会员状态+资料 (支付回流走显式刷新, 不受影响)
 const ON_SHOW_REFRESH_INTERVAL_MS = 3000;
