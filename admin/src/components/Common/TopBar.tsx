@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useStores } from "@/hooks/useStores"
 import { resolveFileUrl } from "@/lib/utils"
 
 /** 顶栏: 门店切换器 (进店不用回列表) + 全局会员搜索 (找人不用进店) */
@@ -33,10 +34,7 @@ function StoreSwitcher() {
   const params = useParams({ strict: false })
   const currentStoreId = (params as { storeId?: string }).storeId
 
-  const { data } = useQuery({
-    queryFn: () => AdminService.adminListStores({ limit: 500 }),
-    queryKey: ["admin-stores"],
-  })
+  const { data } = useStores()
   const stores = data?.items || []
   if (stores.length === 0) return null
 
