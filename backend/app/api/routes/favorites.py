@@ -210,7 +210,9 @@ def _view_sub(filter_col: Any, group_col: Any, user_id: uuid.UUID) -> Any:
 def _view_total(
     session: Session, *, filter_col: Any, group_col: Any, user_id: uuid.UUID
 ) -> int:
-    """浏览关系去重计数 (看过我 / 我看过 共用, 含山东过滤)."""
+    """浏览关系去重计数 (看过我 / 我看过 共用, 含山东过滤).
+
+    与 items 查询同口径: 已注销账号不计入 (否则 total > items, 分页数错)."""
     sub = _view_sub(filter_col, group_col, user_id)
     return session.exec(
         select(func.count())
@@ -218,6 +220,7 @@ def _view_total(
         .join(User, User.id == sub.c.uid)
         .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
         .where(shandong_clause())
+        .where(User.status != "deleted")
     ).one()
 
 
