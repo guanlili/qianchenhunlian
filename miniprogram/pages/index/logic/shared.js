@@ -32,7 +32,16 @@ function _pickTone(seed) {
   return _TONES[_hashToIndex(seed || '', _TONES.length)];
 }
 // 占位字取法与 welcome 页共用 (utils/wizard)
-const _pickGlyph = wizard.pickGlyph;
+const _pickGlyph = wizardUtil.pickGlyph;
+
+/** 微信 region picker 的 value (['北京市','北京市','朝阳区']) → 去重后拼展示串 ('北京市 朝阳区') */
+function _joinRegionLabel(value) {
+  const dedup = [];
+  (value || []).forEach((s) => {
+    if (s && !dedup.includes(s)) dedup.push(s);
+  });
+  return dedup.join(' ');
+}
 
 /** 把 server 的 MatchBrief / Profile 适配成 WXML 期望的 mock 形态 */
 function adaptCard(item) {
@@ -68,5 +77,6 @@ module.exports = {
   getSelectedLabels,
   _pickTone,
   _pickGlyph,
+  _joinRegionLabel,
   adaptCard,
 };
