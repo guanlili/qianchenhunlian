@@ -28,8 +28,20 @@ services:
     restart: always
     ports:
       - "127.0.0.1:8000:8000"      # OpenResty: api.qianyuan.website -> 8000
+    volumes:
+      # 用户上传文件 (头像/照片/二维码) 持久化: 此前落在容器可写层, 每次
+      # up -d --build 重建容器即被清空 (2026-10-09 走查实锤: 后台传的
+      # 红娘二维码被部署冲掉全 404)。命名卷跨容器重建保留, 卷名固定供
+      # scripts-server/uploads-backup.sh 引用; 首挂载继承镜像内属主(uid 1000)。
+      - "qianyuan-uploads:/app/uploads"
 
   admin:
     restart: always
     ports:
       - "127.0.0.1:5173:80"        # OpenResty: dashboard/www.qianyuan.website -> 5173
+
+# 卷名固定 (不随 compose 项目前缀漂移), scripts-server/uploads-backup.sh 按名挂载备份
+volumes:
+  qianyuan-uploads:
+    name: qianyuan-uploads
+    external: false
