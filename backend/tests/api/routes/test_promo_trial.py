@@ -292,3 +292,59 @@ def test_stats_promo_funnel_fields(
     assert body["promo_trials_today"] >= 1
     assert body["online_members"] >= 1  # welcome 用户无归属门店 → 线上会员
     assert "matched_total" in body
+
+
+def test_wizard_full_sequence_grants_trial(client: TestClient, db: Session) -> None:
+    """复现小程序向导完整端点序列 (2026-10-09 走查反馈「第5步完成后回预览」):
+
+    三问(PUT /profiles/me) → 注册(POST /me/welcome) → 条件(PUT /profiles/me)
+    → 择偶(PUT /me/criteria) → GET /membership/me 应为在期会员。
+    任一步断言失败即说明向导路径拿不到试用 (回预览的根因)。
+    """
+    _set_cfg(db, promo_trial_days=30)  # 生产口径 (DEFAULT_CONFIG=30)
+    u = _mk_user(db)  # email 用户: assert_text_safe 自动降级, 无需 patch
+    headers = authentication_token_from_email(client=client, email=u.email, db=db)
+
+    # 1) 三问
+    r = client.put(
+        f"{API}/profiles/me",
+        json={"gender": "男", "year": 1995, "location": "山东 济南"},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+
+    # 2) 注册 (昵称必填, 头像可选空)
+    r = client.post(
+        f"{API}/profiles/me/welcome",
+        json={"nickname": "向导用户"},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+
+    # 3) 基本条件
+    r = client.put(
+        f"{API}/profiles/me",
+        json={"height": 175, "weight": 70, "edu": "本科"},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+
+    # 4) 择偶要求 (向导第 5 步)
+    r = client.put(
+        f"{API}/profiles/me/criteria",
+        json={
+            "year_min": 1992,
+            "year_max": 1998,
+            "height_min": 160,
+            "height_max": 175,
+            "income": "不限",
+            "locations": ["山东 济南"],
+        },
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+
+    # 5) 会员状态: 试用应已发放
+    r = client.get(f"{API}/membership/me", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["is_member"] is True, "向导完成后应为在期试用会员"
