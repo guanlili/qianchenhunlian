@@ -488,7 +488,7 @@ Page({
       { icon: '设', label: '设置', sub: '' },
       { icon: '反', label: '意见反馈', sub: '' },
       { icon: '客', label: '在线客服', sub: '' },
-      { icon: '红', label: '平台红娘微信', sub: '' },
+      { icon: '红', label: '红娘咨询', sub: '' },
     ],
     // 推广模式: 向导总步数 (wxml 第 X 步 / 共 N 步) 与跳过缴费/选店共用此口径
     promoSkipPayStore: PROMO_SKIP_PAY_STORE,
@@ -777,7 +777,7 @@ Page({
       const expiredDate = formatDate(membership.expired_at);
       wx.showModal({
         title: '会员已到期',
-        content: `你的会员已于 ${expiredDate} 到期。续费后继续享受全年资料展示与智能匹配服务，可联系平台红娘续费 (我的-平台红娘微信) 或前往附近门店办理。`,
+        content: `你的会员已于 ${expiredDate} 到期。可前往附近门店办理续期, 继续享受全年资料展示与智能匹配服务。`,
         confirmText: '去续费',
         cancelText: '稍后',
         success: (res) => {
@@ -799,7 +799,7 @@ Page({
         wx.setStorageSync('qy_expiry_soon_date', today);
         wx.showModal({
           title: '会员即将到期',
-          content: `你的会员还有 ${daysLeft} 天到期。现在续费时间会在到期日自动往后接, 不吃亏; 可联系平台红娘续费 (我的-平台红娘微信) 或前往附近门店办理。`,
+          content: `你的会员还有 ${daysLeft} 天到期。现在续期, 时长会在到期日自动往后接, 不吃亏; 可前往附近门店办理。`,
           confirmText: '去续费',
           cancelText: '知道了',
           success: (res) => {
@@ -1491,7 +1491,7 @@ Page({
   _handleQuotaExhausted() {
     wx.showModal({
       title: '今日额度已用完',
-      content: '开通会员可享更多每日申请次数, 可联系平台红娘开通 (我的-平台红娘微信) 或前往附近门店办理。',
+      content: '开通会员可享更多每日申请次数, 可前往附近门店咨询办理。',
       confirmText: '去开通',
       cancelText: '稍后',
       success: (res) => {
@@ -2107,7 +2107,7 @@ Page({
     if (label === '设置')            return wx.navigateTo({ url: '/pages/settings/settings' });
     if (label === '意见反馈')        return wx.navigateTo({ url: '/pages/feedback/feedback' });
     if (label === '在线客服')        return this.openCustomerService();
-    if (label === '平台红娘微信')   return this.showPlatformQr();
+    if (label === '红娘咨询')       return this.showPlatformQr();
     wx.showToast({ title: '功能演示', icon: 'none' });
   },
 
