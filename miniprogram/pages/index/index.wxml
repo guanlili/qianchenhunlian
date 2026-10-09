@@ -255,8 +255,8 @@
         </view>
       </view>
 
-      <!-- 缴费页: 微信支付年费 / 体验码开通 / 暂不缴费 -->
-      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 6}}">
+      <!-- 缴费页: 微信支付年费 / 体验码开通 / 暂不缴费 (线上支付关闭时不渲染, 防价格展示; promo 模式向导亦跳过本步) -->
+      <view class="member-lock-card" wx:if="{{previewGate && guestStep === 6 && guestPayMode !== 'off'}}">
         <button class="member-lock-btn ghost-prev pay-prev" bindtap="goWizardPrev">‹ 上一步</button>
         <view class="pay-price-row">
           <text class="pay-price-num">¥{{guestYearPrice}}</text>
