@@ -348,3 +348,51 @@ def test_wizard_full_sequence_grants_trial(client: TestClient, db: Session) -> N
     r = client.get(f"{API}/membership/me", headers=headers)
     assert r.status_code == 200, r.text
     assert r.json()["is_member"] is True, "向导完成后应为在期试用会员"
+
+
+def test_existing_user_completing_criteria_gets_trial(
+    client: TestClient, db: Session
+) -> None:
+    """存量用户 (注册早于推广上线, 已有资料无试用) 向导补完择偶要求 → 应补发试用.
+
+    这是 2026-10-09 走查真根因: welcome 发放只覆盖新注册, 老账号补完资料
+    卡回预览页。criteria 保存后补发判定应覆盖此路径。
+    """
+    from app.models import Profile
+
+    _set_cfg(db, promo_trial_days=30)
+    u = _mk_user(db)
+    # 已有完整基础资料的老账号 (is_welcomed 口径齐), 从未有任何发放
+    db.add(
+        Profile(
+            user_id=u.id,
+            nickname="老用户",
+            avatar_url="/img/a.jpg",
+            gender="男",
+            year=1993,
+            location="山东 济南",
+            progress=60,
+            audit_status="approved",
+        )
+    )
+    db.commit()
+    headers = authentication_token_from_email(client=client, email=u.email, db=db)
+
+    r = client.put(
+        f"{API}/profiles/me/criteria",
+        json={
+            "year_min": 1992,
+            "year_max": 1998,
+            "height_min": 160,
+            "height_max": 172,
+            "income": "不限",
+            "locations": ["山东 济南"],
+        },
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+
+    r = client.get(f"{API}/membership/me", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["is_member"] is True, "存量用户向导补完资料应获得试用"
+    assert len(_promo_grants(db, u)) == 1
