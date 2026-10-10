@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 import os
 import re
 import threading
@@ -9,7 +10,7 @@ from pathlib import Path
 import sentry_sdk
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from fastapi.routing import APIRoute
 from sqlmodel import Session
 from starlette.middleware.cors import CORSMiddleware
@@ -122,7 +123,17 @@ def get_file(key: str, session: SessionDep) -> Response:
         return FileResponse(local_path)
 
     if oss.enabled():
-        return RedirectResponse(
-            oss.sign_url(key), status_code=status.HTTP_307_TEMPORARY_REDIRECT
+        # 代理直出而非 307 跳转 OSS 签名 URL: 跳转链要求小程序把 OSS 域名
+        # 加进 downloadFile 合法域名 (且签名过期后缓存链接失效), 2026-10-09
+        # 走查实锤真机二维码全挂。改为代理后客户端只需本服务一个域名;
+        # 流量走内网 endpoint (同地域 ECS 免流量费), uuid 文件名不可变可缓存。
+        try:
+            content = oss.get_object(key)
+        except oss.OssError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from None
+        return Response(
+            content,
+            media_type=mimetypes.guess_type(key)[0] or "application/octet-stream",
+            headers={"Cache-Control": "private, max-age=600"},
         )
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
