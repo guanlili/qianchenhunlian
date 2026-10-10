@@ -36,6 +36,7 @@ from app.models import (
     ProfileWithContact,
     Store,
     StorePublic,
+    User,
 )
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -395,10 +396,24 @@ def upsert_my_criteria(
         existing.updated_at = datetime.utcnow()
         session.add(existing)
         session.commit()
+        _grant_promo_trial_after_wizard(session, current_user)
         session.refresh(existing)
         return CriteriaPublic.model_validate(existing, from_attributes=True)
+    _grant_promo_trial_after_wizard(session, current_user)
     session.refresh(criteria)
     return CriteriaPublic.model_validate(criteria, from_attributes=True)
+
+
+def _grant_promo_trial_after_wizard(session: SessionDep, current_user: User) -> None:
+    """网上推广: 择偶要求保存 = 注册向导终点, 补一次试用发放判定.
+
+    welcome 端点的发放只覆盖「新注册」; 注册早于推广上线的存量用户走向导
+    补完资料时拿不到试用, 会卡回预览页 (2026-10-09 走查)。内部自带三重
+    防重守卫 (推广开启 / 当前非会员 / 从未发过), 不满足时是静默 no-op,
+    已 commit 过的择偶要求不受影响。
+    """
+    membership.grant_promo_trial_if_eligible(session, current_user)
+    session.commit()
 
 
 @router.post("/me/photos", response_model=ProfileWithContact)
