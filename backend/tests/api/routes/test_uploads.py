@@ -179,31 +179,24 @@ def test_upload_oss_failure_returns_503(
     assert "稍后重试" in r.json()["detail"]
 
 
-def test_files_route_redirects_to_signed_url(
+def test_files_route_proxies_oss_content(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # OSS 模式 + 本地无此文件 → 307 跳签名 URL; 本地已存在的文件仍直读
+    # OSS 模式 + 本地无此文件 → 后端代理直出内容 (不再 307 跳签名 URL:
+    # 跳转链要求小程序把 OSS 域名加进 downloadFile 合法域名, 真机全挂);
+    # 本地已存在的文件仍直读
     _enable_oss(monkeypatch)
     bucket = MagicMock()
-    bucket.sign_url.return_value = (
-        "https://test-bucket.oss.example/ab/c.jpg?Signature=x"
-    )
+    bucket.get_object.return_value = MagicMock(read=lambda: b"oss-content")
     with patch("app.core.oss.oss2.Bucket", return_value=bucket):
-        # follow_redirects=False: TestClient 的 ASGI transport 会把外域跳转请求
-        # 再打回本 app (无此路由 → 404), 测试只断言 307 + Location 本身
         r = client.get(
             "/files/00000000-0000-0000-0000-000000000000/notlocal.jpg",
-            follow_redirects=False,
         )
-        assert r.status_code == 307
-        assert (
-            r.headers["location"]
-            == "https://test-bucket.oss.example/ab/c.jpg?Signature=x"
-        )
-        bucket.sign_url.assert_called_once_with(
-            "GET",
-            "00000000-0000-0000-0000-000000000000/notlocal.jpg",
-            settings.OSS_SIGNED_URL_EXPIRE_SECONDS,
+        assert r.status_code == 200
+        assert r.content == b"oss-content"
+        assert r.headers["content-type"].startswith("image/jpeg")
+        bucket.get_object.assert_called_once_with(
+            "00000000-0000-0000-0000-000000000000/notlocal.jpg"
         )
 
         # 本地存在 → 不走 OSS

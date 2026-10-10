@@ -54,3 +54,14 @@ def sign_url(key: str) -> str:
         "GET", key, settings.OSS_SIGNED_URL_EXPIRE_SECONDS
     )
     return str(url)
+
+
+def get_object(key: str) -> bytes:
+    """读取文件内容 (内网 endpoint, 供后端代理直出; 失败/不存在抛 OssError)."""
+    try:
+        content: bytes = _bucket(settings.OSS_INTERNAL_ENDPOINT).get_object(key).read()
+        return content
+    except OssError:
+        raise
+    except Exception as exc:  # oss2 SDK 异常统一收口 (含 NoSuchKey 等)
+        raise OssError(str(exc)) from exc
