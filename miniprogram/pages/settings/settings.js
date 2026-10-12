@@ -7,7 +7,7 @@ Page({
       {
         items: [
           { label: '相亲下线 / 上线', sub: '暂时不接收推荐 / 重新上线', kind: 'toggle-active' },
-          { label: '账号注销', sub: '永久删除账号和资料 (5 工作日处理)', kind: 'cancel-account' },
+          { label: '账号注销', sub: '永久删除账号和资料 (立即生效)', kind: 'cancel-account' },
         ],
       },
       {
@@ -81,16 +81,16 @@ Page({
   _cancelAccount() {
     wx.showModal({
       title: '注销账号',
-      content: '注销后您的资料会被永久删除, 不可恢复. 确认提交注销申请么?',
-      confirmText: '提交申请',
+      content: '注销后资料立即删除且不可恢复; 该微信之后可重新注册全新账号 (原会员权益不结转). 确认注销么?',
+      confirmText: '确认注销',
       cancelText: '取消',
       confirmColor: '#c93434',
       success(res) {
         if (!res.confirm) return;
         profileSvc.cancelAccount().then((r) => {
           wx.showModal({
-            title: '已提交',
-            content: (r && r.message) || '注销申请已提交, 5 工作日内处理',
+            title: '已注销',
+            content: (r && r.message) || '账号已注销, 该微信可随时重新注册',
             showCancel: false,
           });
         }).catch((e) => {
