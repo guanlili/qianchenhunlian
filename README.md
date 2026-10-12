@@ -70,9 +70,9 @@ docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-co
 
 > 不加 `docker-compose.local.yml` 的裸 `docker compose up -d --build`（自动加载 override）也可跑，端口为 5432 / 8000 / 5173 且绑 `0.0.0.0`，适合局域网联调；本机 5432 / 8000 被占用时用上面的 local 组合。
 
-### 原作者开发机备忘
+### 真机联调
 
-原作者 dev 机（IP `10.129.209.249`，路径 `/data/gzl/project/qianchenhunlian`）已把这些值写进其本地 `.env`（`HOST_IP`、`DOMAIN`、`FRONTEND_HOST` 等，供小程序真机直连 dev 后端）。新机器上小程序真机联调时，把 `.env` 里 `HOST_IP` 改成你本机的局域网 IP 即可，其余配置不受影响。
+小程序真机联调时，把 `.env` 里 `HOST_IP` 改成你本机的局域网 IP 即可，其余配置不受影响。
 
 ---
 
@@ -306,5 +306,11 @@ for p in sorted(d['paths']):
 | JWT SECRET_KEY | `.env`；生产务必 `openssl rand -hex 32` 重新生成 |
 
 （数据库初始只创建 `FIRST_SUPERUSER` 一个超管账号，无其它内置账号；demo 资料仅在 local 环境注入。）
+
+---
+
+## License
+
+[MIT](LICENSE)
 
 种子数据：6 个 demo 资料（寻缘号 `53366922 / 31821616 / 47291038 / 68402957 / 29475861 / 81937465`），全部已通过审核，含联系方式。
