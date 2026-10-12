@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "乾缘婚恋",
+    "title": "qianchenhunlian",
     "version": "0.1.0"
   },
   "paths": {
@@ -2436,7 +2436,7 @@
           "stores"
         ],
         "summary": "List Cities",
-        "description": "有门店的城市 distinct 列表 (按 active 状态过滤), 带 60s 读缓存.",
+        "description": "有门店的城市 distinct 列表 (按 active 状态过滤), 带 60s 读缓存.\n\nSQL 按原串 GROUP BY 后, Python 侧再按归一键合并: 历史脏数据 (多倍\n空格) 会在页面上渲染成多个「看起来一样」的城市 (2026-10-10 走查);\n门店量小, 合并代价可忽略。",
         "operationId": "stores-list_cities",
         "responses": {
           "200": {
@@ -4323,64 +4323,6 @@
         }
       }
     },
-    "/api/v1/admin/stats": {
-      "get": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "Admin Stats",
-        "description": "工作台指标 — 门店管理员自动限本店口径; 总部可用 store_id 查看单店.\n\n结果带 30s 进程内缓存 (同 dashboard: 看板高频轮询, 底层数据刷新频率低)。",
-        "operationId": "admin-admin_stats",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "store_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "指定门店口径 (总部可用)",
-              "title": "Store Id"
-            },
-            "description": "指定门店口径 (总部可用)"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StatsResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/admin/users": {
       "get": {
         "tags": [
@@ -4947,6 +4889,219 @@
         }
       }
     },
+    "/api/v1/admin/activity-feed": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Activity Feed",
+        "description": "行为动态流: 谁对谁 心动/收藏/浏览, 时间倒序.\n\n门店管理员强制本店口径 (任一方属于本店); superuser 可用 store_id 筛选.",
+        "operationId": "admin-list_activity_feed",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "affinity",
+                "favorite",
+                "view"
+              ],
+              "type": "string",
+              "default": "affinity",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "store_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Store Id"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityFeedList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/activity-feed/match": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Match From Activity",
+        "description": "动态撮合: 红娘在行为动态里把一对用户直接标记为已撮合.\n\n与用户主动提交的联系申请不同: 不扣 unlock_balance (运营动作非用户申请),\n建单即 status=matched + 记录红娘手写备注, 在「撮合工单」页留档展示.",
+        "operationId": "admin-match_from_activity",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityMatchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminContactRequestItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/members/{user_id}/requests": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Member Requests",
+        "description": "会员发起 / 收到的撮合工单历史. 门店管理员限本店会员.",
+        "operationId": "admin-list_member_requests",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminContactRequestList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/members": {
       "get": {
         "tags": [
@@ -5169,6 +5324,298 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminMemberFull"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/members/{user_id}/contact-view": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "View Member Contact",
+        "description": "查看会员联系方式 (admin / 本店红娘), 每次查看写审计日志.",
+        "operationId": "admin-view_member_contact",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactViewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/members/{user_id}/transactions": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Member Transactions",
+        "description": "会员解锁次数流水 (赠送/消耗全程可查). 门店管理员限本店会员.",
+        "operationId": "admin-list_member_transactions",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceTransactionList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/members/{user_id}/activities": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Member Activities",
+        "description": "会员行为记录: 收藏/浏览/好感 的双向流水. 门店管理员限本店会员.",
+        "operationId": "admin-list_member_activities",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "favorite_given",
+                "favorite_received",
+                "view_given",
+                "view_received",
+                "affinity_given",
+                "affinity_received"
+              ],
+              "type": "string",
+              "default": "favorite_received",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/verify-queue": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Verify Queue",
+        "description": "实名认证队列: verified='pending' 的会员. 红娘只看本店.\n\nstore_id 给总部「门店工作台」用; 门店管理员传入会被强制覆盖为本店.",
+        "operationId": "admin-list_verify_queue",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "store_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "按门店过滤 (总部可用)",
+              "title": "Store Id"
+            },
+            "description": "按门店过滤 (总部可用)"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMemberList"
                 }
               }
             }
@@ -5746,430 +6193,6 @@
         }
       }
     },
-    "/api/v1/admin/members/{user_id}/contact-view": {
-      "post": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "View Member Contact",
-        "description": "查看会员联系方式 (admin / 本店红娘), 每次查看写审计日志.",
-        "operationId": "admin-view_member_contact",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "User Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ContactViewResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/members/{user_id}/transactions": {
-      "get": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "List Member Transactions",
-        "description": "会员解锁次数流水 (赠送/消耗全程可查). 门店管理员限本店会员.",
-        "operationId": "admin-list_member_transactions",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "User Id"
-            }
-          },
-          {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Skip"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BalanceTransactionList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/members/{user_id}/activities": {
-      "get": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "List Member Activities",
-        "description": "会员行为记录: 收藏/浏览/好感 的双向流水. 门店管理员限本店会员.",
-        "operationId": "admin-list_member_activities",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "User Id"
-            }
-          },
-          {
-            "name": "kind",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "favorite_given",
-                "favorite_received",
-                "view_given",
-                "view_received",
-                "affinity_given",
-                "affinity_received"
-              ],
-              "type": "string",
-              "default": "favorite_received",
-              "title": "Kind"
-            }
-          },
-          {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Skip"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "minimum": 1,
-              "default": 20,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActivityList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/activity-feed": {
-      "get": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "List Activity Feed",
-        "description": "行为动态流: 谁对谁 心动/收藏/浏览, 时间倒序.\n\n门店管理员强制本店口径 (任一方属于本店); superuser 可用 store_id 筛选.",
-        "operationId": "admin-list_activity_feed",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "kind",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "affinity",
-                "favorite",
-                "view"
-              ],
-              "type": "string",
-              "default": "affinity",
-              "title": "Kind"
-            }
-          },
-          {
-            "name": "store_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Store Id"
-            }
-          },
-          {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Skip"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActivityFeedList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/activity-feed/match": {
-      "post": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "Match From Activity",
-        "description": "动态撮合: 红娘在行为动态里把一对用户直接标记为已撮合.\n\n与用户主动提交的联系申请不同: 不扣 unlock_balance (运营动作非用户申请),\n建单即 status=matched + 记录红娘手写备注, 在「撮合工单」页留档展示.",
-        "operationId": "admin-match_from_activity",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActivityMatchBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminContactRequestItem"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/members/{user_id}/requests": {
-      "get": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "List Member Requests",
-        "description": "会员发起 / 收到的撮合工单历史. 门店管理员限本店会员.",
-        "operationId": "admin-list_member_requests",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "User Id"
-            }
-          },
-          {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Skip"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "minimum": 1,
-              "default": 20,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminContactRequestList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/admin/members/{user_id}/audit-logs": {
       "get": {
         "tags": [
@@ -6355,14 +6378,14 @@
         }
       }
     },
-    "/api/v1/admin/verify-queue": {
+    "/api/v1/admin/stats": {
       "get": {
         "tags": [
           "admin"
         ],
-        "summary": "List Verify Queue",
-        "description": "实名认证队列: verified='pending' 的会员. 红娘只看本店.\n\nstore_id 给总部「门店工作台」用; 门店管理员传入会被强制覆盖为本店.",
-        "operationId": "admin-list_verify_queue",
+        "summary": "Admin Stats",
+        "description": "工作台指标 — 门店管理员自动限本店口径; 总部可用 store_id 查看单店.\n\n结果带 30s 进程内缓存 (同 dashboard: 看板高频轮询, 底层数据刷新频率低)。",
+        "operationId": "admin-admin_stats",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -6383,33 +6406,10 @@
                   "type": "null"
                 }
               ],
-              "description": "按门店过滤 (总部可用)",
+              "description": "指定门店口径 (总部可用)",
               "title": "Store Id"
             },
-            "description": "按门店过滤 (总部可用)"
-          },
-          {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Skip"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
+            "description": "指定门店口径 (总部可用)"
           }
         ],
         "responses": {
@@ -6418,7 +6418,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdminMemberList"
+                  "$ref": "#/components/schemas/StatsResponse"
                 }
               }
             }

@@ -1627,15 +1627,6 @@ export type AdminDeleteMemberData = {
 
 export type AdminDeleteMemberResponse = (Message);
 
-export type AdminAdminStatsData = {
-    /**
-     * 指定门店口径 (总部可用)
-     */
-    storeId?: (string | null);
-};
-
-export type AdminAdminStatsResponse = (StatsResponse);
-
 export type AdminListAdminUsersData = {
     actor?: 'all' | 'wx' | 'admin';
     keyword?: (string | null);
@@ -1703,6 +1694,29 @@ export type AdminAssignContactRequestData = {
 
 export type AdminAssignContactRequestResponse = (AdminContactRequestItem);
 
+export type AdminListActivityFeedData = {
+    kind?: 'affinity' | 'favorite' | 'view';
+    limit?: number;
+    skip?: number;
+    storeId?: (string | null);
+};
+
+export type AdminListActivityFeedResponse = (ActivityFeedList);
+
+export type AdminMatchFromActivityData = {
+    requestBody: ActivityMatchBody;
+};
+
+export type AdminMatchFromActivityResponse = (AdminContactRequestItem);
+
+export type AdminListMemberRequestsData = {
+    limit?: number;
+    skip?: number;
+    userId: string;
+};
+
+export type AdminListMemberRequestsResponse = (AdminContactRequestList);
+
 export type AdminListMembersData = {
     auditStatus?: 'all' | 'none' | 'pending' | 'approved' | 'rejected';
     gender?: (string | null);
@@ -1729,6 +1743,40 @@ export type AdminGetMemberFullData = {
 };
 
 export type AdminGetMemberFullResponse = (AdminMemberFull);
+
+export type AdminViewMemberContactData = {
+    userId: string;
+};
+
+export type AdminViewMemberContactResponse = (ContactViewResponse);
+
+export type AdminListMemberTransactionsData = {
+    limit?: number;
+    skip?: number;
+    userId: string;
+};
+
+export type AdminListMemberTransactionsResponse = (BalanceTransactionList);
+
+export type AdminListMemberActivitiesData = {
+    kind?: 'favorite_given' | 'favorite_received' | 'view_given' | 'view_received' | 'affinity_given' | 'affinity_received';
+    limit?: number;
+    skip?: number;
+    userId: string;
+};
+
+export type AdminListMemberActivitiesResponse = (ActivityList);
+
+export type AdminListVerifyQueueData = {
+    limit?: number;
+    skip?: number;
+    /**
+     * 按门店过滤 (总部可用)
+     */
+    storeId?: (string | null);
+};
+
+export type AdminListVerifyQueueResponse = (AdminMemberList);
 
 export type AdminGetMembershipPlansResponse = (MembershipPlansResponse);
 
@@ -1794,52 +1842,6 @@ export type AdminListMembershipGrantsData = {
 
 export type AdminListMembershipGrantsResponse = (MembershipGrantList);
 
-export type AdminViewMemberContactData = {
-    userId: string;
-};
-
-export type AdminViewMemberContactResponse = (ContactViewResponse);
-
-export type AdminListMemberTransactionsData = {
-    limit?: number;
-    skip?: number;
-    userId: string;
-};
-
-export type AdminListMemberTransactionsResponse = (BalanceTransactionList);
-
-export type AdminListMemberActivitiesData = {
-    kind?: 'favorite_given' | 'favorite_received' | 'view_given' | 'view_received' | 'affinity_given' | 'affinity_received';
-    limit?: number;
-    skip?: number;
-    userId: string;
-};
-
-export type AdminListMemberActivitiesResponse = (ActivityList);
-
-export type AdminListActivityFeedData = {
-    kind?: 'affinity' | 'favorite' | 'view';
-    limit?: number;
-    skip?: number;
-    storeId?: (string | null);
-};
-
-export type AdminListActivityFeedResponse = (ActivityFeedList);
-
-export type AdminMatchFromActivityData = {
-    requestBody: ActivityMatchBody;
-};
-
-export type AdminMatchFromActivityResponse = (AdminContactRequestItem);
-
-export type AdminListMemberRequestsData = {
-    limit?: number;
-    skip?: number;
-    userId: string;
-};
-
-export type AdminListMemberRequestsResponse = (AdminContactRequestList);
-
 export type AdminListMemberAuditLogsData = {
     limit?: number;
     skip?: number;
@@ -1861,16 +1863,14 @@ export type AdminListAuditLogsData = {
 
 export type AdminListAuditLogsResponse = (AuditLogList);
 
-export type AdminListVerifyQueueData = {
-    limit?: number;
-    skip?: number;
+export type AdminAdminStatsData = {
     /**
-     * 按门店过滤 (总部可用)
+     * 指定门店口径 (总部可用)
      */
     storeId?: (string | null);
 };
 
-export type AdminListVerifyQueueResponse = (AdminMemberList);
+export type AdminAdminStatsResponse = (StatsResponse);
 
 export type AdminAdminDashboardData = {
     /**

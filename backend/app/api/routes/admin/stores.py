@@ -574,7 +574,12 @@ def admin_create_store(
     actor: CurrentActor,
     body: StoreCreate = Body(),
 ) -> StorePublic:
-    s = Store(**body.model_dump())
+    data = body.model_dump()
+    # 地域/名称归一: 折叠连续空格, 防「山东省   德州市」类脏值把城市聚合拆重
+    for f in ("name", "city", "district"):
+        if data.get(f):
+            data[f] = stores_routes.normalize_geo(data[f])
+    s = Store(**data)
     session.add(s)
     session.flush()
     _audit(
@@ -606,6 +611,10 @@ def admin_update_store(
     data = body.model_dump(exclude_unset=True)
     if data.get("city") is not None and not str(data["city"]).strip():
         raise HTTPException(status_code=400, detail="城市不能为空")
+    # 与创建同款归一 (name/city/district 折叠连续空格)
+    for f in ("name", "city", "district"):
+        if data.get(f):
+            data[f] = stores_routes.normalize_geo(data[f])
     for k, v in data.items():
         setattr(s, k, v if v != "" else None)
     s.updated_at = datetime.utcnow()
