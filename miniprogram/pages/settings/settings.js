@@ -27,7 +27,7 @@ Page({
     const status = me.status || 'active';
     const subMap = {
       inactive: '当前: 已下线 (点此重新上线)',
-      deactivating: '当前: 注销审核中, 暂不可变更',
+      deactivating: '当前: 注销审核中 (点此恢复上线)',
       blocked: '当前: 账号已封禁',
     };
     this.setData({
@@ -54,11 +54,21 @@ Page({
 
   _toggleActive() {
     if (this.data.activeStatus === 'deactivating') {
+      // 旧注销流程的存量中间态 (流程已废弃): 直接恢复上线即可清除
       return wx.showModal({
-        title: '注销审核中',
-        content: '账号正在注销审核流程中, 无法变更上/下线状态。',
-        showCancel: false,
-        confirmText: '知道了',
+        title: '恢复上线',
+        content: '账号处于旧版注销流程的中间状态, 恢复上线后即可正常使用相亲上下线。',
+        confirmText: '恢复上线',
+        cancelText: '取消',
+        success: (res) => {
+          if (!res.confirm) return;
+          profileSvc.reactivateMe().then((r) => {
+            wx.showToast({ title: (r && r.message) || '已上线', icon: 'success' });
+            this.onLoad();
+          }).catch((e) => {
+            wx.showToast({ title: (e && e.detail) || '操作失败', icon: 'none' });
+          });
+        },
       });
     }
     const inactive = this.data.activeStatus === 'inactive';
