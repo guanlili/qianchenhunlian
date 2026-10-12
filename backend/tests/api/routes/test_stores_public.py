@@ -116,3 +116,44 @@ def test_set_home_store_nationwide_keeps_location_empty(
 
     me = client.get(f"{settings.API_V1_STR}/profiles/me", headers=headers).json()
     assert me["profile"]["location"] is None
+
+
+def test_cities_merges_whitespace_variants(client: TestClient, db: Session) -> None:
+    """城市聚合按归一键合并: 「山东省 德州市」与「山东省   德州市」(多倍空格
+    历史脏数据) 在页面上渲染成两个一样城市 (2026-10-10 走查), 合并为一条计数相加."""
+    _add_store(db, "武城店", "山东省 德州市")
+    _add_store(db, "夏津店", "山东省   德州市")
+    _add_store(db, "市中店", "山东省      济南市")
+
+    r = client.get(f"{API}/cities")
+    assert r.status_code == 200, r.text
+    items = {(i["city"], i["count"]) for i in r.json()["items"]}
+    assert ("山东省 德州市", 2) in items
+    assert ("山东省 济南市", 1) in items
+    assert len(items) == 2
+
+
+def test_admin_create_store_normalizes_geo(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """admin 建店归一 name/city/district: 连续空格折叠为单空格, 脏值不再入库."""
+    r = client.post(
+        "/api/v1/admin/stores",
+        json={
+            "name": "测试   归一店",
+            "city": "山东省   德州市",
+            "district": "  武城县  ",
+        },
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["name"] == "测试 归一店"
+    assert body["city"] == "山东省 德州市"
+    assert body["district"] == "武城县"
+
+    # 聚合侧立即生效 (不再出现多倍空格的城市条目)
+    r2 = client.get(f"{API}/cities")
+    cities = {i["city"] for i in r2.json()["items"]}
+    assert "山东省 德州市" in cities
+    assert all("  " not in c for c in cities)
