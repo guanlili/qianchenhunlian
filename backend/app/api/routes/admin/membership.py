@@ -5,24 +5,27 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlmodel import Field, SQLModel, func, select
+from fastapi.concurrency import run_in_threadpool
+from sqlmodel import Field, SQLModel, Session, func, select
 
 from app import crud
 from app.api.audit import write_audit as _audit
 from app.api.deps import CurrentActor, SessionDep
 from app.api.permissions import Perm, require_perm
-from app.core import membership, profile_audit
+from app.core import membership, profile_audit, wechat_pay
 from app.models import (
     BalanceTransaction,
     MembershipGrant,
     MembershipGrantList,
     MembershipGrantPublic,
+    MembershipOrder,
     MembershipRedeemCode,
     MembershipRedeemCodePublic,
     SiteSetting,
     Store,
     User,
 )
+from ..membership import _apply_notify
 
 from .common import _check_member_scope, _check_store_scope, _store_owner_id
 
@@ -680,3 +683,127 @@ def list_membership_grants(
         ],
         total=len(rows),
     )
+
+
+# ---------------- 线上缴费对账扫描 (回调丢失兜底, docs/13 P3) ----------------
+
+
+class MembershipReconcileItem(SQLModel):
+    out_trade_no: str
+    action: Literal["granted", "already_paid", "closed", "unpaid", "error"]
+    message: str = ""
+
+
+class MembershipReconcileReport(SQLModel):
+    scanned: int = 0
+    granted: int = 0
+    closed: int = 0
+    unpaid: int = 0
+    errors: int = 0
+    details: list[MembershipReconcileItem] = []
+
+
+def _list_stale_pending(session: Session, cutoff: datetime) -> list[MembershipOrder]:
+    """超时未收到回调的 pending 单 (对账扫描对象), 按下单时间正序."""
+    rows = session.exec(
+        select(MembershipOrder)
+        .where(MembershipOrder.status == "pending")  # type: ignore
+        .where(MembershipOrder.created_at < cutoff)  # type: ignore[arg-type]
+        .order_by(MembershipOrder.created_at.asc())  # type: ignore[attr-defined]
+    ).all()
+    return list(rows)
+
+
+@router.post(
+    "/membership/orders/reconcile",
+    response_model=MembershipReconcileReport,
+    dependencies=[Depends(require_perm(Perm.MEMBER_GRANT))],
+)
+async def reconcile_membership_orders(
+    session: SessionDep,
+    actor: CurrentActor,
+    older_than_minutes: int = Query(120, ge=5, le=10080),
+) -> MembershipReconcileReport:
+    """对账扫描: 超时未收到微信回调的 pending 单, 逐单向微信查单并按真相处理.
+
+    - 微信侧 SUCCESS → 复用回调链路 (_apply_notify) 幂等发放; 金额不符记
+      error 待人工核查, 绝不发放;
+    - 微信终态 (CLOSED/PAYERROR/REVOKED) → 同步关单;
+    - 其余状态 (NOTPAY/USERPAYING 等) → 保守不关单只上报: 订单未设
+      time_expire, 误关可能让「查单后又完成支付」的钱收了不发。
+    - 仅 online 模式可用 (mock/off 没有真实的微信侧状态); 单次最多 50 单,
+      防止长事务与查单限频。每单独立事务, 部分失败不影响已处理订单。
+    """
+    if membership.purchase_mode(session) != "online":
+        raise HTTPException(status_code=400, detail="仅线上支付 (online) 模式需要对账")
+    cutoff = datetime.utcnow() - timedelta(minutes=older_than_minutes)
+    stale = await run_in_threadpool(_list_stale_pending, session, cutoff)
+    details: list[MembershipReconcileItem] = []
+    for order in stale[:50]:
+        item = MembershipReconcileItem(out_trade_no=order.out_trade_no, action="error")
+        try:
+            data = await wechat_pay.query_order(out_trade_no=order.out_trade_no)
+        except wechat_pay.WechatPayError as e:
+            item.message = f"查单失败: {e}"
+            details.append(item)
+            continue
+        state = str(data.get("trade_state") or "")
+        transaction_id = str(data.get("transaction_id") or "")
+        if state == "SUCCESS":
+            try:
+                res = await run_in_threadpool(
+                    _apply_notify,
+                    session,
+                    out_trade_no=order.out_trade_no,
+                    trade_state=state,
+                    transaction_id=transaction_id,
+                    total=(data.get("amount") or {}).get("total"),
+                )
+            except HTTPException as e:
+                item.message = f"金额校验失败, 待人工核查: {e.detail}"
+                details.append(item)
+                continue
+            if res.get("message") == "成功":
+                item.action = "granted"
+                item.message = f"已补发放: 微信单号 {transaction_id}"
+            else:
+                item.action = "already_paid"
+                item.message = str(res.get("message") or "")
+        elif state in ("CLOSED", "PAYERROR", "REVOKED"):
+            await run_in_threadpool(
+                _apply_notify,
+                session,
+                out_trade_no=order.out_trade_no,
+                trade_state=state,
+                transaction_id=transaction_id,
+                total=order.amount_fen,
+            )
+            item.action = "closed"
+            item.message = f"微信侧 {state}, 已同步关单"
+        else:
+            item.action = "unpaid"
+            item.message = f"微信侧 {state or '未知'}, 保守不关单"
+        details.append(item)
+    report = MembershipReconcileReport(
+        scanned=len(details),
+        granted=sum(1 for d in details if d.action == "granted"),
+        closed=sum(1 for d in details if d.action == "closed"),
+        unpaid=sum(1 for d in details if d.action == "unpaid"),
+        errors=sum(1 for d in details if d.action == "error"),
+        details=details,
+    )
+    _audit(
+        session,
+        actor,
+        "reconcile_membership_orders",
+        detail={
+            "older_than_minutes": older_than_minutes,
+            "scanned": report.scanned,
+            "granted": report.granted,
+            "closed": report.closed,
+            "unpaid": report.unpaid,
+            "errors": report.errors,
+        },
+    )
+    session.commit()
+    return report
