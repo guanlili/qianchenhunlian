@@ -111,12 +111,14 @@ def test_welcome_avatar_url_too_long_rejected(client: TestClient, db: Session) -
     assert r.status_code == 422
 
 
-def test_deactivating_account_cannot_toggle_active(
+def test_legacy_deactivating_account_can_self_recover(
     client: TestClient, db: Session
 ) -> None:
-    """注销审核中 (deactivating) 的账号不能变更上/下线状态 (409).
+    """历史 deactivating (旧注销流程中间态, 已废弃) 账号可自助恢复上线.
 
-    此前下线/上线会直接改写 status, 静默撤销掉进行中的注销申请。
+    旧流程: cancel-account 置 deactivating 等 5 工作日人工删, 但后台无
+    待办入口, 账号卡死且上下线被 409 锁死 (2026-10-10 走查)。现注销改
+    为立即删除, deactivating 只作为存量脏状态 —— 上下线放行让其自救。
     """
     import uuid as _uuid
 
@@ -130,9 +132,38 @@ def test_deactivating_account_cannot_toggle_active(
     db.add(row)
     db.commit()
 
-    r = client.post(f"{API}/profiles/me/deactivate", headers=headers)
-    assert r.status_code == 409
     r = client.post(f"{API}/profiles/me/reactivate", headers=headers)
-    assert r.status_code == 409
+    assert r.status_code == 200, r.text
     db.refresh(row)
-    assert row.status == "deactivating"  # 状态未被改写
+    assert row.status == "active"
+
+
+def test_cancel_account_deletes_immediately_and_tombstones_openid(
+    client: TestClient, db: Session
+) -> None:
+    """注销 = 立即删除 (2026-10-10 业务确认): status=deleted + openid 墓碑 +
+    在途 token 失效 (后续请求 401 触发重登, 同微信再注册即全新账号)."""
+    import uuid as _uuid
+
+    from app.models import User
+
+    email = _mk_user(db)
+    headers = _headers(client, db, email)
+    me = client.get(f"{API}/users/me", headers=headers).json()
+    uid = me["id"]
+    row = db.get(User, _uuid.UUID(uid))
+    row.openid = "oCX" + uid[:8]
+    db.add(row)
+    db.commit()
+
+    r = client.post(f"{API}/profiles/me/cancel-account", headers=headers)
+    assert r.status_code == 200, r.text
+    assert "重新注册" in r.json()["message"]
+    db.refresh(row)
+    assert row.status == "deleted"
+    assert row.is_active is False
+    assert row.openid == f"deleted:{uid}"  # 墓碑释放原 openid, 不留明文
+
+    # 在途 token 立即失效: deleted → 401 (小程序静默重登走注册链路)
+    r2 = client.get(f"{API}/users/me", headers=headers)
+    assert r2.status_code == 401

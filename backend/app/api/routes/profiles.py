@@ -491,10 +491,8 @@ def deactivate_me(
     用户端表现是整个小程序坏掉 (历史自锁 bug 的根源之一)。
     可见性由各读接口的 User.status == "active" 过滤保证。
     """
-    if current_user.status == "deactivating":
-        raise HTTPException(
-            status_code=409, detail="账号注销审核中, 无法变更上/下线状态"
-        )
+    if current_user.status == "blocked":
+        raise HTTPException(status_code=403, detail="账号已封禁, 无法变更上/下线状态")
     current_user.status = "inactive"
     current_user.updated_at = datetime.utcnow()
     session.add(current_user)
@@ -511,10 +509,7 @@ def reactivate_me(
     """重新上线"""
     if current_user.status == "blocked":
         raise HTTPException(status_code=403, detail="账号已封禁, 无法自助上线")
-    if current_user.status == "deactivating":
-        raise HTTPException(
-            status_code=409, detail="账号注销审核中, 无法变更上/下线状态"
-        )
+    # 历史 deactivating (旧注销流程中间态) 账号在此自助恢复为 active
     current_user.status = "active"
     current_user.is_active = True  # 恢复 token 有效性
     current_user.updated_at = datetime.utcnow()
@@ -528,12 +523,25 @@ def cancel_account_request(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> Message:
-    """申请注销账号: 标记 deactivating, 后台审核后由 admin 真删."""
-    current_user.status = "deactivating"
+    """注销账号: 立即删除 (2026-10-10 与业务确认, 原「deactivating 审核
+    5 工作日」流程无后台待办入口, 账号会卡死在注销中间态, 已废弃).
+
+    与 admin 删除会员同语义: 资料流水审计保留归档, openid 改写墓碑值后
+    同一微信再进小程序会注册全新账号 (新寻缘号/新赠送额度); 在途会员
+    权益随归档账号终止, 不结转。
+    """
+    if current_user.status == "deleted":
+        raise HTTPException(status_code=400, detail="账号已是删除状态")
+    current_user.status = "deleted"
+    current_user.is_active = False  # 在途 token 立即失效 (deleted → 401 触发重登)
+    if current_user.openid:
+        # 墓碑格式带 user_id 保证唯一可溯源, 不存原 openid (归档不留明文)
+        current_user.openid = f"deleted:{current_user.id}"
+    current_user.unionid = None
     current_user.updated_at = datetime.utcnow()
     session.add(current_user)
     session.commit()
-    return Message(message="已提交注销申请, 审核完成后 5 个工作日内处理")
+    return Message(message="账号已注销, 资料已删除; 该微信可随时重新注册 (全新账号)")
 
 
 @router.delete("/me", response_model=Message)

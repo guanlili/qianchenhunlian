@@ -2388,7 +2388,12 @@ export class ProfilesService {
     
     /**
      * Cancel Account Request
-     * 申请注销账号: 标记 deactivating, 后台审核后由 admin 真删.
+     * 注销账号: 立即删除 (2026-10-10 与业务确认, 原「deactivating 审核
+     * 5 工作日」流程无后台待办入口, 账号会卡死在注销中间态, 已废弃).
+     *
+     * 与 admin 删除会员同语义: 资料流水审计保留归档, openid 改写墓碑值后
+     * 同一微信再进小程序会注册全新账号 (新寻缘号/新赠送额度); 在途会员
+     * 权益随归档账号终止, 不结转。
      * @returns Message Successful Response
      * @throws ApiError
      */
