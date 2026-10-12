@@ -67,9 +67,26 @@ def clear_store_geo_cache() -> None:
     invalidate_store_geo_cache()
 
 
+def normalize_geo(s: str | None) -> str | None:
+    """城市/区县/门店名归一: 折叠连续空白为单空格并去首尾.
+
+    region picker/手工录入可能混入多倍空格 (如「山东省   德州市」), 与
+    「山东省 德州市」在 SQL 精确匹配下是两个值——聚合拆重、筛选落空。
+    admin 门店写入与本模块聚合统一走这里。
+    """
+    if s is None:
+        return None
+    return " ".join(s.split())
+
+
 @router.get("/cities", response_model=CityList)
 def list_cities(session: SessionDep) -> CityList:
-    """有门店的城市 distinct 列表 (按 active 状态过滤), 带 60s 读缓存."""
+    """有门店的城市 distinct 列表 (按 active 状态过滤), 带 60s 读缓存.
+
+    SQL 按原串 GROUP BY 后, Python 侧再按归一键合并: 历史脏数据 (多倍
+    空格) 会在页面上渲染成多个「看起来一样」的城市 (2026-10-10 走查);
+    门店量小, 合并代价可忽略。
+    """
     global _cities_cache, _cities_cached_at
     with _geo_cache_lock:
         if (
@@ -81,9 +98,15 @@ def list_cities(session: SessionDep) -> CityList:
         select(Store.city, func.count(Store.id))  # type: ignore
         .where(Store.status == "active")
         .group_by(Store.city)
-        .order_by(Store.city)
     ).all()
-    result = CityList(items=[CityItem(city=r[0], count=r[1]) for r in rows])
+    merged: dict[str, int] = {}
+    for raw, n in rows:
+        key = normalize_geo(raw) or ""
+        if key:
+            merged[key] = merged.get(key, 0) + int(n)
+    result = CityList(
+        items=[CityItem(city=c, count=n) for c, n in sorted(merged.items())]
+    )
     with _geo_cache_lock:
         _cities_cache = result
         _cities_cached_at = time.monotonic()
