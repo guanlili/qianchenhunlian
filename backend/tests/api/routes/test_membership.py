@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 
 from fastapi.testclient import TestClient
+from sqlalchemy import update as sa_update
 from sqlmodel import Session, select
 
 from app import crud
@@ -611,3 +612,59 @@ def test_member_full_membership_typed_payload(
     # 建模同时校验 OpenAPI schema 已带上 $ref (不再是 object/any)
     spec = client.get(f"{API}/openapi.json").json()
     assert "MemberQuotaStatus" in spec["components"]["schemas"]
+
+
+# ---------------- 发放起算点并发正确性 ----------------
+
+
+def test_grant_membership_reads_expiry_from_db_not_identity_map(db: Session) -> None:
+    """行锁内的起算点必须取库里的最新值, 不能用 identity map 的旧对象.
+
+    并发场景: 本事务加载 user 后、拿到行锁前, 另一事务 (admin 发放 vs 支付
+    回调) 可能已提交发放并把库里的到期时间推后 —— 此时 ORM 对象上还是旧值。
+    若按旧值起算, 两笔会员会重叠而不是顺延 (丢叠加天数)。
+    """
+    user = _make_user(db)
+
+    first = membership.grant_membership(
+        db,
+        user=user,
+        plan_code="yearly_365d",
+        days=10,
+        source="admin_recharge",
+        granted_by_type="system",
+        granted_by_id=user.id,
+    )
+    db.commit()
+    assert first.expires_at - first.start_from == timedelta(days=10)
+
+    # 把 identity map 填成「另一事务提交前」的新值 (访问触发 reload, 对象干净
+    # 无脏标记) —— 对应生产上「本事务早已加载了 user」的时序
+    _ = user.membership_expires_at
+
+    # 模拟「另一事务随后提交了发放」: ORM update 但关掉 synchronize_session,
+    # 只改库、不惊动 identity map (默认 evaluate 同步会把新值写进内存对象,
+    # 模拟不出来; 给对象赋值则变脏, 会被 autoflush 反写库, 同样失真)
+    far_future = datetime.utcnow() + timedelta(days=100)
+    db.execute(
+        sa_update(User)
+        .where(User.id == user.id)  # type: ignore[arg-type]
+        .values(membership_expires_at=far_future)
+        .execution_options(synchronize_session=False)
+    )
+
+    second = membership.grant_membership(
+        db,
+        user=user,
+        plan_code="yearly_365d",
+        days=5,
+        source="admin_recharge",
+        granted_by_type="system",
+        granted_by_id=user.id,
+    )
+    # 修复前: 起算点取 identity map 旧值 (first 的到期时间), 与 far_future
+    # 重叠 90 天; 修复后: 行锁内重读库值, 从 far_future 顺延
+    assert second.start_from == far_future
+    db.commit()
+    db.refresh(user)
+    assert user.membership_expires_at == far_future + timedelta(days=5)

@@ -511,3 +511,152 @@ def test_admin_membership_config_requires_permission(
         f"{API}/admin/membership/config", json={"pay_mock": True}, headers=headers
     )
     assert r.status_code == 403
+
+
+# ---------------- 对账扫描 (回调丢失兜底) ----------------
+
+RECONCILE_URL = f"{API}/admin/membership/orders/reconcile"
+
+
+def _stale_pending_order(
+    db: Session, client: TestClient
+) -> tuple[User, MembershipOrder]:
+    """开通 online 模式并造一张 3 小时前下单的 pending 单 (默认扫描阈值 2h)."""
+    _set_cfg(db, pay_enabled=True)
+    user = _make_wx_user(db)
+    headers = authentication_token_from_email(client=client, email=user.email, db=db)
+    r = _create_order(client, headers)
+    assert r.status_code == 201, r.text
+    order = db.get(MembershipOrder, uuid.UUID(r.json()["order_id"]))
+    assert order is not None
+    order.created_at = datetime.utcnow() - timedelta(hours=3)
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+    return user, order
+
+
+def test_reconcile_rejected_when_not_online(
+    client: TestClient, superuser_token_headers: dict
+) -> None:
+    """mock/off 模式没有真实的微信侧状态, 对账无意义, 直接 400."""
+    r = client.post(RECONCILE_URL, headers=superuser_token_headers)
+    assert r.status_code == 400
+
+
+def test_reconcile_grants_lost_callback(
+    client: TestClient,
+    db: Session,
+    pay_env: dict[str, Any],
+    superuser_token_headers: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """回调丢失但用户已付款: 查单 SUCCESS → 幂等补发放, 钱不能白收."""
+    user, order = _stale_pending_order(db, client)
+
+    async def _fake_query(*, out_trade_no: str) -> dict[str, Any]:
+        assert out_trade_no == order.out_trade_no
+        return _success_notify_data(order)
+
+    monkeypatch.setattr("app.core.wechat_pay.query_order", _fake_query)
+
+    r = client.post(RECONCILE_URL, headers=superuser_token_headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["scanned"] == 1
+    assert body["granted"] == 1
+    assert body["details"][0]["action"] == "granted"
+
+    db.refresh(order)
+    assert order.status == "paid"
+    assert order.paid_at is not None
+    grant = db.exec(
+        select(MembershipGrant).where(MembershipGrant.user_id == user.id)
+    ).one()
+    assert grant.days == order.days
+    db.refresh(user)
+    assert user.membership_expires_at is not None
+
+    # 已 paid 的单不再进扫描范围 (重复触发无副作用)
+    r2 = client.post(RECONCILE_URL, headers=superuser_token_headers)
+    assert r2.status_code == 200
+    assert r2.json()["scanned"] == 0
+
+
+def test_reconcile_closes_wechat_terminal(
+    client: TestClient,
+    db: Session,
+    pay_env: dict[str, Any],
+    superuser_token_headers: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """微信侧已终态 (CLOSED) 的超时单 → 同步关单, 不发放."""
+    user, order = _stale_pending_order(db, client)
+
+    async def _fake_query(*, out_trade_no: str) -> dict[str, Any]:
+        return {"out_trade_no": out_trade_no, "trade_state": "CLOSED"}
+
+    monkeypatch.setattr("app.core.wechat_pay.query_order", _fake_query)
+
+    r = client.post(RECONCILE_URL, headers=superuser_token_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["closed"] == 1
+    db.refresh(order)
+    assert order.status == "closed"
+    assert (
+        db.exec(
+            select(MembershipGrant).where(MembershipGrant.user_id == user.id)
+        ).first()
+        is None
+    )
+
+
+def test_reconcile_leaves_notpay_open(
+    client: TestClient,
+    db: Session,
+    pay_env: dict[str, Any],
+    superuser_token_headers: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """NOTPAY 非终态: 保守不关单只上报 (订单未设 time_expire, 防误关漏发)."""
+    _, order = _stale_pending_order(db, client)
+
+    async def _fake_query(*, out_trade_no: str) -> dict[str, Any]:
+        return {"out_trade_no": out_trade_no, "trade_state": "NOTPAY"}
+
+    monkeypatch.setattr("app.core.wechat_pay.query_order", _fake_query)
+
+    r = client.post(RECONCILE_URL, headers=superuser_token_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["unpaid"] == 1
+    db.refresh(order)
+    assert order.status == "pending"
+
+
+def test_reconcile_flags_amount_mismatch(
+    client: TestClient,
+    db: Session,
+    pay_env: dict[str, Any],
+    superuser_token_headers: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """查单金额与订单不一致 → 记 error 待人工核查, 绝不发放也绝不关单."""
+    _, order = _stale_pending_order(db, client)
+
+    data = _success_notify_data(order)
+    data["amount"]["total"] = order.amount_fen + 100
+
+    async def _fake_query(*, out_trade_no: str) -> dict[str, Any]:
+        return data
+
+    monkeypatch.setattr("app.core.wechat_pay.query_order", _fake_query)
+
+    r = client.post(RECONCILE_URL, headers=superuser_token_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["errors"] == 1
+    assert "金额" in body["details"][0]["message"]
+    db.refresh(order)
+    assert order.status == "pending"

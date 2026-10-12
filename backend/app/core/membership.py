@@ -385,9 +385,16 @@ def grant_membership(
         .where(User.id == user.id)  # type: ignore[arg-type]
         .values(updated_at=now)
     )
+    # 拿到行锁后必须重新查库取到期时间: 传入的 user 是本事务加载的 ORM 对象,
+    # 阻塞期间另一事务可能已提交发放并推后了库里的到期时间, identity map 里
+    # 还是旧值 —— 直接用会按旧值起算, 两笔会员重叠而不是顺延 (丢叠加天数)。
+    # 此刻行锁在握, 读到的是对方提交后的最新值 (PG READ COMMITTED 同理)。
+    current_expires_at = session.exec(
+        select(User.membership_expires_at).where(User.id == user.id)
+    ).one()
     start_from = now
-    if user.membership_expires_at and user.membership_expires_at > now:
-        start_from = user.membership_expires_at
+    if current_expires_at and current_expires_at > now:
+        start_from = current_expires_at
     grant = MembershipGrant(
         user_id=user.id,
         plan_code=plan_code,

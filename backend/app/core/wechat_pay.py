@@ -191,6 +191,40 @@ async def jsapi_prepay(
     }
 
 
+async def _query_order_http(url_path: str) -> dict[str, Any]:
+    """查单实际发 HTTP 的地方单独成函数, 方便单测 mock 掉网络."""
+    headers = {
+        "Authorization": _authorization("GET", url_path, ""),
+        "Accept": "application/json",
+        "User-Agent": "qianchenhunlian/1.0",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{WX_PAY_API_BASE}{url_path}", headers=headers)
+    if resp.status_code != 200:
+        # 只记状态码, 不打响应体 (可能含敏感字段); 404 (单不存在) 同样抛错,
+        # 由调用方按 error 记录, 不臆断关单
+        logger.warning("微信支付查单失败: HTTP %s", resp.status_code)
+        raise WechatPayError(
+            f"微信支付查单失败: HTTP {resp.status_code}",
+            status_code=resp.status_code,
+        )
+    data: dict[str, Any] = resp.json()
+    return data
+
+
+async def query_order(*, out_trade_no: str) -> dict[str, Any]:
+    """商户查单 (对账兜底): 按商户单号查微信侧真实支付状态.
+
+    返回微信 v3 查单响应 (trade_state / transaction_id / amount.total 等),
+    供回调丢失时的对账扫描使用 (admin 端点 membership/orders/reconcile)。
+    """
+    url_path = (
+        f"/v3/pay/transactions/out-trade-no/{out_trade_no}"
+        f"?mchid={settings.WECHAT_PAY_MCH_ID}"
+    )
+    return await _query_order_http(url_path)
+
+
 def verify_notify(
     *, timestamp: str, nonce: str, body: str, serial: str, signature: str
 ) -> bool:
