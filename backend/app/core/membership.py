@@ -390,7 +390,7 @@ def grant_membership(
     # 还是旧值 —— 直接用会按旧值起算, 两笔会员重叠而不是顺延 (丢叠加天数)。
     # 此刻行锁在握, 读到的是对方提交后的最新值 (PG READ COMMITTED 同理)。
     current_expires_at = session.exec(
-        select(User.membership_expires_at).where(User.id == user.id)  # type: ignore[arg-type]
+        select(User.membership_expires_at).where(User.id == user.id)
     ).one()
     start_from = now
     if current_expires_at and current_expires_at > now:

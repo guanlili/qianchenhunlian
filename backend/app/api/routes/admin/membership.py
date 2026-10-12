@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.concurrency import run_in_threadpool
-from sqlmodel import Field, SQLModel, Session, func, select
+from sqlmodel import Field, Session, SQLModel, func, select
 
 from app import crud
 from app.api.audit import write_audit as _audit
@@ -25,8 +25,8 @@ from app.models import (
     Store,
     User,
 )
-from ..membership import _apply_notify
 
+from ..membership import _apply_notify
 from .common import _check_member_scope, _check_store_scope, _store_owner_id
 
 router = APIRouter()
@@ -707,8 +707,8 @@ def _list_stale_pending(session: Session, cutoff: datetime) -> list[MembershipOr
     """超时未收到回调的 pending 单 (对账扫描对象), 按下单时间正序."""
     rows = session.exec(
         select(MembershipOrder)
-        .where(MembershipOrder.status == "pending")  # type: ignore
-        .where(MembershipOrder.created_at < cutoff)  # type: ignore[arg-type]
+        .where(MembershipOrder.status == "pending")
+        .where(MembershipOrder.created_at < cutoff)
         .order_by(MembershipOrder.created_at.asc())  # type: ignore[attr-defined]
     ).all()
     return list(rows)

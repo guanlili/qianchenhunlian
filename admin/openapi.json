@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "qianchenhunlian",
+    "title": "qc",
     "version": "0.1.0"
   },
   "paths": {
@@ -6193,6 +6193,57 @@
         }
       }
     },
+    "/api/v1/admin/membership/orders/reconcile": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reconcile Membership Orders",
+        "description": "对账扫描: 超时未收到微信回调的 pending 单, 逐单向微信查单并按真相处理.\n\n- 微信侧 SUCCESS → 复用回调链路 (_apply_notify) 幂等发放; 金额不符记\n  error 待人工核查, 绝不发放;\n- 微信终态 (CLOSED/PAYERROR/REVOKED) → 同步关单;\n- 其余状态 (NOTPAY/USERPAYING 等) → 保守不关单只上报: 订单未设\n  time_expire, 误关可能让「查单后又完成支付」的钱收了不发。\n- 仅 online 模式可用 (mock/off 没有真实的微信侧状态); 单次最多 50 单,\n  防止长事务与查单限频。每单独立事务, 部分失败不影响已处理订单。",
+        "operationId": "admin-reconcile_membership_orders",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "older_than_minutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10080,
+              "minimum": 5,
+              "default": 120,
+              "title": "Older Than Minutes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipReconcileReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/members/{user_id}/audit-logs": {
       "get": {
         "tags": [
@@ -12352,6 +12403,75 @@
           "trial_once_per_user"
         ],
         "title": "MembershipPlansResponse"
+      },
+      "MembershipReconcileItem": {
+        "properties": {
+          "out_trade_no": {
+            "type": "string",
+            "title": "Out Trade No"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "already_paid",
+              "closed",
+              "unpaid",
+              "error"
+            ],
+            "title": "Action"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "out_trade_no",
+          "action"
+        ],
+        "title": "MembershipReconcileItem"
+      },
+      "MembershipReconcileReport": {
+        "properties": {
+          "scanned": {
+            "type": "integer",
+            "title": "Scanned",
+            "default": 0
+          },
+          "granted": {
+            "type": "integer",
+            "title": "Granted",
+            "default": 0
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed",
+            "default": 0
+          },
+          "unpaid": {
+            "type": "integer",
+            "title": "Unpaid",
+            "default": 0
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors",
+            "default": 0
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipReconcileItem"
+            },
+            "type": "array",
+            "title": "Details",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "MembershipReconcileReport"
       },
       "MembershipRedeemCodePublic": {
         "properties": {
