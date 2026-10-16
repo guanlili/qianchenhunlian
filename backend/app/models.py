@@ -242,6 +242,17 @@ class Profile(ProfileBase, table=True):
         default=False, nullable=False, sa_column_kwargs={"server_default": false()}
     )
 
+    # 推荐/筛选热路径: 山东 + 审核通过, 再按性别和更新时间取候选。
+    # 部分索引只覆盖对外可见的资料, 待审行不进索引。
+    __table_args__ = (
+        Index(
+            "ix_profile_recommend_pool",
+            "gender",
+            "updated_at",
+            postgresql_where=text("is_shandong IS TRUE AND audit_status = 'approved'"),
+        ),
+    )
+
     user: User = Relationship(back_populates="profile")
 
     @property

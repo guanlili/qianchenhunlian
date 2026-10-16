@@ -4,6 +4,7 @@
 不同门店口径缓存键互不污染。与 test_config_cache.py 的配置缓存测试同风格。
 """
 
+import threading
 from datetime import datetime, timedelta
 
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from sqlmodel import Session
 
 from app import crud
 from app.api.routes.admin import clear_stats_cache
+from app.api.routes.admin.stats import _load_ttl_cache
 from app.core.config import settings
 from app.models import Store, UserCreate
 from tests.utils.utils import random_email, random_lower_string
@@ -85,3 +87,50 @@ def test_stores_overview_cached(
     r3 = client.get(f"{API}/admin/stores/overview", headers=superuser_token_headers)
     assert r3.status_code == 200
     assert r3.json()["total"] == total_before + 1
+
+
+class _CacheValue:
+    def model_copy(self, deep: bool = False) -> str:
+        return "cached"
+
+
+def test_ttl_cache_single_flight() -> None:
+    """同一 key 并发未命中时只计算一次, 等待方拿到同一份结果."""
+    lock = threading.Lock()
+    cache: dict[str, _CacheValue] = {}
+    cached_at: dict[str, float] = {}
+    inflight: dict[str, threading.Event] = {}
+    calls = {"n": 0}
+    started = threading.Event()
+    release = threading.Event()
+
+    def compute() -> _CacheValue:
+        calls["n"] += 1
+        started.set()
+        assert release.wait(timeout=2)
+        return _CacheValue()
+
+    results: list[str] = []
+
+    def run() -> None:
+        results.append(
+            _load_ttl_cache(lock, cache, cached_at, inflight, "k", 30.0, compute)
+        )
+
+    leader = threading.Thread(target=run)
+    leader.start()
+    assert started.wait(timeout=2)
+    follower = threading.Thread(target=run)
+    follower.start()
+    # 等跟随者登记进 inflight, 再放行领头计算
+    for _ in range(50):
+        with lock:
+            waiting = "k" in inflight and not inflight["k"].is_set()
+        if waiting and follower.is_alive():
+            break
+        threading.Event().wait(0.01)
+    release.set()
+    leader.join(timeout=2)
+    follower.join(timeout=2)
+    assert calls["n"] == 1
+    assert results == ["cached", "cached"]

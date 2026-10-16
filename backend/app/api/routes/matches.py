@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, Session, SQLModel, and_, func, or_, select
 
@@ -163,9 +163,104 @@ class MatchDetailResponse(SQLModel):
 # ---------------- Helpers ----------------
 
 
-# 每日推荐快照容量: 与打分候选池 limit(500) 一致 (打分在全量池上做,
-# 快照只截断存储, 容量对齐避免落库大小失控)
-_DAILY_SNAPSHOT_CAPACITY = 500
+# 打分只看这一窗。会员池更大时按 user.id 随机落点取连续一窗,
+# 避免固定从头截断让后段会员永远进不了推荐。
+_RANK_POOL_LIMIT = 500
+# 当日快照只留打分后的前 N 条。首页每次 10 条, 80 条约 8 屏,
+# 再长只增加 JSON 体积和首开写入。
+_DAILY_SNAPSHOT_CAPACITY = 80
+
+
+class _RankProfile:
+    """打分用的瘦行: 不加载照片、简介等列表用不到的大字段."""
+
+    __slots__ = (
+        "user_id",
+        "year",
+        "height",
+        "income",
+        "location",
+        "origin",
+        "marriage",
+        "updated_at",
+    )
+
+    def __init__(
+        self,
+        user_id: uuid.UUID,
+        year: int | None,
+        height: int | None,
+        income: str | None,
+        location: str | None,
+        origin: str | None,
+        marriage: str | None,
+        updated_at: datetime,
+    ) -> None:
+        self.user_id = user_id
+        self.year = year
+        self.height = height
+        self.income = income
+        self.location = location
+        self.origin = origin
+        self.marriage = marriage
+        self.updated_at = updated_at
+
+
+class _RankCriteria:
+    """对方择偶要求里参与打分的列."""
+
+    __slots__ = (
+        "year_min",
+        "year_max",
+        "height_min",
+        "height_max",
+        "income",
+        "locations",
+        "marriage",
+    )
+
+    def __init__(
+        self,
+        year_min: int | None,
+        year_max: int | None,
+        height_min: int | None,
+        height_max: int | None,
+        income: str | None,
+        locations: list[str] | None,
+        marriage: str | None,
+    ) -> None:
+        self.year_min = year_min
+        self.year_max = year_max
+        self.height_min = height_min
+        self.height_max = height_max
+        self.income = income
+        self.locations = list(locations or [])
+        self.marriage = marriage
+
+
+def _sample_rank_rows(session: Session, stmt: Any, pool_limit: int) -> list[Any]:
+    """按 user.id 随机落点取一窗; 窗口尾部不够时从开头补齐.
+
+    替代 COUNT 全池再 OFFSET: 大偏移要先扫描被丢掉的行。
+    UUID 落点是范围扫描; 池子小于窗口时两段拼起来仍是全量。
+    """
+    start = uuid.uuid4()
+    first = list(
+        session.exec(
+            stmt.where(User.id >= start).order_by(User.id).limit(pool_limit)
+        ).all()
+    )
+    if len(first) >= pool_limit:
+        return first
+    seen = {row[0] for row in first}
+    rest = session.exec(
+        stmt.where(User.id < start).order_by(User.id).limit(pool_limit - len(first))
+    ).all()
+    for row in rest:
+        if row[0] not in seen:
+            first.append(row)
+            seen.add(row[0])
+    return first
 
 
 def _compute_today_ranking(
@@ -174,60 +269,57 @@ def _compute_today_ranking(
     me_profile: Profile,
     my_criteria: Criteria | None,
 ) -> list[str]:
-    """计算当日推荐顺序 (双向匹配打分): 候选池前 500 内择优, 返回排好序的 user_id 字符串序列.
+    """计算当日推荐顺序 (双向匹配打分): 候选窗内择优, 返回排好序的 user_id 字符串序列.
 
-    与原实时路径完全同一套打分口径 (候选池 User.id 稳定序 + pair_score + 同城加分)。
+    打分口径不变 (pair_score + 同城加分 + 年龄接近)。只读取打分列,
+    快照截断到 _DAILY_SNAPSHOT_CAPACITY。
     """
-    import random
-
-    stmt = (
-        select(Profile, User)
-        .join(User, Profile.user_id == User.id)  # type: ignore
+    stmt: Any = (
+        select(  # type: ignore[call-overload, misc]
+            Profile.user_id,
+            Profile.year,
+            Profile.height,
+            Profile.income,
+            Profile.location,
+            Profile.origin,
+            Profile.marriage,
+            Profile.updated_at,
+        )
+        .join(User, Profile.user_id == User.id)
         .where(*_visible_candidates_clause(session, current_user))
     )
-    # 候选池 500 内择优。取样窗随机: 会员池超过 500 时若按固定 User.id 截断,
-    # 排序靠后的会员永远进不了任何人的推荐; 快照内仍稳定 (一天一份)。
-    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
-    pool_limit = 500
-    pool_offset = random.randrange(total - pool_limit + 1) if total > pool_limit else 0
-    pool = session.exec(
-        stmt.order_by(User.id).offset(pool_offset).limit(pool_limit)  # type: ignore[arg-type]
-    ).all()
-    cand_ids = [p.user_id for p, _ in pool]
-    cand_criteria_map: dict[Any, Any] = (
-        {
-            c.user_id: c
-            for c in session.exec(
-                select(Criteria).where(Criteria.user_id.in_(cand_ids))  # type: ignore[attr-defined]
-            ).all()
-        }
-        if cand_ids
-        else {}
-    )
+    pool = [
+        _RankProfile(*row) for row in _sample_rank_rows(session, stmt, _RANK_POOL_LIMIT)
+    ]
+    cand_ids = [p.user_id for p in pool]
+    cand_criteria_map: dict[uuid.UUID, _RankCriteria] = {}
+    if cand_ids:
+        for row in session.exec(
+            select(  # type: ignore[call-overload, misc]
+                Criteria.user_id,
+                Criteria.year_min,
+                Criteria.year_max,
+                Criteria.height_min,
+                Criteria.height_max,
+                Criteria.income,
+                Criteria.locations,
+                Criteria.marriage,
+            ).where(Criteria.user_id.in_(cand_ids))  # type: ignore[attr-defined]
+        ).all():
+            cand_criteria_map[row[0]] = _RankCriteria(*row[1:])
     my_city = (me_profile.location or "").strip()
 
-    if my_city:
-
-        def _daily_total(p: Profile) -> int:
-            total = pair_score(
-                my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
-            )
-            if my_city in (p.location or "") or my_city in (p.origin or ""):
-                total += 10  # 同城匹配加分
-            return total
-
-    else:
-
-        def _daily_total(p: Profile) -> int:
-            return pair_score(
-                my_criteria, me_profile, p, cand_criteria_map.get(p.user_id)
-            )
+    def _daily_total(p: _RankProfile) -> int:
+        total = pair_score(my_criteria, me_profile, p, cand_criteria_map.get(p.user_id))
+        if my_city and (my_city in (p.location or "") or my_city in (p.origin or "")):
+            total += 10  # 同城匹配加分
+        return total
 
     scored = sorted(
         pool,
-        key=lambda pu: sort_key(_daily_total(pu[0]), pu[0], me_profile),
+        key=lambda p: sort_key(_daily_total(p), p, me_profile),
     )
-    return [str(p.user_id) for p, _ in scored[:_DAILY_SNAPSHOT_CAPACITY]]
+    return [str(p.user_id) for p in scored[:_DAILY_SNAPSHOT_CAPACITY]]
 
 
 def _get_or_build_daily_snapshot(
@@ -490,6 +582,7 @@ def get_guest_preview(
 def get_daily_recommendations(
     session: SessionDep,
     current_user: CurrentUser,
+    background_tasks: BackgroundTasks,
     _lim: ApiReadLimited,
     _mem: MemberRequired,
     tab: Literal["today", "new", "missed"] = Query("today"),
@@ -502,8 +595,8 @@ def get_daily_recommendations(
     后续翻页直接按快照顺序读 —— 翻页绝对稳定 (翻页期间资料更新不跳页/不重复),
     且不再每页重算打分。其它 tab (new/missed) 逻辑不变。
     """
-    # 浏览记录治理: 顺带清理 90 天前的 View (每天至多一次, 失败静默不影响本请求)
-    view_cleanup.maybe_cleanup_old_views(session)
+    # 浏览记录清理每天至多一次, 放到响应发出之后, 避免 DELETE 拖住首开
+    background_tasks.add_task(view_cleanup.cleanup_old_views_in_background)
 
     offset = _decode_cursor(cursor)
 
