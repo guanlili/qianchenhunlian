@@ -209,6 +209,24 @@ def test_snapshot_skips_delisted_candidates(client: TestClient, db: Session) -> 
     assert snap.profile_ids == order
 
 
+def test_snapshot_keeps_best_slice_only(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """快照只留打分后的前若干条, 年龄更接近的排在前面."""
+    monkeypatch.setattr(matches_routes, "_DAILY_SNAPSHOT_CAPACITY", 2)
+    viewer = _mk_member(db, gender="男", year=1990)
+    for year in (1980, 1990, 1991, 1970):
+        _mk_member(db, year=year)
+
+    headers = authentication_token_from_email(client=client, email=viewer.email, db=db)
+    data = _daily(client, headers, limit=10)
+    years = [item["year"] for item in data["items"]]
+    assert years == [1990, 1991]
+    snap = db.exec(select(DailyRecommendation)).one()
+    assert len(snap.profile_ids) == 2
+    assert data["next_cursor"] is None
+
+
 def test_snapshot_expires_next_day(client: TestClient, db: Session) -> None:
     """快照按日期作废: 过期快照不被复用, 触发重算."""
     viewer = _mk_member(db, gender="男")

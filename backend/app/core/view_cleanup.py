@@ -2,8 +2,8 @@
 
 - View 表只增不删, favorites 的 /visitors 聚合与详情页 24h 去重都会扫全历史,
   需要定期裁剪; 浏览行为数据非审计日志 (AGENTS 允许删), 90 天远超产品回看窗口。
-- 触发点挂在 matches daily 请求路径上顺带执行 (省一个定时任务); 单 worker
-  节流即可 —— 多 worker 最多并发多删一次, 删除本身幂等无害。
+- 触发点挂在 matches daily 的响应发出之后 (后台任务); 单 worker 节流即可
+  —— 多 worker 最多并发多删一次, 删除本身幂等无害。
 - 失败只记日志不抛出, 绝不影响主请求。
 """
 
@@ -43,11 +43,27 @@ def cleanup_old_views(session: Session, days: int = DEFAULT_KEEP_DAYS) -> int:
     return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
 
-def maybe_cleanup_old_views(session: Session, days: int = DEFAULT_KEEP_DAYS) -> None:
-    """带每日节流的顺带清理 (挂在 matches daily 请求路径上).
+def cleanup_old_views_in_background() -> None:
+    """响应体发出后再清理。另开连接, 不占用推荐请求的事务.
 
-    24h 内已跑过直接返回; 执行失败回滚并记日志, 不影响主请求
-    (调用点在请求开头, 此刻事务内无业务写入, 回滚安全)。
+    测试进程直接返回: 测试把请求绑在 savepoint 上, 这里若用应用 engine
+    会连到配置里的库, 或在共享 sqlite 连接上把测试事务提交掉。
+    """
+    import os
+
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return
+    from app.core.db import engine
+
+    with Session(engine) as session:
+        maybe_cleanup_old_views(session)
+
+
+def maybe_cleanup_old_views(session: Session, days: int = DEFAULT_KEEP_DAYS) -> None:
+    """带每日节流的清理。由响应后的后台任务调用, 使用独立会话.
+
+    24h 内已跑过直接返回; 执行失败回滚并记日志。会话里没有推荐请求的写入,
+    回滚不会丢掉业务数据。
     """
     global _last_cleanup_at
     now = time.monotonic()
