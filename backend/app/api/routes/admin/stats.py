@@ -8,8 +8,9 @@ stats / dashboard 缓存状态在本模块; 门店总览 (overview) 缓存随 st
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import SQLModel, and_, func, or_, select
@@ -75,18 +76,18 @@ def admin_stats(
     sid = _store_owner_id(actor)
     if sid is None:
         sid = store_id
-    with _stats_cache_lock:
-        cached = _stats_cache.get(sid)
-        if (
-            cached is not None
-            and time.monotonic() - _stats_cached_at.get(sid, 0.0) < _STATS_CACHE_TTL
-        ):
-            return cached.model_copy(deep=True)  # 深拷贝防调用方改写污染缓存
-    resp = _compute_stats(session, actor, store_id=store_id)
-    with _stats_cache_lock:
-        _stats_cache[sid] = resp
-        _stats_cached_at[sid] = time.monotonic()
-    return resp
+    return cast(
+        StatsResponse,
+        _load_ttl_cache(
+            _stats_cache_lock,
+            _stats_cache,
+            _stats_cached_at,
+            _stats_inflight,
+            sid,
+            _STATS_CACHE_TTL,
+            lambda: _compute_stats(session, actor, store_id=store_id),
+        ),
+    )
 
 
 def _compute_stats(
@@ -314,13 +315,17 @@ _DASHBOARD_CACHE_TTL = 30.0
 _dashboard_cache: dict[tuple[uuid.UUID | None, bool], DashboardResponse] = {}
 _dashboard_cached_at: dict[tuple[uuid.UUID | None, bool], float] = {}
 _dashboard_cache_lock = threading.Lock()
+_dashboard_inflight: dict[tuple[uuid.UUID | None, bool], threading.Event] = {}
 
 
 def clear_dashboard_cache() -> None:
     """清空 dashboard 缓存 (tests/conftest.py 每测试调用, 保证测试间隔离)."""
-    with _dashboard_cache_lock:
-        _dashboard_cache.clear()
-        _dashboard_cached_at.clear()
+    _clear_ttl_cache(
+        _dashboard_cache_lock,
+        _dashboard_cache,
+        _dashboard_cached_at,
+        _dashboard_inflight,
+    )
 
 
 # ---------------- stats 30s 进程内缓存 ----------------
@@ -331,13 +336,80 @@ _STATS_CACHE_TTL = 30.0
 _stats_cache: dict[uuid.UUID | None, StatsResponse] = {}
 _stats_cached_at: dict[uuid.UUID | None, float] = {}
 _stats_cache_lock = threading.Lock()
+_stats_inflight: dict[uuid.UUID | None, threading.Event] = {}
+
+
+def _load_ttl_cache(
+    lock: threading.Lock,
+    cache: dict[Any, Any],
+    cached_at: dict[Any, float],
+    inflight: dict[Any, threading.Event],
+    key: Any,
+    ttl: float,
+    compute: Callable[[], Any],
+) -> Any:
+    """30s 缓存 + 同 key 单飞.
+
+    缓存未命中时只有一个线程计算, 其余等到结果。四个 worker 之间仍然各算一次
+    (进程内存不共享); 这里收的是同一进程里线程池并发打穿缓存的情况。
+    """
+    now = time.monotonic()
+    with lock:
+        cached = cache.get(key)
+        if cached is not None and now - cached_at.get(key, 0.0) < ttl:
+            return cached.model_copy(deep=True)
+        waiter = inflight.get(key)
+        if waiter is None:
+            waiter = threading.Event()
+            inflight[key] = waiter
+            leader = True
+        else:
+            leader = False
+    if not leader:
+        waiter.wait(timeout=30)
+        with lock:
+            cached = cache.get(key)
+            if cached is not None and time.monotonic() - cached_at.get(key, 0.0) < ttl:
+                return cached.model_copy(deep=True)
+        # 领头失败或被清缓存: 自己算一份, 不再排队
+        resp = compute()
+        with lock:
+            cache[key] = resp
+            cached_at[key] = time.monotonic()
+        return resp.model_copy(deep=True)
+    try:
+        resp = compute()
+    except Exception:
+        with lock:
+            inflight.pop(key, None)
+        waiter.set()
+        raise
+    with lock:
+        cache[key] = resp
+        cached_at[key] = time.monotonic()
+        inflight.pop(key, None)
+    waiter.set()
+    return resp.model_copy(deep=True)
+
+
+def _clear_ttl_cache(
+    lock: threading.Lock,
+    cache: dict[Any, Any],
+    cached_at: dict[Any, float],
+    inflight: dict[Any, threading.Event],
+) -> None:
+    with lock:
+        cache.clear()
+        cached_at.clear()
+        waiters = list(inflight.values())
+        inflight.clear()
+    for waiter in waiters:
+        waiter.set()
 
 
 def clear_stats_cache() -> None:
     """清空 stats / 门店总览缓存 (tests/conftest.py 每测试调用, 保证测试间隔离)."""
-    with _stats_cache_lock:
-        _stats_cache.clear()
-        _stats_cached_at.clear()
+    _clear_ttl_cache(_stats_cache_lock, _stats_cache, _stats_cached_at, _stats_inflight)
     clear_overview_cache()
 
 
@@ -362,19 +434,18 @@ def admin_dashboard(
     # 防止两类 actor 的响应互相污染 —— 同 store_id 下内容并不同。
     sees_contact = _store_owner_id(actor) is not None
     key: tuple[uuid.UUID | None, bool] = (sid, sees_contact)
-    with _dashboard_cache_lock:
-        cached = _dashboard_cache.get(key)
-        if (
-            cached is not None
-            and time.monotonic() - _dashboard_cached_at.get(key, 0.0)
-            < _DASHBOARD_CACHE_TTL
-        ):
-            return cached.model_copy(deep=True)  # 深拷贝防调用方改写污染缓存
-    resp = _compute_dashboard(session, actor, sid)
-    with _dashboard_cache_lock:
-        _dashboard_cache[key] = resp
-        _dashboard_cached_at[key] = time.monotonic()
-    return resp
+    return cast(
+        DashboardResponse,
+        _load_ttl_cache(
+            _dashboard_cache_lock,
+            _dashboard_cache,
+            _dashboard_cached_at,
+            _dashboard_inflight,
+            key,
+            _DASHBOARD_CACHE_TTL,
+            lambda: _compute_dashboard(session, actor, sid),
+        ),
+    )
 
 
 def _compute_dashboard(

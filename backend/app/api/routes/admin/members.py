@@ -179,22 +179,58 @@ def list_members(
             )
     if gender:
         base = base.where(Profile.gender == gender)
-    if keyword:
-        kw = f"%{keyword.strip()}%"
-        base = base.where(
-            (User.xy_code.like(kw))  # type: ignore
-            | (Profile.real_name.like(kw))  # type: ignore
-            | (Profile.nickname.like(kw))  # type: ignore
-            | (Profile.contact_phone.like(kw))  # type: ignore
-        )
+    if keyword and keyword.strip():
+        base = base.where(_keyword_clause(keyword.strip()))
 
     total = session.exec(select(func.count()).select_from(base.subquery())).one()
-    rows = session.exec(
-        base.order_by(User.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+    # 深分页只先取本页 user.id, 再按 id 回表。
+    # OFFSET 仍要走过前面的行, 但不必把资料大字段一起排序带出来。
+    # exec() 对 with_only_columns 会返回 Row, 直接拿去 IN 会被当成 UUID 去读 .hex。
+    id_source: Any = base
+    id_rows = session.exec(
+        id_source.with_only_columns(User.id)
+        .order_by(User.created_at.desc())  # type: ignore[attr-defined]
+        .offset(skip)
+        .limit(limit)
     ).all()
+    page_ids: list[uuid.UUID] = []
+    for row in id_rows:
+        value = row if isinstance(row, uuid.UUID) else row[0]
+        page_ids.append(
+            value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+        )
+    if not page_ids:
+        return AdminMemberList(items=[], total=int(total or 0))
+    fetched = session.exec(
+        select(User, Profile)
+        .join(Profile, Profile.user_id == User.id, isouter=True)  # type: ignore[arg-type]
+        .where(User.id.in_(page_ids))  # type: ignore[attr-defined]
+    ).all()
+    order = {uid: i for i, uid in enumerate(page_ids)}
+    rows = sorted(fetched, key=lambda up: order.get(up[0].id, 0))
     return AdminMemberList(
         items=[_to_member_item(u, p) for u, p in rows],
-        total=total,
+        total=int(total or 0),
+    )
+
+
+def _keyword_clause(kw: str) -> Any:
+    """数字走寻缘号/手机号的前缀或等值 (btree 能用); 文字才对姓名做前后通配.
+
+    寻缘号默认 8 位数字。满 8 位按等值查唯一索引; 更短的数字是前缀。
+    11 位同时按手机号等值。姓名、昵称仍是 %关键词%, 没有 trigram 时不可避免。
+    """
+    if kw.isdigit():
+        xy_match: Any = (
+            User.xy_code == kw if len(kw) >= 8 else User.xy_code.like(f"{kw}%")  # type: ignore[union-attr]
+        )
+        if len(kw) == 11:
+            return or_(xy_match, Profile.contact_phone == kw)
+        return xy_match
+    like = f"%{kw}%"
+    return or_(
+        Profile.real_name.like(like),  # type: ignore[union-attr]
+        Profile.nickname.like(like),  # type: ignore[union-attr]
     )
 
 
