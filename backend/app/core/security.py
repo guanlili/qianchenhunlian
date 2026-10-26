@@ -1,13 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 ALGORITHM = "HS256"
 
@@ -45,9 +42,27 @@ def create_refresh_token(
     )
 
 
+# bcrypt 算法的密码长度上限 (字节); passlib 时代为静默截断, 换原生 bcrypt 后
+# (bcrypt>=4.1 对超长密码抛 ValueError) 显式截断保持同语义, 避免登录行为漂移
+_BCRYPT_MAX_PASSWORD_BYTES = 72
+
+
+def _password_bytes(password: str) -> bytes:
+    return password.encode("utf-8")[:_BCRYPT_MAX_PASSWORD_BYTES]
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        result: bool = bcrypt.checkpw(
+            _password_bytes(plain_password), hashed_password.encode("utf-8")
+        )
+        return result
+    except ValueError:
+        # 库里存在非 bcrypt 格式的历史 hash 时按「密码不匹配」处理, 不抛 500
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    # rounds=12 与原 passlib CryptContext 的默认强度一致
+    hashed: bytes = bcrypt.hashpw(_password_bytes(password), bcrypt.gensalt(rounds=12))
+    return hashed.decode("utf-8")
